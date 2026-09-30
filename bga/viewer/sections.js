@@ -25,7 +25,7 @@ import { chapters } from "./chapters.js";
 import { renderProvenance } from "./decision.js";
 import { GRADE_EXHIBIT, decomposition, interval, strip } from "./drawings.js";
 import { resolvePath } from "./element.js";
-import { COLUMNS, DECOMPOSITION, DISTRIBUTION, INLINE, INTERVAL, KEYED_BY, KEYED_BY_TASK_UID, QUANTITY, RUNBOOK, SERIES, SEVERITY, attachBlockDoor, bytes, childNode, cssId, describedTerm, el, guessQuantity, heading, hintsOf, keyAsShown, quantity, quantityFor, sectionHead, title } from "./format.js";
+import { COLUMNS, DECOMPOSITION, DISTRIBUTION, INLINE, INTERVAL, KEYED_BY, KEYED_BY_TASK_UID, QUANTITY, RUNBOOK, SERIES, SEVERITY, attachBlockDoor, bytes, childNode, cssId, describedTerm, el, guessQuantity, heading, hintsOf, keyAsShown, quantity, quantityFor, readerLabel, sectionHead, title } from "./format.js";
 import { matches } from "./nav.js";
 import { handOff } from "./perfetto.js";
 import { findingAnchor, served } from "./primitives.js";
@@ -88,7 +88,7 @@ export function renderFindingEvidence(evidence, node = undefined) {
                  "data-field": key,
                  "data-raw": value === null ? "" : String(value) },
          typeof value === "number" ? quantity(value, kind)
-           : value === null ? "—" : String(value),
+           : value === null ? "—" : readerLabel(value),
          describe));
   }
   attachBlockDoor(list, doors);

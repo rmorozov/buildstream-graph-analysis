@@ -1977,7 +1977,10 @@ underutilized_intervals From      "497003.7 h" — a monotonic base rendered as 
 
 1. No task id. The register is `git log`'s; a reader has no `UX-`.
 2. No payload key outside the JSON door — a heading is a question,
-   a cell is a value, the key is the toggle's `title`.
+   a cell is a value, the key is the toggle's `title`. An enum value
+   or gate id reads through one map, `READER_LABELS` in `format.js`,
+   as a sentence-case phrase; a rule's constant and source file stay
+   in the JSON door (`UX-1141`).
 3. No internal key — a task is an element and a kind, never
    `element|KIND|KIND|n`.
 4. No "payload", "contract", "schema", "Part N" — those are the
@@ -2297,7 +2300,7 @@ headings, so a renumber there moves it.
 | §4d | `test_a_new_control_class_lands_declared.py` | `UX-665`'s registry names the § each class belongs to, which is how this one first acquired a guard; `UX-368` and `UX-369` are still the filed items |
 | §4e | `test_the_ceilings_reach_a_reader.py`, `test_the_served_handoff_counts_its_edges.py` | |
 | §4f | `test_the_type_scale_is_four_steps.py` | |
-| §4g | `test_the_json_toggle_carries_the_key.py`, `test_a_reader_never_sees_the_register.py` | item 2; items 1-4 in the second file (`UX-824`); item 5 is `UX-823`'s, item 6 is §1c/§4c's |
+| §4g | `test_the_json_toggle_carries_the_key.py`, `test_a_reader_never_sees_the_register.py`, `test_a_reader_sees_labels_not_keys.py`, `test_the_provenance_names_its_rule.py` | item 2; items 1-4 in the second file (`UX-824`); item 2 as values, gate ids and the rule's constant in the third and fourth (`UX-1141`); item 5 is `UX-823`'s, item 6 is §1c/§4c's |
 | §5 | | named; `test_the_palette_is_validated.py`, named in §5's own prose, cites §4.3 and §4.5 only |
 | §5a | | no guard cites it; `test_the_page_has_a_volume_budget.py`'s `REPEATED_SHARE_MAX` holds it by blocks, the measurement below asks for |
 | §5b | `test_the_readers_are_drawn_once.py` | |

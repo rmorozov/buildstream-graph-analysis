@@ -100,7 +100,7 @@ _COMPOSES = """(() => {
   // is no "All rows" ahead of the Top-N options any more, so which
   // index holds "Top 10" is no longer fixed.
   const top10 = [...preset.options].find(
-    (o) => o.textContent === "Top 10 by element_durations");
+    (o) => o.value === "10:element_durations");
   preset.value = top10.value;
   preset.dispatchEvent(new Event("change", { bubbles: true }));
   out.afterPreset = shown().length;

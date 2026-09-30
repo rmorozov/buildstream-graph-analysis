@@ -15,10 +15,10 @@
  */
 import { served } from "./primitives.js";
 import { COPY_FORMAT_MIRROR, readCopyFormat, writeCopyFormat } from "./viewstate.js";
-import { COMMAND, QUANTITY, COLUMNS, SERIES, DISTRIBUTION, bytes, childNode,
-         cssId, dataKeyed, el, elementColumn, guessQuantity, heading, hintsOf,
-         itemsAsShown, keyAsShown, quantity, quantityFor, sectionHead,
-         title } from "./format.js";
+import { BARE_KEY, COMMAND, QUANTITY, COLUMNS, SERIES, DISTRIBUTION, bytes,
+         childNode, cssId, dataKeyed, el, elementColumn, guessQuantity, heading,
+         hintsOf, itemsAsShown, keyAsShown, quantity, quantityFor, readerLabel,
+         sectionHead, title } from "./format.js";
 import { commandLine, identify } from "./controls.js";
 // UX-303: §2's two drawings. They import nothing and take their
 // formatter, so the quantity table stays here and the geometry stays
@@ -478,7 +478,7 @@ export function renderStructured(key, value, hint = {}, node = undefined,
     // keys, read here for a plain array's items.
     const shown = itemsAsShown(value, hint) ?? value;
     if (control === CONTROLS.INLINE_LIST) {
-      return el("span", {}, shown.map(String).join(", "));
+      return el("span", {}, shown.map(readerLabel).join(", "));
     }
     if (control === CONTROLS.FOLDED_LIST) {
       // `UX-641`: **past the row bound a cell's list is bounded too**,
@@ -662,7 +662,7 @@ export function buildTable(key, rows, hint = {}, node = undefined,
                                ? `${key}.${rowId}`
                                : `${key}.${rowId}.${column}`)
           : numeric ? quantity(raw, kind)
-          : typeof raw === "string" ? renderText(column, raw)
+          : typeof raw === "string" ? renderText(column, raw, memberTitle(column, raw, node))
           : (raw ?? "—")));
     }
     body.append(tr);
@@ -945,7 +945,7 @@ export function interrogable(table, specs, total, depth = 0) {
       for (const n of [10, 25]) {
         if (n >= total) continue;
         preset.append(el("option", { value: `${n}:${column}` },
-                         `Top ${n} by ${column}`));
+                         `Top ${n} by ${specs.find((s) => s.key === column)?.title ?? title(column)}`));
       }
     }
     if (!presets.length) {
@@ -1249,14 +1249,24 @@ function isExplanation(name) {
 }
 
 /**
+ * `UX-1141`: a map table's key column names a declared record member
+ * by its title, never its key; a data-keyed map's names are data.
+ */
+function memberTitle(column, raw, node) {
+  if (column !== "key" || !node || !BARE_KEY.test(raw)) return null;
+  if (readerLabel(raw) !== raw || dataKeyed(node, raw)) return null;
+  return title(raw, quantityFor(childNode(node, raw), raw));
+}
+
+/**
  * A long string as a truncated cell with the whole thing one click
  * away. The `…` is visible, never silent, and the full text stays
  * selectable - a reader who cannot select it has not been given it.
  */
-export function renderText(name, value) {
+export function renderText(name, value, shown = null) {
   const text = String(value);
   if (text.length <= CELL_TEXT_CAP || isExplanation(name)) {
-    return el("span", { "data-raw": text }, text);
+    return el("span", { "data-raw": text }, shown ?? readerLabel(text));
   }
   const head = text.slice(0, CELL_TEXT_CAP).replace(/\s+\S*$/, "");
   return el("details", { class: "long-text", "data-raw": text },

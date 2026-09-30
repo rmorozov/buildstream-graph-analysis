@@ -476,3 +476,39 @@ def has_expected_output(fixture) -> bool:
     `in_place`.
     """
     return os.path.isfile(os.path.join(str(fixture), _DROPPED))
+
+
+#: `UX-1141`/`UX-1142`: the view UI review's page - both planes, 114
+#: elements. `two_plane_run` with this shape.
+REVIEW_SHAPE = ("--layers", "8", "--width", "14")
+
+#: `UX-1142`: every door a reader can open, opened - each block's `?`
+#: clicked, every `details` open, every folded chapter and section
+#: lifted. Statements, for the head of a guard's own expression.
+OPEN_EVERY_DOOR_JS = """
+  document.querySelectorAll('button.describe[aria-expanded="false"]').forEach((b) => b.click());
+  document.querySelectorAll('.description[hidden]').forEach((n) => { n.hidden = false; });
+  document.querySelectorAll('section[data-section][data-collapsed]').forEach(
+    (n) => n.setAttribute('data-collapsed', 'false'));
+  document.querySelectorAll('section.chapter[data-open]').forEach((n) => n.setAttribute('data-open', 'true'));
+  document.querySelectorAll('[hidden="until-found"]').forEach((n) => n.removeAttribute('hidden'));
+  document.querySelectorAll('details').forEach((d) => { d.open = true; });
+  document.querySelectorAll('section.chapter > section[data-section]').forEach(
+    (n) => { n.style.contentVisibility = 'visible'; });
+"""
+
+#: The visible text nodes after `OPEN_EVERY_DOOR_JS`, never a script,
+#: a style or the JSON door: `{text, code, header}` per node.
+VISIBLE_TEXT_JS = """
+  const visible = [];
+  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+    const text = n.textContent.trim();
+    const parent = n.parentElement;
+    if (!text || !parent || parent.closest('script, style, [data-raw-json]')) continue;
+    if (!parent.checkVisibility()) continue;
+    visible.push({ text, code: Boolean(parent.closest('code')),
+                   header: Boolean(parent.closest('body > header h1')),
+                   section: parent.closest('section[id]')?.id ?? null });
+  }
+"""

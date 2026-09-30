@@ -266,6 +266,61 @@ const UNIT_SUFFIX = {
 };
 
 /**
+ * `UX-1141` (styleguide §4g.2): the one map from an enum value or gate
+ * id the payload publishes *as a value* to the phrase a reader sees.
+ * The raw value stays on `data-raw` and in the JSON door.
+ */
+export const READER_LABELS = {
+  chain_bound: "Chain-bound",
+  scheduler_bound: "Scheduler-bound",
+  task_horizon: "Time tasks were running",
+  wall_clock: "Wall clock",
+  detected_host_cpu_count: "Detected host cores",
+  declared_cpu_budget: "Declared CPU budget",
+  host_cpu_count: "Host cores",
+  cpu_budget: "Declared CPU budget",
+  native_max_jobs: "Native build jobs",
+  INSUFFICIENT_EVIDENCE: "Not enough evidence",
+  HIGH_CPU_UTILIZATION: "High CPU use",
+  CONCURRENT_TASKS_EXCEED_CPUS: "More tasks at once than cores",
+  idle_no_tasks: "Idle, no task ready",
+  idle_underparallel: "Idle, too little parallel work",
+  wasted_retry: "Wasted on retries",
+  wasted_rebuild: "Wasted on rebuilds",
+  ordering_violations_zero: "Ordering: no violations",
+  critical_path_coverage_full: "Critical path: fully covered",
+  dominator_coverage_full: "Dominators: fully covered",
+  blame_chain_coverage_full: "Blame chain: fully covered",
+  run_identity_consistent: "Run identity: consistent",
+  occupancy_within_capacity: "Occupancy: within capacity",
+  untracked_head_us: "Before the first task",
+  execution_on_chain_us: "Execution on the chain",
+  dependency_wait_us: "Waiting on dependencies",
+  resource_wait_us: "Waiting on resources",
+  scheduler_wait_us: "Waiting on the scheduler",
+  retry_wait_us: "Retries",
+  idle_us: "Idle",
+  untracked_tail_us: "After the last task",
+};
+
+/** `UX-1141`: a key whose trimmed title collides with a sibling's. */
+const TERM_LABELS = {
+  category_us: "Time waiting",
+  deeper_than_three_share: "Share deeper than three",
+  started_at_us: "Started at, since the epoch",
+};
+
+/** A published value as the reader's phrase; unmapped values pass. */
+export function readerLabel(value) {
+  const text = String(value);
+  return Object.prototype.hasOwnProperty.call(READER_LABELS, text)
+    ? READER_LABELS[text] : text;
+}
+
+/** A bare `snake_case` or `UPPER_CASE` token - a key, never a phrase. */
+export const BARE_KEY = /^(?:[a-z][a-z0-9]*(?:_[a-z0-9]+)+|[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+)$/;
+
+/**
  * A payload key as a label.
  *
  * `UX-341` made every duration key end `_us` and every memory key end
@@ -304,6 +359,7 @@ export function title(key, kind = null, published = false) {
   // its tail. So this returns before all three rather than skipping
   // one.
   if (published) return key;
+  if (Object.prototype.hasOwnProperty.call(TERM_LABELS, key)) return TERM_LABELS[key];
   const suffix = UNIT_SUFFIX[kind];
   // Never trim a key down to nothing: `_us` alone is not a label.
   const trimmed = suffix ? key.replace(suffix, "") : key;

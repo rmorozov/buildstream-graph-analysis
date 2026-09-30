@@ -250,12 +250,12 @@ class TestNoTwoLabelsSitOnTopOfEachOther:
         merged = [tick for axis in out["axes"] for tick in axis["ticks"] if " " in (tick["mark"] or "")]
         assert merged, (
             f"{label}: no axis has coincident marks - both fixtures have "
-            f"one (p95 == max, or peak at level 1), so the walk has broken"
+            f"one (p95 == max, or peak at level 0), so the walk has broken"
         )
         for tick in merged:
             # All but the first: the leading mark is carried by the
-            # label itself - `level 1` *is* the first level, and
-            # `level 1 (first, peak 2)` would be saying it twice.
+            # label itself - `level 0` *is* the first level, and
+            # `level 0 (first, peak 2)` would be saying it twice.
             for name in tick["mark"].split()[1:]:
                 assert name in tick["text"], (tick, name)
 

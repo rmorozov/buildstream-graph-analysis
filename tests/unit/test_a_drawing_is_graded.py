@@ -441,7 +441,8 @@ console.log(JSON.stringify({
 """)
         assert out["drawn"] == "4,1,9,3,7"
         assert out["head"] == ["Level", "Value"]
-        assert out["rows"] == [["1", "4u"], ["2", "1u"], ["3", "9u"], ["4", "3u"], ["5", "7u"]]
+        # UX-1173: a `level` series counts from 0, as `parallelism.levels` does.
+        assert out["rows"] == [["0", "4u"], ["1", "1u"], ["2", "9u"], ["3", "3u"], ["4", "7u"]]
 
     def test_a_distribution_twin_holds_every_published_mark(self):
         out = _ok("""

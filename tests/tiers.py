@@ -1102,6 +1102,8 @@ MEDIUM = (
     "tests/unit/test_the_rail_mark_follows_the_reading_line.py",  #  3.9s
     # `UX-1175`: 1.76 / 1.69 / 1.71s.
     "tests/unit/test_the_export_ships_no_indentation.py",  #  1.7s
+    # `UX-1173`: 4.57 / 3.32s.
+    "tests/unit/test_the_page_ids_are_unique.py",  #  4.6s
     # Round 147, tiered on the merged tree: three single-process runs
     # alone each (setup+call+teardown).
     # `UX-1083`: 4.17 / 4.08 / 4.23s.

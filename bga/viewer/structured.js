@@ -143,7 +143,7 @@ function inlineObject(value, node) {
  * top-level section needs lives there, beside that one call, so this
  * function's body is unchanged from its cell-only years.
  */
-export function mapTable(key, rows, hint, node, nested, depth = 0, path = key) {
+export function mapTable(key, rows, hint, node, nested, depth = 0, path = key, list = false) {
   let declared = hint;
   if (!nested) {
     // A `{name: number}` map's value column has to *declare* a
@@ -164,8 +164,9 @@ export function mapTable(key, rows, hint, node, nested, depth = 0, path = key) {
     const record = Boolean(node?.properties);
     const measure = hintsOf(node)[QUANTITY] ?? guessQuantity(key)
       ?? (record ? null : "count");
+    // UX-1173: a list's index is not a name, so a list draws its items alone.
     declared = { ...hint, [COLUMNS]: [
-      { key: "key", title: "Name" },
+      ...(list ? [] : [{ key: "key", title: "Name" }]),
       { key: "value", title: title(key, measure), quantity: measure }] };
   }
   const { table, tools } = buildTable(path, rows, declared, node, depth);
@@ -500,7 +501,7 @@ export function renderStructured(key, value, hint = {}, node = undefined,
       }
       const rows = shown.map((item, at) => ({ key: String(at), value: item }));
       return folded(title(key), value,
-                    mapTable(key, rows, hint, node, false, depth + 1, path),
+                    mapTable(key, rows, hint, node, false, depth + 1, path, true),
                     path);
     }
     // `UX-277`: an array of *arrays* - `[["app.bst", 8], …]` - used to

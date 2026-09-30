@@ -36,6 +36,8 @@
 
 /** Below this a series is a sentence. Mirrors `schemas.SERIES_MIN_POINTS`. */
 export const SERIES_MIN_POINTS = 3;
+// UX-1173: the first step's number - `parallelism.levels` publishes roots as level 0.
+const SERIES_ORIGIN = { level: 0 };
 
 // UX-316 (styleguide §2a): **two grades, and no third size.**
 //
@@ -350,6 +352,7 @@ export function sparkline(values, {
   unit = "step", format = String, doc = document, label = null,
   grade = undefined,
 } = {}) {
+  const origin = SERIES_ORIGIN[unit] ?? 1;
   const size = scaleFor(grade);
   const points = (values ?? []).filter(numeric);
   const wrap = box(doc, "div", {
@@ -429,15 +432,15 @@ export function sparkline(values, {
   wrap.append(line);
   if (grade === GRADE_EXHIBIT) {
     wrap.append(exhibitAxis(doc, [
-      { name: "first", at: 0, label: `${unit} 1` },
+      { name: "first", at: 0, label: `${unit} ${origin}` },
       { name: "peak", at: (peak / (points.length - 1)) * 100,
         label: format(high) },
-      { name: "last", at: 100, label: `${unit} ${points.length}` },
+      { name: "last", at: 100, label: `${unit} ${points.length - 1 + origin}` },
     ]));
   }
   const sentenceText = `${points.length} ${unit}s, ${format(points[0])} → `
     + `${format(points[points.length - 1])}`
-    + `, peak ${format(high)} at ${unit} ${peak + 1}.`;
+    + `, peak ${format(high)} at ${unit} ${peak + origin}.`;
   const sentence = box(doc, "span", { class: "series-sentence",
                                       "data-role": "series-sentence" },
                        sentenceText);
@@ -450,11 +453,11 @@ export function sparkline(values, {
   let route = sentence;
   if (grade === GRADE_EXHIBIT) {
     twin = exhibitTwin(doc, [unit.charAt(0).toUpperCase() + unit.slice(1), "Value"],
-                       points.map((v, i) => [i + 1, format(v)]));
+                       points.map((v, i) => [i + origin, format(v)]));
     wrap.append(twin);
     route = twin;
   } else {
-    route = valueRoute(doc, points.map((v, i) => `${unit} ${i + 1} ${format(v)}`)
+    route = valueRoute(doc, points.map((v, i) => `${unit} ${i + origin} ${format(v)}`)
                                   .join(", ") + ".");
     wrap.append(route);
   }

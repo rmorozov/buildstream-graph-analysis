@@ -120,7 +120,9 @@ import skip_reasons
 #: `test_the_vocabulary_has_the_shape.py:59`, same form again.
 #: `UX-1168` argues **one** more, to 79:
 #: `test_the_rail_mark_follows_the_reading_line.py`, same form again.
-UNRESOLVABLE = 79
+#: `UX-1173` argues **one** more, to 80:
+#: `test_the_page_ids_are_unique.py`, same form again.
+UNRESOLVABLE = 80
 
 
 def test_every_declared_skip_reason_is_known():

@@ -20,9 +20,9 @@ What the booted exports draw with them today:
 
 ```text
 golden       parallelism.width_at_level
-             "3 levels, 2 → 1, peak 2 at level 1."
+             "3 levels, 2 → 1, peak 2 at level 0."
 macro_micro  parallelism.width_at_level
-             "10 levels, 1 → 1, peak 2 at level 2."
+             "10 levels, 1 → 1, peak 2 at level 1."
              element_duration_distribution
              "0 ms → 19.1 s, median 3.1 s, p95 19.1 s — n=11."
              blast_radius_distribution
@@ -160,7 +160,7 @@ console.log(JSON.stringify({{
 
     def test_the_sentence_names_the_unit_and_the_peak(self):
         out = self._drawn([4, 1, 9, 3, 7])
-        assert out["sentence"] == "5 levels, 4 → 7, peak 9 at level 3."
+        assert out["sentence"] == "5 levels, 4 → 7, peak 9 at level 2."
 
     @pytest.mark.parametrize("values,expected_points", [([5, 9], "2"), ([5], "1")])
     def test_under_three_points_is_a_sentence_and_no_drawing(self, values, expected_points):

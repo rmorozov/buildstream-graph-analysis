@@ -222,7 +222,8 @@ export function presetTable(key, rows, presets, hint, node, payload) {
     // `test_all_rows_means_all_rows.py`.
     body.replaceChildren(
       el("p", { class: "muted" },
-         preset.question ? `${preset.question} ` : "",
+         // UX-1173: the view whose question is the section's heading does not say it again.
+         preset.question && preset.question !== hint[QUESTION] ? `${preset.question} ` : "",
          view.total >= rows.length
            ? `all ${rows.length} elements`
            : `${view.total} of ${rows.length} elements`),

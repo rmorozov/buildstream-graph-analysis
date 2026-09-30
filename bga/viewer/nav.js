@@ -119,12 +119,20 @@ export function subsections(section, doc) {
   if (folds.length < 2) return null;
   const list = doc.createElement("ul");
   list.className = "toc-sub";
+  const bare = (fold) => fold.querySelector?.(".map-name")?.textContent ?? fold.textContent;
+  const names = folds.map(bare);
+  const taken = new Set();
   for (const fold of folds.slice(0, SUBSECTIONS_SHOWN)) {
-    const name = fold.querySelector?.(".map-name")?.textContent
-      ?? fold.textContent;
-    const id = `${section.getAttribute("data-section")}--${
-      String(name).trim().toLowerCase().replace(/[^\w]+/g, "-")}`;
     const target = fold.parentElement ?? fold;
+    // UX-1173: a name two folds share takes its row, so each rail entry reads apart.
+    const name = names.filter((n) => n === bare(fold)).length > 1
+      ? `${bare(fold)}${rowOf(target)}` : bare(fold);
+    const base = `${section.getAttribute("data-section")}--${
+      String(name).trim().toLowerCase().replace(/[^\w]+/g, "-")}`;
+    // UX-1173: one id per fold - a section's ids carry its key, so its own folds are the only rivals.
+    let id = base;
+    for (let n = 2; taken.has(id); n += 1) id = `${base}-${n}`;
+    taken.add(id);
     if (!target.getAttribute?.("id")) target.setAttribute?.("id", id);
     const item = doc.createElement("li");
     const link = doc.createElement("a");
@@ -143,6 +151,14 @@ export function subsections(section, doc) {
     list.append(more);
   }
   return list;
+}
+
+/** UX-1173: " · Level 3" for a fold in a record row - its first cell under its header; a map row's key already names the fold. */
+function rowOf(fold) {
+  const cell = fold.closest?.("td")?.parentElement?.querySelector?.("td");
+  const head = cell?.closest?.("table")?.querySelector?.("th");
+  return cell && !cell.contains(fold) && cell.getAttribute("data-column") !== "key"
+    ? ` · ${head?.textContent ?? ""} ${cell.textContent}` : "";
 }
 
 export function label(key) {
@@ -443,6 +459,10 @@ export function toc(root, { document: doc, controls } = {}) {
       row.append(button);
     }
     nav.append(row);
+  }
+  // UX-1173: a rail entry the ellipsis cuts is still readable whole on hover.
+  for (const a of nav.querySelectorAll?.("a") ?? []) {
+    if (!a.getAttribute("title")) a.setAttribute("title", a.textContent);
   }
   return nav;
 }

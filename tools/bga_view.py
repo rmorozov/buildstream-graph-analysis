@@ -1284,9 +1284,9 @@ def _uncommented_css(text: str) -> str:
     only form, and a `/*` inside a `content:` string would be the only
     hazard, which this file does not have and a guard would catch.
 
-    Measured on round 23's stylesheet: 12,004 B become 10,765 B.
+    Indentation goes too; CSS never reads it (1,097 B in round 154).
     """
-    return "\n".join(line.rstrip() for line in re.sub(r"/\*.*?\*/", "", text, flags=re.S).splitlines() if line.strip())
+    return "\n".join(line.strip() for line in re.sub(r"/\*.*?\*/", "", text, flags=re.S).splitlines() if line.strip())
 
 
 def _degradation_steps():

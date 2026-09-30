@@ -39,8 +39,22 @@ _READ = (
 
 _BARE_KEY = re.compile(r"^(?:[a-z][a-z0-9]*(?:_[a-z0-9]+)+|[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+)$")
 _KEY_IN_OPTION = re.compile(r"\bby [a-z][a-z0-9]*(?:_[a-z0-9]+)+$")
+#: A dotted or bracketed key path, a `Resource.PROCESS` enum spelling, a `.jsonl` file name;
+#: an element (`x_y.bst`) is data, not a key.
+_KEY_PATH = re.compile(
+    r"\b[A-Za-z0-9]+_[A-Za-z0-9_]*\.(?!bst\b)[A-Za-z_]+|\b[a-z][a-z0-9]*\.[a-z0-9]+_[a-z0-9_]+"
+    r"|\w\[\d*\]|\b[A-Z][a-z]+\.[A-Z]{2,}\b|\b[\w-]+\.jsonl\b"
+)
+#: Buckets the payload keys by a single lowercase word, which the bare-token regex cannot see.
+_ONE_WORD_KEYS = {"useful", "untracked"}
 #: `UX-1144` renames the floors; `T_C` is its row, not this one's.
 _OWNED_ELSEWHERE = {"T_C"}
+
+
+def _is_path_text(node):
+    """A process command line and the schema drawing's own path rows are data, not reader text."""
+    section = node["section"] or ""
+    return bool(_KEY_PATH.search(node["text"])) and section != "document_shape" and not section.startswith("element-")
 
 
 @pytest.fixture(scope="module", params=["golden", "macro_micro", "two_plane"])
@@ -70,6 +84,20 @@ class TestAReaderSeesLabelsNotKeys:
                 and n["text"] not in _OWNED_ELSEWHERE
             ]
             assert bare == [], (width, bare)
+
+    def test_no_visible_text_holds_a_key_path_or_a_finding_id(self, measured):
+        from bga.findings import FINDING_READERS
+
+        ids = re.compile(
+            r"(?<![\w-])(?:" + "|".join(map(re.escape, (i for i in FINDING_READERS if "-" in i))) + r")(?![\w-])"
+        )
+        for width, out in measured.items():
+            said = [
+                (n["section"], n["text"][:400])
+                for n in out["visible"]
+                if not n["code"] and (_is_path_text(n) or ids.search(n["text"]) or n["text"] in _ONE_WORD_KEYS)
+            ]
+            assert said == [], (width, said)
 
     def test_no_top_n_option_names_a_key(self, measured):
         for width, out in measured.items():

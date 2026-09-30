@@ -81,3 +81,5 @@ module on `data-rule`/`data-module`, and absent from the text),
 `test_why_bga_believes_what_it_believes.py` (the rule line's layout
 strings), `test_a_filter_is_a_property_of_a_table.py` (the Top-10
 option found by value, not by the key in its label).
+
+Residue fix (round 154): `Resource.PROCESS/DOWNLOAD/UPLOAD`, `useful`, `untracked` and kebab-case finding ids (`blast-radius-ranking`) go through `readerLabel`; "Reasoning in ..." / inline pairs read labels; prose `binary_cost`, `host-samples.jsonl`, `element_join[].cores_busy`, `findings[].evidence.change`, `recommended_builders minus builders`, `debug.cpu_us`, `debug.max_rss_kb` reworded; the unpublished-input paths sit in `<code>`; the guard gains a key-path/enum/`.jsonl`/finding-id scan (5 of 6 mutations red; the schema-description one is invisible on the three fixtures). Open: paths in `<code>` (`headline.chain_share`, `analyze/v6`) stay, `test_why_bga_believes_what_it_believes` and `test_the_provenance_names_its_rule` pin them; snake_case keys inside longer descriptions (`host_cpu_count`, `native_max_jobs`, `avg_fanin`, `ru_maxrss`) remain.

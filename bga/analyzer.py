@@ -2082,13 +2082,11 @@ class BuildEfficiencyAnalyzer:
                 return {
                     "absence": "this analysis has no run context, graph or run directory to read a host series against"
                 }
-            from .run_store import HOST_SAMPLES_NAME
-
             return {
-                "absence": f"this capture has no {HOST_SAMPLES_NAME} - "
-                f"it was taken before host memory sampling "
-                f"was added, or the host exposes no "
-                f"/proc/meminfo"
+                "absence": "this capture has no host memory series - "
+                "it was taken before host memory sampling "
+                "was added, or the host exposes no "
+                "/proc/meminfo"
             }
         tasks = [
             {

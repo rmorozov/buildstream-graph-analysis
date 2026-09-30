@@ -1403,7 +1403,7 @@ def _remote_execution_findings(result: AnalysisResult) -> list[dict]:
     elif unbounded:
         title = (
             f"Remote execution (builder cap only, no Plane 2 "
-            f"`binary_cost`): unbounded builders "
+            f"per-binary cost): unbounded builders "
             f"{_s(unbounded['wall_us_before']):.1f}s -> "
             f"{_s(unbounded['wall_us_after']):.1f}s"
         )

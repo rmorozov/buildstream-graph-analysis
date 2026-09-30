@@ -237,7 +237,7 @@
         {
             "id": "remote-execution-whatif",
             "severity": "info",
-            "title": "Remote execution (builder cap only, no Plane 2 `binary_cost`): unbounded builders 0.0s -> 0.0s",
+            "title": "Remote execution (builder cap only, no Plane 2 per-binary cost): unbounded builders 0.0s -> 0.0s",
             "detail": [
                 "    Unbounded builders (REAPI moves whole sandboxes): 0.0s -> 0.0s (0.0s); assumes staging and wait per element unchanged, workers never queue"
             ],
@@ -254,7 +254,7 @@
                 }
             },
             "reader": "ci-gatekeeper",
-            "copy_text": "BGA finding: Remote execution (builder cap only, no Plane 2 `binary_cost`): unbounded builders 0.0s -> 0.0s\n      Unbounded builders (REAPI moves whole sandboxes): 0.0s -> 0.0s (0.0s); assumes staging and wait per element unchanged, workers never queue\n  additive False\n  why_not_additive Not additive: both remove the same critical-path seconds, so buying both is not buying their sum.\n  Run: golden-fixture-manifest-hash-v1",
+            "copy_text": "BGA finding: Remote execution (builder cap only, no Plane 2 per-binary cost): unbounded builders 0.0s -> 0.0s\n      Unbounded builders (REAPI moves whole sandboxes): 0.0s -> 0.0s (0.0s); assumes staging and wait per element unchanged, workers never queue\n  additive False\n  why_not_additive Not additive: both remove the same critical-path seconds, so buying both is not buying their sum.\n  Run: golden-fixture-manifest-hash-v1",
             "trace_query": null
         },
         {
@@ -399,7 +399,7 @@
     },
     "utilization_envelope": {
         "available": false,
-        "absence": "this capture has no host-samples.jsonl - it was taken before host memory sampling was added, or the host exposes no /proc/meminfo"
+        "absence": "this capture has no host memory series - it was taken before host memory sampling was added, or the host exposes no /proc/meminfo"
     },
     "plane2_absence": "Plane 2 was not captured for this run, so there is no per-process detail. `bga snapshot -- bst build TARGET` captures both planes.",
     "attribution": {

@@ -651,7 +651,7 @@ _CLAIMS = {
         _unconditional(
             "Published whenever the critical path has measured elements on "
             "it; which elements, and their share, are the finding's own "
-            "`evidence.rows`."
+            "evidence rows."
         ),
         (),
     ),
@@ -732,8 +732,8 @@ _CLAIMS = {
         _unconditional(
             "Published whenever `bga sweep`'s own unbounded-capacity row "
             "priced the builder cap; the compiler-offload half needs a "
-            "Plane 2 `binary_cost` too, and is absent without one - both "
-            "numbers are the finding's own `evidence`."
+            "Plane 2 binary cost too, and is absent without one - both "
+            "numbers are the finding's own evidence."
         ),
         (),
     ),

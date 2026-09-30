@@ -345,11 +345,22 @@ def _blast_signals(diag_result, kind_by_uid: dict, foundation: frozenset = froze
     return out
 
 
+#: `UX-1159`: a skipped capacity input in a reader's words; `skipped_inputs` keeps the key.
+_INPUT_WORDS: dict[str, str] = {
+    'native_max_jobs': 'the --max-jobs value',
+    'governing core count (host_cpu_count/cpu_budget)': 'a core count (the host or a CPU budget)',
+}
+
+
+def _inputs_said(skipped: list[str]) -> str:
+    return ", ".join(_INPUT_WORDS.get(name, name) for name in skipped)
+
+
 def _capacity_verdict_sentence(over: bool, under: bool, skipped: list) -> str:
     """`UX-1150`: the capacity verdict's three booleans as the one sentence they answer."""
     if skipped:
         return (
-            f"The capacity checks did not run - {', '.join(skipped)} missing - "
+            f"The capacity checks did not run - {_inputs_said(skipped)} missing - "
             "so neither over- nor undersubscription was tested."
         )
     said = []
@@ -1446,7 +1457,7 @@ class BuildEfficiencyAnalyzer:
             note += (
                 " Capacity checks (over/under-subscription, memory) did not run for "
                 "this run - missing: "
-                + ", ".join(self.capacity_check_skipped_inputs)
+                + _inputs_said(self.capacity_check_skipped_inputs)
                 + ". They are inert here, not passing; a wrapped log records "
                 "--max-jobs on its own first line, or declare the missing "
                 "value explicitly at extraction time."

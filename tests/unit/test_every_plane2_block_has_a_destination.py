@@ -186,7 +186,7 @@ class TestTheCaptureSaysWhatItCouldSee:
     def test_the_two_caveats_travel_with_what_they_qualify(self, payload):
         """A number whose caveat stayed behind is the same defect."""
         coverage = payload["plane2_coverage"]
-        assert "excluded from max_concurrency" in coverage["open_records_note"]
+        assert "excluded from the peak, not" in coverage["open_records_note"]
         assert "LD_PRELOAD" in coverage["static_binary_disclaimer"]
 
     def test_the_span_is_microseconds_like_every_other_duration(self, payload):

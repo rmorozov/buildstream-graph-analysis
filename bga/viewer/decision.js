@@ -21,7 +21,7 @@ import {
 // to take this import unaliased - the export concatenates the modules
 // into one scope and drops the `import` line, so an alias resolves to
 // a name nothing declares.
-import { TERMS, childNode, heading, hintsOf, quantity, quantityAt, title } from "./format.js";
+import { TERMS, childNode, heading, hintsOf, pathLabel, quantity, quantityAt, title } from "./format.js";
 import {
   resolvePath, elementFacts, elementHistory, renderElementHistory,
 } from "./element.js";
@@ -121,41 +121,17 @@ export function renderProvenance(provenance, options = {}) {
     // the first and rendered nowhere.
     if (provenance.rule.observed_path) {
       rule.setAttribute("data-observed", provenance.rule.observed_path);
+      rule.setAttribute("title", provenance.rule.observed_path);
     }
-    // `<span>` rather than `createTextNode`: the guards drive these
-    // renderers against a hand-built `document` that offers
-    // `createElement` and not much else, and a renderer that needs a
-    // DOM method thirty test stubs do not have is a renderer nothing
-    // can test. The shim exports `createTextNode`; the stubs predate
-    // it (`UX-264`'s complaint, still half-true).
-    const said = (text) => {
-      const span = document.createElement("span");
-      span.textContent = text;
-      return span;
-    };
     // `UX-1141` (§4g.2): the constant and its file are the producer's -
     // on the attributes and in the JSON door, never in the text.
     rule.setAttribute("data-module", provenance.rule.module ?? "");
-    if (provenance.rule.name) {
-      rule.append(said("Threshold "));
-      const comparison = document.createElement("code");
-      comparison.textContent =
-        `${provenance.rule.observed_path ?? ""} `
-        + `${provenance.rule.comparison ?? "="} ${provenance.rule.threshold}`;
-      rule.append(comparison);
-    } else if (provenance.rule.observed_path) {
-      // A record can publish an observed path and no threshold -
-      // `confidence.run_mode present` is a rule with no number in it -
-      // and the address is the interesting half either way.
-      rule.append(said("No named threshold; "));
-      const observed = document.createElement("code");
-      observed.textContent =
-        `${provenance.rule.observed_path} `
-        + `${provenance.rule.comparison ?? ""}`.trim();
-      rule.append(observed);
-    } else {
-      rule.append(said("No named threshold; computed"));
-    }
+    // `UX-1159`: the path is on the hover and `data-observed`; the text says its label.
+    const observed = provenance.rule.observed_path
+      ? `${pathLabel(options.schema, provenance.rule.observed_path)} ` : "";
+    rule.textContent = provenance.rule.name
+      ? `Threshold ${observed}${provenance.rule.comparison ?? "="} ${provenance.rule.threshold}`
+      : `No named threshold; ${observed ? observed + (provenance.rule.comparison ?? "") : "computed"}`.trim();
     details.append(rule);
   }
 
@@ -166,9 +142,8 @@ export function renderProvenance(provenance, options = {}) {
     for (const ref of refs) {
       const term = document.createElement("dt");
       term.setAttribute("data-path", ref.path ?? "");
-      const path = document.createElement("code");
-      path.textContent = ref.path ?? "";
-      term.append(path);
+      term.setAttribute("title", ref.path ?? "");
+      term.textContent = pathLabel(options.schema, ref.path);
       const value = document.createElement("dd");
       value.setAttribute("data-raw", ref.value === null || ref.value === undefined
         ? "" : String(ref.value));
@@ -190,34 +165,18 @@ export function renderProvenance(provenance, options = {}) {
     details.append(list);
   }
 
-  // `UX-357`: the document every path above walks. A record that
-  // travels - a `compare/v1` chain read beside an `analyze/v5` one -
-  // resolves against a different document, and the schema calls this
-  // load-bearing the moment it does.
-  if (provenance.document) {
-    const against = document.createElement("p");
-    against.className = "muted";
-    against.setAttribute("data-document", provenance.document);
-    const lead = document.createElement("span");
-    lead.textContent = "Paths resolve against ";
-    const named = document.createElement("code");
-    named.textContent = provenance.document;
-    against.append(lead, named);
-    details.append(against);
-  }
+  // `UX-357`: the document every path above walks - `UX-1159`: on the
+  // fold for the copy, not in the reader's text.
+  if (provenance.document) details.setAttribute("data-document", provenance.document);
 
   const unpublished = Array.isArray(provenance.unpublished_inputs)
     ? provenance.unpublished_inputs : [];
   if (unpublished.length) {
     const note = document.createElement("p");
     note.className = "muted unpublished";
-    note.setAttribute("data-unpublished", String(unpublished.length));
-    note.textContent = "Also drawn from, and not published in this document: ";
-    unpublished.forEach((p, i) => {
-      const c = document.createElement("code");
-      c.textContent = p;
-      note.append(i ? ", " : "", c);
-    });
+    note.setAttribute("title", unpublished.join(", "));
+    note.textContent = "Also read, not published here: "
+      + unpublished.map((p) => pathLabel(options.schema, p)).join(", ");
     details.append(note);
   }
   return details;

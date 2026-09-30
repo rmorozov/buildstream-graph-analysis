@@ -36,7 +36,7 @@ GOLDEN_NOTE = (
     "declared CPU budget - native build-system parallelism (--max-jobs) is a "
     "separate, currently unmodeled axis. Capacity checks "
     "(over/under-subscription, memory) did not run for this run - missing: "
-    "native_max_jobs, governing core count (host_cpu_count/cpu_budget). They "
+    "the --max-jobs value, a core count (the host or a CPU budget). They "
     "are inert here, not passing; a wrapped log records --max-jobs on its own "
     "first line, or declare the missing value explicitly at extraction time."
 )

@@ -270,8 +270,8 @@ const UNIT_SUFFIX = {
 
 /** `UX-1144`: styleguide §6e.2's keyed concepts - one reader name per data key. */
 export const TERMS = {
-  t_infinity_observed: "T∞", t_infinity_us: "T∞", t_infinity_cold: "T∞ (cold)",
-  lb: "LB", lb_us: "LB", t_c: "T_C",
+  t_infinity_observed: "Chain floor T∞", t_infinity_us: "Chain floor T∞", t_infinity_cold: "Chain floor T∞ (cold)",
+  lb: "Resource floor LB", lb_us: "Resource floor LB", t_c: "Replay makespan T_C",
   scheduling_gap_us: "Scheduling gap",
   plane2_processes: "Plane 2 processes", cpu_coverage: "Plane 2 coverage",
   primary: "Confidence",
@@ -303,6 +303,9 @@ export const READER_LABELS = {
   idle_underparallel: "Idle, too little parallel work",
   wasted_retry: "Wasted on retries",
   wasted_rebuild: "Wasted on rebuilds",
+  "governing core count (host_cpu_count/cpu_budget)": "Governing core count",
+  pinned_to_one_job: "Pinned to one job", underachieved_requested_jobs: "Fewer jobs than requested",
+  overlap_exceeds_granted_width: "More processes than granted",
   ordering_violations_zero: "Ordering: no violations",
   critical_path_coverage_full: "Critical path: fully covered",
   dominator_coverage_full: "Dominators: fully covered",
@@ -714,6 +717,19 @@ export function quantityAt(schema, path) {
     }
   }
   return quantityFor(node, key);
+}
+
+/** `UX-1159`: a published path as a reader's label - the leaf's title, and the element it keys. */
+export function pathLabel(schema, path) {
+  let node = schema, key = null, row = "";
+  for (const part of String(path ?? "").match(/[^.[\]]+|\[[^\]]*\]/g) ?? []) {
+    if (part.startsWith("[")) {
+      node = node?.items ?? node?.additionalProperties;
+      if (!/^\[\d*\]$/.test(part)) row = ` (${part.slice(1, -1)})`;
+    } else { node = childNode(node, part); key = part; }
+  }
+  return key === null ? String(path ?? "")
+    : (node?.title ?? title(key, hintsOf(node)[QUANTITY] ?? guessQuantity(key))) + row;
 }
 
 /**

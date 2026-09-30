@@ -15,7 +15,7 @@
  */
 import { identify, labelFor } from "./controls.js";
 import { plural } from "./tables.js";
-import { TERMS, title } from "./format.js";
+import { READER_LABELS, TERMS, title } from "./format.js";
 import {
   SVG, svg, seconds, mib, bar, OVERVIEW_SHOWN, elementAnchor,
 } from "./primitives.js";
@@ -734,8 +734,10 @@ function elementSection(record, places, investigate, format, bounded = null) {
       continue;
     }
     named.items.forEach((item, index) => {
-      const code = document.createElement("code");
-      code.textContent = item;
+      // `UX-1159`: a Plane 2 flag reads as its phrase; a name stays copyable.
+      const code = document.createElement(READER_LABELS[item] ? "span" : "code");
+      code.textContent = READER_LABELS[item] ?? item;
+      code.setAttribute("data-raw", item);
       line.append(code);
       if (index < named.items.length - 1) {
         line.append(document.createTextNode(", "));

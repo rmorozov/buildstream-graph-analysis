@@ -478,7 +478,7 @@ limit 25;`,
       "peak. It is " +
       "read as a maximum and never summed: two processes peaking at " +
       "different moments never held the sum between them, which is " +
-      "the same refusal `compute_peak_memory` makes and the reason " +
+      "the same refusal the peak-memory section makes and the reason " +
       "the trace draws no memory curve.",
     sql: `select extract_arg(s.arg_set_id, 'debug.element') as element,
        max(extract_arg(s.arg_set_id, 'debug.max_rss_kb')) / 1024 as peak_mb,
@@ -524,7 +524,7 @@ limit 20;`,
     why:
       "Plane 2's concurrency as a curve: a counter track, " +
       "sampled from the same records the " +
-      "process census counts. Its peak equals the `max_concurrency` " +
+      "process census counts. Its peak equals the peak " +
       "the report publishes - by construction, because both read one " +
       "function. Read it against `host cores busy` below: a plateau of " +
       "processes over an idle machine is work that was blocked, not " +

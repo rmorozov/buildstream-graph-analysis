@@ -91,4 +91,5 @@ fold has no schema in reach (`renderFindings`), so its values use the
 leaf's guess and 3-place rounding. Producer prose is not reworded:
 "78.35s" beside "78.3 s" (two precisions) and "1 process(es)" stay -
 no shared Python helper renders them; the text report is unchanged.
+
 - Merged-tree fix: `quantityAt` reads a table column's unit from the row's `bga:columns`, so provenance paths like `optimization_horizon[0].makespan_after_us` no longer guess (`test_no_number_renders_from_a_guess`).

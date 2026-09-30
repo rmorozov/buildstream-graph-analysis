@@ -74,8 +74,10 @@ LABEL = "macro_micro"
 
 
 def _typeset(text):
-    """`UX-1149`: the page sets a backtick span as `<code>` and `->` as `→`."""
-    return text.replace("`", "").replace("→", "->")
+    """`UX-1149`: the page sets a backtick span as `<code>` and `->` as `→`;
+    `UX-1140`: and spaces a number from its `s`/`ms`."""
+    text = text.replace("`", "").replace("→", "->")
+    return re.sub(r"(?<![\w.])(\d+(?:\.\d+)?) (ms|s)\b", r"\1\2", text)
 
 
 _LOOK = """

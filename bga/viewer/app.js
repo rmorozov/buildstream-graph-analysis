@@ -948,7 +948,7 @@ async function boot() {
     // the chapters file the sections. The same relationship `elements`
     // has with the element sections - an index over the population and
     // a detail block per row.
-    renderProvenanceRecords(payload, root);
+    renderProvenanceRecords(payload, root, schemas[payload.schema]);
 
     chapters(root, document, payload);
 

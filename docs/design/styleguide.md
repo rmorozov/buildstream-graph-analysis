@@ -61,7 +61,7 @@ listed under its topic as `§6e.N`; since round 142 every one is binding.
 | **Budgets** | §3e | landed distance and opened volume are both bounded, per size class | binding |
 | | §3f | a bound is enforced at the largest size and in the mode people use | binding |
 | | §3g | a budget counts the unit its consumer spends | binding |
-| | §5a | repeated text is bounded; distinct blocks may not fall; on the landed page no sentence of eight words or more is said twice - a shared one is said once, under the list (`UX-1146`) | binding |
+| | §5a | repeated text is bounded; distinct blocks may not fall; on the landed page no sentence of eight words or more is said twice - a shared one is said once, under the list (`UX-1146`); with every fold open neither, and a finding or rule drawn elsewhere is named and linked (`UX-1156`) | binding |
 | **Header** | §2b | a control's explanation lives with the control; a described value shows its `?` | binding |
 | | §3i | the header is at most 72 px: wordmark, run alias and instant, reader picker | binding |
 | | §5b | what the header's picker already lists is not drawn again | binding |
@@ -1131,6 +1131,13 @@ The budget has a second half, and it is the one that makes it mean
 anything: **the count of distinct blocks may not fall**. The cheapest
 way to drive a repetition ratio down is to say less, and losing a
 claim is not deduplicating it.
+
+`UX-1156` carries the sentence rule into every open fold: a sentence
+has one drawing, and every other place **names and links** it - a
+finding off its own card by its title to the colon, the ranking rule
+by its `#provenance` block. A lead's `data-said` members leave its
+pairs. A link, a command and a stock absence line are not sentences
+(`test_each_sentence_is_drawn_once.py`).
 
 ## 6b. What this page may depend on (round 65)
 

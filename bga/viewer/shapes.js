@@ -242,8 +242,8 @@ export function distributionStrip(table, specs, total, state, refresh, few = fal
   if (!spec) return null;
   // The column key, not `cssId`: that normalises an *element uid* into
   // an anchor, and a column key is already a schema identifier.
-  // Over every row, not the shown ones: the label below says "across
-  // all N rows" and `UX-526` took the hidden ones out of the document.
+  // Over every row, not the shown ones: the sentence says "across N
+  // rows" and `UX-526` took the hidden ones out of the document.
   const raw = columnCells(table, spec.key)
     .map((td) => Number(td.getAttribute("data-raw")))
     .filter((n) => Number.isFinite(n));
@@ -252,8 +252,8 @@ export function distributionStrip(table, specs, total, state, refresh, few = fal
   const drawn = columnStrip(raw, {
     grade: GRADE_ANNOTATION,
     format: (n) => quantity(n, spec.quantity),
-    label: few ? null : `${spec.title ?? title(spec.key, spec.quantity)} across all ${
-      total.toLocaleString("en-US")} rows`,
+    // `UX-1156`: the column's name; the count is the sentence's and the tools'.
+    label: few ? null : spec.title ?? title(spec.key, spec.quantity),
     counted: !few,
   });
   drawn.setAttribute("data-column", spec.key);

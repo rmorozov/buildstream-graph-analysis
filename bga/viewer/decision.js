@@ -21,7 +21,7 @@ import {
 // to take this import unaliased - the export concatenates the modules
 // into one scope and drops the `import` line, so an alias resolves to
 // a name nothing declares.
-import { TERMS, childNode, heading, hintsOf, quantity, quantityAt, title } from "./format.js";
+import { TERMS, childNode, el, findingLink, heading, hintsOf, quantity, quantityAt, title } from "./format.js";
 import {
   resolvePath, elementFacts, elementHistory, renderElementHistory,
 } from "./element.js";
@@ -261,6 +261,7 @@ export function renderProvenanceRecords(payload, root, schema = null) {
     const block = renderProvenance(record,
       { label: record.claim ? title(record.claim) : "", schema });
     if (!block) continue;
+    block.id = `provenance-${record.claim}`;
     section.append(block);
     drawn += 1;
   }
@@ -346,7 +347,7 @@ export function renderWhyRanked(payload, action, options = {}) {
     const line = document.createElement("p");
     line.className = "muted why-finding";
     line.setAttribute("data-finding", finding.id ?? "");
-    line.textContent = finding.title ?? finding.id ?? "";
+    line.append(findingLink(finding));
     details.append(line);
   }
 
@@ -372,8 +373,7 @@ function renderSaidOnce(common) {
     line.setAttribute("data-finding", finding.id ?? "");
     line.setAttribute("data-ranks", ranks.join(" "));
     const which = ranks.map((rank) => `#${rank}`);
-    line.textContent = `${which.slice(0, -1).join(", ")} and ${which.at(-1)}: `
-      + `${finding.title ?? finding.id ?? ""}`;
+    line.append(`${which.slice(0, -1).join(", ")} and ${which.at(-1)}: `, findingLink(finding));
     box.append(line);
   }
   return box;
@@ -810,14 +810,10 @@ export function renderDecision(payload, investigate = null, copy = null,
     section.append(list);
     if (common.length) section.append(renderSaidOnce(common));
     // Below the list it explains, not above it: the reader came for
-    // the actions.
-    const how = shared
-      ? renderProvenance(shared, { schema: options.reportSchema }) : null;
-    if (how) {
-      const rule = document.createElement("h3");
-      rule.textContent = "How these were ranked";
-      rule.setAttribute("data-role", "ranking-rule");
-      section.append(rule, how);
+    // the actions. `UX-1156`: the rule is drawn once, in `#provenance`.
+    if (shared?.rule) {
+      section.append(el("p", { "data-role": "ranking-rule", "data-provenance": claim },
+                        el("a", { href: `#provenance-${claim}` }, "How these were ranked")));
     }
   }
 
@@ -889,8 +885,7 @@ function nextStepRow(step, copy, payload, reportSchema, isFirst = false) {
  * `follows_from` names either a published section or a finding id. A
  * section is linked by its own question - never its key, which is
  * §4b's rule and the raw `critical_path_detail` a reader met in the
- * table this replaces. A finding has no anchor of its own, so it links
- * the findings list and is labelled with its own claim.
+ * table this replaces. A finding links its own card, by its name.
  */
 function followsFrom(name, payload, reportSchema) {
   if (!name) return null;
@@ -904,9 +899,11 @@ function followsFrom(name, payload, reportSchema) {
   }
   const finding = (payload?.findings ?? []).find((one) => one.id === name);
   if (!finding) return null;
-  link.setAttribute("href", "#findings");
-  link.textContent = `from: ${finding.title ?? name}`;
-  return link;
+  // `UX-1156`: the finding named and linked to its card, whose title is its one drawing.
+  const named = findingLink(finding);
+  named.className = link.className;
+  named.prepend("from: ");
+  return named;
 }
 
 function actionRow(action, investigate, whyBlock = null) {

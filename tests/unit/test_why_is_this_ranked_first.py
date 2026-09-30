@@ -264,7 +264,14 @@ const blocks = [];
 let shared = null, heading = false;
 (function walk(n) {
   if (!n) return;
-  if (n.attrs?.["data-role"] === "ranking-rule") heading = true;
+  // `UX-1156`: the list links the rule's one drawing, its `#provenance` block;
+  // the sentence it reaches is that record's (that block is `test_the_provenance_names_its_rule`'s).
+  if (n.attrs?.["data-role"] === "ranking-rule") {
+    heading = true;
+    const link = (n.children ?? []).find((c) => c.tagName === "a");
+    const claim = link && (link.href ?? link.attrs.href ?? "").replace("#provenance-", "");
+    shared = (payload.provenance ?? []).find((e) => e.claim === claim)?.rule?.sentence ?? null;
+  }
   if (n.className === "why-ranked") {
     const rows = [], findings = [];
     let why = null, history = null;

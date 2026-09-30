@@ -256,8 +256,8 @@ export function renderPairs(key, object, hint = {}, node = undefined,
   const lead = typeof object?.[leadKey] === "string" ? object[leadKey] : null;
   for (const [name, value] of Object.entries(object)) {
     if (merged.has(name) || (lead !== null && name === leadKey)) continue;
-    // `UX-1150`: a lead answers its section's boolean group; the JSON view keeps them.
-    if (lead !== null && typeof value === "boolean") continue;
+    // `UX-1150`, `UX-1156`: a lead answers its boolean group and its empty lists; the JSON view keeps them.
+    if (lead !== null && (typeof value === "boolean" || value?.length === 0)) continue;
     // UX-270: the critical path is its own section, not a row inside
     // this one. It is also the one member that rendered a whole
     // `<section>` into a `<dd>` - the nesting UX-267 removed

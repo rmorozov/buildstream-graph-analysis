@@ -77,7 +77,10 @@ for (const s of root.querySelectorAll("[data-section]")) {
   // looking for its name in the section's prose - which the schema
   // puts there whether the value arrived or not.
   keyed[name] = s.querySelectorAll("[data-key]")
-    .map((n) => n.getAttribute("data-key"));
+    .map((n) => n.getAttribute("data-key"))
+    // `UX-1156`: a member the section's answer says is drawn there, in the lead.
+    .concat(s.querySelectorAll("[data-said]")
+      .flatMap((n) => n.getAttribute("data-said").split(" ")));
 }
 // The two declaration tables, out of the modules the *page* loaded -
 // `tests/viewer.mjs` re-exports the same source, so no clause here

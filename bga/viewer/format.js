@@ -20,7 +20,7 @@
  * in exactly that order (`UX-199`, where a cycle shipped a report that
  * threw `ReferenceError` in `boot()` and rendered empty).
  */
-import { elementAnchor, headRow } from "./primitives.js";
+import { elementAnchor, findingAnchor, headRow } from "./primitives.js";
 
 export const QUANTITY = "bga:quantity";
 
@@ -562,6 +562,10 @@ export function elementColumn(specs = []) {
 }
 
 // ---------------------------------------------------------------- render
+
+/** `UX-1156`: a finding named off its own card - its title to the colon, linked there. */
+export const findingLink = ({ id, title }) => el("a", {
+  href: `#${findingAnchor(id)}`, "data-finding": id }, String(title ?? id).split(": ")[0]);
 
 export function el(tag, attrs = {}, ...children) {
   const node = document.createElement(tag);

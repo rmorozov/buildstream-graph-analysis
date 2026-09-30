@@ -179,6 +179,9 @@ class TestEveryPublishedFieldReachesAReader:
                 if value is None or isinstance(value, bool):
                     continue
                 spelled = str(value)
+                # `UX-1141`: "present" with no observed path is the no-threshold marker, drawn as "No named threshold".
+                if field == "rule.comparison" and spelled == "present" and not record["rule"].get("observed_path"):
+                    continue
                 if len(spelled) < 2:
                     continue
                 if spelled in reachable or _typeset(spelled) in shown:

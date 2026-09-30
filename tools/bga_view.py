@@ -825,6 +825,15 @@ TRACE_BUDGET_B = 4 * 1024 * 1024
 #: large ones a person mails stay mailable.
 DATA_COMPACT_MIN_B = 200_000
 
+#: The data blocks an export embeds: JSON, or `UX-529`'s compacted octet-stream.
+_DATA_BLOCK = re.compile(r'<script[^>]*type="application/(?:json|octet-stream)"[^>]*>.*?</script>', re.S)
+
+
+def page_half(html):
+    """UTF-8 bytes of `html` with its data blocks (tags included) removed: the page's own half."""
+    return len(_DATA_BLOCK.sub("", html).encode("utf-8"))
+
+
 #: `UX-430`: the bound in the unit the **consumer** spends.
 #:
 #: `TRACE_BUDGET_B` above bounds transfer, and it bounds it correctly.
@@ -1549,12 +1558,12 @@ def export(run: str, path: str, with_trace: bool = True, reanalyse: bool = False
 
     size = os.path.getsize(path)
     # `UX-1052`: the two halves apart - the page is bounded, the data scales.
-    data = sum(len(block.encode("utf-8")) for block in blocks)
+    page_bytes = page_half(page)
     return {
         "path": os.path.abspath(path),
         "bytes": size,
-        "page_bytes": size - data,
-        "data_bytes": data,
+        "page_bytes": page_bytes,
+        "data_bytes": size - page_bytes,
         "has_timeline": trace is not None,
         "omitted": omitted,
         "over_budget": size > EXPORT_BUDGET_B,

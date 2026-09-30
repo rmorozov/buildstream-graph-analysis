@@ -105,13 +105,6 @@ def _halves(path):
     first would have counted a compacted payload as page.
     """
     html = pathlib.Path(path).read_text(encoding="utf-8")
-    page = re.sub(
-        r'<script[^>]*type="application/(json|octet-stream)"'
-        r'[^>]*>.*?</script>',
-        "",
-        html,
-        flags=re.S,
-    )
     blocks = dict(
         re.findall(
             r'<script[^>]*type="application/(?:json|octet-stream)"[^>]*'
@@ -122,7 +115,7 @@ def _halves(path):
     )
     schemas = len(blocks.get("bga-schemas", ""))
     data = sum(len(body) for name, body in blocks.items() if name != "bga-schemas")
-    return len(page), schemas, data, blocks
+    return view.page_half(html), schemas, data, blocks
 
 
 def _document(blocks, name):

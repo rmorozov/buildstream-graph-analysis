@@ -552,6 +552,7 @@ END pid=101 ppid=1 ts=1002.500000 element=work-a.bst cmd=cc -c main.c
 #
 # `UX-1167`: 150,000 -> 160,000, the owner's call (2026-09-30): the page
 # measured 149,745 B at `3e6feb45`, 255 B under, with six page rows due.
+from tools import bga_view as view
 from tools.bga_view import PAGE_BUDGET_B
 
 #: `UX-444`: the claim, stated once. **The run's data is at least twice
@@ -1157,33 +1158,6 @@ COMMITTED_EXPORTS = [
 ]
 
 
-def _embedded(path):
-    """The bytes of documents the page carries, so the rest is the page.
-
-    `octet-stream` too: `UX-529` compacts a large payload into one, and
-    counting only `application/json` would book a 194 KB compacted
-    report as *page* - which is the half with the budget.
-    """
-    text = pathlib.Path(path).read_text(encoding="utf-8")
-    # `UX-1174`: bytes, as the file size it is subtracted from.
-    return sum(
-        len(found.encode("utf-8"))
-        for found in re.findall(
-            r'<script type="application/(?:json|octet-stream)"[^>]*>(.*?)'
-            r'</script>',
-            text,
-            re.S,
-        )
-    )
-
-
-def _page_half(path):
-    """The file's UTF-8 bytes with its data blocks removed - `export()`'s `page_bytes`."""
-    text = pathlib.Path(path).read_text(encoding="utf-8")
-    page = re.sub(r'<script[^>]*type="application/(?:json|octet-stream)"[^>]*>.*?</script>', "", text, flags=re.S)
-    return len(page.encode("utf-8"))
-
-
 @pytest.fixture
 def snapshot(tmp_path):
     snap = tmp_path / "20260821T120000Z"
@@ -1569,7 +1543,7 @@ class TestTheSizeDiscipline:
         """
         # Every `<script type="application/json">` block and the trace
         # blob are *data*. What is left is the page.
-        page = _page_half(exported[0])
+        page = view.page_half(pathlib.Path(exported[0]).read_text(encoding="utf-8"))
         assert page < PAGE_BUDGET_B, (
             f"the exported page is {page} B with its data removed - "
             f"that is a structural change, not a feature. Check "
@@ -1619,7 +1593,7 @@ class TestTheSizeDiscipline:
         out = tmp_path / "big.html"
         view.export(str(run), str(out))
         html = out.read_text(encoding="utf-8")
-        page = _page_half(out)
+        page = view.page_half(html)
         schemas = re.search(
             r'<script type="application/json" id="bga-schemas">(.*?)'
             r"</script>",
@@ -1900,24 +1874,17 @@ class TestTheSizeDiscipline:
         import tools.bga_view as view
 
         html = open(exported[0], encoding="utf-8").read()
-        page = re.sub(
-            r"<script[^>]*type=\"application/(json|octet-stream)\"[^>]*>"
-            r".*?</script>",
-            "",
-            html,
-            flags=re.S,
-        )
+        page = view.page_half(html)
         # `UX-1052`: the modules as the page carries them - gzipped.
-        accounted = len(view._module_blocks(view._viewer_module()))
-        accounted += len(
-            view._uncommented_css(open(os.path.join(view.ASSET_DIR, "style.css"), encoding="utf-8").read())
-        )
-        accounted += len(open(os.path.join(view.ASSET_DIR, "index.html"), encoding="utf-8").read())
+        accounted = len(view._module_blocks(view._viewer_module()).encode("utf-8"))
+        css = open(os.path.join(view.ASSET_DIR, "style.css"), encoding="utf-8").read()
+        accounted += len(view._uncommented_css(css).encode("utf-8"))
+        accounted += len(open(os.path.join(view.ASSET_DIR, "index.html"), encoding="utf-8").read().encode("utf-8"))
         # The export rewrites the page around those bytes, so an exact
         # equality would be asserting the glue. Anything the modules do
         # not account for is what this is looking for.
-        assert len(page) - accounted < 4_000, (
-            f"{len(page) - accounted} B of the page comes from neither the modules nor the stylesheet"
+        assert page - accounted < 4_000, (
+            f"{page - accounted} B of the page comes from neither the modules nor the stylesheet"
         )
 
     def test_the_page_itself_stays_within_its_budget(self, exported):
@@ -1944,7 +1911,7 @@ class TestTheSizeDiscipline:
         half, per fixture - so content can no longer hide behind the
         page, nor the page behind content.
         """
-        page = exported[1]["bytes"] - _embedded(exported[0])
+        page = exported[1]["page_bytes"]
         assert page < PAGE_BUDGET_B, f"the page itself is {page} B"
 
     def test_the_page_costs_the_same_whatever_the_run(self, tmp_path):
@@ -1957,7 +1924,7 @@ class TestTheSizeDiscipline:
         for label, run in (("golden", GOLDEN), ("macro_micro", MACRO_MICRO)):
             path = tmp_path / f"{label}.html"
             result = export(str(run), str(path))
-            fixed[label] = result["bytes"] - _embedded(path)
+            fixed[label] = result["page_bytes"]
         assert len(set(fixed.values())) == 1, f"the page is not run-independent: {fixed}"
 
     def test_a_non_ascii_datum_leaves_the_page_half_where_it_was(self, exported, tmp_path):
@@ -1970,11 +1937,11 @@ class TestTheSizeDiscipline:
         raw = tmp_path / "raw.html"
         raw.write_text(html.replace(block, block + '"datum": "—", '), encoding="utf-8")
         readings = {
-            name: (_page_half(one), os.path.getsize(one) - _embedded(one))
+            name: view.page_half(one.read_text(encoding="utf-8"))
             for name, one in (("as exported", path), ("raw —", raw))
         }
         assert readings["as exported"] == readings["raw —"], readings
-        assert _page_half(path) == written["page_bytes"], (_page_half(path), written["page_bytes"])
+        assert readings["as exported"] == written["page_bytes"], (readings, written["page_bytes"])
 
     @pytest.mark.parametrize("label,run,bound", COMMITTED_EXPORTS)
     def test_each_committed_run_exports_within_its_stated_bound(self, label, run, bound, tmp_path):
@@ -2027,17 +1994,10 @@ class TestTheSizeDiscipline:
                 json.loads(gzip.decompress(base64.b64decode(block)))
             else:
                 json.loads(block)
-        data = sum(len(block) for _kind, block in blocks)
-        page = re.sub(
-            r"<script[^>]*type=\"application/(json|octet-stream)\"[^>]*>"
-            r".*?</script>",
-            "",
-            html,
-            flags=re.S,
-        )
-        assert len(html) - len(page) - data < 4_000, (
-            f"{len(html) - len(page) - data} B of embedded data is not one of the JSON documents the page renders"
-        )
+        data = sum(len(block.encode("utf-8")) for _kind, block in blocks)
+        page = view.page_half(html)
+        rest = len(html.encode("utf-8")) - page - data
+        assert rest < 4_000, f"{rest} B of embedded data is not one of the JSON documents the page renders"
 
     def test_a_file_over_budget_is_reported_not_refused(self, snapshot, tmp_path, monkeypatch):
         import tools.bga_view as view

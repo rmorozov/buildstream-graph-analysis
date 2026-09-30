@@ -37,9 +37,6 @@ needs_browser = pytest.mark.skipif(chrome is None, reason=NO_BROWSER)
 node = shutil.which("node")
 needs_node = pytest.mark.skipif(node is None, reason="node is not installed")
 
-#: Every page/data split in the suite reads these two types as data.
-_DATA = r'<script[^>]*type="application/(json|octet-stream)"[^>]*>.*?</script>'
-
 
 @pytest.fixture(scope="module")
 def exports(tmp_path_factory):
@@ -55,8 +52,7 @@ def exports(tmp_path_factory):
 def test_the_page_half_is_under_its_bound(exports):
     for label, (path, written) in exports.items():
         html = path.read_text(encoding="utf-8")
-        # The reported half is the file's own: the data blocks removed.
-        page = len(re.sub(_DATA, "", html, flags=re.S).encode("utf-8"))
+        page = view.page_half(html)
         assert written["page_bytes"] == page, (label, written, page)
         assert written["page_bytes"] + written["data_bytes"] == written["bytes"]
         assert written["page_bytes"] < view.PAGE_BUDGET_B, (

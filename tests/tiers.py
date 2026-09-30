@@ -1142,4 +1142,6 @@ MEDIUM = (
     "tests/unit/test_one_name_one_population.py",  #  5.6s
     # UX-1183's heavy page, its export and two Chromium reads 4.14s.
     "tests/unit/test_a_traced_elements_binaries_reach_the_page.py",  #  4.1s
+    # UX-1187's 1,202-element export and one Chromium read 4.46s.
+    "tests/unit/test_an_element_view_answers_whole.py",  #  4.5s
 )

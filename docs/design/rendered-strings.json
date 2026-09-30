@@ -992,6 +992,11 @@
   {
     "exception": null,
     "role": "th",
+    "text": "Unweighted depth"
+  },
+  {
+    "exception": null,
+    "role": "th",
     "text": "Is leaf"
   },
   {
@@ -1363,6 +1368,11 @@
     "exception": null,
     "role": "button",
     "text": "Downstream count"
+  },
+  {
+    "exception": null,
+    "role": "button",
+    "text": "Unweighted depth"
   },
   {
     "exception": null,
@@ -1853,6 +1863,11 @@
     "exception": null,
     "role": "option",
     "text": "Top # by Downstream count"
+  },
+  {
+    "exception": null,
+    "role": "option",
+    "text": "Top # by Unweighted depth"
   },
   {
     "exception": null,

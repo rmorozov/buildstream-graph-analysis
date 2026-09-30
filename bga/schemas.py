@@ -1966,7 +1966,15 @@ _ELEMENT_PRESETS = [
     {
         "name": "All elements",
         "question": "Which element should I look at?",
-        "columns": ["element", "element_durations", "downstream_count", "is_leaf", "observed_critical", "element_kind"],
+        "columns": [
+            "element",
+            "element_durations",
+            "unweighted_depth",
+            "downstream_count",
+            "is_leaf",
+            "observed_critical",
+            "element_kind",
+        ],
         "sort": {"column": "element_durations", "direction": "desc"},
     },
     {
@@ -1976,27 +1984,41 @@ _ELEMENT_PRESETS = [
         # selection is published in - the page does not need to know
         # what a critical path is to draw it in the right order.
         "from": "critical_path_detail",
-        "columns": ["element", "element_durations", "slack", "element_kind", "probability"],
+        "columns": ["element", "element_durations", "unweighted_depth", "slack", "element_kind", "probability"],
     },
     {
         "name": "Leaves",
         "question": "What could be deferred?",
         "where": {"column": "is_leaf", "equals": True},
-        "columns": ["element", "element_durations", "downstream_count", "element_kind", "is_structural_kind"],
+        "columns": [
+            "element",
+            "element_durations",
+            "unweighted_depth",
+            "downstream_count",
+            "element_kind",
+            "is_structural_kind",
+        ],
         "sort": {"column": "element_durations", "direction": "desc"},
     },
     {
         "name": "Choke points",
         "question": "What does everything wait on?",
         "from": "bottleneck.choke_points",
-        "columns": ["element", "element_durations", "downstream_count", "weighted_duration_us", "element_kind"],
+        "columns": [
+            "element",
+            "element_durations",
+            "unweighted_depth",
+            "downstream_count",
+            "weighted_duration_us",
+            "element_kind",
+        ],
     },
     {
         "name": "Latent heavies",
         "question": "What is big and off the chain?",
         # UX-1193: the section's population, so one name counts one set.
         "from": "latent_heavies",
-        "columns": ["element", "element_durations", "slack", "downstream_count", "risk_score"],
+        "columns": ["element", "element_durations", "unweighted_depth", "slack", "downstream_count", "risk_score"],
     },
     # `UX-829`: the joined fields with no view of their own - measured
     # on the scale export, `unweighted_depth`, `criticality_probability`
@@ -2009,7 +2031,15 @@ _ELEMENT_PRESETS = [
     {
         "name": "What does my element wait on",
         "question": "What does my element wait on?",
-        "columns": ["element", "slack", "unweighted_depth", "probability", "direct_count", "weighted_duration_us"],
+        "columns": [
+            "element",
+            "element_durations",
+            "unweighted_depth",
+            "slack",
+            "probability",
+            "direct_count",
+            "weighted_duration_us",
+        ],
         "sort": {"column": "slack", "direction": "asc"},
     },
     # UX-338: the two-plane join, as a *view* of this table
@@ -2028,7 +2058,14 @@ _ELEMENT_PRESETS = [
     {
         "name": "Plane 2 (sandbox)",
         "question": "Compute-bound, or badly built?",
-        "columns": ["element", "element_durations", "cores_busy", "requested_jobs", "peak_rss_bytes"],
+        "columns": [
+            "element",
+            "element_durations",
+            "unweighted_depth",
+            "cores_busy",
+            "requested_jobs",
+            "peak_rss_bytes",
+        ],
         # Without these the view is `element_durations` under a
         # heading that promises the sandbox, so it is not offered
         # at all on a run that captured no Plane 2.

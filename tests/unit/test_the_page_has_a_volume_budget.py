@@ -376,7 +376,9 @@ BUDGETS = (
     # `bga:grows` descriptions are words and nothing else. 154 of headroom.
     # Round 154's merged tree: macro_micro 37,847 px, 13,113 words (3 runs,
     # spread 0) - `UX-1152`'s card links fit once `UX-1146`/`UX-1147` cut.
-    (50, 38_200, 13_200, 800, 7_900),
+    # `UX-1185` (D1): px 38,200 -> 38,400 - a table of 80 rows or fewer opens whole, and
+    # macro_micro's 71-row `binary_cost` unrolls: 38,226 px measured. 174 of headroom.
+    (50, 38_400, 13_200, 800, 7_900),
     # `UX-1050`: px 36,500 -> 43,500, words 9,600 -> 13,200, nodes
     # 6,000 -> 7,500 on the 4,100 class: `xl_both` (Plane 2 and a store)
     # reads 42,982 px, 12,872 words, 7,209 nodes; Plane 2's cost is flat

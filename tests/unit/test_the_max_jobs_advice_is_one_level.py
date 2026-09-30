@@ -224,16 +224,16 @@ def test_the_advice_row_is_one_level_and_capped(tmp_path_factory, browser):
 @needs_browser
 @pytest.mark.medium
 def test_over_the_cap_the_badge_and_a_filter_appear(tmp_path_factory, browser):
-    # `TABLE_OPENS_BOUNDED_ABOVE` is 40 (structured.js); 45 priced
-    # lowerings at distinct costs cross it while staying one input
-    # class, which is what the badge and the filter are keyed off.
-    rows = [_row(f"lowered-{n}.bst", 4, 2, price_cost_us=1000 + n) for n in range(45)]
+    # `UNROLL_AT` is 80 (tables.js, `UX-1185`); 85 priced lowerings at
+    # distinct costs cross it while staying one input class, which is
+    # what the badge and the filter are keyed off.
+    rows = [_row(f"lowered-{n}.bst", 4, 2, price_cost_us=1000 + n) for n in range(85)]
     uri = _advice_uri(tmp_path_factory.mktemp("advice-scale"), rows, name="advice-scale")
     result = browser.measure(uri, ELEMENTS_TABLE_JS)
 
     assert result is not None
     assert result["badge"] and CAPPED_BADGE.match(result["badge"]), result["badge"]
-    assert result["badge"].endswith("of 45"), result["badge"]
+    assert result["badge"].endswith("of 85"), result["badge"]
     assert result["hasFilter"], "no input.table-filter over the row cap"
 
 

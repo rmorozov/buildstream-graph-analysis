@@ -1104,6 +1104,9 @@ MEDIUM = (
     "tests/unit/test_the_export_ships_no_indentation.py",  #  1.7s
     # `UX-1173`: 4.57 / 3.32s.
     "tests/unit/test_the_page_ids_are_unique.py",  #  4.6s
+    # Round 158, tiered on the track: one single-process run alone.
+    # `UX-1185`: 9.60s.
+    "tests/unit/test_a_pager_continues_the_view.py",  #  9.6s
     # Round 147, tiered on the merged tree: three single-process runs
     # alone each (setup+call+teardown).
     # `UX-1083`: 4.17 / 4.08 / 4.23s.

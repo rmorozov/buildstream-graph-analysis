@@ -239,7 +239,8 @@ class TestNoSectionGrowsWithoutBound:
         # asserted: that the caller asks, and that the answer is
         # decided on the *total*.
         assert "openingBound(presets, total, TABLE_OPENS_BOUNDED_ABOVE)" in code, code[-1500:]
-        assert "if (total <= bound) return null;" in code, code[-1500:]
+        # `UX-1185` (D1): and two pages or fewer open whole.
+        assert "if (total <= Math.max(bound, UNROLL_AT)) return null;" in code, code[-1500:]
 
     def test_the_bound_clears_the_ordinary_case(self):
         """A bound that fired on the ordinary table would train readers

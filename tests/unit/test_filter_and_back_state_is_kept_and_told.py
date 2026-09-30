@@ -313,7 +313,8 @@ class TestAFilterSaysWhatItKept:
         for label in told:
             for width in (1440, 390):
                 out = seen[label][width]
-                total = out["before"]["badge"].split()[-1]
+                # `UX-1185`: a whole table's badge is `71 rows`, a bounded one's `25 of 1,202`.
+                total = re.findall(r"[\d,]+", out["before"]["badge"])[-1]
                 assert out["none"]["badge"] == f"none of {total} match", (label, width, out)
                 # `UX-1170`: a threshold nothing passes says the same.
                 assert out["unmet"]["badge"] == f"none of {total} match", (label, width, out)
@@ -322,7 +323,8 @@ class TestAFilterSaysWhatItKept:
         for label in (k for k in seen if seen[k][1440]):
             for width in (1440, 390):
                 out = seen[label][width]
-                total = out["before"]["badge"].split()[-1]
+                # `UX-1185`: a whole table's badge is `71 rows`, a bounded one's `25 of 1,202`.
+                total = re.findall(r"[\d,]+", out["before"]["badge"])[-1]
                 some = out["some"]
                 assert some, (label, "no prefix of the needle keeps 3 to M-1 rows", out)
                 # `UX-1156`: the label names the column; the badge and the strip's sentence count.
@@ -485,7 +487,8 @@ class TestEveryViewButtonWritesTheLink:
 
     def test_all_rows_survives_a_reload(self, seen):
         bounded = [label for label in seen if seen[label]["link"]["all"]]
-        assert "two_plane" in bounded and "macro_micro" in bounded, {k: v["link"] for k, v in seen.items()}
+        # `UX-1185`: macro_micro's 71-row `binary_cost` opens whole now, so no table of its opens bounded.
+        assert "two_plane" in bounded, {k: v["link"] for k, v in seen.items()}
         for label in bounded:
             link = seen[label]["link"]
             assert link["folded"]["tops"][link["id"]] != "", (label, link)

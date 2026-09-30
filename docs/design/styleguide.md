@@ -735,7 +735,7 @@ column re-read in round 73:
                  elements   landed   opened    words   controls    nodes
 golden                  4    3,800   15,618    7,144        427    2,498
 macro_micro            11    5,965   31,804   12,002        750    5,686
-budget, to 50 elts             7,600   38,200   13,200        800    7,900
+budget, to 50 elts             7,600   38,400   13,200        800    7,900
 
 scale               1,202    4,763   26,242   36,542      1,941   24,294
 budget, to 4,000 elts          7,000   32,000   41,000      2,300   27,500
@@ -877,6 +877,10 @@ caused it.
 Re-measured on the round's merged tree: macro_micro 37,743 px and
 12,769 words, xl 35,669 px, 9,456 words and 5,785 nodes - 457, 31 and
 831, 144, 215 of headroom.
+
+`UX-1185` (D1) moved the small class's height bound 38,200 -> 38,400:
+a table of 80 rows or fewer opens whole, and `macro_micro`'s 71-row
+`binary_cost` unrolls - measured 38,226 px opened.
 
 `UX-1152`'s card links read section titles, not ids; alone they took
 `macro_micro` to 38,201 px and 13,441 words. Round 154's merged tree,
@@ -2137,7 +2141,7 @@ the census runs at the largest class.
 
 | population | bound at rest | the step past it | named in |
 |---|---|---|---|
-| table rows (§1: array of objects, array of arrays) | opens bounded above `TABLE_OPENS_BOUNDED_ABOVE` rows | filter, preset, Top-N, table focus; "All rows" under `ALL_ROWS_CEILING`, the paging step past it (`UX-1028`) | `structured.js`, `tables.js` |
+| table rows (§1: array of objects, array of arrays) | opens whole at `UNROLL_AT` rows or fewer, bounded past it (`UX-1185`) | filter, preset, Top-N, table focus; "All rows" under `ALL_ROWS_CEILING`, the paging step past it (`UX-1028`) | `structured.js`, `tables.js` |
 | nested cell | `CELL_NEST_LIMIT` levels inline | table focus (§3a) | `structured.js` |
 | cell text | `CELL_TEXT_CAP` characters | the labeled fold | `structured.js` |
 | long scalar array | count + folded list | not measured here | `shapes.js` |
@@ -2155,7 +2159,9 @@ the census runs at the largest class.
 points, names, and characters of text — opens at a bound held by a
 named constant, and its label states what lies beyond it (§3a.1). **The
 step past a bound is bounded too:** it advances by the same bound with
-the position shown ("rows 41-80 of 4,002"), opens table focus, or
+the position shown ("rows 26-50 of 4,002"), **in the order the view
+opened on** — a pager continues the ranking, and its position travels
+in the fragment (`UX-1185`) — opens table focus, or
 narrows (filter, preset, Top-N); no control draws a population whose
 size grows with the run in one step. **Paging replaces the mounted
 window; it never appends**: after any number of presses a table mounts
@@ -2376,7 +2382,7 @@ headings, so a renumber there moves it.
 | §3h | `test_the_rail_is_a_source_list.py` | |
 | §3i | `test_the_header_keeps_its_budget.py` | |
 | §3j | `test_a_fold_bounds_its_interactive_descendants.py` | `UX-921` |
-| §3k | `test_a_findings_element_list_is_bounded.py`, `test_every_step_past_a_bound_is_bounded.py` | `UX-1032`'s census, at the 4,002-element run; `UX-1028`/`UX-1029`/`UX-1030` closed the three violations it found |
+| §3k | `test_a_findings_element_list_is_bounded.py`, `test_every_step_past_a_bound_is_bounded.py`, `test_a_pager_continues_the_view.py` | `UX-1032`'s census, at the 4,002-element run; `UX-1028`/`UX-1029`/`UX-1030` closed the three violations it found |
 | §3l | `test_a_chapter_fold_has_one_place_and_one_label.py`, `test_a_sections_controls_sit_together.py`, `test_pointer_travel_is_a_budget.py` | `UX-1042`: placement per class and travel per journey; `UX-1055` places copy-rows and top-n, and closes the placement-census gap |
 | §4 | `test_emphasis_is_a_budget.py`, `test_the_palette_is_validated.py`, `test_a_drawing_is_graded.py`, `test_apparatus_in_its_place.py`, `test_the_browser_is_the_library.py` | named |
 | §4a | | named; `UX-346`'s `test_a_sentence_lives_on_its_door.py` holds it and cites no section |

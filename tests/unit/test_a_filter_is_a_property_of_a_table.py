@@ -299,7 +299,8 @@ class TestThePagerAgreesWithTheFilteredPopulation:
         )
 
     def test_the_position_matches_what_is_actually_on_the_page(self, paged_filter):
-        assert paged_filter["positionAfterOnePage"].startswith("rows 41-80")
+        # `UX-1185`: Next continues from the `Top 10` shown, one 25-row page.
+        assert paged_filter["positionAfterOnePage"].startswith("rows 11-35")
         shown = paged_filter["shownAfterFilter"]
         assert shown == 1, paged_filter
         assert paged_filter["positionAfterFilter"] == f"rows 1-{shown} of {shown}", paged_filter

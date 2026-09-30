@@ -289,8 +289,11 @@ export function applyFilters(table, options = {}) {
  */
 export const ALL_ROWS_CEILING = 200;
 
+// `UX-1185` (D1): two pages or fewer open whole.
+export const UNROLL_AT = 80;
+
 export function openingBound(presets, total, bound) {
-  if (total <= bound) return null;
+  if (total <= Math.max(bound, UNROLL_AT)) return null;
   const [column] = presets;
   return column
     ? { value: `25:${column}`, top: { n: 25, column } }

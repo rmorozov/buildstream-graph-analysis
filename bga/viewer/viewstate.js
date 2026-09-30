@@ -117,6 +117,9 @@ export function captureView(root) {
       const sorted = th.getAttribute("aria-sort");
       if (sorted) params.set(`s.${key}`, `${th.getAttribute("data-column")}:${sorted}`);
     }
+    // `UX-1185`: where the pager stands, after the filter it is measured against.
+    const at = tools?.querySelector?.(".table-pager")?.getAttribute?.("data-offset");
+    if (at) params.set(`p.${key}`, at);
   }
 
   const open = [...(root.querySelectorAll?.(FOLDS) ?? [])]
@@ -251,6 +254,9 @@ export function applyView(root, query, { dispatch } = {}) {
         applied.push(`s:${key}`);
       }
     }
+    const at = params.get(`p.${key}`);
+    const pager = tools?.querySelector?.(".table-pager");
+    if (at && pager) { pager.setAttribute("data-offset", at); fire(pager, "bga:page"); applied.push(`p:${key}`); }
   }
 
   if (params.has("ch")) applyFolds(root, params.get("ch").split(","));

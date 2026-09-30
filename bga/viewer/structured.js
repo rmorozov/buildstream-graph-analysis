@@ -860,6 +860,7 @@ export function interrogable(table, specs, total, depth = 0) {
   // measures its position and bounds against, not `total`, which
   // disagrees with the page the moment a filter narrows it.
   let pagerRefresh = null;
+  let relabel = null;
   let shape = null;
   const few = total <= FEW_ROWS;
   const refresh = () => {
@@ -867,6 +868,7 @@ export function interrogable(table, specs, total, depth = 0) {
     badge.textContent = badgeText(applyFilters(table, state), total, state.filtered);
     badge.hidden = badge.textContent === rest;
     pagerRefresh?.();
+    relabel?.();
     // UX-1158: the strip draws, and counts, the rows the filter kept; `UX-1170`: none at two or fewer.
     shape?.replaceWith?.(shape = distributionStrip(table, specs, total, few || state.filtered <= FEW_ROWS,
                                                    state.kept) ?? el("span"));
@@ -992,6 +994,9 @@ export function interrogable(table, specs, total, depth = 0) {
     // selected while paging showed a plain offset window).
     let offset = 0;
     let paging = false;
+    // `UX-1185` (D4): the pager steps the ranking the table opened on, one page the opening bound's size.
+    const size = opening?.top.n ?? TABLE_OPENS_BOUNDED_ABOVE;
+    let ranking = opening?.top.column ?? null;
     const canPage = total > ALL_ROWS_CEILING;
     const position = canPage ? el("span", { class: "page-position" }, "") : null;
     const prev = canPage ? el("button", { type: "button", class: "page-prev",
@@ -1005,28 +1010,28 @@ export function interrogable(table, specs, total, depth = 0) {
     // of the unfiltered `total` (Review #295, `UX-1028`).
     if (canPage) {
       pagerRefresh = () => {
-        if (!paging) { position.textContent = ""; return; }
+        if (!paging) { position.textContent = ""; pager?.removeAttribute?.("data-offset"); return; }
         const denom = state.filtered ?? total;
-        const lastStart = denom === 0 ? 0
-          : Math.floor((denom - 1) / TABLE_OPENS_BOUNDED_ABOVE)
-            * TABLE_OPENS_BOUNDED_ABOVE;
+        const lastStart = denom === 0 ? 0 : Math.floor((denom - 1) / size) * size;
         // The filtered population can shrink under the current window
         // (typing a filter mid-page) - clamp back onto its last real
         // page rather than claim a range past what is now filtered.
         if (offset > lastStart) {
           offset = lastStart;
-          state.top = { n: TABLE_OPENS_BOUNDED_ABOVE, column: null, offset };
+          state.top = { n: size, column: ranking, offset };
           badge.textContent = badgeText(applyFilters(table, state), total, state.filtered);
         }
-        const end = Math.min(offset + TABLE_OPENS_BOUNDED_ABOVE, denom);
+        const end = Math.min(offset + size, denom);
         position.textContent = denom === 0 ? "no rows match"
           : `rows ${offset + 1}-${end} of ${denom.toLocaleString("en-US")}`;
         prev.disabled = offset <= 0;
         next.disabled = end >= denom;
+        // `UX-1185`: the fragment's `p.` - `viewstate.js` reads it here and writes it back through `bga:page`.
+        pager?.setAttribute?.("data-offset", String(offset));
       };
       const step = () => {
         paging = true;
-        state.top = { n: TABLE_OPENS_BOUNDED_ABOVE, column: null, offset };
+        state.top = { n: size, column: ranking, offset };
         // The preset no longer describes what is on the page - paging
         // replaces its claim rather than leaving it beside a window it
         // did not choose (Review #295).
@@ -1034,13 +1039,17 @@ export function interrogable(table, specs, total, depth = 0) {
         refresh();
       };
       prev.addEventListener("click", () => {
-        offset = Math.max(0, offset - TABLE_OPENS_BOUNDED_ABOVE);
+        offset = Math.max(0, offset - size);
         step();
       });
       next.addEventListener("click", () => {
-        const denom = state.filtered ?? total;
-        offset = Math.min(offset + TABLE_OPENS_BOUNDED_ABOVE,
-                          Math.max(0, denom - TABLE_OPENS_BOUNDED_ABOVE));
+        // From the end of what is shown, so `Top 10` then Next is rows 11-35; `pagerRefresh` clamps it.
+        offset = paging ? offset + size : (state.top?.n ?? size);
+        step();
+      });
+      pager = el("span", { class: "table-pager" }, prev, position, next);
+      pager.addEventListener?.("bga:page", () => {
+        offset = Math.max(0, Number(pager.getAttribute("data-offset")) || 0);
         step();
       });
     }
@@ -1061,6 +1070,7 @@ export function interrogable(table, specs, total, depth = 0) {
       state.top = preset.value ? { n: Number(n), column: column || null }
         : preset.selectedIndex === -1 ? (opening?.top ?? null) : null;
       offset = 0;
+      ranking = state.top?.column ?? opening?.top.column ?? null;
       paging = false;
       refresh();
     });
@@ -1078,13 +1088,9 @@ export function interrogable(table, specs, total, depth = 0) {
     }
     state.preset = preset;
 
-    if (canPage) {
-      // Not paged at build time: at rest the table opens on `opening`'s
-      // own bound (Top 25, or the first `TABLE_OPENS_BOUNDED_ABOVE`),
-      // and the paging step only takes over once pressed.
-      prev.disabled = true;
-      pager = el("span", { class: "table-pager" }, prev, position, next);
-    }
+    // Not paged at build time: at rest the table opens on `opening`'s
+    // own bound, and the paging step only takes over once pressed.
+    if (prev) prev.disabled = true;
   }
 
   // UX-279: the noun, not the verb, and the count rather than a
@@ -1140,6 +1146,8 @@ export function interrogable(table, specs, total, depth = 0) {
     copyRows.title = `Copy the ${rows} shown in this table as ${form}, `
       + `with their published values`;
   };
+  // `UX-1185`: every `refresh` - a page step is a click, which no `input` listener hears.
+  relabel = label;
   label();
   copyRows.addEventListener("click", () => {
     const rows = shownRows();

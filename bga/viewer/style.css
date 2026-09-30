@@ -906,6 +906,8 @@ section[data-promoted] { border-left: 3px solid var(--accent); }
 /* UX-208 / UX-209: investigation affordances, and the rail. */
 .inspect { margin-left: var(--space-1); text-decoration: none; opacity: .55; margin-block: calc(var(--space-1) * -1); }
 .inspect:hover { opacity: 1; }
+/* On screen a name and its Inspect link are one line: the column widens, the row does not double. */
+@media screen { td:has(> a.inspect) { white-space: nowrap; } }
 .copy-sql { margin-top: var(--space-1); }
 /* UX-369: the query builder's one substitution. Inline with its label
    so it reads as a sentence the reader completes, not as a form. The

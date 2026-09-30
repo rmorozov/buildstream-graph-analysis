@@ -136,7 +136,8 @@ export function subsections(section, doc) {
     if (!target.getAttribute?.("id")) target.setAttribute?.("id", id);
     const item = doc.createElement("li");
     const link = doc.createElement("a");
-    link.href = `#${target.getAttribute?.("id") ?? id}`;
+    // A fold id is slugged DOM text; encode it so the href cannot carry markup.
+    link.href = `#${encodeURIComponent(target.getAttribute?.("id") ?? id)}`;
     link.setAttribute("data-toc-sub", id);
     link.textContent = String(name).trim();
     item.append(link);

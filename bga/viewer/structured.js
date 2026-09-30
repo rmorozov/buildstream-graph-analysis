@@ -550,6 +550,11 @@ export function renderStructured(key, value, hint = {}, node = undefined,
                 path);
 }
 
+/** `UX-1152` (styleguide §3d): one row with no element column is a record, drawn as pairs - an element row keeps its table's Inspect. */
+export function oneRecord(rows, hint, node) {
+  return rows.length === 1 && !elementColumn(columnSpecs(hint, rows, node));
+}
+
 /**
  * The table and its controls, with **no section around them**.
  *
@@ -1147,7 +1152,9 @@ export function interrogable(table, specs, total, depth = 0) {
   // number.** Its labels are the smallest and largest *rows* and a
   // count of rows; the p50 and p95 ticks are positions and nothing
   // else. A percentile worth printing enters the payload first.
-  const shape = distributionStrip(table, specs, total, state, refresh);
+  // `UX-1152` (styleguide §3d): at two rows or fewer the rows are the shape, and `Copy N rows` already counts them.
+  const few = total <= FEW_ROWS;
+  const shape = few ? null : distributionStrip(table, specs, total, state, refresh);
 
   // `UX-318` (§3a.3): **every capped or nested table offers focus.** A
   // table that opened bounded is hiding rows behind a Top-N; a nested
@@ -1175,7 +1182,7 @@ export function interrogable(table, specs, total, depth = 0) {
   // a reader tabbing through matches what a sighted reader sees
   // (WCAG 2.4.3/1.3.2); `style.css`'s `margin-left: auto` on `top-n`
   // still carries the "nothing shares its trailing space" guarantee.
-  const tools = el("div", { class: "table-tools" }, copyRows, box, badge,
+  const tools = el("div", { class: "table-tools" }, copyRows, box, few ? null : badge,
                             pager, asMarkdown, expand, shape,
                             state.preset ?? null);
   // The badge and the count are the same claim; refresh both together.
@@ -1260,9 +1267,11 @@ export function renderText(name, value) {
   }
   const head = text.slice(0, CELL_TEXT_CAP).replace(/\s+\S*$/, "");
   return el("details", { class: "long-text", "data-raw": text },
+            // `UX-1152`: the preview hides once open, so the text shows once; a count of chars is no label.
             el("summary", {},
-               el("span", {}, `${head}…`),
-               el("span", { class: "muted" }, ` ${text.length} chars`)),
+               el("span", { class: "long-text-head" }, `${head}… `),
+               el("span", { class: "long-text-more muted" }, "more"),
+               el("span", { class: "long-text-less muted" }, "less")),
             el("p", { class: "full-text" }, text));
 }
 
@@ -1272,3 +1281,5 @@ export function renderText(name, value) {
 // 122-deep critical path is 132 and does not. A bound that fired on
 // the ordinary case would train readers to reset it every load.
 export const TABLE_OPENS_BOUNDED_ABOVE = 40;
+// `UX-1152`: at or under this many rows a table's tools carry no badge and no strip.
+const FEW_ROWS = 2;

@@ -718,7 +718,7 @@ column re-read in round 73:
                  elements   landed   opened    words   controls    nodes
 golden                  4    3,800   15,618    7,144        427    2,498
 macro_micro            11    5,965   31,804   12,002        750    5,686
-budget, to 50 elts             7,600   38,200   13,200        800    7,900
+budget, to 50 elts             7,600   38,600   13,600        800    7,900
 
 scale               1,202    4,763   26,242   36,542      1,941   24,294
 budget, to 4,000 elts          7,000   32,000   41,000      2,300   27,500
@@ -860,6 +860,11 @@ caused it.
 Re-measured on the round's merged tree: macro_micro 37,743 px and
 12,769 words, xl 35,669 px, 9,456 words and 5,785 nodes - 457, 31 and
 831, 144, 215 of headroom.
+
+`UX-1152` moved the small class's height bound 38,200 -> 38,600 and
+words 13,200 -> 13,600: an element card's links read section titles,
+not ids - `macro_micro` 37,805 -> 38,201 px and 13,098 -> 13,441 words -
+and one-row records, folds and Whys the other 73 px and 33 words.
 
 `UX-1050` moved the 4,100 class's height 36,500 -> 43,500, words 9,600
 -> 13,200 and nodes 6,000 -> 7,500: `xl_both`, the 4,002-element run

@@ -32,7 +32,7 @@ import { findingAnchor, served } from "./primitives.js";
 import { byId, copyButton } from "./questions.js";
 import { recordSource } from "./rawjson.js";
 import { CONTROLS, classify } from "./shapes.js";
-import { ARRAY_INLINE_ITEMS, CELL_NEST_LIMIT, LIFTED_SECTION, OBJECT_INLINE_FIELDS, TABLE_OPENS_BOUNDED_ABOVE, foldedList, liftedCriticalPath, mapTable, renderStructured, renderTable } from "./structured.js";
+import { ARRAY_INLINE_ITEMS, CELL_NEST_LIMIT, LIFTED_SECTION, OBJECT_INLINE_FIELDS, TABLE_OPENS_BOUNDED_ABOVE, foldedList, liftedCriticalPath, mapTable, oneRecord, renderStructured, renderTable } from "./structured.js";
 import { renderPairs } from "./pairs.js";
 import { boundCards, columnCells } from "./tables.js";
 import { investigationsFor } from "./trace_context.js";
@@ -533,6 +533,7 @@ export function renderSection(key, value, hint = {}, node = undefined,
     if (control === CONTROLS.TABLE
         && value.every((item) => item && typeof item === "object"
                                  && !Array.isArray(item))) {
+      if (oneRecord(value, hint, node)) return renderPairs(key, value[0], hint, node);
       return renderTable(key, value, hint, node);
     }
     const body = control === CONTROLS.INLINE_LIST

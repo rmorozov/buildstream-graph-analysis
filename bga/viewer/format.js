@@ -691,11 +691,21 @@ export function childNode(node, key) {
  */
 export function quantityAt(schema, path) {
   let node = schema, key = null;
+  const above = [];
   for (const part of String(path ?? "").match(/[^.[\]]+|\[[^\]]*\]/g) ?? []) {
+    above.push(node);
     if (part.startsWith("[")) node = node?.items ?? node?.additionalProperties;
     else { node = childNode(node, part); key = part; }
   }
-  return key === null ? null : quantityFor(node, key);
+  if (key === null) return null;
+  // A table column's unit is declared on the row's `bga:columns`, not on a property.
+  if (!hintsOf(node)[QUANTITY]) {
+    for (const holder of above.slice(-2)) {
+      const column = (holder?.[COLUMNS] ?? []).find((c) => c.key === key);
+      if (column?.quantity) return column.quantity;
+    }
+  }
+  return quantityFor(node, key);
 }
 
 /**

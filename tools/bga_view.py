@@ -1129,10 +1129,10 @@ def _uncommented(text: str):
     the whole text can pair it with a `/*` anywhere above and delete
     everything in between.
 
-    It is still **not a minifier** and must not become one: code is left
-    exactly as written, so a stack trace from an exported page still
-    quotes the source. The only bytes it takes are comments, and the
-    whitespace that led into them.
+    It is still **not a minifier** and must not become one: no line is
+    joined, so a stack trace from an exported page still quotes the
+    source line. The only bytes it takes are comments, the whitespace
+    that led into them, and indentation outside a literal (`UX-1175`).
     """
     return _uncomment_js(text).splitlines()
 
@@ -1147,7 +1147,12 @@ _KEYWORDS_BEFORE_REGEX = frozenset(
 
 
 def _comment_spans(text: str):
-    """Yield `(start, end)` of every comment, literals excluded.
+    """Yield `(start, end)` of every comment, literals excluded."""
+    return ((start, end) for comment, start, end in _lexed_spans(text) if comment)
+
+
+def _lexed_spans(text: str):
+    """Yield `(is_comment, start, end)` of every comment and every literal.
 
     One pass. The states that matter are the ones in which a `//` or a
     `/*` is *not* a comment: the two quoted string forms, a template
@@ -1160,21 +1165,27 @@ def _comment_spans(text: str):
     while i < n:
         char = text[i]
         if char in "\"'":
-            i, prev, word = _close_string(text, i, char), char, ""
+            end = _close_string(text, i, char)
+            yield False, i, end
+            i, prev, word = end, char, ""
         elif char == "`":
-            i, prev, word = _close_template(text, i), "`", ""
+            end = _close_template(text, i)
+            yield False, i, end
+            i, prev, word = end, "`", ""
         elif char == "/" and i + 1 < n and text[i + 1] == "/":
             end = text.find("\n", i)
             end = n if end < 0 else end
-            yield i, end
+            yield True, i, end
             i = end
         elif char == "/" and i + 1 < n and text[i + 1] == "*":
             end = text.find("*/", i + 2)
             end = n if end < 0 else end + 2
-            yield i, end
+            yield True, i, end
             i = end
         elif char == "/" and (not prev or prev in _VALUE_MAY_FOLLOW or word in _KEYWORDS_BEFORE_REGEX):
-            i, prev, word = _close_regex(text, i), "/", ""
+            end = _close_regex(text, i)
+            yield False, i, end
+            i, prev, word = end, "/", ""
         else:
             if not char.isspace():
                 prev = char
@@ -1270,7 +1281,22 @@ def _uncomment_js(text: str) -> str:
         out.append("\n" * text.count("\n", start, end))
         at = end
     out.append(text[at:])
-    return "\n".join(line for line in "".join(out).splitlines() if line.strip())
+    return "\n".join(line for line in _unindented_js("".join(out)).splitlines() if line.strip())
+
+
+def _unindented_js(text: str) -> str:
+    """`text` with each line's indentation gone, unless the line starts inside a literal."""
+    inside = set()
+    for comment, start, end in _lexed_spans(text):
+        at = -1 if comment else text.find("\n", start, end - 1)
+        while at >= 0:
+            inside.add(at + 1)
+            at = text.find("\n", at + 1, end - 1)
+    lines, at = [], 0
+    for line in text.split("\n"):
+        lines.append(line if at in inside else line.lstrip(" \t"))
+        at += len(line) + 1
+    return "\n".join(lines)
 
 
 def _uncommented_css(text: str) -> str:
@@ -1284,9 +1310,14 @@ def _uncommented_css(text: str) -> str:
     only form, and a `/*` inside a `content:` string would be the only
     hazard, which this file does not have and a guard would catch.
 
-    Indentation goes too; CSS never reads it (1,097 B in round 154).
+    Whitespace outside a quoted string goes too, where no selector or
+    value reads it: around `{ } ; ,` and after `:` (`UX-1175`).
     """
-    return "\n".join(line.strip() for line in re.sub(r"/\*.*?\*/", "", text, flags=re.S).splitlines() if line.strip())
+    parts = re.split(r"(\"[^\"\n]*\"|'[^'\n]*')", re.sub(r"/\*.*?\*/", "", text, flags=re.S))
+    for index in range(0, len(parts), 2):
+        code = re.sub(r"\s*([{};,])\s*", r"\1", re.sub(r"\s+", " ", parts[index]))
+        parts[index] = re.sub(r":\s", ":", code).replace(";}", "}")
+    return "".join(parts).strip()
 
 
 def _degradation_steps():

@@ -450,6 +450,11 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 }
 .pairs dt { color: var(--muted); min-width: 0; }
 .pairs dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+/* `UX-1145` (styleguide §6e.10): compact has no room for two columns - a term stacks above its value. */
+@media (max-width: 60rem) {
+  .pairs { grid-template-columns: minmax(0, 1fr); row-gap: 0; }
+  .pairs dd + dt { margin-top: var(--space-2); }
+}
 details { margin: var(--space-1) 0; }
 /* `UX-1025` (styleguide §6e.13): one disclosure glyph pair, ▸ closed
    and ▾ open - the same pair the boxed fold buttons already use
@@ -725,6 +730,8 @@ input.table-filter { max-width: 100%; }
     padding: var(--space-2) 0 var(--space-3); margin: 0 0 var(--space-4);
     max-height: 60vh;
   }
+  /* `UX-1145`: a folded rail is a bar and scrolls away - header and rail stuck 168 of 844 px; an opened one stays. */
+  body[data-has-toc] > .toc[data-folded="true"] { position: static; }
   body[data-has-toc] > .toc ul { display: flex; }
   body[data-has-toc] > .toc a { display: inline; white-space: normal; }
   /* `UX-397`: the handoff stays when the rail folds. A folded rail
@@ -830,6 +837,8 @@ th .th-filter.unparsed { border-color: var(--bad); border-style: dashed; }
                     align-items: baseline; flex-wrap: wrap; }
 .decision .action .worth { color: var(--muted); font-size: var(--font-small); }
 .decision .action .why { font-size: var(--font-small); }
+/* `UX-1152`: every Why opens on a row of its own, below its element - not beside it where there is room. */
+.decision .action > details.why-ranked[open] { flex-basis: 100%; }
 /* UX-669 (§1e): the runbook. Three blocks a reader reads downward -
    why, the command, where it came from - so the command keeps its own
    line however long it is, and the citation does not trail the Copy
@@ -855,11 +864,12 @@ th .th-filter.unparsed { border-color: var(--bad); border-style: dashed; }
   letter-spacing: .04em; color: var(--muted);
   border: 1px solid var(--line); border-radius: .2rem; padding: 0 var(--space-1);
   vertical-align: middle;
-  /* `UX-1043`: always a flex item of the head that also carries the
-     JSON toggle - shrinks past its own longest word so a promoted
-     section's tag never pushes the toggle past the head's edge. */
-  min-width: 0; overflow-wrap: anywhere;
+  /* `UX-1043`, `UX-1145`: a flex item of the head beside the JSON toggle -
+     it shrinks to its longest reader's chip and no further; the title shrinks past that. */
+  min-width: min-content;
 }
+/* `UX-1145`: a reader's chip is one line; the tag breaks between readers. */
+.reader-chip { white-space: nowrap; }
 /* UX-668 (styleguide §4 rule 7): a reader is a shape, not a hue - §4.2's
    accent marks promotion on a border, the one channel §4.3 reserves. */
 section[data-promoted] { border-left: 3px solid var(--accent); }
@@ -1137,6 +1147,9 @@ nav.toc[data-focus-inert="true"] {
    value stays selectable once opened. */
 details.long-text > summary { cursor: pointer; }
 details.long-text .full-text { white-space: pre-wrap; margin: var(--space-2) 0 0; }
+/* `UX-1152`: open, the fold shows its text once - the preview goes, and the label says so. */
+details.long-text:not([open]) > summary > .long-text-less,
+details.long-text[open] > summary > :is(.long-text-head, .long-text-more) { display: none; }
 
 /* UX-271: the rail nests one level. Indented, quieter than its parent,
    and collapsed to nothing when the section it belongs to is not the
@@ -1262,6 +1275,16 @@ h2:has(> button.json-toggle), h3:has(> button.json-toggle) {
 button.json-toggle {
   margin-left: auto;
   flex: none;
+}
+/* `UX-1145`: compact has no room for title, chips and toggle on one row - the chips take a row under them. */
+@media (max-width: 60rem) {
+  h2:has(> button.json-toggle), h3:has(> button.json-toggle) {
+    display: grid; grid-template-columns: auto minmax(0, 1fr) auto; column-gap: var(--space-2);
+  }
+  :is(h2, h3) > button.json-toggle { grid-area: 1 / 3; margin-left: 0; }
+  :is(h2, h3):has(> button.json-toggle) > .reader-tag {
+    grid-row: 2; grid-column: 1 / -1; justify-self: start; margin-left: 0;
+  }
 }
 button.json-toggle:hover { color: var(--fg); }
 .section-json pre {

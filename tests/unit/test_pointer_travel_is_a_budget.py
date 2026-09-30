@@ -61,18 +61,21 @@ DX_ONLY = ("button.copy-rows", "select.top-n")
 #: every value) after `UX-1055`'s reorder; J2 is its worst chapter. J4
 #: (table tools) is the journey `UX-1055`'s own Decomposition names as
 #: extended; `UX-1044`'s fold label lengthens both_scale 390 J3; `UX-1137` and `UX-1143` (the capacity lead) re-base both 390 J3s;
-#: `UX-1153`'s one-line command puts macro_micro 390's Copy on the first
-#: screen; round 154's merged tree re-measured.
+#: `UX-1153`'s one-line command puts macro_micro 390's Copy on the first screen;
+#: `UX-1145` re-bases both 390 rows (stacked pairs, chips on their own row);
+#: `UX-1152` re-bases all four (a one-row record drawn as pairs, Why below its row).
+#: Round 154's merged tree re-measured, 3 runs.
 MEASURED = {
-    ("macro_micro", 1440): {"J1": (4.53, 0), "J2": (18.5, 0), "J3": (15.67, 38172), "J4": (14.8, 11761)},
-    ("macro_micro", 390): {"J1": (4.37, 0), "J2": (17.58, 0), "J3": (24.39, 51554), "J4": (9.99, 17717)},
+    ("macro_micro", 1440): {"J1": (4.53, 0), "J2": (18.5, 0), "J3": (16.49, 38172), "J4": (14.8, 11761)},
+    ("macro_micro", 390): {"J1": (4.37, 478), "J2": (17.58, 0), "J3": (24.39, 53273), "J4": (9.99, 18791)},
     ("both_scale", 1440): {"J1": (4.48, 0), "J2": (19.67, 0), "J3": (12.49, 45945), "J4": (14.78, 12568)},
-    ("both_scale", 390): {"J1": (1.68, 771), "J2": (18.94, 0), "J3": (30.88, 60426), "J4": (10.63, 22257)},
+    ("both_scale", 390): {"J1": (1.73, 825), "J2": (18.94, 0), "J3": (30.88, 60426), "J4": (10.63, 22737)},
 }
 HEADROOM_BITS = 0.5
 HEADROOM_WHEEL = 1.10
-#: Chapters no section of which offers ?, JSON and fold together.
-UNOFFERED = {"macro_micro": ["change"], "both_scale": ["compare"]}
+#: Chapters no section of which offers ?, JSON and fold together. `UX-1152`: `change`
+#: now does - its one-row section is a pair list, which carries a ? door.
+UNOFFERED = {"macro_micro": [], "both_scale": ["compare"]}
 
 _PRELUDE = r"""
 const frames = (n) => new Promise((r) => {

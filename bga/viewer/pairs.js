@@ -11,8 +11,8 @@ import { COLUMNS, DIRECTION, QUESTION, PRESETS, INLINE, LEAD, attachBlockDoor,
          title } from "./format.js";
 import { identify, labelFor } from "./controls.js";
 import { applyPreset, boundPairs, sortable } from "./tables.js";
-import { TABLE_OPENS_BOUNDED_ABOVE, buildTable, renderStructured, renderText }
-  from "./structured.js";
+import { TABLE_OPENS_BOUNDED_ABOVE, buildTable, oneRecord, renderStructured,
+         renderText } from "./structured.js";
 
 // UX-268: the element-keyed signals are one table, not six.
 //
@@ -285,7 +285,10 @@ export function renderPairs(key, object, hint = {}, node = undefined,
       // `buildTable`, not `renderTable`: a cell must not contain a
       // `<section>`. This was the last of them (`UX-267`) - measured,
       // three sections still lived inside `<dd>` after the rest moved.
-      {
+      if (oneRecord(value, hintsOf(child), child)) {
+        const record = renderPairs(name, value[0], {}, child);
+        cell = [...record.children].find((n) => n.tagName === "DL") ?? record;
+      } else {
         const built = buildTable(name, value, hintsOf(child), child);
         cell = el("div", { class: "map-table", "data-bounded": "map" },
                   built.tools, built.table);

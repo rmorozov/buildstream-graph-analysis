@@ -29,6 +29,7 @@ import {
 // `views.js` inlines above this file (`dev_js_deps.py --order`).
 import { declareReaders, renderBand, verdictMarker,
          verdictMarkers } from "./views.js";
+import { sectionLabel } from "./nav.js";
 
 // -------------------------------------------------- the element object
 //
@@ -563,8 +564,9 @@ export function renderElementSections(payload, root, options = {}) {
     }
     const key = owner?.getAttribute?.("data-section");
     if (!key || key.startsWith("element-")) continue;
-    if (!places.has(uid)) places.set(uid, new Set());
-    places.get(uid).add(key);
+    if (!places.has(uid)) places.set(uid, new Map());
+    // `UX-1152`: the link reads the section's own title, the one the rail shows.
+    places.get(uid).set(key, sectionLabel(owner, key));
   }
 
   const sections = [];
@@ -767,12 +769,13 @@ function elementSection(record, places, investigate, format, bounded = null) {
     const where = document.createElement("p");
     where.className = "where muted";
     where.append(document.createTextNode("Also in: "));
-    for (const key of [...places].sort()) {
+    const named = [...places].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
+    for (const [at, [key, name]] of named.entries()) {
       const link = document.createElement("a");
       link.setAttribute("href", `#${key}`);
       link.setAttribute("data-where", key);
-      link.textContent = key.replace(/[-_]/g, " ");
-      where.append(link, document.createTextNode(" "));
+      link.textContent = name;
+      where.append(link, document.createTextNode(at < named.length - 1 ? " · " : ""));
     }
     section.append(where);
   }

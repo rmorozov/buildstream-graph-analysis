@@ -135,7 +135,9 @@ LANDED_HEIGHT_PX = 7_600
 #: is the regular class's own bound and was never asked at this width.
 #: Measured: `golden` 8,308 px, `macro_micro` 11,193 px - headroom kept
 #: under 200 px each, the convention above.
-COMPACT_LANDED_HEIGHT_PX = {"golden": 8_500, "macro_micro": 11_400}
+#: `UX-1145`: 8,500 -> 8,800 and 11,400 -> 11,800. A pair stacks its term
+#: above its value in compact: 8,688 and 11,604 measured, 112 and 196 of headroom.
+COMPACT_LANDED_HEIGHT_PX = {"golden": 8_800, "macro_micro": 11_800}
 
 #: `UX-367`: the opened bounds, per size class, largest class last.
 #: Each row is `(elements at most, opened px, words, controls, nodes)`,
@@ -372,7 +374,11 @@ BUDGETS = (
     # The UI batch: words 12,800 -> 13,200. macro_micro reads 13,046;
     # `UX-1034`'s reader words, `UX-1021`'s block doors and `UX-1031`'s
     # `bga:grows` descriptions are words and nothing else. 154 of headroom.
-    (50, 38_200, 13_200, 800, 7_900),
+    # `UX-1152`: px 38,200 -> 38,600, words 13,200 -> 13,600. An element
+    # card's links read section titles, not ids: macro_micro 37,805 ->
+    # 38,201 px, 13,098 -> 13,441 words; the one-row records, folds and
+    # Whys the other 73 px and 33 words. 399 and 159 of headroom.
+    (50, 38_600, 13_600, 800, 7_900),
     # `UX-1050`: px 36,500 -> 43,500, words 9,600 -> 13,200, nodes
     # 6,000 -> 7,500 on the 4,100 class: `xl_both` (Plane 2 and a store)
     # reads 42,982 px, 12,872 words, 7,209 nodes; Plane 2's cost is flat

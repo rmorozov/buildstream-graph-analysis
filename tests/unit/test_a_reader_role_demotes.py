@@ -126,7 +126,7 @@ _DRIVE = r"""
   const shape = () => {
     const sections = [...document.querySelectorAll("section[data-section]")];
     return {
-      nodes: document.querySelectorAll("*").length,
+      nodes: document.querySelectorAll("*:not([data-reader-tag] *)").length,  // `UX-1145`: a tag holds one chip per reader
       keys: sections.map((s) => s.getAttribute("data-section")),
       text: sections
         .filter((s) => s.getAttribute("data-section") !== "decision")

@@ -12,7 +12,7 @@
  */
 import { commandLine, identify, labelFor } from "./controls.js";
 import {
-  SVG, svg, seconds, mib, bar, OVERVIEW_SHOWN, elementAnchor,
+  SVG, svg, seconds, mib, bar, OVERVIEW_SHOWN, elementAnchor, plainValue,
 } from "./primitives.js";
 import {
   SCALE, GRADE_ANNOTATION, GRADE_EXHIBIT, exhibitAxis, exhibitTwin,
@@ -184,7 +184,7 @@ export function renderProvenance(provenance, options = {}) {
       value.textContent = ref.resolved === false
         ? "unresolved"
         : (ref.elided ? `${ref.elided} - follow the path`
-                      : String(ref.value));
+                      : plainValue(ref.value));
       list.append(term, value);
     }
     details.append(list);

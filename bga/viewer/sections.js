@@ -28,7 +28,7 @@ import { resolvePath } from "./element.js";
 import { COLUMNS, DECOMPOSITION, DISTRIBUTION, INLINE, INTERVAL, KEYED_BY, KEYED_BY_TASK_UID, QUANTITY, RUNBOOK, SERIES, SEVERITY, attachBlockDoor, bytes, childNode, cssId, describedTerm, el, guessQuantity, heading, hintsOf, keyAsShown, quantity, quantityFor, sectionHead, title } from "./format.js";
 import { matches } from "./nav.js";
 import { handOff } from "./perfetto.js";
-import { findingAnchor, served } from "./primitives.js";
+import { findingAnchor, plainValue, served } from "./primitives.js";
 import { byId, copyButton } from "./questions.js";
 import { recordSource } from "./rawjson.js";
 import { CONTROLS, classify } from "./shapes.js";
@@ -88,7 +88,7 @@ export function renderFindingEvidence(evidence, node = undefined) {
                  "data-field": key,
                  "data-raw": value === null ? "" : String(value) },
          typeof value === "number" ? quantity(value, kind)
-           : value === null ? "—" : String(value),
+           : plainValue(value),
          describe));
   }
   attachBlockDoor(list, doors);
@@ -670,7 +670,7 @@ export function renderSummary(payload, hints) {
         class: typeof value === "number" ? "num" : null,
         "data-raw": value === null ? "" : String(value),
       }, typeof value === "number" ? quantity(value, kind)
-         : value === null ? "—" : String(value)), describe));
+         : plainValue(value)), describe));
   }
   attachBlockDoor(list, doors);
   return el("section", { "data-section": "summary" },

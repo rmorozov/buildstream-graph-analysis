@@ -3803,7 +3803,14 @@ _ANALYZE_HINTS = {
         "description": "Whether this run's capacities suited its work - "
         "and whether the checks could run at all. A check "
         "that did not run is inert, not passing.",
+        LEAD: "verdict",
         "properties": {
+            "verdict": {
+                "type": "string",
+                "description": "The three booleans below as one sentence: "
+                "whether the capacity matched demand, and whether "
+                "the checks could run at all.",
+            },
             "oversubscribed": {
                 INLINE: "caveat",
                 "description": "Whether the run asked for more parallelism "

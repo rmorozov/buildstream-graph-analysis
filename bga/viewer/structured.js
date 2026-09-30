@@ -13,7 +13,7 @@
  * - is a parameter, which is why the crossing count was taken with
  * comments and strings stripped and then read, rather than trusted.
  */
-import { served } from "./primitives.js";
+import { plainValue, served } from "./primitives.js";
 import { COPY_FORMAT_MIRROR, readCopyFormat, writeCopyFormat } from "./viewstate.js";
 import { COMMAND, QUANTITY, COLUMNS, SERIES, DISTRIBUTION, bytes, childNode,
          cssId, dataKeyed, el, elementColumn, guessQuantity, heading, hintsOf,
@@ -129,7 +129,7 @@ function inlineObject(value, node) {
         `${title(name, kind, dataKeyed(node, name))} `),
       el("span", { class: typeof member === "number" ? "num" : null,
                    "data-raw": member === null ? "" : String(member) },
-         member === null ? "—" : quantity(member, kind))));
+         typeof member === "number" ? quantity(member, kind) : plainValue(member))));
   }
   return el("span", { class: "inline-object" }, ...parts);
 }
@@ -663,7 +663,7 @@ export function buildTable(key, rows, hint = {}, node = undefined,
                                : `${key}.${rowId}.${column}`)
           : numeric ? quantity(raw, kind)
           : typeof raw === "string" ? renderText(column, raw)
-          : (raw ?? "—")));
+          : plainValue(raw)));
     }
     body.append(tr);
   }

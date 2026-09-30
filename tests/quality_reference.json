@@ -1,5 +1,5 @@
 {
-  "paths": ["bga/correlate.py", "bga/findings.py", "bga/schema_hints.py", "bga/schemas.py"],
+  "paths": ["bga/analyzer.py", "bga/schemas.py"],
   "files": {
     ".claude/hooks/agent_worktree_limits.py": {"duplicate_blocks": 0, "file_lines": 128, "longest_function": 23},
     ".claude/hooks/gate_covers_push.py": {"duplicate_blocks": 1, "file_lines": 168, "longest_function": 28},
@@ -7,7 +7,7 @@
     ".claude/hooks/selector_before_commit.py": {"duplicate_blocks": 0, "file_lines": 164, "longest_function": 20},
     ".claude/hooks/session_start.py": {"duplicate_blocks": 0, "file_lines": 84, "longest_function": 20},
     "bga/__init__.py": {"duplicate_blocks": 1, "file_lines": 105, "longest_function": 0},
-    "bga/analyzer.py": {"duplicate_blocks": 2, "file_lines": 2814, "longest_function": 328},
+    "bga/analyzer.py": {"duplicate_blocks": 0, "file_lines": 2835, "longest_function": 328},
     "bga/anonymize.py": {"duplicate_blocks": 0, "file_lines": 799, "longest_function": 48},
     "bga/artifact_weight.py": {"duplicate_blocks": 0, "file_lines": 225, "longest_function": 46},
     "bga/attribution/__init__.py": {"duplicate_blocks": 0, "file_lines": 19, "longest_function": 0},
@@ -66,7 +66,7 @@
     "bga/report/text.py": {"duplicate_blocks": 0, "file_lines": 1970, "longest_function": 258},
     "bga/run_store.py": {"duplicate_blocks": 1, "file_lines": 833, "longest_function": 78},
     "bga/schema_hints.py": {"duplicate_blocks": 0, "file_lines": 534, "longest_function": 164},
-    "bga/schemas.py": {"duplicate_blocks": 0, "file_lines": 6940, "longest_function": 62},
+    "bga/schemas.py": {"duplicate_blocks": 0, "file_lines": 6947, "longest_function": 62},
     "bga/sources.py": {"duplicate_blocks": 0, "file_lines": 527, "longest_function": 84},
     "bga/store_aggregate.py": {"duplicate_blocks": 0, "file_lines": 698, "longest_function": 140},
     "bga/structural/__init__.py": {"duplicate_blocks": 0, "file_lines": 27, "longest_function": 0},

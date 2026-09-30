@@ -4,7 +4,7 @@
  * Points down at `structured.js` for the table factory; nothing there
  * points back.
  */
-import { served } from "./primitives.js";
+import { plainValue, served } from "./primitives.js";
 import { COLUMNS, DIRECTION, QUESTION, PRESETS, INLINE, LEAD, attachBlockDoor,
          childNode, dataKeyed, describedTerm, el, guessQuantity, heading,
          hintsOf, adviceFor, keyAsShown, quantity, quantityFor, sectionHead,
@@ -256,6 +256,8 @@ export function renderPairs(key, object, hint = {}, node = undefined,
   const lead = typeof object?.[leadKey] === "string" ? object[leadKey] : null;
   for (const [name, value] of Object.entries(object)) {
     if (merged.has(name) || (lead !== null && name === leadKey)) continue;
+    // `UX-1150`: a lead answers its section's boolean group; the JSON view keeps them.
+    if (lead !== null && typeof value === "boolean") continue;
     // UX-270: the critical path is its own section, not a row inside
     // this one. It is also the one member that rendered a whole
     // `<section>` into a `<dd>` - the nesting UX-267 removed
@@ -314,7 +316,7 @@ export function renderPairs(key, object, hint = {}, node = undefined,
       cell = renderText(name, value);
     } else {
       cell = el("span", { "data-raw": value === null ? "" : String(value) },
-                value === null ? "—" : String(value));
+                plainValue(value));
     }
     // UX-201: the schema's own `description` is the sentence - the "why
     // does this number matter" answer sourced from the contract, and

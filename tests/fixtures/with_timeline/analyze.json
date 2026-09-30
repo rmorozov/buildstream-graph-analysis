@@ -192,7 +192,7 @@
         {
             "id": "joint-saving",
             "severity": "high",
-            "title": "Together, the top 3 are worth 23.1s (50% of the build) - more than the 16.1s they are worth one at a time - codegen.bst pays off only once core.bst is fixed, so work them in the order listed",
+            "title": "Together, the top 3 are worth 23.1s (50% of the build) - more than the 16.1s alone: codegen.bst pays off after core.bst",
             "detail": [],
             "elements": [
                 "core.bst",
@@ -206,7 +206,7 @@
                 "relation": "compound"
             },
             "reader": "local-optimizer",
-            "copy_text": "BGA finding: Together, the top 3 are worth 23.1s (50% of the build) - more than the 16.1s they are worth one at a time - codegen.bst pays off only once core.bst is fixed, so work them in the order listed\n  joint_saving_us 23.1s\n  sum_of_individual_us 16.1s\n  savings_add False\n  relation compound\n  Elements: core.bst, codegen.bst, lib-b.bst\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
+            "copy_text": "BGA finding: Together, the top 3 are worth 23.1s (50% of the build) - more than the 16.1s alone: codegen.bst pays off after core.bst\n  joint_saving_us 23.1s\n  sum_of_individual_us 16.1s\n  savings_add False\n  relation compound\n  Elements: core.bst, codegen.bst, lib-b.bst\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
             "trace_query": "waited-on-flow"
         },
         {
@@ -469,6 +469,7 @@
         "capacity_model_note": "LB/Efficiency Score certify against this run's recorded resource capacities (builders/fetchers/pushers), not real host CPU cores or any declared CPU budget - native build-system parallelism (--max-jobs) is a separate, currently unmodeled axis. Capacity checks (over/under-subscription, memory) did not run for this run - missing: native_max_jobs. They are inert here, not passing; a wrapped log records --max-jobs on its own first line, or declare the missing value explicitly at extraction time."
     },
     "capacity_verdict": {
+        "verdict": "The capacity checks did not run - native_max_jobs missing - so neither over- nor undersubscription was tested.",
         "oversubscribed": false,
         "undersubscribed": false,
         "checks_ran": false,
@@ -2264,10 +2265,10 @@
         }
     ],
     "document_shape": {
-        "leaves": 1524,
+        "leaves": 1525,
         "deepest_depth": 7,
         "deepest_path": "findings.[].evidence.steps.[].entering.[]",
         "deeper_than_three": 913,
-        "deeper_than_three_share": 0.5990813648293963
+        "deeper_than_three_share": 0.598688524590164
     }
 }

@@ -104,7 +104,7 @@ side is the only control that may render it.
 |---|---|---|
 | scalar + `bga:quantity` | formatted value with `data-raw` | unit per the quantity table; never a bare number |
 | scalar enum (declared) | badge | text + tone; tone never alone (§4) |
-| boolean / nullable presence | a sentence | "not captured" ≠ "zero" — absence is stated, never drawn |
+| boolean / nullable presence | a sentence | "not captured" ≠ "zero" — absence is stated, never drawn; a section's boolean group reads through its `bga:lead` sentence, a lone boolean reads `yes`/`no`, never `true`/`false`, and a null value cell reads `none`, never `—` (`UX-1150`) |
 | scalar + `description` | value, and its block's `?` door | the schema's sentence, on demand, beside the value (§2b.3, §6e.4) |
 | array of objects | table (§3) | declared columns; distribution strip when §2 applies |
 | array of objects + `bga:runbook` | **a runbook** — `ol` of *why, command, citation* | `UX-669` (§1e); rendered once, in the decision panel, and the section is a link to it |
@@ -175,7 +175,7 @@ sets equal in both directions.
 | `bga:series` | that an array is an ordered series, and the unit of one step | the sparkline and its sentence (§2) |
 | `bga:distribution` | that an object publishes percentiles, and where it counts | the density strip and its stated `n` (§2) |
 | `bga:inline` | that this value's sentence stays beside it rather than behind its `?` — `name` or `caveat` (§4a) | `describedTerm`, which then draws no door |
-| `bga:lead` | which member of a record section is its **answer**, a published sentence — the rest is the evidence under it | `p.section-lead` first under the heading, not a pair (`UX-1143`) |
+| `bga:lead` | which member of a record section is its **answer**, a published sentence — the rest is the evidence under it | `p.section-lead` first under the heading, not a pair; the section's booleans read only through it (`UX-1143`, `UX-1150`) |
 | `bga:decomposition` | that a section's numbers are a published total split into published parts, each named by its path | the decomposition bar and its sentence (§2d) |
 | `bga:interval` | that a set of published values compare on one axis, each named by its path | the interval and its sentence (§2d) |
 | `bga:keyed_by` | what a map's own **keys** are, where they are not names — `task_uid` today | the row's label (the element) and its `data-key` (the composite), `UX-391` |

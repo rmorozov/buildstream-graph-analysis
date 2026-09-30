@@ -361,6 +361,10 @@ export const FIELDS_DRAWN_ELSEWHERE = {
     sentence: "the decision panel's lead sentence (`decision.js`'s "
       + "`renderDecision`), word for word",
   },
+  duration_resolution: {
+    note: "the section's lead (`SECTION_ANSWERS`), the same claim in the page's units",
+    element_count: "the section's lead, which opens with the count",
+  },
 };
 
 //: `UX-401`: the fourth destination, and the only silent one allowed.

@@ -57,7 +57,7 @@ listed under its topic as `§6e.N`; since round 142 every one is binding.
 | | §3h | the rail shows every chapter, and only the sections of the chapter the reader is in | binding |
 | | §3l | pointer travel is a budget — a control class sits at one place, a journey's travel is bounded | binding |
 | | §6e.11 | find-in-page reaches folded content | binding |
-| | §6e.10 | two size classes, regular (≥ 60rem) and compact; budgets measured in both | binding |
+| | §6e.10 | two size classes, regular (≥ 60rem) and compact; budgets measured in both; compact stacks pairs and sticks only the header | binding |
 | **Budgets** | §3e | landed distance and opened volume are both bounded, per size class | binding |
 | | §3f | a bound is enforced at the largest size and in the mode people use | binding |
 | | §3g | a budget counts the unit its consumer spends | binding |
@@ -487,7 +487,7 @@ screens, per size class (§6e.10; `UX-1049`):
 - the document a reader lands on: see §3e's landed-height budget - one
   bound, in px, and not restated here;
 - every chapter's question sits within **9 screens at 1440x900** and
-  **13 screens at 390x844** of the top;
+  **13.5 screens at 390x844** of the top;
 - and a chapter's first section begins within **half a screen** of its
   own heading.
 
@@ -877,6 +877,8 @@ Spacing, not new blocks; 129 of headroom.
 (`macro_micro`), bounded at 8,500 and 11,400 - the same
 fifth-of-headroom convention, per class rather than shared, because a
 narrow viewport does not fold the same content into the same pixels.
+`UX-1145` stacked a pair's term above its value in compact: 8,688 and
+11,604 measured, bounded at 8,800 and 11,800.
 
 `tests/unit/test_the_page_has_a_volume_budget.py` asserts both budgets
 in **one** guard, so a change trading one for the other has to say so.
@@ -1359,7 +1361,7 @@ distinct margin/padding/gap lengths                23 in style.css
 | 7 | **Accessibility: targets** | every control's hit area is at least 24x24 CSS px with a fine pointer and 44x44 with a coarse one — stricter than WCAG 2.2 AA, below; a small glyph takes padding, not a bigger glyph | door 14x14px | 2 | both pointers, links included, below |
 | 8 | **Accessibility: keyboard** | one focus ring, 2px accent, on every focusable element; Tab follows reading order; Escape leaves table focus | a designed ring on `button` only | 1 | the keyboard journey, below |
 | 9 | **Charts** | a drawing's accessible name is its sentence (§6), and every drawing shape has an accessible route to its labelled values | 20 of 23 unnamed | 1 | the name and the route, below |
-| 10 | **Adaptivity** | two size classes, regular (≥ 60rem) and compact; the budgets (§3c, §3e) are measured in both, and compact draws no empty chrome | budgets at 1440x900 only; an empty band under "Sections" at 390px | 2 | the volume guard gains a compact column |
+| 10 | **Adaptivity** | two size classes, regular (≥ 60rem) and compact; the budgets (§3c, §3e) are measured in both, and compact draws no empty chrome; in compact a term stacks above its value, a chip is one line, and only the header sticks (`UX-1145`) | budgets at 1440x900 only; an empty band under "Sections" at 390px | 2 | the volume guard gains a compact column |
 | 11 | **Search** | find-in-page reaches folded content: a folded chapter's sections are `hidden="until-found"`, and the reveal goes through the same state setter as the chapter's control | 5 of 6 chapters are `display: none` to Ctrl+F | 1 | find, fragments, controls and print, below |
 | 12 | **Clarity** | an absence is one sentence: what is missing, why, and the command that fills it; no punctuation around an empty value | the header's orphan "—" with the reader "anyone" | 2 | booted: no separator beside an empty node |
 | 13 | **Progressive disclosure** | one glyph pair, ▸ closed and ▾ open, at the start of the label; the label names the content and its count first; a nested fold then adds §3a.1's depth after it ("inputs: 2 rows, 1 level"), never the depth alone | "1 level, 2 rows" | 2 | booted: one glyph pair; no label is depth and count alone |
@@ -2306,7 +2308,7 @@ headings, so a renumber there moves it.
 | §6b | `test_one_factory_builds_every_table.py`, `test_the_handoff_rides_the_rail.py` | |
 | §6c | `test_the_browser_is_the_library.py`, `test_the_report_you_can_attach.py`, `test_find_in_page_reaches_folded_chapters.py` | |
 | §6d | `test_every_control_has_a_resting_appearance.py` | |
-| §6e | `test_a_reader_never_sees_the_register.py`, `test_an_absence_is_one_sentence.py`, `test_one_disclosure_glyph_pair.py`, `test_one_door_per_block.py`, `test_the_chain_folds_and_clicks_are_counted.py`, `test_the_heading_outline_has_three_levels.py`, `test_spacing_comes_from_a_scale.py`, `test_controls_meet_the_target_size.py`, `test_every_control_has_a_resting_appearance.py`, `test_a_new_control_class_lands_declared.py`, `test_a_keyboard_journey_reaches_every_chapter.py`, `test_every_drawing_has_a_name_and_a_data_route.py`, `test_find_in_page_reaches_folded_chapters.py`, `test_the_page_has_a_volume_budget.py`, `test_a_chapter_fold_has_one_place_and_one_label.py` | binding since round 142; each rule's guard is the one its row (`UX-1015`-`UX-1027`) closed with |
+| §6e | `test_a_reader_never_sees_the_register.py`, `test_an_absence_is_one_sentence.py`, `test_one_disclosure_glyph_pair.py`, `test_one_door_per_block.py`, `test_the_chain_folds_and_clicks_are_counted.py`, `test_the_heading_outline_has_three_levels.py`, `test_spacing_comes_from_a_scale.py`, `test_controls_meet_the_target_size.py`, `test_every_control_has_a_resting_appearance.py`, `test_a_new_control_class_lands_declared.py`, `test_a_keyboard_journey_reaches_every_chapter.py`, `test_every_drawing_has_a_name_and_a_data_route.py`, `test_find_in_page_reaches_folded_chapters.py`, `test_the_page_has_a_volume_budget.py`, `test_a_chapter_fold_has_one_place_and_one_label.py`, `test_the_compact_class_stacks_pairs.py` | binding since round 142; each rule's guard is the one its row (`UX-1015`-`UX-1027`) closed with |
 | §7 | `test_emphasis_is_a_budget.py`, `test_the_styleguide_names_its_guards.py` | named |
 
 What the rows with no guard were written from, rounds 58 and 69, kept

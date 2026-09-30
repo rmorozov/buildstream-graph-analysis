@@ -135,7 +135,9 @@ LANDED_HEIGHT_PX = 7_600
 #: is the regular class's own bound and was never asked at this width.
 #: Measured: `golden` 8,308 px, `macro_micro` 11,193 px - headroom kept
 #: under 200 px each, the convention above.
-COMPACT_LANDED_HEIGHT_PX = {"golden": 8_500, "macro_micro": 11_400}
+#: `UX-1145`: 8,500 -> 8,800 and 11,400 -> 11,800. A pair stacks its term
+#: above its value in compact: 8,688 and 11,604 measured, 112 and 196 of headroom.
+COMPACT_LANDED_HEIGHT_PX = {"golden": 8_800, "macro_micro": 11_800}
 
 #: `UX-367`: the opened bounds, per size class, largest class last.
 #: Each row is `(elements at most, opened px, words, controls, nodes)`,

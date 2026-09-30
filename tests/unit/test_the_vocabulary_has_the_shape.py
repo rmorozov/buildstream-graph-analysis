@@ -87,6 +87,8 @@ _LOOK = """
           title: (mark.querySelector("title")?.textContent || "").trim(),
         })),
       twin: node.querySelectorAll('[data-role="drawing-twin"] tbody tr').length,
+      axis: [...node.querySelectorAll("line.interval-rule")].map(
+        (rule) => [Number(rule.getAttribute("x1")), Number(rule.getAttribute("x2"))])[0] ?? null,
     }));
   return {
     decomposition: read("decomposition"),
@@ -285,10 +287,12 @@ class TestTheDeclaredDrawingsAreDrawn:
         for one in out["interval"]:
             assert one["drawn"] == "true", one
             assert one["marks"], one
+            # `UX-1153`: the drawn rule is the axis (inset by a mark's radius so an
+            # end mark stays whole); a declared 0..1 share sits at its value along it.
+            low, high = one["axis"]
+            assert high - low > 80, one["axis"]
             for mark in one["marks"]:
-                # The declared axis is 0..1 for a share, so the position
-                # in the 100-unit viewBox is the value times a hundred.
-                want = float(mark["raw"]) * 100
+                want = low + float(mark["raw"]) * (high - low)
                 assert abs(mark["at"] - want) < 1, (one["section"], mark, want)
 
     def test_every_mark_names_itself(self, browser, booted, label):

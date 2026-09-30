@@ -108,7 +108,10 @@ class TestOneAccentAndNoSecondPalette:
     # Set from JavaScript rather than in the stylesheet, with the site
     # that sets it. A custom property nothing declares anywhere is the
     # `--muted-bg` defect; one the *page* sets at runtime is a channel.
-    SET_BY_THE_PAGE = {"w": "views.js sets it per horizon bar"}
+    SET_BY_THE_PAGE = {
+        "w": "views.js sets it per horizon bar",
+        "at": "drawings.js sets it per decomposition tick (UX-1153)",
+    }
 
     def test_every_token_used_is_a_token_declared(self):
         declared = set(re.findall(r"--([\w-]+)\s*:", CSS))

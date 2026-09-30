@@ -128,8 +128,10 @@ export function renderFindings(findings, investigate = null, node = undefined,
     // UX-1148: an indented finding is a note on the card above, not a rank of its own.
     const noteOf = finding.indent && ranked ? ranked : null;
     if (!noteOf) ranked = finding.id ?? "";
-    const detail = Array.isArray(finding.detail)
-      ? finding.detail : (finding.detail ? [finding.detail] : []);
+    // UX-1149: the detail line leads with its sentence, not an arrow.
+    const detail = (Array.isArray(finding.detail)
+      ? finding.detail : (finding.detail ? [finding.detail] : []))
+      .map((line) => String(line).replace(/^\s*->\s*/, ""));
     const article = el("article",
       { class: "finding", id: findingAnchor(finding.id), "data-severity": severity,
         "data-finding-id": finding.id ?? "", "data-note-of": noteOf },
@@ -143,9 +145,7 @@ export function renderFindings(findings, investigate = null, node = undefined,
     article._hydrate = () => {
       // UX-1136: native `append` prints a null child as the text "null"; `el` skips it.
       article.append(...[
-        // UX-1149: the detail line leads with its sentence, not an arrow.
-        ...(drawnIn ? [] : detail).map((line) => el("p", { class: "detail muted" },
-                                   String(line).replace(/^\s*->\s*/, ""))),
+        ...(drawnIn ? [] : detail).map((line) => el("p", { class: "detail muted" }, line)),
         drawnIn
           ? el("p", { class: "section-link" }, "The evidence: ",
                el("a", { href: `#${drawnIn}`, "data-section-link": drawnIn },
@@ -164,7 +164,7 @@ export function renderFindings(findings, investigate = null, node = undefined,
                 i ? ", " : "", elementLink(uid)]))
           : null,
         drawnIn ? null : renderFindingEvidence(finding.evidence, evidenceNode,
-                                               new Set(detail.map((line) => String(line).trim()))),
+                                               new Set(detail.map((line) => line.trim()))),
         // UX-229: the chain behind this finding, from the published
         // record. `views.js` draws it, so the decision panel and every
         // finding show one shape.
@@ -770,7 +770,10 @@ function leadWith(section, key, value, payload) {
   const said = SECTION_ANSWERS[key]?.(value, payload);
   const own = (node, tag) => [...(node?.children ?? [])].filter(
     (child) => String(child.tagName).toLowerCase() === tag);
-  const head = [...own(section, "h2"), ...own(section, "h3")][0];
+  // UX-1147: `headRow` may have wrapped the heading in its `div.section-head`.
+  const head = [...(section?.children ?? [])].find(
+    (child) => String(child.className ?? "").split(" ").includes("section-head"))
+    ?? [...own(section, "h2"), ...own(section, "h3")][0];
   if (!said || !head) return;
   const lead = el("p", { class: "section-answer", "data-role": "section-answer" }, said);
   section.insertBefore(lead, head.nextSibling ?? null);

@@ -44,7 +44,8 @@ _MEASURE = (
   for (const id of __PLANE2__) {
     const section = document.getElementById(id);
     if (!section) continue;
-    const first = [...section.children].find((child) => child.tagName !== "H3");
+    const first = [...section.children].find(
+      (child) => child.tagName !== "H3" && !child.classList.contains("section-head"));
     const text = first ? first.textContent.trim() : "";
     out.sections[id] = { first: first ? first.tagName + "." + first.className : null, text };
     const pairs = [...section.querySelectorAll(":scope > dl.pairs > dt")].map(

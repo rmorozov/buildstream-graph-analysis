@@ -129,7 +129,14 @@ FIXTURES = {
 #
 # `macro_micro` stays at 0.58 - it moved the same direction but has
 # more headroom (11 elements' worth of chains against golden's 4).
-DEEPER_THAN_THREE = {"golden": (0.574, 0.52), "macro_micro": (0.671, 0.58)}
+#
+# `UX-1187` moves the golden bound 0.52 -> 0.53 on the owner's pending
+# card, default taken: `elements.fan_in.<uid>.dependents` and
+# `dependent_count`, depth four by the `fan_in` construction above.
+#
+#     golden       855 -> 861 leaves, 444 -> 450 deep, 0.5193 -> 0.5226
+#     macro_micro 2666 -> 2711 leaves, 1291 -> 1336 deep, 0.4842 -> 0.4928
+DEEPER_THAN_THREE = {"golden": (0.574, 0.53), "macro_micro": (0.671, 0.58)}
 
 #: `macro_micro` keeps a seventh level, argued in the item: a step's
 #: `entering` list is four real relations, not a namespace.

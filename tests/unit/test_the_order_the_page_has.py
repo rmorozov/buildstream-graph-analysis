@@ -352,7 +352,6 @@ INTENDED_ORDER = [
     "overview",
     "findings",
     "headline",
-    "next_steps",
     "blast",
     "elements",
     "graph_metrics",
@@ -442,7 +441,8 @@ class TestThePageReadsInTheOrderItShould:
         inside it - and `next_steps` is where the run prints
         `bga blast <target>` as the command to run."""
         order = _boot_order()
-        assert order.index("blast") == order.index("next_steps") + 1, order[:10]
+        # `UX-1146`: `next_steps` is drawn in the decision panel, not as a section.
+        assert order.index("blast") == order.index("headline") + 1, order[:10]
 
     def test_the_control_sits_beside_the_table_when_there_is_one(self):
         """The clause the item could not check when it was filed: both
@@ -458,4 +458,4 @@ class TestThePageReadsInTheOrderItShould:
         that matters. With a table present the control leaves the
         `next_steps` slot it takes without one."""
         order = _boot_order(inventory=SHARED_MONOREPO)
-        assert order.index("blast") > order.index("next_steps") + 1, order[:12]
+        assert order.index("blast") > order.index("headline") + 1, order[:12]

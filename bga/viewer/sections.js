@@ -25,14 +25,14 @@ import { chapters } from "./chapters.js";
 import { renderProvenance } from "./decision.js";
 import { GRADE_EXHIBIT, decomposition, interval, strip } from "./drawings.js";
 import { resolvePath } from "./element.js";
-import { COLUMNS, DECOMPOSITION, DISTRIBUTION, INLINE, INTERVAL, KEYED_BY, KEYED_BY_TASK_UID, QUANTITY, RUNBOOK, SERIES, SEVERITY, attachBlockDoor, bytes, childNode, cssId, describedTerm, el, guessQuantity, heading, hintsOf, keyAsShown, quantity, quantityFor, sectionHead, title } from "./format.js";
+import { COLUMNS, DECOMPOSITION, DISTRIBUTION, INLINE, INTERVAL, KEYED_BY, KEYED_BY_TASK_UID, QUANTITY, SERIES, SEVERITY, attachBlockDoor, bytes, childNode, cssId, describedTerm, el, guessQuantity, heading, hintsOf, keyAsShown, quantity, quantityFor, readerLabel, sectionHead, title } from "./format.js";
 import { matches } from "./nav.js";
 import { handOff } from "./perfetto.js";
-import { findingAnchor, served } from "./primitives.js";
+import { findingAnchor, plainValue, served } from "./primitives.js";
 import { byId, copyButton } from "./questions.js";
 import { recordSource } from "./rawjson.js";
 import { CONTROLS, classify } from "./shapes.js";
-import { ARRAY_INLINE_ITEMS, CELL_NEST_LIMIT, LIFTED_SECTION, OBJECT_INLINE_FIELDS, TABLE_OPENS_BOUNDED_ABOVE, foldedList, liftedCriticalPath, mapTable, renderStructured, renderTable } from "./structured.js";
+import { ARRAY_INLINE_ITEMS, CELL_NEST_LIMIT, LIFTED_SECTION, OBJECT_INLINE_FIELDS, TABLE_OPENS_BOUNDED_ABOVE, foldedList, liftedCriticalPath, mapTable, oneRecord, renderStructured, renderTable } from "./structured.js";
 import { renderPairs } from "./pairs.js";
 import { boundCards, columnCells } from "./tables.js";
 import { investigationsFor } from "./trace_context.js";
@@ -66,9 +66,11 @@ export const EVIDENCE_SHOWN = 4;
  * sentence from) is a table in its own right and is left to the
  * section that already draws it.
  */
-export function renderFindingEvidence(evidence, node = undefined) {
+export function renderFindingEvidence(evidence, node = undefined, said = new Set()) {
+  // `UX-1146`: a sentence the card's detail already printed is not evidence twice.
   const scalars = Object.entries(evidence ?? {}).filter(
-    ([, value]) => value === null || typeof value !== "object");
+    ([, value]) => (value === null || typeof value !== "object")
+      && !(typeof value === "string" && said.has(value.trim())));
   if (!scalars.length) return null;
 
   const list = el("dl", { class: "pairs evidence" });
@@ -88,11 +90,11 @@ export function renderFindingEvidence(evidence, node = undefined) {
                  "data-field": key,
                  "data-raw": value === null ? "" : String(value) },
          typeof value === "number" ? quantity(value, kind)
-           : value === null ? "—" : String(value),
+           : readerLabel(plainValue(value)),
          describe));
   }
-  attachBlockDoor(list, doors);
-  if (scalars.length <= EVIDENCE_SHOWN) return list;
+  const door = attachBlockDoor(list, doors);
+  if (scalars.length <= EVIDENCE_SHOWN) return [door, list];
   // UX-209's fold, for the same reason: the evidence is the point, and
   // eight rows of it above the next finding is a wall.
   //
@@ -107,32 +109,51 @@ export function renderFindingEvidence(evidence, node = undefined) {
             el("summary", {},
                `Evidence · 1 level, `
                + `${rows} row${rows === 1 ? "" : "s"}`),
-            list);
+            door, list);
 }
 
 // `UX-216`: a finding's element links to its section; `data-element` feeds the cross-reference.
 const elementLink = (uid) => el("a", { href: `#${cssId(uid)}`, "data-element": uid },
                                 el("code", {}, uid));
 
-export function renderFindings(findings, investigate = null, node = undefined) {
+export function renderFindings(findings, investigate = null, node = undefined,
+                               root = undefined, payload = undefined) {
   const section = el("section", { "data-section": "findings" },
     el("h2", {}, `Findings (${findings.length})`));
   const evidenceNode = childNode(node?.items, "evidence");
   const bound = TABLE_OPENS_BOUNDED_ABOVE;
+  let ranked = null;
+  // `UX-1156`: a detail line `attribution` draws as its bucket's advice is said there.
+  const advised = Object.values(payload?.attribution_hints ?? {});
   findings.forEach((finding, index) => {
     const severity = String(finding.severity ?? "info").toLowerCase();
-    const detail = Array.isArray(finding.detail)
-      ? finding.detail : (finding.detail ? [finding.detail] : []);
+    // UX-1148: an indented finding is a note on the card above, not a rank of its own.
+    const noteOf = finding.indent && ranked ? ranked : null;
+    if (!noteOf) ranked = finding.id ?? "";
+    // UX-1149: the detail line leads with its sentence, not an arrow.
+    const detail = (Array.isArray(finding.detail)
+      ? finding.detail : (finding.detail ? [finding.detail] : []))
+      .map((line) => String(line).replace(/^\s*->\s*/, ""));
     const article = el("article",
       { class: "finding", id: findingAnchor(finding.id), "data-severity": severity,
-        "data-finding-id": finding.id ?? "" },
+        "data-finding-id": finding.id ?? "", "data-note-of": noteOf },
       el("p", { class: "title" },
         el("span", { class: "badge" }, title(severity)),
         finding.title ?? finding.id ?? ""));
+    // `UX-1143`: a section on this page draws the evidence, so the card links there instead.
+    const drawnIn = finding.section && payload?.[finding.section]
+      ? finding.section : null;
     // UX-921: `_hydrate` appends the rest once; a second call no-ops.
     article._hydrate = () => {
-      article.append(
-        ...detail.map((line) => el("p", { class: "detail muted" }, line)),
+      // UX-1136: native `append` prints a null child as the text "null"; `el` skips it.
+      article.append(...[
+        ...(drawnIn ? [] : detail).filter((line) => !advised.includes(line))
+          .map((line) => el("p", { class: "detail muted" }, line)),
+        drawnIn
+          ? el("p", { class: "section-link" }, "The evidence: ",
+               el("a", { href: `#${drawnIn}`, "data-section-link": drawnIn },
+                  heading(drawnIn, hintsOf(childNode(root, drawnIn))).label))
+          : null,
         // UX-216: a finding names elements; each is a link to that
         // element's own section, and carries `data-element` so the
         // cross-reference finds this finding from the other direction.
@@ -145,7 +166,9 @@ export function renderFindings(findings, investigate = null, node = undefined) {
               ...finding.elements.flatMap((uid, i) => [
                 i ? ", " : "", elementLink(uid)]))
           : null,
-        renderFindingEvidence(finding.evidence, evidenceNode),
+        // `UX-1157`: the door and its list are two children, so spread.
+        ...[drawnIn ? null : renderFindingEvidence(finding.evidence, evidenceNode,
+                                                   new Set(detail.map((line) => line.trim())))].flat(),
         // UX-229: the chain behind this finding, from the published
         // record. `views.js` draws it, so the decision panel and every
         // finding show one shape.
@@ -158,8 +181,11 @@ export function renderFindings(findings, investigate = null, node = undefined) {
         // comment and a JavaScript page. Absent, not empty, on a
         // payload that does not carry it.
         finding.copy_text
-          ? copyButton(el, finding.copy_text, {}, "finding")
-          : null);
+          ? copyButton(el, finding.copy_text, {}, "finding", finding.title)
+          : null,
+      ].filter((child) => child !== null && child !== undefined));
+      article.querySelector?.(".describe")?.setAttribute("aria-label",
+        `What these mean: ${finding.title}`);
       article._hydrate = null;
     };
     if (index < bound) article._hydrate();
@@ -190,7 +216,9 @@ export function investigateButton(finding, investigate) {
   const wrapper = el("div", { class: "investigate",
                               "data-query-id": context.queryId,
                               "data-element": context.element ?? "" });
-  const button = el("button", { type: "button" }, "Investigate in Perfetto");
+  // UX-1155: named for what it investigates.
+  const button = el("button", { type: "button", "aria-label":
+    `Investigate in Perfetto: ${context.element || finding.title}` }, "Investigate in Perfetto");
   // `UX-448`: one paste per grain the claim offers, not one button
   // per grain. The handoff opens one trace into one tab whichever
   // question the reader came with, so a second button would send the
@@ -326,6 +354,26 @@ export const DRAWN_ELSEWHERE = {
     + "explaining it in another - which is `UX-288`'s rule at section "
     + "level. Every hint present before the merge is reachable after it, "
     + "on the row it belongs to",
+  // `UX-1146`: the panel's `Next` list is the runbook, and the rail
+  // reaches it as the decision entry's sub-link (`nav.js`'s `subsections`).
+  next_steps: "the decision panel's numbered list under \"What should I "
+    + "run next?\" (`decision.js`), which the rail links as the decision "
+    + "entry's sub-entry - a section whose whole body was a link to it "
+    + "was the same answer twice",
+};
+
+//: `UX-1146`: the same rule one level down - a field a section does not
+//: repeat, and where it is drawn instead. The JSON door keeps it.
+export const FIELDS_DRAWN_ELSEWHERE = {
+  headline: {
+    sentence: "the decision panel's lead sentence (`decision.js`'s "
+      + "`renderDecision`), word for word",
+  },
+  duration_resolution: {
+    note: "the section's lead (`SECTION_ANSWERS`), the same claim in the page's units",
+    element_count: "the section's lead, which opens with the count",
+  },
+  confidence: { ordering_violations: "the hard gates' ordering row (`UX-1163`)" },
 };
 
 //: `UX-401`: the fourth destination, and the only silent one allowed.
@@ -472,6 +520,11 @@ export function renderSection(key, value, hint = {}, node = undefined,
                               investigate = null, payload = undefined,
                               root = undefined) {
   if (key in DRAWN_ELSEWHERE) return null;
+  const elsewhere = FIELDS_DRAWN_ELSEWHERE[key];
+  if (elsewhere && value && typeof value === "object" && !Array.isArray(value)) {
+    value = Object.fromEntries(
+      Object.entries(value).filter(([name]) => !(name in elsewhere)));
+  }
   // `UX-536`: **a join with no Plane 2 in it is not a measurement of
   // zero.** The evidence line already says these words on the same
   // condition; the section presenting the zeros said nothing, under a
@@ -495,7 +548,7 @@ export function renderSection(key, value, hint = {}, node = undefined,
   if (hint[SEVERITY] && Array.isArray(value)) {
     // UX-217: the schema node travels with the value, so the evidence
     // renders in its declared units rather than by name-sniffing.
-    return renderFindings(value, investigate, node);
+    return renderFindings(value, investigate, node, root, payload);
   }
   if (Array.isArray(value)) {
     // `UX-302`: §1 again, at section level. Three of its rows reach
@@ -515,22 +568,10 @@ export function renderSection(key, value, hint = {}, node = undefined,
       nestLimit: CELL_NEST_LIMIT,
       inlineFields: OBJECT_INLINE_FIELDS, inlineItems: ARRAY_INLINE_ITEMS,
     });
-    // `UX-669` (§1e): a runbook renders **once**, in the decision
-    // panel, where a reader who has just been told what is wrong is
-    // standing. The section is a link to it rather than a second copy:
-    // a table of three commands wrapped over three lines each was
-    // §5a's repeated-text budget spent on a duplicate.
-    if (hintsOf(node)[RUNBOOK] ?? hint[RUNBOOK]) {
-      return el("section", { "data-section": key,
-                             "data-rail": heading(key, hint).rail },
-                sectionHead(key, hint),
-                el("p", {}, el("a", { href: "#decision", class: "runbook-link" },
-                               `${value.length} step${value.length === 1 ? "" : "s"}, `
-                               + "in the decision panel")));
-    }
     if (control === CONTROLS.TABLE
         && value.every((item) => item && typeof item === "object"
                                  && !Array.isArray(item))) {
+      if (oneRecord(value, hint, node)) return renderPairs(key, value[0], hint, node);
       return renderTable(key, value, hint, node);
     }
     const body = control === CONTROLS.INLINE_LIST
@@ -552,7 +593,7 @@ export function renderSection(key, value, hint = {}, node = undefined,
                 strip(value, {
                   countKey: String(hintsOf(node)[DISTRIBUTION]
                                    ?? hint[DISTRIBUTION]),
-                  grade: GRADE_EXHIBIT,
+                  grade: GRADE_EXHIBIT, name: title(key, quantityFor(node, key)),
                   format: (n) => quantity(n, quantityFor(node, key)),
                 }));
     }
@@ -585,7 +626,10 @@ export function renderSection(key, value, hint = {}, node = undefined,
     // analyzer (Direction 7).
     const shaped = declaredDrawing(key, hint, node, payload);
     const body = renderPairs(key, value, hint, node, payload, root);
-    if (shaped && body) body.insertBefore(shaped, body.children[1] ?? null);
+    if (shaped && body) {
+      const led = body.children[1]?.getAttribute?.("data-lead") ? 1 : 0;
+      body.insertBefore(shaped, body.children[1 + led] ?? null);
+    }
     // UX-289: the whole document, because a preset's population is a
     // selection published elsewhere in it - `bottleneck`
     // for the choke points. The section renders its own value; the
@@ -656,11 +700,131 @@ export function renderSummary(payload, hints) {
         class: typeof value === "number" ? "num" : null,
         "data-raw": value === null ? "" : String(value),
       }, typeof value === "number" ? quantity(value, kind)
-         : value === null ? "—" : String(value)), describe));
+         : plainValue(value)), describe));
   }
-  attachBlockDoor(list, doors);
+  const door = attachBlockDoor(list, doors);
   return el("section", { "data-section": "summary" },
-            el("h2", {}, "Run"), list);
+            el("h2", {}, "Run"), door, list);
+}
+
+const many = (n, noun, plural = `${noun}s`) =>
+  `${n.toLocaleString("en-US")} ${n === 1 ? noun : plural}`;
+
+/**
+ * `UX-1151`: each Plane 2 section's answer, one sentence read off
+ * published fields - a sum or a max over a published column at most.
+ * `null` where the fields are not there to say it.
+ */
+export const SECTION_ANSWERS = {
+  plane2_coverage(value) {
+    const seen = value?.processes;
+    if (typeof seen !== "number") return null;
+    const alive = value.max_concurrency;
+    const span = value.wall_span_us;
+    const opened = value.opens_covered_processes;
+    const traced = value.process_count;
+    return `Plane 2 saw ${many(seen, "process", "processes")}`
+      + (typeof alive === "number" ? `, at most ${alive} alive at once` : "")
+      + (typeof span === "number" ? ` over ${quantity(span, "duration_us")}` : "")
+      + (opened === 0 ? "; the files they opened were not recorded."
+        : typeof opened === "number"
+          ? `; the files they opened were recorded for ${opened} of them.` : ".")
+      + (typeof traced === "number" && traced !== seen
+        ? ` The capture traced ${many(traced, "process", "processes")} in all.` : "");
+  },
+  duration_resolution(value) {
+    const count = value?.element_count;
+    if (typeof count !== "number") return null;
+    const grid = typeof value.epsilon_us === "number"
+      ? ` the ${quantity(value.epsilon_us, "duration_us")} grid` : " the grid";
+    return `${many(count, "element")} ran for less than half${grid}, `
+      + "so their durations publish as zero: unmeasurable, not instantaneous.";
+  },
+  cpu_time(value) {
+    const total = value?.total_cpu_us;
+    const measured = value?.measured_processes;
+    if (typeof total !== "number" || typeof measured !== "number") return null;
+    const lost = value.unmeasured_processes;
+    return `The build cost ${quantity(total, "duration_us")} of CPU, read from `
+      + `${many(measured, "process", "processes")}`
+      + (typeof lost === "number"
+        ? (lost === 0 ? "; none went unmeasured." : `; ${lost} could not be read.`) : ".");
+  },
+  binary_cost(rows) {
+    if (!Array.isArray(rows) || !rows.length) return null;
+    const by = new Map();
+    const elements = new Set();
+    for (const row of rows) {
+      const one = by.get(row.binary) ?? { cpu: 0, calls: 0, elements: 0 };
+      one.cpu += Number(row.cpu_us) || 0;
+      one.calls += Number(row.calls) || 0;
+      one.elements += 1;
+      by.set(row.binary, one);
+      elements.add(row.element);
+    }
+    const [name, top] = [...by].sort(
+      (a, b) => b[1].cpu - a[1].cpu || b[1].calls - a[1].calls)[0];
+    const cost = `${many(top.calls, "call")}, `
+      + `${quantity(top.cpu, "duration_us")} of CPU`;
+    return by.size === 1
+      ? `One binary, ${name}, ran in ${many(top.elements, "element")}: ${cost}.`
+      : `${many(by.size, "binary", "binaries")} ran in `
+        + `${many(elements.size, "element")}; ${name} cost the most, `
+        + `${cost} in ${many(top.elements, "element")}.`;
+  },
+  peak_memory(value, payload) {
+    const rows = (Array.isArray(payload?.element_join) ? payload.element_join : [])
+      .filter((row) => typeof row?.peak_rss_bytes === "number");
+    if (!rows.length) {
+      return "No element published a per-process peak, so there is no figure here.";
+    }
+    const top = rows.reduce(
+      (a, b) => (b.peak_rss_bytes > a.peak_rss_bytes ? b : a));
+    return `No single process exceeded ${bytes(top.peak_rss_bytes)}; `
+      + `the largest ran in ${top.element}.`;
+  },
+  element_join_coverage(value) {
+    const counts = [value?.joined_elements, value?.plane1_elements,
+                    value?.plane2_elements];
+    if (!counts.every((n) => typeof n === "number") || counts[2] === 0) return null;
+    const [joined, one, two] = counts;
+    return joined === one && joined === two
+      ? `The two planes agree on all ${many(joined, "element")}.`
+      : `The two planes agree on ${joined} of ${many(one, "element")}; `
+        + `Plane 2 saw ${two}.`;
+  },
+};
+
+/** The answer as the section's first block; the pairs it restates are dropped. */
+function leadWith(section, key, value, payload) {
+  // `UX-1156`: a member an answer reads is a member it says.
+  const read = new Set();
+  const said = SECTION_ANSWERS[key]?.(value?.constructor === Object ? new Proxy(value, {
+    get: (object, name) => (read.add(name), object[name]) }) : value, payload);
+  const own = (node, tag) => [...(node?.children ?? [])].filter(
+    (child) => String(child.tagName).toLowerCase() === tag);
+  // UX-1147: `headRow` may have wrapped the heading in its `div.section-head`.
+  const head = [...(section?.children ?? [])].find(
+    (child) => String(child.className ?? "").split(" ").includes("section-head"))
+    ?? [...own(section, "h2"), ...own(section, "h3")][0];
+  if (!said || !head) return;
+  const dropped = [...read];
+  const lead = el("p", { class: "section-answer", "data-role": "section-answer",
+                         "data-said": dropped.join(" ") }, said);
+  section.insertBefore(lead, head.nextSibling ?? null);
+  // A pair the lead or a sibling count already says; the census reads `data-said`.
+  if (Array.isArray(value?.cpu_disagreements) && !value.cpu_disagreements.length) {
+    dropped.push("cpu_disagreements");
+  }
+  for (const list of own(section, "dl")) {
+    for (const name of dropped) {
+      const term = own(list, "dt").find((dt) => dt.getAttribute?.("data-key") === name);
+      if (!term) continue;
+      const kids = [...list.children];
+      kids[kids.indexOf(term) + 1]?.remove?.();
+      term.remove?.();
+    }
+  }
 }
 
 export function render(payload, schema, root, investigate = null) {
@@ -690,6 +854,7 @@ export function render(payload, schema, root, investigate = null) {
     // one; a section the page composes from several places has no
     // single payload slice, and gets no toggle rather than a misleading
     // one.
+    if (section) leadWith(section, key, value, payload);
     if (section) root.append(recordSource(section, value));
   }
   const summary = renderSummary(payload, hints);

@@ -12,12 +12,7 @@
   {
     "exception": null,
     "role": "heading",
-    "text": "How these were ranked"
-  },
-  {
-    "exception": null,
-    "role": "heading",
-    "text": "Next"
+    "text": "What should I run next?"
   },
   {
     "exception": null,
@@ -43,11 +38,6 @@
     "exception": null,
     "role": "heading",
     "text": "What should I fix first, and what is it worth?"
-  },
-  {
-    "exception": null,
-    "role": "heading",
-    "text": "What should I run next?"
   },
   {
     "exception": null,
@@ -332,7 +322,7 @@
   {
     "exception": null,
     "role": "heading",
-    "text": "How much of this can be believed?"
+    "text": "How confident is each part of this report?"
   },
   {
     "exception": null,
@@ -353,6 +343,11 @@
     "exception": null,
     "role": "heading",
     "text": "Run"
+  },
+  {
+    "exception": null,
+    "role": "heading",
+    "text": "When, and on what machine, was this captured?"
   },
   {
     "exception": null,
@@ -517,7 +512,7 @@
   {
     "exception": null,
     "role": "summary",
-    "text": "The rule \u00b7 # level, # rows"
+    "text": "What they share \u00b7 # level, # rows"
   },
   {
     "exception": null,
@@ -587,21 +582,6 @@
   {
     "exception": null,
     "role": "summary",
-    "text": "Blast radius reach \u00b7 # level, # rows"
-  },
-  {
-    "exception": null,
-    "role": "summary",
-    "text": "Fan in ranking \u00b7 # level, # rows"
-  },
-  {
-    "exception": null,
-    "role": "summary",
-    "text": "Graph width \u00b7 # level, # rows"
-  },
-  {
-    "exception": null,
-    "role": "summary",
     "text": "Joint saving \u00b7 # level, # rows"
   },
   {
@@ -612,7 +592,22 @@
   {
     "exception": null,
     "role": "summary",
+    "text": "Blast radius reach \u00b7 # level, # rows"
+  },
+  {
+    "exception": null,
+    "role": "summary",
     "text": "Latent heavies \u00b7 # level, # row"
+  },
+  {
+    "exception": null,
+    "role": "summary",
+    "text": "Fan in ranking \u00b7 # level, # rows"
+  },
+  {
+    "exception": null,
+    "role": "summary",
+    "text": "Graph width \u00b7 # level, # rows"
   },
   {
     "exception": null,
@@ -693,11 +688,6 @@
     "exception": null,
     "role": "rail-entry",
     "text": "What should I fix first, and what is it worth?"
-  },
-  {
-    "exception": null,
-    "role": "rail-entry",
-    "text": "What should I run next?"
   },
   {
     "exception": null,
@@ -867,7 +857,7 @@
   {
     "exception": null,
     "role": "rail-entry",
-    "text": "How much of this can be believed?"
+    "text": "How confident is each part of this report?"
   },
   {
     "exception": null,
@@ -887,7 +877,7 @@
   {
     "exception": null,
     "role": "rail-entry",
-    "text": "Which run is this?"
+    "text": "When, and on what machine, was this captured?"
   },
   {
     "exception": null,
@@ -1172,7 +1162,7 @@
   {
     "exception": null,
     "role": "option",
-    "text": "Top # by value"
+    "text": "Top # by Contracts"
   },
   {
     "exception": null,
@@ -1307,7 +1297,7 @@
   {
     "exception": null,
     "role": "summary",
-    "text": "Half of this graph's # elements reach # others or fewer; the top tenth reach # others or more, up to #. Reach is spread across many elements - there is no\u2026 # chars"
+    "text": "Half of this graph's # elements reach # others or fewer; the top tenth reach # others or more, up to #. Reach is spread across many elements \u2014 there is no\u2026 moreless"
   },
   {
     "exception": null,
@@ -1327,7 +1317,7 @@
   {
     "exception": null,
     "role": "summary",
-    "text": "Derived from this run's shape: the sweep replays observed durations and does not model contention, and cores-busy is an average over the whole run rather than\u2026 # chars"
+    "text": "Derived from this run's shape: the sweep replays observed durations and does not model contention, and cores-busy is an average over the whole run rather than\u2026 moreless"
   },
   {
     "exception": null,
@@ -1337,7 +1327,7 @@
   {
     "exception": "product name",
     "role": "summary",
-    "text": "core.bst runs its own build system at # job - `variables: notparallel: True` - while the rest of this build runs at # and it is the longest kind of task here\u2026 # chars"
+    "text": "core.bst runs its own build system at # job - variables: notparallel: True - while the rest of this build runs at # and it is the longest kind of task here\u2026 moreless"
   },
   {
     "exception": null,
@@ -1348,6 +1338,11 @@
     "exception": null,
     "role": "summary",
     "text": "What Plane # saw \u00b7 # level, # rows"
+  },
+  {
+    "exception": null,
+    "role": "summary",
+    "text": "Capacity recommendation \u00b7 # level, # rows"
   },
   {
     "exception": null,
@@ -1372,22 +1367,17 @@
   {
     "exception": null,
     "role": "summary",
-    "text": "Capacity recommendation \u00b7 # level, # rows"
-  },
-  {
-    "exception": null,
-    "role": "summary",
     "text": "Static census \u00b7 # levels, # rows"
   },
   {
     "exception": "acronym",
     "role": "summary",
-    "text": "Read from the project's own `local` sources before anything runs: an ELF executable with no PT_INTERP never invokes the dynamic linker, so LD_PRELOAD never\u2026 # chars"
+    "text": "Read from the project's own local sources before anything runs: an ELF executable with no PT_INTERP never invokes the dynamic linker, so LD_PRELOAD never\u2026 moreless"
   },
   {
     "exception": "acronym",
     "role": "summary",
-    "text": "LD_PRELOAD only affects dynamically-linked executables. Any statically-linked process invoked inside the sandbox (e.g. a musl-based toolchain, busybox, some\u2026 # chars"
+    "text": "LD_PRELOAD only affects dynamically-linked executables. Any statically-linked process invoked inside the sandbox (e.g. a musl-based toolchain, busybox, some\u2026 moreless"
   },
   {
     "exception": null,
@@ -1570,9 +1560,14 @@
     "text": "Calls"
   },
   {
-    "exception": null,
+    "exception": "acronym",
     "role": "th",
-    "text": "Cpu"
+    "text": "CPU"
+  },
+  {
+    "exception": "acronym",
+    "role": "th",
+    "text": "Share of CPU"
   },
   {
     "exception": null,
@@ -1717,17 +1712,27 @@
   {
     "exception": null,
     "role": "option",
-    "text": "Top # by calls"
+    "text": "Top # by Wall clock share"
   },
   {
-    "exception": "code",
+    "exception": null,
     "role": "option",
-    "text": "Top # by cpu_us"
+    "text": "Top # by Calls"
   },
   {
-    "exception": "code",
+    "exception": "acronym",
     "role": "option",
-    "text": "Top # by cpu_share"
+    "text": "Top # by CPU"
+  },
+  {
+    "exception": "acronym",
+    "role": "option",
+    "text": "Top # by Share of CPU"
+  },
+  {
+    "exception": null,
+    "role": "option",
+    "text": "Top # by By binary"
   },
   {
     "exception": null,
@@ -1740,34 +1745,29 @@
     "text": "Plane # (sandbox) (#)"
   },
   {
-    "exception": "code",
+    "exception": null,
     "role": "option",
-    "text": "Top # by element_durations"
-  },
-  {
-    "exception": "code",
-    "role": "option",
-    "text": "Top # by downstream_count"
+    "text": "Top # by Element durations"
   },
   {
     "exception": null,
     "role": "option",
-    "text": "Top # by rank"
+    "text": "Top # by Downstream count"
   },
   {
     "exception": null,
     "role": "option",
-    "text": "Top # by length"
+    "text": "Top # by Rank"
   },
   {
-    "exception": "code",
+    "exception": null,
     "role": "option",
-    "text": "Top # by weighted_duration_us"
+    "text": "Top # by Duration"
   },
   {
-    "exception": "code",
+    "exception": null,
     "role": "option",
-    "text": "Top # by wall_share"
+    "text": "Top # by Of longest path"
   },
   {
     "exception": "product name",
@@ -1802,12 +1802,7 @@
   {
     "exception": null,
     "role": "summary",
-    "text": "The rule \u00b7 # level, # row"
-  },
-  {
-    "exception": null,
-    "role": "summary",
-    "text": "Half of this graph's # elements reach # others or fewer; the top tenth reach # others or more, up to #. Reach is spread across many elements - there\u2026 # chars"
+    "text": "Half of this graph's # elements reach # others or fewer; the top tenth reach # others or more, up to #. Reach is spread across many elements \u2014 there\u2026 moreless"
   },
   {
     "exception": null,
@@ -1818,6 +1813,11 @@
     "exception": null,
     "role": "summary",
     "text": "Blast radius ranking \u00b7 # level, # row"
+  },
+  {
+    "exception": null,
+    "role": "summary",
+    "text": "Certified headroom \u00b7 # level, # rows"
   },
   {
     "exception": null,
@@ -1833,11 +1833,6 @@
     "exception": null,
     "role": "summary",
     "text": "Criticality \u00b7 # level, # row"
-  },
-  {
-    "exception": null,
-    "role": "summary",
-    "text": "Certified headroom \u00b7 # level, # rows"
   },
   {
     "exception": null,
@@ -1875,29 +1870,24 @@
     "text": "layer#/mod#.bst"
   },
   {
-    "exception": "code",
+    "exception": null,
     "role": "option",
-    "text": "Top # by duration_us"
-  },
-  {
-    "exception": "code",
-    "role": "option",
-    "text": "Top # by share_of_path"
-  },
-  {
-    "exception": "code",
-    "role": "option",
-    "text": "Top # by realizable_saving_us"
+    "text": "Top # by Share of path"
   },
   {
     "exception": null,
     "role": "option",
-    "text": "Top # by level"
+    "text": "Top # by Realizable"
   },
   {
     "exception": null,
     "role": "option",
-    "text": "Top # by width"
+    "text": "Top # by Level"
+  },
+  {
+    "exception": null,
+    "role": "option",
+    "text": "Top # by Elements here"
   },
   {
     "exception": null,

@@ -72,6 +72,14 @@ needs_browser = pytest.mark.skipif(chrome is None, reason=NO_BROWSER)
 #: beside every clause here.
 LABEL = "macro_micro"
 
+
+def _typeset(text):
+    """`UX-1149`: the page sets a backtick span as `<code>` and `->` as `→`;
+    `UX-1140`: and spaces a number from its `s`/`ms`."""
+    text = text.replace("`", "").replace("→", "->")
+    return re.sub(r"(?<![\w.])(\d+(?:\.\d+)?) (ms|s)\b", r"\1\2", text)
+
+
 _LOOK = """
 (() => {
   for (const box of document.querySelectorAll("section.chapter")) {
@@ -227,7 +235,8 @@ class TestThePublishedSentenceIsPrinted:
             for advice in (entry.get("recommendations") or [])
             if advice.get("text")
         ]
-        missing = [text for text in written if text not in out["text"]]
+        shown = _typeset(out["text"])
+        missing = [text for text in written if _typeset(text) not in shown]
         assert missing == [], (
             f"{len(missing)} of {len(written)} recommendation sentences reach no rendered node: {missing[:2]}"
         )

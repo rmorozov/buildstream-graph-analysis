@@ -179,12 +179,13 @@ class TestTheJumpBoxWritesWhatItScrolledTo:
     def test_the_hit_writes_the_anchor(self, jumped):
         out = jumped["hit"]
         assert out["before"]["hash"] == "", out["before"]
-        assert out["after"]["hash"].startswith("#evidence~"), out["after"]
+        # `UX-1158`: an untouched view writes no state, so the anchor alone.
+        assert out["after"]["hash"].partition("~")[0] == "#evidence", out["after"]
         assert abs(out["after"]["rectTop"] - LANDING_PX) < 40, out["after"]
 
     def test_enter_writes_the_anchor_too(self, jumped):
         out = jumped["enter"]
-        assert out["after"]["hash"].startswith("#evidence~"), out["after"]
+        assert out["after"]["hash"].partition("~")[0] == "#evidence", out["after"]
         assert abs(out["after"]["rectTop"] - LANDING_PX) < 40, out["after"]
 
     def test_the_copied_link_reopens_where_the_jump_landed(self, jumped):

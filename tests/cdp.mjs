@@ -2,7 +2,7 @@
 // fetch, and nothing else - that is the argument for driving a browser
 // directly rather than adding Playwright.
 //
-//   node cdp.mjs <port> <url> <width> <height> [--observe] [--coarse] [--media=print] [--scheme=dark]  < expression
+//   node cdp.mjs <port> <url> <width> <height> [--observe] [--coarse] [--media=print] [--scheme=dark] [--ax]  < expression
 //
 // `--coarse` (`UX-1022`): touch emulation plus `Emulation.setEmulatedMedia`
 // forcing `pointer: coarse`/`hover: none`, so `@media (pointer: coarse)`
@@ -45,6 +45,7 @@ const observing = process.argv.includes("--observe");
 // step would lose.
 const journeying = process.argv.includes("--journey");
 const coarse = process.argv.includes("--coarse");
+const axing = process.argv.includes("--ax");
 const mediaArg = process.argv.find((a) => a.startsWith("--media="));
 const media = mediaArg ? mediaArg.slice("--media=".length) : null;
 const schemeArg = process.argv.find((a) => a.startsWith("--scheme="));
@@ -298,6 +299,25 @@ if (journeying) {
   }
   const value = result.result.value ?? null;
   out = value;
+  // `UX-1155`: `--ax` reads Chromium's own accessibility tree after the
+  // expression ran - the name a screen reader hears, not an attribute.
+  // One entry per unignored node whose role is in the expression's
+  // returned list, with its DOM attributes so a guard can say which.
+  if (axing) {
+    const roles = new Set(Array.isArray(value) ? value : []);
+    await send("DOM.getDocument", { depth: -1 });
+    const { nodes } = await send("Accessibility.getFullAXTree");
+    out = [];
+    for (const node of nodes ?? []) {
+      const role = node.role?.value;
+      if (node.ignored || !roles.has(role) || !node.backendDOMNodeId) continue;
+      const dom = await send("DOM.describeNode", { backendNodeId: node.backendDOMNodeId });
+      const pairs = dom?.node?.attributes ?? [];
+      const attrs = {};
+      for (let i = 0; i < pairs.length; i += 2) attrs[pairs[i]] = pairs[i + 1];
+      out.push({ role, name: node.name?.value ?? "", attrs });
+    }
+  }
   if (observing) {
     const violations = await send("Runtime.evaluate", {
       expression: "window.__bgaCsp ?? []", returnByValue: true,

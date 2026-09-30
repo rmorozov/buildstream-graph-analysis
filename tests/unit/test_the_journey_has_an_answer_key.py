@@ -48,6 +48,7 @@ import pytest
 REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 
+from bga import shown
 from bga.findings import CHAIN_BOUND_RATIO
 
 EXAMPLE = REPO / "examples/06-macro-micro-optimization"
@@ -436,8 +437,8 @@ class TestTheMacroAnswer:
         see how close this run sat without re-deriving anything."""
         headline = cold["headline"]
         said = headline["sentence"]
-        assert f"{headline['chain_share']:.0%}" in said, said
-        assert f"{CHAIN_BOUND_RATIO:.0%}" in said, said
+        assert shown.share(headline["chain_share"]) in said, said
+        assert shown.share(CHAIN_BOUND_RATIO) in said, said
         assert "chain" in said, said
 
     def test_the_fixture_is_still_a_chain_dominated_build(self, cold):

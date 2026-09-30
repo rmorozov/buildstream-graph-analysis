@@ -31,6 +31,7 @@ import os
 from collections.abc import Iterable, Mapping
 from typing import Optional
 
+from . import shown as qty
 from .plural import plural
 from .units import US_PER_S
 
@@ -474,11 +475,7 @@ def format_work(seconds: float) -> str:
     to say nothing; one that says "6.1h" about a real one is the whole
     point of measuring.
     """
-    if seconds >= 3600:
-        return f"{seconds / 3600:.1f}h"
-    if seconds >= 120:
-        return f"{seconds / 60:.0f}m"
-    return f"{seconds:.0f}s"
+    return qty.seconds(seconds)
 
 
 def monorepo_headline(rows: list[dict], element_count: int, share: float = MONOREPO_SHARE) -> Optional[str]:

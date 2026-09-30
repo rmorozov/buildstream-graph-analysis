@@ -138,7 +138,7 @@ DESTINATIONS = {
         TERMINAL,
         "",
         "Processes per element, which is the input the attribution "
-        "table is built from rather than an answer of its own - and "
+        "table is built from rather than an answer of its own — and "
         "`element_join` already carries one row per element. Publishing "
         "it beside them would be `UX-288`'s duplicate population.",
     ),
@@ -155,7 +155,7 @@ DESTINATIONS = {
         "",
         "The pid-to-element mapping itself, resolved and ambiguous. "
         "Every join row rests on it, so it is apparatus rather than a "
-        "measurement - and it names pids, which mean nothing after the "
+        "measurement — and it names pids, which mean nothing after the "
         "build that owned them exited.",
     ),
     "opens_captured": (
@@ -184,7 +184,7 @@ DESTINATIONS = {
         TERMINAL,
         "",
         "Raw open events, which is a size of the trace log rather than "
-        "a property of the build - the trace's own size is published "
+        "a property of the build — the trace's own size is published "
         "by the capture layout.",
     ),
     "wrapped_command_exit_code": (
@@ -268,7 +268,7 @@ def provenance(report: Optional[dict]) -> Optional[dict]:
         "records_embedded": embedded,
         "records": len((report or {}).get(RECORDS_KEY) or []) if embedded else 0,
         "note": (
-            "This run's Plane 2 report predates `UX-297` and embeds its "
+            "This run's Plane 2 report predates the aggregate-only format and embeds its "
             "per-process record list, which no published number reads. "
             "The aggregates below are the same either way; the file is "
             "large for a reason that is now historical."
@@ -316,8 +316,8 @@ NOT_CAPTURED = (
     "captures both planes."
 )
 CAPTURED_NO_RAW_LOG = (
-    "Plane 2 was captured - its report is beside this run "
-    "- but the raw trace log it was built from was not "
+    "Plane 2 was captured — its report is beside this run "
+    "— but the raw trace log it was built from was not "
     "kept, so there is no timeline to render. `bga "
     "snapshot` keeps one by default; `--no-keep-raw` and a "
     "hand-pruned store are the two ways it goes missing."
@@ -337,8 +337,8 @@ DECLINED = (
 CAPTURED_EMPTY = (
     "Plane 2 was captured and recorded no process at all, so "
     "there is no per-process detail. That is what every "
-    "`bga snapshot` flag that reads like \"off\" produces - "
-    "`--no-inject`, `--no-trace-opens`, `--trace-spine=off` - "
+    "`bga snapshot` flag that reads like \"off\" produces — "
+    "`--no-inject`, `--no-trace-opens`, `--trace-spine=off` — "
     "and it is also what a hook that failed to attach looks "
     "like. `bga wrap` then `bga extract` captures Plane 1 "
     "alone on purpose."
@@ -420,7 +420,7 @@ def attachable(run_dir: str):
         return path, None
     return None, (
         f"Plane 2 is {run_store.human_bytes(size)} and this run published no "
-        f"analysis, so the report is rendered from Plane 1 alone - parsing it "
+        f"analysis, so the report is rendered from Plane 1 alone — parsing it "
         f"here costs about {run_store.human_bytes(int(size * 2.9))} of memory. "
         f"`bga snapshot -- bst build TARGET` publishes an analysis "
         f"that carries both planes."
@@ -438,6 +438,7 @@ GRAPH_DENOMINATOR = "graph"
 #: the sandbox, not a parallelism score, so it is a finding and the
 #: ratio is held at 1.0.
 OVERLAP_FINDING = "overlap_exceeds_granted_width"
+PINNED_FINDING = "pinned_to_one_job"
 
 
 def resolved_widths(graph_path: str) -> dict[str, int]:
@@ -482,7 +483,9 @@ def apply_resolved_widths(native_report: dict, widths: dict[str, int]) -> int:
     report was written is corrected the first time one is in hand.
     """
     filled = 0
-    for entry in native_report.get("per_element_parallelism") or []:
+    entries = native_report.get("per_element_parallelism") or []
+    widest = max((widths.get(entry.get("element")) or 0 for entry in entries), default=0)
+    for entry in entries:
         width = widths.get(entry.get("element"))
         entry["resolved_jobs"] = width
         if width is None:
@@ -492,7 +495,10 @@ def apply_resolved_widths(native_report: dict, widths: dict[str, int]) -> int:
         filled += 1
         entry["jobs_denominator"] = GRAPH_DENOMINATOR
         peak = entry.get("peak_work_concurrency") or 0
-        findings = [f for f in (entry.get("findings") or []) if f != OVERLAP_FINDING]
+        findings = [f for f in (entry.get("findings") or []) if f not in (OVERLAP_FINDING, PINNED_FINDING)]
+        # UX-1138: pinned is the resolved width, not an argv `-j1` - autotools' install step writes one.
+        if width == 1 and widest > 1:
+            findings.append(PINNED_FINDING)
         if width > 0 and peak > width:
             findings.append(OVERLAP_FINDING)
         entry["findings"] = findings

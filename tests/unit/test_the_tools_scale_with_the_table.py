@@ -124,6 +124,7 @@ _LOOK = """
       search: scope?.querySelectorAll("input.table-filter").length ?? 0,
       sortable: t.querySelectorAll("th[aria-sort]").length
         + t.querySelectorAll("th[data-column]").length,
+      cells: t.querySelector("tr")?.children.length ?? 0,
       note: (scope?.querySelector('[data-role="uniform-columns"]')
         ?.textContent || "").trim(),
     };
@@ -279,9 +280,11 @@ class TestAFilterAppearsWhereItHelps:
 
     def test_sorting_survives(self, browser, pages, label):
         """Explicitly out of scope, and worth asserting: the fix is a
-        threshold on *filters*, not a general stripping of the header."""
+        threshold on *filters*, not a general stripping of the header.
+        `UX-1163`: a short table left one column is a list, headerless."""
         out = browser.measure(pages[label], _LOOK, 1440, 900)
-        assert all(t["sortable"] for t in out["tables"]), [t["table"] for t in out["tables"] if not t["sortable"]]
+        bare = [t["table"] for t in out["tables"] if not t["sortable"] and t["cells"] > 1]
+        assert not bare, bare
 
 
 @needs_browser
@@ -307,7 +310,7 @@ class TestAColumnThatNeverVariesIsASentence:
             f"had one when this was measured, so the walk has broken"
         )
         for table in noted:
-            assert table["note"].startswith("All "), table
+            assert table["note"].startswith("Every row: "), table
             assert table["note"].endswith("."), table
 
 

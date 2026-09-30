@@ -126,7 +126,8 @@ def journey(tmp_path_factory):
 class TestBackUnwindsAReveal:
     def test_the_click_opens_a_folded_chapter(self, journey):
         """Non-vacuity: the reveal back() must undo happened."""
-        assert journey["initial"] == {"y": 0, "chapters": 1, "sections": 6}, journey
+        # `UX-1146`: five - `next_steps` is the decision's rail sub-entry now.
+        assert journey["initial"] == {"y": 0, "chapters": 1, "sections": 5}, journey
         assert journey["first"]["chapters"] == 2 and journey["first"]["y"] > 0, journey
 
     def test_one_back_after_one_click_restores_the_resting_page(self, journey):

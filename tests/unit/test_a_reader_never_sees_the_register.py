@@ -1,5 +1,10 @@
 """UX-824 (styleguide §4g): a reader never sees the register.
 
+`UX-1142` widened it: every `?` door clicked and every `details` open
+(`tests.pages.OPEN_EVERY_DOOR_JS`), the review's two-plane page added,
+item 1 read over every visible text node for `UX-NNN` and `docs/`,
+and every schema `description` read for the same two without a page.
+
 Boots the golden export and the 1,202-element scale export
 (`tests.pages.scale_run`), every `.description[hidden]` door,
 `data-collapsed` section and `data-open` chapter forced open and
@@ -35,15 +40,11 @@ needs_browser = pytest.mark.skipif(chrome is None, reason=NO_BROWSER)
 
 #: Every real UI door forced open - never the JSON door, never a
 #: `<script>`, which `innerText` never shows a reader anyway.
-_OPEN_AND_READ = r"""
-(() => {
-  document.querySelectorAll('.description[hidden]').forEach(n => { n.hidden = false; });
-  document.querySelectorAll('section[data-section][data-collapsed]').forEach(
-    n => n.setAttribute('data-collapsed', 'false'));
-  document.querySelectorAll('section.chapter[data-open]').forEach(
-    n => n.setAttribute('data-open', 'true'));
-  document.querySelectorAll('section.chapter > section[data-section]')
-    .forEach(n => { n.style.contentVisibility = 'visible'; });
+_OPEN_AND_READ = (
+    "(() => {"
+    + pages.OPEN_EVERY_DOOR_JS
+    + pages.VISIBLE_TEXT_JS
+    + r"""
   const strip = (el) => {
     const clone = el.cloneNode(true);
     clone.querySelectorAll('code').forEach(c => c.remove());
@@ -51,6 +52,7 @@ _OPEN_AND_READ = r"""
   };
   return {
     innerText: document.body.innerText,
+    visible: visible.map((n) => n.text),
     sectionKeySpans: document.querySelectorAll('span.section-key').length,
     headings: [...document.querySelectorAll('h2, h3')].map((h) => h.textContent.trim()),
     cells: [...document.querySelectorAll('p, li, td, dt, dd, h2')].map((el) => ({
@@ -62,8 +64,11 @@ _OPEN_AND_READ = r"""
   };
 })()
 """
+)
 
 _TASK_ID = re.compile(r"\bUX-\d+\b")
+#: `UX-1142`: a repository path is the register's too.
+_REPO_PATH = re.compile(r"\bdocs/")
 _SNAKE_HEADING = re.compile(r"^[a-z][a-z0-9]*(_[a-z0-9]+)+$")
 _PIPE_KEY = re.compile(r"\|(FETCH|BUILD|PULL|PUSH|TRACK)\|")
 _REGISTER_WORD = re.compile(r"\b(payload|contract|schema)\b|Part \d", re.IGNORECASE)
@@ -104,17 +109,30 @@ _NOT_THE_RUN_CONCEPT = re.compile(r"Which build of bga measured this")
 def _run(into, label):
     if label == "golden":
         return pages.export_uri(pages.FIXTURES["golden"], into)
+    if label == "two_plane":
+        return pages.export_uri(pages.two_plane_run(into, shape=pages.REVIEW_SHAPE), into / "page")
     return pages.export_uri(pages.scale_run(into / "run"), into)
+
+
+def _measure(tmp_path_factory, label):
+    tmp = tmp_path_factory.mktemp(f"reader-facing-{label}")
+    uri = _run(tmp, label)
+    with Browser(chrome) as opened:
+        result = opened.measure(uri, _OPEN_AND_READ)
+    result["label"] = label
+    return result
+
+
+#: `UX-1142`: item 1 only on the review's page - its item-4 and heading
+#: findings are other rows' (reported, not fixed, by that track).
+@pytest.fixture(scope="module")
+def two_plane(tmp_path_factory):
+    return _measure(tmp_path_factory, "two_plane")
 
 
 @pytest.fixture(scope="module", params=["golden", "scale"])
 def measured(request, tmp_path_factory):
-    tmp = tmp_path_factory.mktemp(f"reader-facing-{request.param}")
-    uri = _run(tmp, request.param)
-    with Browser(chrome) as opened:
-        result = opened.measure(uri, _OPEN_AND_READ)
-    result["label"] = request.param
-    return result
+    return _measure(tmp_path_factory, request.param)
 
 
 @needs_browser
@@ -127,6 +145,15 @@ class TestAReaderNeverSeesTheRegister:
     def test_item_1_no_task_id(self, measured):
         ids = _TASK_ID.findall(measured["innerText"])
         assert ids == [], (measured["label"], ids)
+
+    def test_item_1_no_task_id_or_repository_path_in_any_visible_node(self, measured):
+        """`UX-1142`: descriptions, notes and provenance, every door open."""
+        _no_task_id_or_path(measured)
+
+    def test_item_1_on_the_two_plane_page(self, two_plane):
+        """`UX-1142`: the Perfetto notes, Plane 2 notes and disclaimer."""
+        assert _TASK_ID.findall(two_plane["innerText"]) == []
+        _no_task_id_or_path(two_plane)
 
     def test_item_2_no_section_key_and_no_snake_case_heading(self, measured):
         assert measured["sectionKeySpans"] == 0, measured["label"]
@@ -164,3 +191,31 @@ class TestAReaderNeverSeesTheRegister:
         assert headings, measured["label"]
         bad = [h for h in headings if _REJECTED_SYNONYM.search(h) and not _NOT_THE_RUN_CONCEPT.search(h)]
         assert bad == [], (measured["label"], bad)
+
+
+def _no_task_id_or_path(measured):
+    assert len(measured["visible"]) > 500, (measured["label"], len(measured["visible"]))
+    bad = [t[:120] for t in measured["visible"] if _TASK_ID.search(t) or _REPO_PATH.search(t)]
+    assert bad == [], (measured["label"], bad)
+
+
+def _descriptions(node):
+    if isinstance(node, dict):
+        for key, value in node.items():
+            if key == "description" and isinstance(value, str):
+                yield value
+            yield from _descriptions(value)
+    elif isinstance(node, list):
+        for value in node:
+            yield from _descriptions(value)
+
+
+def test_no_schema_description_names_a_task_or_a_path():
+    """`UX-1142`: a description is the `?` door's sentence, on any page
+    that draws its key - read here without one."""
+    from bga import schemas
+
+    said = [(name, d) for name in schemas.names() for d in _descriptions(schemas.schema(name))]
+    assert len(said) > 500, len(said)
+    bad = [(name, d[:120]) for name, d in said if _TASK_ID.search(d) or _REPO_PATH.search(d)]
+    assert bad == [], bad

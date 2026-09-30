@@ -256,7 +256,10 @@ class TestARailClickLandsUnderTheHeader:
         the identity block at the foot of the page are where the
         document ends. `UX-1031` described `targets` and `contracts`,
         and the `?` door each drew made the foot 51px taller: 55/6 ->
-        56/5, `run_instance` landing at 60 with 30px left below it."""
+        56/5, `run_instance` landing at 60 with 30px left below it.
+        `UX-1151`'s `cpu_time` lead (+39 px) lands it too: 57/4, 31px left.
+        Round 155: `UX-1156`'s dropped repeats shorten the foot; `cpu_time`
+        lands at 89 again, 56/5 (3 runs alike)."""
         under = [row for row in landings if row["fromEnd"] != 0]
         at_end = [row for row in landings if row["fromEnd"] == 0]
         assert (len(landings), len(under), len(at_end)) == (61, 56, 5)

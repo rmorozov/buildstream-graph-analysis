@@ -295,10 +295,11 @@ class TestTheDenormalisedColumns:
     def test_the_schema_says_which_value_each_one_is(self):
         node = schemas._ANALYZE_HINTS["element_join"]
         fields = node["items"]["properties"]
-        assert "downstream_count" in fields["blast_radius"]["description"], (
+        # `UX-1159`: named by its words, not its key.
+        assert "downstream count" in fields["blast_radius"]["description"], (
             "the join's `blast_radius` is an int where the map's is a record, and nothing says the two are related"
         )
-        assert "observed_critical" in (fields["on_critical_path"].get("description") or ""), (
+        assert "observed-critical" in (fields["on_critical_path"].get("description") or ""), (
             "the join's `on_critical_path` is the map's `observed_critical` and nothing says so"
         )
 

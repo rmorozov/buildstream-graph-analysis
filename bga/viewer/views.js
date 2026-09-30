@@ -22,11 +22,12 @@ import { SCALE, GRADE_ANNOTATION, GRADE_EXHIBIT, exhibitAxis, exhibitTwin,
 // one. `controls.js` imports nothing, which is why this module may use
 // it where it may not use `app.js` - see the note below.
 import { commandLine, identify, labelFor } from "./controls.js";
+import { TERMS } from "./format.js";
 import { plural } from "./tables.js";
 // `UX-337`: the primitives the chapters share. Extracted because the
 // chapters were *not* acyclic without them - see `primitives.js`.
 import {
-  SVG, svg, seconds, mib, bar, OVERVIEW_SHOWN, elementAnchor,
+  ABSENT, SVG, svg, seconds, mib, bar, OVERVIEW_SHOWN, elementAnchor, plainValue, headRow,
 } from "./primitives.js";
 
 // UX-699: `eqeqeq` disallows `== null`, so a null-or-undefined check is
@@ -52,7 +53,8 @@ export function declareReaders(section, roles) {
   tag.className = "reader-tag";
   tag.setAttribute("data-reader-tag", "");
   tag.setAttribute("data-readers", roles.join(" "));
-  (section.querySelector?.("h2, h3") ?? section).append(tag);  // UX-1018
+  const head = section.querySelector?.("h2, h3");  // UX-1018
+  (head ? headRow(head) : section).append(tag);
   return section;
 }
 
@@ -439,9 +441,9 @@ export function renderTrend(store, schema = undefined,
   const tailed = rows.some((row) => notNullish(row.bga_tail_us));
   const twinRows = (list) => list.map((row) => [
     row.stamp,
-    notNullish(row.total_duration_us) ? seconds(row.total_duration_us) : "—",
+    notNullish(row.total_duration_us) ? seconds(row.total_duration_us) : ABSENT,
     row.incomplete_reason ? row.incomplete_reason
-      : (row.verdict_kind ?? "—").replace(/_/g, " "),
+      : (row.verdict_kind ?? ABSENT).replace(/_/g, " "),
     ...(tailed ? [tailCell(row)] : []),
   ]);
   const columns = ["Snapshot", "Duration", "Verdict",
@@ -520,9 +522,9 @@ export function renderTrend(store, schema = undefined,
   return wrapper;
 }
 
-/** UX-1078: `5.6 s beside a 34.7 s build`, or a dash before `tail.json`. */
+/** UX-1078: `5.6 s beside a 34.7 s build`, or none before `tail.json`. */
 function tailCell(row) {
-  if (!notNullish(row.bga_tail_us)) return "—";
+  if (!notNullish(row.bga_tail_us)) return ABSENT;
   return notNullish(row.build_wall_us)
     ? `${seconds(row.bga_tail_us)} beside a ${seconds(row.build_wall_us)} build`
     : seconds(row.bga_tail_us);
@@ -641,18 +643,15 @@ export function renderBlastOffline(payload, copy, make) {
   // is stated *inside* the section, not in its name.
   section.append(make("p", { class: "muted" },
     argv
-      ? "The search box asks a server, and an exported report has none - "
+      ? "The search box asks a server, and an exported report has none — "
         + "so here is the same answer as a command, for the element this "
         + "run ranks first:"
       : "The search box asks a server, and an exported report has none. "
         + "Run `bga blast` against this run with the element you are "
         + "about to change."));
   if (argv) {
-    if (step.reason) {
-      section.append(make("p", { class: "muted", "data-role": "blast-why" },
-                          step.reason));
-    }
-    // `UX-429`: the same control the decision panel and the table use.
+    // `UX-429`: the same control the decision panel and the table use;
+    // `UX-1156`: the step's reason is the decision panel's, said there.
     section.append(...commandLine(step.argv, { make, copy }));
   }
   return section;
@@ -702,7 +701,7 @@ export function renderBlastAnswer(result) {
     const dt = document.createElement("dt");
     dt.textContent = name;
     const dd = document.createElement("dd");
-    dd.textContent = value === null || value === undefined ? "—" : String(value);
+    dd.textContent = plainValue(value);
     dd.setAttribute("data-key", name.toLowerCase().replace(/\W+/g, "_"));
     list.append(dt, dd);
   }
@@ -742,9 +741,9 @@ const WATERFALL = [
 
 // The certified floors, read the same way.
 const FLOORS = [
-  { key: "t_infinity_observed", label: "T∞ (observed)" },
-  { key: "lb", label: "LB" },
-  { key: "t_c", label: "T_C" },
+  { key: "t_infinity_observed", label: TERMS.t_infinity_observed },
+  { key: "lb", label: TERMS.lb },
+  { key: "t_c", label: TERMS.t_c },
   { key: "certified_headroom", label: "Certified headroom" },
 ];
 
@@ -847,7 +846,7 @@ export function renderEvidence(payload) {
   // truth is that nobody looked.
   const plane2 = payload?.plane2_coverage;
   if (plane2 && typeof plane2.processes === "number") {
-    rows.push(["Plane 2 coverage",
+    rows.push([TERMS.plane2_processes,
                `${plane2.processes} processes`
                + (typeof plane2.opens_coverage === "number"
                   ? `, opens ${(plane2.opens_coverage * 100).toFixed(0)}%` : ""),

@@ -160,9 +160,8 @@ html { font-family: var(--font-sans); }
     --good-mark: #176b2c; --accent-mark: #2b5797;
     --muted-bg: #f2f2f2;
   }
-  body { background: #fff; }
-  /* The rail is navigation; paper has none. */
-  nav.toc, .jump-hits, #jump { display: none; }
+  /* The rail is navigation; paper has none (the jump box is an `input`, hidden below). */
+  nav.toc, .jump-hits { display: none; }
   details { break-inside: avoid; }
 }
 * { box-sizing: border-box; }
@@ -193,7 +192,7 @@ p, li > p, dd { max-width: 72ch; }
 
    - **standing** (this rule) - a control with a surface, for
      something you press on purpose;
-   - **quiet** (`.control-quiet`) - an inline toggle beside a value it
+   - **quiet** (the grade rule below) - an inline toggle beside a value it
      must not compete with;
    - **door** (`button.describe`) - `UX-317`'s circular `?`.
 
@@ -243,8 +242,7 @@ button[aria-pressed="true"] {
    beside something it annotates - a fold, a chapter, a JSON door - and
    a surface on it would read as the page's next action. */
 button.collapse, button.fold-more, button.json-toggle, button.twin-toggle,
-button.focus-back, button.expand-table, button.chapter-open, button.toc-title,
-.control-quiet {
+button.focus-back, button.expand-table, button.chapter-open, button.toc-title {
   background: transparent; color: var(--muted);
 }
 
@@ -325,7 +323,8 @@ body[data-has-toc] > header {
    independent of it). One line, truncated, rather than a second. */
 #run-name {
   display: inline-block; margin: 0 var(--space-3) 0 0; vertical-align: middle;
-  max-width: 55%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  /* `UX-1153`: of the viewport; `UX-1157`: 65vw holds a 16-character name beside the wordmark at 390; 55vw cut it. */
+  max-width: 65vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 /* The height the sticky heading occupies, named once so the rail's
    offset and every anchor's landing clear it by the same amount. A
@@ -348,8 +347,18 @@ h3 { font-size: var(--font-h2); margin: var(--space-8) 0 var(--space-2); }
    the unstyled UA default (1.17em of the body) computed 17.55px,
    above every h3 on the page (16.8px) it was supposed to nest under. */
 h4 { font-size: var(--font-body); font-weight: 600; margin: var(--space-4) 0 var(--space-1); }
+/* UX-1147 (§6e.1): a heading's controls sit in its row, not in it - the
+   row takes the heading's margins (below), the heading keeps its name. */
+.section-head > h2, .section-head > h3, .chapter-head > h2 { margin: 0; min-width: 0; }
 .muted { color: var(--muted); }
 code, pre, .num { font-family: var(--font-mono); }
+/* `UX-1153`: a header or a sentence beside a number is words, not digits. */
+th.num, .num .description, .num .run-advice { font-family: var(--font-sans); }
+/* `UX-1153` (§1d): a command is one line; it scrolls inside its own box. */
+code.next-command {
+  display: inline-block; max-width: 100%; vertical-align: bottom;
+  white-space: pre; overflow-x: auto;
+}
 a { color: var(--accent); }
 
 /* UX-1022 (styleguide §6e.7): a hit area, not a bigger glyph - min-*
@@ -372,7 +381,7 @@ a:not(p a) { display: inline-flex; align-items: center; justify-content: center;
 .verdict.refused { border-left-color: var(--bad); }
 .verdict.warn { border-left-color: var(--warn); }
 .verdict.good { border-left-color: var(--good); }
-.verdict h3 { margin: 0 0 var(--space-1); }
+.verdict h3, .verdict .section-head { margin: 0 0 var(--space-1); }
 
 .finding {
   border-left: 3px solid var(--line); padding: var(--space-2) var(--space-3); margin: var(--space-2) 0;
@@ -386,6 +395,7 @@ a:not(p a) { display: inline-flex; align-items: center; justify-content: center;
 .finding[data-severity="info"], .finding[data-severity="low"] {
   border-left-color: var(--accent);
 }
+.finding[data-note-of] { margin-left: var(--space-4); }
 /* UX-356: the join's own advice, at the grade of a finding because
    that is what it is - a written recommendation with a severity. Tone
    on the rule, never on the words (§4.4). */
@@ -414,7 +424,7 @@ a:not(p a) { display: inline-flex; align-items: center; justify-content: center;
 table { border-collapse: collapse; width: 100%; margin: var(--space-2) 0 var(--space-4); }
 th, td {
   text-align: left; padding: var(--space-1) var(--space-2); border-bottom: 1px solid var(--line);
-  vertical-align: top;
+  vertical-align: top; overflow-wrap: break-word;
 }
 th { cursor: pointer; user-select: none; white-space: nowrap; }
 th::after { content: ""; }
@@ -442,6 +452,21 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 }
 .pairs dt { color: var(--muted); min-width: 0; }
 .pairs dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+/* `UX-1145` (styleguide §6e.10): compact has no room for two columns - a term stacks above its value. */
+@media (max-width: 60rem) {
+  .pairs { grid-template-columns: minmax(0, 1fr); row-gap: 0; }
+  .pairs dd + dt { margin-top: var(--space-2); }
+  /* `UX-1157`: a header wraps between words, and a table of tables stacks its cells. */
+  th, td { white-space: normal; font-size: var(--font-small); padding: var(--space-1); }
+  table:has(td table) > * > tr, table:has(td table) > * > tr > * { display: block; }
+  /* `UX-1164`: no tick label, part or question is cut. */
+  .draw-axis:not([data-layout]) { height: 3.2em; }
+  .draw-tick:nth-child(even) { top: 1.6em; }
+  .decomposition .draw-axis, [data-layout] { height: auto; flex-wrap: wrap; }
+  .decomposition .draw-tick { position: relative; display: table; top: 0; }
+  .chapter-head { flex-wrap: wrap; }
+  .chapter-head > h2 { order: 1; flex-basis: 100%; }
+}
 details { margin: var(--space-1) 0; }
 /* `UX-1025` (styleguide §6e.13): one disclosure glyph pair, ▸ closed
    and ▾ open - the same pair the boxed fold buttons already use
@@ -498,6 +523,8 @@ body[data-has-toc] > .toc {
 }
 .toc-title { display: block; width: 100%; text-align: left; margin: 0 0 var(--space-1); }
 .toc-title:disabled { cursor: default; }
+/* `UX-1153`: where the rail cannot fold its title is a heading, not a control. */
+.toc-title:disabled, .toc-title:disabled:hover { border-color: transparent; }
 .toc ul {
   list-style: none; margin: 0; padding: 0;
   display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-4);
@@ -552,8 +579,6 @@ button.collapse:hover { color: var(--fg); }
         background: var(--bg); color: var(--fg); }
 .jump-hits { list-style: none; margin: var(--space-1) 0 0; padding: 0;
              display: flex; flex-wrap: wrap; gap: var(--space-1); }
-.jump-hits button {
-}
 
 /* UX-286: the chapters. A rule, a name and the space a heading earns -
    the grouping has to be visible to be navigation, and it must not cost
@@ -563,7 +588,7 @@ button.collapse:hover { color: var(--fg); }
 section.chapter { margin: var(--space-5) 0 0; }
 section.chapter:first-of-type { margin-top: 0; }
 /* `UX-1044`: the fold control sits at the head's right edge, first line. */
-h2.chapter-title {
+.chapter-head {
   margin: 0; padding-top: var(--space-2);
   border-top: 2px solid var(--line);
   display: flex; align-items: baseline; gap: var(--space-2);
@@ -573,7 +598,7 @@ h2.chapter-title {
    separation now. Measured: this pays for the seven chapter headings
    and leaves the document shorter than it was, which is the acceptance
    test's third clause. */
-section.chapter > section > h3 { margin-top: var(--space-4); }
+section.chapter > section > h3, section.chapter > section > .section-head { margin-top: var(--space-4); }
 
 /* UX-347 (styleguide §3c): **a folded chapter is its question, its
    answer and its count.** The document was 22.7 screens with every
@@ -645,13 +670,21 @@ button.chapter-open:hover, button.chapter-open[aria-expanded="true"] {
     display: block !important;
     content-visibility: visible !important;
   }
-  button.chapter-open { display: none; }
+  /* `UX-1154`/`UX-1161`: paper has no click - every fold prints open with no marker, no control or its label prints, code wraps, every description prints; a fold count stays, it says what is not printed. */
+  ::details-content { content-visibility: visible; }
+  summary::before { content: none !important; }
+  button:not(.fold-more), input, select, label { display: none !important; }
+  pre, code { white-space: pre-wrap !important; }
+  body, td, th { overflow-wrap: anywhere; }
+  .description { display: block !important; }
+  /* An exhibit's twin prints open, so its values reach paper (§2b: hover is never the only door). */
+  table.twin-table { display: table !important; }
 }
 
 /* Collapsed sections keep their heading; everything below it goes.
    Scoped to a section that names itself, so a chapter - which is also a
    `section` - never hides the sections inside it. */
-section[data-section][data-collapsed="true"] > *:not(h3) { display: none; }
+section[data-section]:is([data-collapsed="true"], [data-unfocused="true"]) > *:not(h3):not(.section-head) { display: none; }
 section[data-jumped="true"], [data-jumped="true"] {
   outline: 2px solid var(--accent); outline-offset: 3px;
 }
@@ -669,7 +702,8 @@ section[data-jumped="true"], [data-jumped="true"] {
 
 /* UX-202: the overview waterfall. Bars are a reading of published
    numbers - the printed value beside each is the field itself. */
-.wf-row { display: grid; grid-template-columns: 13rem 1fr 6rem;
+/* `UX-1153`: the bar is capped so a value stays within reach of its label. */
+.wf-row { display: grid; grid-template-columns: 13rem minmax(0, 30rem) 6rem;
           align-items: center; gap: var(--space-2); margin: var(--space-1) 0; }
 .wf-label { font-size: var(--font-small); }
 .wf-track { background: var(--panel); border: 1px solid var(--line);
@@ -699,6 +733,9 @@ main table table { display: table; max-width: none; overflow: visible; }
 /* A published command is long by nature (`bga whatif a.bst b.bst …`)
    and must not set the page's width. */
 main code, main pre { overflow-wrap: anywhere; max-width: 100%; }
+/* `UX-1164`: a query scrolls in its box; a table of tables wraps its headers. */
+main pre { overflow-x: auto; }
+table:has(td table) th { white-space: normal; }
 input.table-filter { max-width: 100%; }
 
 /* UX-254: below this there is no room for two columns, so the page
@@ -714,6 +751,8 @@ input.table-filter { max-width: 100%; }
     padding: var(--space-2) 0 var(--space-3); margin: 0 0 var(--space-4);
     max-height: 60vh;
   }
+  /* `UX-1145`: a folded rail is a bar and scrolls away - header and rail stuck 168 of 844 px; an opened one stays. */
+  body[data-has-toc] > .toc[data-folded="true"] { position: static; }
   body[data-has-toc] > .toc ul { display: flex; }
   body[data-has-toc] > .toc a { display: inline; white-space: normal; }
   /* `UX-397`: the handoff stays when the rail folds. A folded rail
@@ -731,9 +770,6 @@ input.table-filter { max-width: 100%; }
 
 /* UX-204: the investigate button and the paste it leaves behind. */
 .investigate { margin: var(--space-2) 0 var(--space-1); }
-/* `UX-436`: standing grade, from the base rule. What was here was the
-   base rule written out by hand, at a different size. */
-.investigate button { }
 .investigate button:hover { border-color: var(--accent); }
 .investigate .handoff { margin-left: var(--space-2); font-size: var(--font-small); }
 .investigate .query { margin: var(--space-2) 0 0; font-size: var(--font-small); }
@@ -773,7 +809,6 @@ h3.category { letter-spacing: .04em;
    pairing costs one line on four tables, not most. */
 .table-tools button.copy-rows { align-self: flex-start; }
 .table-tools select.top-n { margin-left: auto; align-self: flex-start; }
-.copy-rows { }
 th .th-filter { display: block; width: 100%; margin-top: var(--space-1);
                 font: inherit; font-size: var(--font-small); font-weight: normal;
                 padding: 0 var(--space-1); background: var(--bg); color: inherit;
@@ -811,7 +846,7 @@ th .th-filter.unparsed { border-color: var(--bad); border-style: dashed; }
 .decision { border: 1px solid var(--accent); border-radius: 4px;
             padding: var(--space-3) var(--space-4); margin-bottom: var(--space-4);
             background: var(--panel); }
-.decision h3 { margin-top: 0; }
+.decision h3, .decision .section-head { margin-top: 0; }
 .decision .diagnosis { font-size: var(--font-body); margin: var(--space-1) 0 var(--space-2); }
 .decision .opportunity { margin: var(--space-1) 0 var(--space-2); }
 .decision .actions { margin: 0; padding-left: var(--space-5); }
@@ -819,6 +854,8 @@ th .th-filter.unparsed { border-color: var(--bad); border-style: dashed; }
                     align-items: baseline; flex-wrap: wrap; }
 .decision .action .worth { color: var(--muted); font-size: var(--font-small); }
 .decision .action .why { font-size: var(--font-small); }
+/* `UX-1152`: every Why opens on a row of its own, below its element - not beside it where there is room. */
+.decision .action > details.why-ranked[open] { flex-basis: 100%; }
 /* UX-669 (§1e): the runbook. Three blocks a reader reads downward -
    why, the command, where it came from - so the command keeps its own
    line however long it is, and the citation does not trail the Copy
@@ -844,11 +881,12 @@ th .th-filter.unparsed { border-color: var(--bad); border-style: dashed; }
   letter-spacing: .04em; color: var(--muted);
   border: 1px solid var(--line); border-radius: .2rem; padding: 0 var(--space-1);
   vertical-align: middle;
-  /* `UX-1043`: always a flex item of the head that also carries the
-     JSON toggle - shrinks past its own longest word so a promoted
-     section's tag never pushes the toggle past the head's edge. */
-  min-width: 0; overflow-wrap: anywhere;
+  /* `UX-1043`, `UX-1145`: a flex item of the head beside the JSON toggle -
+     it shrinks to its longest reader's chip and no further; the title shrinks past that. */
+  min-width: min-content;
 }
+/* `UX-1145`: a reader's chip is one line; the tag breaks between readers. */
+.reader-chip { white-space: nowrap; }
 /* UX-668 (styleguide §4 rule 7): a reader is a shape, not a hue - §4.2's
    accent marks promotion on a border, the one channel §4.3 reserves. */
 section[data-promoted] { border-left: 3px solid var(--accent); }
@@ -859,7 +897,6 @@ section[data-promoted] { border-left: 3px solid var(--accent); }
                            color: var(--muted); margin-top: var(--space-1); }
 
 /* UX-208 / UX-209: investigation affordances, and the rail. */
-.section-key { margin-left: var(--space-2); font-size: var(--font-small); font-weight: normal; }
 .inspect { margin-left: var(--space-1); text-decoration: none; opacity: .55; }
 .inspect:hover { opacity: 1; }
 .copy-sql { margin-top: var(--space-1); }
@@ -937,8 +974,7 @@ ol.horizon { list-style: none; margin: 0; padding: 0; }
    what they are not looking at, and the document underneath stays
    byte-identical so Ctrl-F and the export remain honest. */
 [data-dimmed="true"] { opacity: 0.32; }
-section[data-section][data-unfocused="true"] > *:not(h3) { display: none; }
-section[data-section][data-unfocused="true"] > h3 { opacity: 0.32; }
+section[data-section][data-unfocused="true"] > :is(h3, .section-head) { opacity: 0.32; }
 .focus-bar, .mark-summary {
   margin: 0 0 var(--space-2);
   padding: var(--space-1) var(--space-2);
@@ -946,8 +982,6 @@ section[data-section][data-unfocused="true"] > h3 { opacity: 0.32; }
   background: var(--muted-bg);
 }
 .element-controls { display: flex; gap: var(--space-1); margin: var(--space-1) 0 var(--space-2); }
-/* `UX-436`: was `0.85em`, which resolved differently per parent. */
-.element-controls button { }
 
 /* UX-225: a mark annotates, it never hides. An element marked done is
    still ranked and still in the horizon - a ranking that quietly drops
@@ -1050,8 +1084,7 @@ button.describe {
   font: inherit; font-size: var(--font-small); line-height: 1; cursor: help;
   background: transparent; color: var(--muted);
   border: 1px solid var(--line); border-radius: 50%;
-  width: 1.1em; height: 1.1em; padding: 0; margin-left: var(--space-1);
-  vertical-align: super;
+  width: 1.1em; height: 1.1em; padding: 0;
 }
 button.describe:hover, button.describe[aria-expanded="true"] { color: var(--fg); }
 .description {
@@ -1072,11 +1105,8 @@ button.describe:hover, button.describe[aria-expanded="true"] { color: var(--fg);
    were the schema's glossary printed in full.
 
    `.description[hidden]` is (0,2,0) against those (0,1,0), so it wins
-   in both blocks wherever it sits in the file. Paper gets the same
-   answer as the screen deliberately: a printed report carrying every
-   field's definition is the glossary nobody asked for, and the two
-   declared inline classes (`bga:inline`) print because they are not
-   behind the door at all. */
+   in both blocks wherever it sits in the file. Paper has no door, so
+   print shows every sentence (`UX-1161`). */
 .description[hidden] { display: none; }
 
 /* UX-318 (styleguide §3a.2/§3a.3): **table focus.** One table takes the
@@ -1097,12 +1127,6 @@ button.expand-table[aria-pressed="true"] {
   color: var(--fg); border-color: var(--fg);
 }
 .focus-crumb { margin: 0 0 var(--space-1); }
-button.focus-back, button.expand-table {
-  font: inherit; font-size: var(--font-small); cursor: pointer;
-  background: transparent; color: var(--muted);
-  border: 1px solid var(--line); border-radius: 3px;
-  padding: 0 var(--space-2);
-}
 button.focus-back:hover, button.expand-table:hover { color: var(--fg); }
 /* Behind, not gone. `display: none` rather than a visual dimming: a
    reader in focus is looking at one table, and a half-visible report
@@ -1123,6 +1147,9 @@ nav.toc[data-focus-inert="true"] {
    value stays selectable once opened. */
 details.long-text > summary { cursor: pointer; }
 details.long-text .full-text { white-space: pre-wrap; margin: var(--space-2) 0 0; }
+/* `UX-1152`: open, the fold shows its text once - the preview goes, and the label says so. */
+details.long-text:not([open]) > summary > .long-text-less,
+details.long-text[open] > summary > :is(.long-text-head, .long-text-more) { display: none; }
 
 /* UX-271: the rail nests one level. Indented, quieter than its parent,
    and collapsed to nothing when the section it belongs to is not the
@@ -1232,7 +1259,8 @@ section > .table-tools { top: var(--head, 5.5rem); }
    what is reserved. The title text is an anonymous flex item here
    (`el("h2", {}, info.label)` gives the head a bare text child) and
    shrinks to wrap around the fixed-width sibling on its own. */
-h2:has(> button.json-toggle), h3:has(> button.json-toggle) {
+.section-head {
+  margin: var(--space-8) 0 var(--space-2);
   display: flex;
   align-items: baseline;
   gap: var(--space-2);
@@ -1248,6 +1276,15 @@ h2:has(> button.json-toggle), h3:has(> button.json-toggle) {
 button.json-toggle {
   margin-left: auto;
   flex: none;
+}
+/* `UX-1147`: compact gives a heading a row of its own, controls above. */
+@media (max-width: 60rem) {
+  .section-head:has(> .reader-tag, > .json-toggle) { display: grid; grid: auto / auto minmax(0, 1fr) auto; gap: 0 var(--space-2); }
+  .section-head > h3 { grid-area: 1 / 2 / 2 / 4; flex: auto; }
+  .section-head:has(> .json-toggle) > h3 { grid-area: 2 / 1 / 3 / 4; }
+  .section-head > .json-toggle { grid-area: 1 / 3; margin-left: 0; }
+  .section-head > .reader-tag { grid-area: 2 / 2 / 3 / 4; justify-self: start; margin-left: 0; }
+  .section-head:has(> .json-toggle) > .reader-tag { grid-area: 1 / 2; }
 }
 button.json-toggle:hover { color: var(--fg); }
 .section-json pre {
@@ -1365,6 +1402,10 @@ button.json-toggle:hover { color: var(--fg); }
 .draw-tick[data-mark~="max"], .draw-tick[data-mark~="last"] {
   transform: translateX(-100%);
 }
+/* `UX-1153`: a part's label shifts by its own position, so it never leaves the bar. */
+.decomposition .draw-tick { transform: translateX(calc(var(--at, 50) * -1%)); }
+/* `UX-1157`: the label names its part; a reader-mark suffix only widened it into its neighbour. */
+.decomposition .draw-tick::after, .draw-tick[data-mark*=" "]::after { content: none; }
 /* `UX-674`: a single middle tick between two edge ticks lays out in
    normal flow instead of by absolute percentage - flow never overlaps
    a sibling, a percentage `left` can once either label's own text
@@ -1385,18 +1426,9 @@ button.json-toggle:hover { color: var(--fg); }
    table is the same answer as rows - and it survives the export,
    because a toggle is DOM and needs no server (`UX-195`). */
 .draw-twin { margin: var(--space-1) 0 0; }
-button.twin-toggle { }
 button.twin-toggle:hover { color: var(--fg); }
 table.twin-table { margin-top: var(--space-1); font-size: var(--font-small); }
 table.twin-table td { font-variant-numeric: tabular-nums; }
-
-/* Paper has no toggles: an exhibit's twin prints open, so the values
-   reach the reader of a printed report too (§2b's rule that hover is
-   never the only door, applied to a click). */
-@media print {
-  table.twin-table { display: table !important; }
-  button.twin-toggle { display: none; }
-}
 
 /* `UX-390`: the run's advice for one attribution bucket, under the
    value it is about. Muted and narrow: it is a second sentence on a
@@ -1411,11 +1443,7 @@ p.run-advice {
 /* `UX-393`: the rail's own step controls. In the rail, not a banner:
    `UX-347`'s distance budget measures the reading column, and a
    sticky bar costs it on every screen. */
-.toc-steps {
-  display: flex;
-  gap: var(--space-1);
-  margin: var(--space-1) 0 var(--space-2);
-}
+.toc-steps { display: flex; flex-wrap: wrap; gap: var(--space-1); margin: var(--space-1) 0 var(--space-2); }
 /* `UX-667`: one row of three, not the wrap the default button font
    gave three in a 208px column ("41px two-line buttons", round 90's
    design review). `white-space` is not one of the fields
@@ -1425,10 +1453,12 @@ p.run-advice {
 .toc-steps button { flex: 1; white-space: nowrap; }
 /* `UX-536`: the two accelerators, said where the controls they drive
    are. Muted and last, so it reads as a note rather than a fourth
-   control. */
-.toc-keys {
-  flex: 0 0 auto; align-self: center;
-  color: var(--muted); font-size: var(--font-small); white-space: nowrap;
+   control. On its own row (`UX-1164`). */
+.toc-keys { flex: 0 0 100%; color: var(--muted); font-size: var(--font-small); white-space: nowrap; }
+/* `UX-1153`: a key cap, so "[ ]" does not read as an empty checkbox. */
+.toc-keys kbd {
+  font-family: var(--font-mono); border: 1px solid var(--line);
+  border-radius: 3px; padding: 0 var(--space-1);
 }
 
 /* `UX-397`: the Perfetto handoff, in the rail rather than in a header

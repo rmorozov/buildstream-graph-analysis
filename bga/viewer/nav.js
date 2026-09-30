@@ -39,6 +39,7 @@ export function sections(root) {
 // invisible to the export's `_module_order`, which walks `import`
 // lines, so the module would never be inlined.
 import { elementAnchor } from "./primitives.js";
+import { headRow } from "./primitives.js";
 
 /**
  * The named things inside one section, as a nested list - or `null`.
@@ -98,6 +99,22 @@ function viewEntries(section, doc) {
 export function subsections(section, doc) {
   const views = viewEntries(section, doc);
   if (views) return views;
+  // `UX-1146`: a published section drawn inside this one is its sub-entry.
+  const drawn = [...(section?.querySelectorAll?.("[data-rail-sub][id]") ?? [])];
+  if (drawn.length) {
+    const list = doc.createElement("ul");
+    list.className = "toc-sub";
+    for (const head of drawn) {
+      const item = doc.createElement("li");
+      const link = doc.createElement("a");
+      link.href = `#${head.getAttribute("id")}`;
+      link.setAttribute("data-toc-sub", head.getAttribute("data-rail-sub"));
+      link.textContent = String(head.textContent ?? "").trim();
+      item.append(link);
+      list.append(item);
+    }
+    return list;
+  }
   const folds = [...(section?.querySelectorAll?.("details.map > summary") ?? [])];
   if (folds.length < 2) return null;
   const list = doc.createElement("ul");
@@ -151,7 +168,9 @@ export function headingLabel(section) {
   // promotes it - a selector list reads either, so this runs the same before
   // or after that pass.
   const head = section?.querySelector?.("h2, h3");
-  if (!head || (head.parentElement ?? head.parentNode) !== section) return null;
+  const parent = head?.parentElement ?? head?.parentNode;
+  if (!head || (parent !== section
+                && (parent?.parentElement ?? parent?.parentNode) !== section)) return null;
   const own = [...(head.childNodes ?? [])]
     .filter((node) => node.nodeType === 3)
     .map((node) => node.textContent ?? "").join("").trim();
@@ -239,11 +258,14 @@ export function collapsible(root, { document: doc, storage,
 
     const button = doc.createElement("button");
     button.className = "collapse";
-    // `UX-536`: 65 of these had no accessible name and defaulted to
-    // `type=submit`. The name is the heading's, read before the button
-    // joins it; `aria-expanded` beside it carries the state.
+    // UX-536, UX-1155: named for the heading it folds, and its own `?` doors for what they describe.
     button.setAttribute("type", "button");
-    button.setAttribute("aria-label", (heading.textContent || key).trim());
+    const named = (heading.textContent || key).trim();
+    button.setAttribute("aria-label", `Fold ${named}`);
+    // A finding card names its own; a nested section comes later and names its own over these.
+    for (const door of section.querySelectorAll?.(".describe") ?? []) {
+      if (!door.closest("article")) door.setAttribute("aria-label", `What these mean: ${named}`);
+    }
     button.setAttribute("aria-expanded", String(!collapsed.has(key)));
     button.setAttribute("data-collapse", key);
     button.textContent = collapsed.has(key) ? "▸" : "▾";
@@ -262,8 +284,9 @@ export function collapsible(root, { document: doc, storage,
     // Not `heading.prepend?.(button) ?? heading.append(button)`: prepend
     // returns undefined, so `??` falls through and the button is added
     // *twice*. Caught by the collapse guard.
-    if (typeof heading.prepend === "function") heading.prepend(button);
-    else heading.append(button);
+    const row = headRow(heading, doc);
+    if (typeof row.prepend === "function") row.prepend(button);
+    else row.append(button);
     toggles.set(key, apply);
   }
 
@@ -692,7 +715,13 @@ export function stepper(root, nav, { document: doc, window: win } = {}) {
   const keys = owner.createElement("span");
   keys.className = "toc-keys";
   keys.setAttribute("data-step-keys", "[]");
-  keys.textContent = "[ ] step";
+  // `UX-1153`: key caps, not "[ ]" - that read as an empty checkbox.
+  const cap = (key) => {
+    const node = owner.createElement("kbd");
+    node.textContent = key;
+    return node;
+  };
+  keys.append(cap("["), " and ", cap("]"), " step");
   bar.append(keys);
 
   // `UX-393`: back to the top appears once there *is* a top to go
@@ -824,7 +853,15 @@ export function scrollspy(root, nav, { observer } = {}) {
   // counts as on screen while the reader is inside it. The reading
   // line above is what turns "on screen" into "here".
   }, { threshold: 0 });
-  for (const section of targets) watch.observe(section);
+  // A zero-height root on the reading line: a section edge crossing it,
+  // by scroll or by layout, is what moves the mark, and `watch` alone
+  // sees nothing while the set on screen stays the same.
+  const pct = READING_LINE * 100;
+  const line = new Observer(mark, { rootMargin: `-${pct}% 0px -${100 - pct}% 0px` });
+  for (const section of targets) {
+    watch.observe(section);
+    line.observe(section);
+  }
   return watch;
 }
 

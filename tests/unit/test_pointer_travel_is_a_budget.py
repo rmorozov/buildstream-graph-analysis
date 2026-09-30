@@ -60,19 +60,31 @@ DX_ONLY = ("button.copy-rows", "select.top-n")
 #: `(label, width): {journey: (bits, wheel px)}`, 3 runs (spread 0 on
 #: every value) after `UX-1055`'s reorder; J2 is its worst chapter. J4
 #: (table tools) is the journey `UX-1055`'s own Decomposition names as
-#: extended; `UX-1044`'s fold label lengthens both_scale 390 J3.
+#: extended; `UX-1044`'s fold label lengthens both_scale 390 J3; `UX-1137` and `UX-1143` (the capacity lead) re-base both 390 J3s;
+#: `UX-1153`'s one-line command puts macro_micro 390's Copy on the first screen;
+#: `UX-1145` re-bases both 390 rows (stacked pairs, chips on their own row);
+#: `UX-1152` re-bases all four (a one-row record drawn as pairs, Why below its row).
+#: Round 154's merged tree re-measured, 3 runs, spread 0.
+#: `UX-1147`'s heading row lowers macro_micro 390 and re-bases both_scale 390 J3/J4 (one hop), 3 runs, spread 0.
+#: `UX-1160` re-bases all four on the laid-out page (no placeholder section), 3 runs, spread 0.
+#: Round 155's merged tree (`UX-1154`..`UX-1160`) re-measured, 3 runs, spread 0.
 MEASURED = {
-    ("macro_micro", 1440): {"J1": (4.53, 0), "J2": (18.5, 0), "J3": (15.67, 38172), "J4": (14.8, 11761)},
-    ("macro_micro", 390): {"J1": (2.09, 424), "J2": (17.58, 0), "J3": (18.51, 50777), "J4": (9.99, 17717)},
-    ("both_scale", 1440): {"J1": (4.48, 0), "J2": (19.67, 0), "J3": (12.49, 45945), "J4": (14.78, 12568)},
-    ("both_scale", 390): {"J1": (1.68, 771), "J2": (18.94, 0), "J3": (21.01, 57550), "J4": (10.63, 22257)},
+    ("macro_micro", 1440): {"J1": (4.53, 0), "J2": (18.48, 0), "J3": (5.87, 35123), "J4": (14.76, 10856)},
+    ("macro_micro", 390): {"J1": (2.34, 466), "J2": (14.81, 1487), "J3": (3.56, 56293), "J4": (9.79, 16695)},
+    ("both_scale", 1440): {"J1": (4.45, 0), "J2": (18.33, 1982), "J3": (6.49, 39669), "J4": (14.64, 11201)},
+    ("both_scale", 390): {"J1": (2.07, 769), "J2": (15.15, 2426), "J3": (4.14, 65240), "J4": (10.34, 21340)},
 }
 HEADROOM_BITS = 0.5
 HEADROOM_WHEEL = 1.10
-#: Chapters no section of which offers ?, JSON and fold together.
+#: Chapters no section of which offers ?, JSON and fold together. `change`'s one-row
+#: `restructuring` holds nested tables, so it stays a table (`UX-1152`'s fixer).
 UNOFFERED = {"macro_micro": ["change"], "both_scale": ["compare"]}
 
-_PRELUDE = r"""
+#: `UX-1160`: every section laid out - an unrendered one is 600 px of
+#: `contain-intrinsic-size`, not the geometry a reader scrolls through.
+_PRELUDE = (
+    pages.FULL_LAYOUT_JS
+    + r"""
 const frames = (n) => new Promise((r) => {
   let i = 0;
   const step = () => (++i >= n ? r() : requestAnimationFrame(step));
@@ -87,7 +99,12 @@ const vis = (n) => { const r = n.getBoundingClientRect(); return r.width > 0 && 
 const $ = (s, root = document) => [...root.querySelectorAll(s)].filter(vis);
 let pos = null;
 const steps = [];
+// Open sections still deferred: each is sized by its placeholder until drawn.
+let placeholders = 0;
+const lazy = () => [...document.querySelectorAll("section.chapter > section[data-section]:not([hidden])")]
+  .filter((n) => getComputedStyle(n).contentVisibility === "auto").length;
 async function hop(label, n, click = true) {
+  placeholders = Math.max(placeholders, lazy());
   if (!n || !vis(n)) { steps.push({label, missing: true}); return; }
   let r = n.getBoundingClientRect();
   let wheel = 0;
@@ -107,12 +124,13 @@ async function hop(label, n, click = true) {
   if (click) { n.click(); await settle(); }
 }
 async function journey(fn) {
-  pos = null; steps.length = 0;
+  pos = null; steps.length = 0; placeholders = 0;
   scrollTo(0, 0); await settle();
   await fn();
-  return {steps: [...steps]};
+  return {steps: [...steps], placeholders};
 }
 """
+)
 
 #: J1, J3, then placement with every chapter open, then J4 - one load.
 _DOCUMENT = (
@@ -133,15 +151,16 @@ _DOCUMENT = (
     .filter((b) => b.getAttribute("aria-expanded") !== "true").length;
   const head = (n) => {
     const s = n.closest("section[data-section]");
-    const h = s && s.querySelector("h2, h3");
+    const h = s && s.querySelector(".section-head");
     return h && h.contains(n) ? h : null;
   };
   const blockOf = {
     "button.collapse": head,
     "button.json-toggle": head,
-    // `attachBlockDoor` prepends the door to the block it describes.
-    "button.describe": (n) => head(n) || n.closest("h2, h3, h4") || n.parentNode,
-    "button.chapter-open": (n) => n.closest("h2.chapter-title"),
+    // `UX-1157`: the door sits just before the `dl` it describes.
+    "button.describe": (n) => head(n) || n.closest("h2, h3, h4")
+      || (n.nextElementSibling?.matches("dl") ? n.nextElementSibling : n.parentNode),
+    "button.chapter-open": (n) => n.closest(".chapter-head"),
     // `UX-1055`: the block is the tool row itself, not the whole table
     // - the Motivation's own claim is that both follow a variable run
     // of *siblings inside `.table-tools`* (the badge, preset, pager),
@@ -166,12 +185,12 @@ _DOCUMENT = (
   // head or a tool row - read off the page itself, never off
   // `blockOf`'s own keys, so a class removed from both PLACEMENT and
   // UNPLACED still shows up here. Direct children only: `button.describe`
-  // owns its block, not a head (`attachBlockDoor` prepends it into the
-  // `dl`/`table`/`ul`, per `format.js`), so it is out of this census on
+  // owns its block, not a head (it sits just before its `dl`, per
+  // `format.js`), so it is out of this census on
   // purpose; a nested one (`button.page-prev`/`-next`, inside
   // `.table-pager`) is `.table-tools`'s own row and not this one's.
   const containers = document.querySelectorAll(
-    "section[data-section] h2, section[data-section] h3, h2.chapter-title, .table-tools");
+    "section[data-section] .section-head, .chapter-head, .table-tools");
   const census = new Set();
   for (const root of containers) {
     for (const n of root.querySelectorAll(":scope > button, :scope > select")) {
@@ -407,3 +426,16 @@ def test_a_journey_stays_under_its_budget(walked, label, size, name):
         f"{label} at {_page(size)}: {name} needs {wheel}px of wheel, measured "
         f"{base_wheel} x {HEADROOM_WHEEL} (styleguide §3l)"
     )
+
+
+@needs_browser
+@pytest.mark.parametrize("label", LABELS)
+@pytest.mark.parametrize("size", VIEWPORTS, ids=_page)
+def test_no_journey_reads_a_placeholder(walked, label, size):
+    """UX-1160: a hop across an undrawn section reads its 600 px
+    placeholder, not the page - every journey walks the laid-out page."""
+    out = walked[label, size]
+    runs = {name: out[name] for name in ("J1", "J3", "J4")}
+    runs.update({f"J2 {cid}": j for cid, j in out["J2"].items()})
+    lazy = {name: j["placeholders"] for name, j in runs.items() if j["placeholders"]}
+    assert not lazy, f"{label} at {_page(size)}: sections at their intrinsic-size placeholder while walked: {lazy}"

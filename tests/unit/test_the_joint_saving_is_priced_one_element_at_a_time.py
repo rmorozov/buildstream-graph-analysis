@@ -41,7 +41,7 @@ def test_an_element_worth_nothing_alone_compounds_and_names_the_order():
     assert joint["relation"] == "compound"
     assert joint["worth_more_after"] == ["B"]
     assert joint["savings_add"] is False
-    assert _sentence(joint).endswith("more than the 40.0s alone: B pays off after A")
+    assert _sentence(joint).endswith("more than the 40.0 s alone: B pays off after A")
 
 
 def test_independent_elements_add():

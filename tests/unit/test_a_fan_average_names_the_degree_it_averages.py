@@ -103,12 +103,13 @@ class TestBothDescriptionsStateTheEqualityByConstruction:
 
     def test_avg_fanin_names_avg_fanout_and_the_reason(self):
         text = _graph_metrics()["avg_fanin"]["description"].lower()
-        assert "avg_fanout" in text
+        # `UX-1159`: the sibling by its reader name, not its key.
+        assert "average fan-out" in text
         assert "construction" in text
         assert "in-edge" in text and "out-edge" in text
 
     def test_avg_fanout_names_avg_fanin_and_the_reason(self):
         text = _graph_metrics()["avg_fanout"]["description"].lower()
-        assert "avg_fanin" in text
+        assert "average fan-in" in text
         assert "construction" in text
         assert "in-edge" in text and "out-edge" in text

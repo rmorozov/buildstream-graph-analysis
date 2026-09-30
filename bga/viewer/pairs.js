@@ -4,15 +4,15 @@
  * Points down at `structured.js` for the table factory; nothing there
  * points back.
  */
-import { served } from "./primitives.js";
-import { COLUMNS, DIRECTION, QUESTION, PRESETS, INLINE, attachBlockDoor,
+import { plainValue, served } from "./primitives.js";
+import { COLUMNS, DIRECTION, QUESTION, PRESETS, INLINE, KEY_PATH, LEAD, attachBlockDoor,
          childNode, dataKeyed, describedTerm, el, guessQuantity, heading,
-         hintsOf, adviceFor, keyAsShown, quantity, quantityFor, sectionHead,
+         hintsOf, adviceFor, keyAsShown, pathTrail, quantity, quantityFor, sectionHead,
          title } from "./format.js";
 import { identify, labelFor } from "./controls.js";
 import { applyPreset, boundPairs, sortable } from "./tables.js";
-import { TABLE_OPENS_BOUNDED_ABOVE, buildTable, renderStructured, renderText }
-  from "./structured.js";
+import { TABLE_OPENS_BOUNDED_ABOVE, buildTable, oneRecord, renderStructured,
+         renderText } from "./structured.js";
 
 // UX-268: the element-keyed signals are one table, not six.
 //
@@ -251,8 +251,13 @@ export function renderPairs(key, object, hint = {}, node = undefined,
                          childNode(root, "element_join"))
     : null;
   const merged = new Set(joined?.merged ?? []);
+  // `UX-1143`: the declared answer is drawn first, as a sentence, and not again as a pair.
+  const leadKey = hintsOf(node)[LEAD] ?? hint[LEAD];
+  const lead = typeof object?.[leadKey] === "string" ? object[leadKey] : null;
   for (const [name, value] of Object.entries(object)) {
-    if (merged.has(name)) continue;
+    if (merged.has(name) || (lead !== null && name === leadKey)) continue;
+    // `UX-1150`, `UX-1156`: a lead answers its boolean group and its empty lists; the JSON view keeps them.
+    if (lead !== null && (typeof value === "boolean" || value?.length === 0)) continue;
     // UX-270: the critical path is its own section, not a row inside
     // this one. It is also the one member that rendered a whole
     // `<section>` into a `<dd>` - the nesting UX-267 removed
@@ -280,7 +285,11 @@ export function renderPairs(key, object, hint = {}, node = undefined,
       // `buildTable`, not `renderTable`: a cell must not contain a
       // `<section>`. This was the last of them (`UX-267`) - measured,
       // three sections still lived inside `<dd>` after the rest moved.
-      {
+      if (oneRecord(value, hintsOf(child), child)) {
+        const record = renderPairs(name, value[0], {}, child);
+        // The `dl` alone: its `section` would be a second, stray section inside a `dd`.
+        cell = [...record.children].find((n) => String(n.tagName).toUpperCase() === "DL");
+      } else {
         const built = buildTable(name, value, hintsOf(child), child);
         cell = el("div", { class: "map-table", "data-bounded": "map" },
                   built.tools, built.table);
@@ -308,10 +317,10 @@ export function renderPairs(key, object, hint = {}, node = undefined,
       cell = el("span", { class: "num", "data-raw": String(value) },
                 quantity(value, kind));
     } else if (typeof value === "string") {
-      cell = renderText(name, value);
+      cell = renderText(name, value, hintsOf(child)[KEY_PATH] ? pathTrail(root, value) : null);
     } else {
       cell = el("span", { "data-raw": value === null ? "" : String(value) },
-                value === null ? "—" : String(value));
+                plainValue(value));
     }
     // UX-201: the schema's own `description` is the sentence - the "why
     // does this number matter" answer sourced from the contract, and
@@ -327,6 +336,9 @@ export function renderPairs(key, object, hint = {}, node = undefined,
       shown ? shown.element : name, described, {}, hintsOf(child)[INLINE],
       kind, shown ? true : dataKeyed(node, name));
     doors.push(describe);
+    // `UX-1151`: JSON Schema's own `title` names a field its key would name like another.
+    const named = node?.properties?.[name]?.title;
+    if (!shown && typeof named === "string") term.textContent = named;
     if (shown) {
       term.setAttribute?.("data-key", name);
       if (shown.qualifier) term.append(
@@ -339,8 +351,9 @@ export function renderPairs(key, object, hint = {}, node = undefined,
                          advice ? el("p", { class: "run-advice" }, advice)
                                 : null));
   }
-  attachBlockDoor(list, doors);
+  const door = attachBlockDoor(list, doors);
   const parts = [sectionHead(key, hint)];
+  if (lead !== null) parts.push(el("p", { class: "section-lead", "data-lead": leadKey }, lead));
   if (joined) {
     // One row per element, before the scalars - it is the thing a
     // reader came for, and `UX-261` put the same argument to the
@@ -375,7 +388,7 @@ export function renderPairs(key, object, hint = {}, node = undefined,
     }
   }
   // `UX-419`: a map grows with the payload too, and had no bound at all.
-  parts.push(list, boundPairs(list, TABLE_OPENS_BOUNDED_ABOVE));
+  parts.push(door, list, boundPairs(list, TABLE_OPENS_BOUNDED_ABOVE));
   return el("section", { "data-section": key, "data-rail": heading(key, hint).rail },
                         ...parts);
 }

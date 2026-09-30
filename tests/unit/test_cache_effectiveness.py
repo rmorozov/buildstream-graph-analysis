@@ -149,7 +149,7 @@ def test_a_healthy_cache_is_still_reported():
     finding = _cache_finding(0.9)
     assert finding is not None
     assert finding["severity"] == "info"
-    assert "90%" in finding["title"]
+    assert "90.0%" in finding["title"]
 
 
 def test_a_barely_incremental_build_says_so_loudly():

@@ -152,7 +152,7 @@ class TestAnOlderStoreStillReads:
         # The sentence is what a reader meets, so it has to say
         # something: which command, or what it means for this run.
         assert "raw trace log" in new["note"], new["note"]
-        assert "UX-297" in old["note"], old["note"]
+        assert "predates the aggregate-only format" in old["note"], old["note"]
 
     def test_a_saved_report_is_still_recognised_as_one(self, tmp_path, report):
         """`UX-38`: handing `report` a saved JSON report must not parse

@@ -13,13 +13,13 @@
  * - is a parameter, which is why the crossing count was taken with
  * comments and strings stripped and then read, rather than trusted.
  */
-import { served } from "./primitives.js";
+import { plainValue, served } from "./primitives.js";
 import { COPY_FORMAT_MIRROR, readCopyFormat, writeCopyFormat } from "./viewstate.js";
-import { COMMAND, QUANTITY, COLUMNS, SERIES, DISTRIBUTION, bytes, childNode,
-         cssId, dataKeyed, el, elementColumn, guessQuantity, heading, hintsOf,
-         itemsAsShown, keyAsShown, quantity, quantityFor, sectionHead,
-         title } from "./format.js";
-import { commandLine, identify } from "./controls.js";
+import { BARE_KEY, COMMAND, QUANTITY, COLUMNS, SERIES, DISTRIBUTION, bytes,
+         childNode, cssId, dataKeyed, el, elementColumn, guessQuantity, heading,
+         hintsOf, itemsAsShown, keyAsShown, quantity, quantityFor, readerLabel,
+         sectionHead, title } from "./format.js";
+import { commandLine, identify, say } from "./controls.js";
 // UX-303: §2's two drawings. They import nothing and take their
 // formatter, so the quantity table stays here and the geometry stays
 // there.
@@ -126,10 +126,10 @@ function inlineObject(value, node) {
     const kind = quantityFor(childNode(node, name), name);
     parts.push(el("span", { class: "pair" },
       el("span", { class: "pair-key", "data-key": name },
-        `${title(name, kind, dataKeyed(node, name))} `),
+        `${readerLabel(title(name, kind, dataKeyed(node, name)))} `),
       el("span", { class: typeof member === "number" ? "num" : null,
                    "data-raw": member === null ? "" : String(member) },
-         member === null ? "—" : quantity(member, kind))));
+         typeof member === "number" ? quantity(member, kind) : plainValue(member))));
   }
   return el("span", { class: "inline-object" }, ...parts);
 }
@@ -437,6 +437,7 @@ export function renderStructured(key, value, hint = {}, node = undefined,
   if (control === CONTROLS.DENSITY_STRIP) {
     return strip(value, {
       countKey: String(declared[DISTRIBUTION]), grade: GRADE_EXHIBIT,
+      name: title(key, quantityFor(node, key)),
       format: (n) => quantity(n, quantityFor(node, key)),
     });
   }
@@ -478,7 +479,7 @@ export function renderStructured(key, value, hint = {}, node = undefined,
     // keys, read here for a plain array's items.
     const shown = itemsAsShown(value, hint) ?? value;
     if (control === CONTROLS.INLINE_LIST) {
-      return el("span", {}, shown.map(String).join(", "));
+      return el("span", {}, shown.map(readerLabel).join(", "));
     }
     if (control === CONTROLS.FOLDED_LIST) {
       // `UX-641`: **past the row bound a cell's list is bounded too**,
@@ -548,6 +549,14 @@ export function renderStructured(key, value, hint = {}, node = undefined,
   return folded(title(key), value,
                 mapTable(key, rows, hint, node, nested, depth + 1, path),
                 path);
+}
+
+/** `UX-1152` (styleguide §3d): one row with no element column is a record, drawn as pairs - an element row keeps its table's Inspect. */
+export function oneRecord(rows, hint, node) {
+  // A row holding a nested table keeps its table, so the nested one keeps its fold and rail.
+  const nested = (v) => Array.isArray(v) && v.some((i) => i && typeof i === "object");
+  return rows.length === 1 && !Object.values(rows[0]).some(nested)
+    && !elementColumn(columnSpecs(hint, rows, node));
 }
 
 /**
@@ -662,8 +671,8 @@ export function buildTable(key, rows, hint = {}, node = undefined,
                                ? `${key}.${rowId}`
                                : `${key}.${rowId}.${column}`)
           : numeric ? quantity(raw, kind)
-          : typeof raw === "string" ? renderText(column, raw)
-          : (raw ?? "—")));
+          : typeof raw === "string" ? renderText(column, raw, memberTitle(column, raw, node))
+          : plainValue(raw)));
     }
     body.append(tr);
   }
@@ -686,7 +695,8 @@ export function buildTable(key, rows, hint = {}, node = undefined,
       const uid = cell.getAttribute("data-raw") || cell.textContent;
       tr.setAttribute("data-element", uid);
       cell.append(el("a", { class: "inspect", href: `#${cssId(uid)}`,
-                            title: `Find ${uid} elsewhere in this report` },
+                            title: `Find ${uid} elsewhere in this report`,
+                            "aria-label": `Find ${uid}` },
                      "\u2315"));
     }
   }
@@ -700,8 +710,10 @@ export function buildTable(key, rows, hint = {}, node = undefined,
   // chain's middle and `UX-196` taught the drawing to; this is the
   // third surface, folded by the same two numbers.
   if (options.fold) foldTheMiddle(table, rows.length, options.fold);
-  const uniform = statedOnce(table, specs, rows.length);
-  const tools = interrogable(table, specs, rows.length, depth);
+  const { note: uniform, gone } = statedOnce(table, specs, rows.length);
+  // `UX-1151`: a column said once above the table ranks nothing - no preset over it.
+  const tools = interrogable(table, specs.filter((spec) => !gone.has(spec.key)),
+                             rows.length, depth);
   // `UX-1055`: after `copy-rows`, not before it - a plain `prepend`
   // put this note ahead of `copy-rows`, undoing its guaranteed first
   // place in the row (styleguide §3l).
@@ -731,7 +743,8 @@ export function buildTable(key, rows, hint = {}, node = undefined,
  * goes, so `Copy 12 rows` and Ctrl-F still see what the payload had.
  */
 function statedOnce(table, specs, total) {
-  if (total <= SERIES_MIN_POINTS) return null;
+  const gone = new Set();
+  if (total <= SERIES_MIN_POINTS) return { note: null, gone };
   const said = [];
   for (const spec of specs) {
     if (!spec || spec.role === "element" || spec.key === elementColumn(specs)) {
@@ -750,18 +763,22 @@ function statedOnce(table, specs, total) {
     if (new Set(raw).size !== 1) continue;
     said.push([spec.title ?? title(spec.key, spec.quantity),
                cells[0].textContent]);
+    gone.add(spec.key);
     for (const cell of cells) cell.remove?.();
     const head = [...table.querySelectorAll("th")].find(
       (th) => th.getAttribute("data-column") === spec.key);
     head?.remove?.();
   }
-  if (!said.length) return null;
+  if (!said.length) return { note: null, gone };
+  // `UX-1163`: a short table left one column is a list, with no header.
+  const head = table.children[0];
+  if (total <= TABLE_OPENS_BOUNDED_ABOVE && head.children[0].children.length < 2) head.remove();
   const note = el("p", { class: "muted uniform-columns",
                          "data-role": "uniform-columns",
                          "data-columns": String(said.length) });
-  note.textContent = `All ${total.toLocaleString("en-US")} rows: `
+  note.textContent = "Every row: "
     + said.map(([name, value]) => `${name} ${value}`).join(", ") + ".";
-  return note;
+  return { note, gone };
 }
 
 /**
@@ -829,17 +846,25 @@ export function interrogable(table, specs, total, depth = 0) {
   // `viewstate.js` already keys this table's url state by, so the
   // control's `name` and its bookmarked parameter say the same word.
   const key = table.getAttribute?.("data-table") ?? "table";
-  const badge = el("span", { class: "badge" }, badgeText(total, total));
+  // `UX-1162`: each tool's accessible name ends with its table's.
+  const named = key.split(".").map((part) => title(part, guessQuantity(part))).join(" ");
+  // `UX-1163`: at rest `Copy N rows` is the count; the badge says `N of M`.
+  const rest = badgeText(total, total);
+  const badge = el("span", { class: "badge", hidden: true }, rest);
   // Review (#295), `UX-1028`: `filtered` - the text/threshold
   // population, before `top`'s slice - is what the paging step below
   // measures its position and bounds against, not `total`, which
   // disagrees with the page the moment a filter narrows it.
   let pagerRefresh = null;
+  let shape = null;
+  const few = total <= FEW_ROWS;
   const refresh = () => {
-    // `applyFilters` also writes `state.filtered` - the pre-`top`
-    // population - back onto `state` itself.
+    // `applyFilters` also writes `state.filtered` and `state.kept` - the pre-`top` population.
     badge.textContent = badgeText(applyFilters(table, state), total);
+    badge.hidden = badge.textContent === rest;
     pagerRefresh?.();
+    // UX-1158: the strip draws, and counts, the rows the filter kept.
+    shape?.replaceWith?.(shape = distributionStrip(table, specs, total, few, state.kept) ?? el("span"));
   };
 
   // `UX-349`: **filters appear when the table is long enough to need
@@ -856,7 +881,7 @@ export function interrogable(table, specs, total, depth = 0) {
   const box = worthFiltering ? el("input", {
     type: "search", class: "table-filter",
     placeholder: "filter rows…",
-    "aria-label": "filter rows",
+    "aria-label": `Filter rows: ${named}`,
   }) : null;
   if (box) {
     identify(box, `filter-${key}`);
@@ -932,7 +957,7 @@ export function interrogable(table, specs, total, depth = 0) {
   // here, appended into `tools` below.
   let pager = null;
   if ((presets.length && total > 10) || opening) {
-    const preset = el("select", { class: "top-n", "aria-label": "Rows shown" });
+    const preset = el("select", { class: "top-n", "aria-label": `Rows shown: ${named}` });
     identify(preset, `top-${key}`);
     // `UX-1028` (styleguide §3k): "All rows" mounts the whole table in
     // one step, so it is offered only under a ceiling the table
@@ -945,7 +970,7 @@ export function interrogable(table, specs, total, depth = 0) {
       for (const n of [10, 25]) {
         if (n >= total) continue;
         preset.append(el("option", { value: `${n}:${column}` },
-                         `Top ${n} by ${column}`));
+                         `Top ${n} by ${specs.find((s) => s.key === column)?.title ?? title(column)}`));
       }
     }
     if (!presets.length) {
@@ -1041,7 +1066,8 @@ export function interrogable(table, specs, total, depth = 0) {
     // defect. The badge still says `25 of 132`, per `UX-208`, so this
     // bounds the page without hiding the size of what it bounded.
     if (opening) {
-      preset.value = opening.value;
+      // UX-1158: the opening value, which the link leaves unsaid.
+      preset.value = preset.opening = opening.value;
       state.top = opening.top;
       refresh();
     }
@@ -1071,7 +1097,8 @@ export function interrogable(table, specs, total, depth = 0) {
   // allowed to take the report down with it.
   const shownRows = () => ownRows(table).filter((tr) => !tr.hidden);
   const asMarkdown = el("label", { class: "copy-as" },
-    el("input", { type: "checkbox", class: "copy-markdown" }),
+    el("input", { type: "checkbox", class: "copy-markdown",
+                  "aria-label": `as Markdown: ${named}` }),
     " as Markdown");
   const markdownBox = asMarkdown.querySelector("input");
   if (markdownBox) identify(markdownBox, `copy-markdown-${key}`);
@@ -1100,7 +1127,11 @@ export function interrogable(table, specs, total, depth = 0) {
     // `UX-412`: through the shared helper, so this label and the badge
     // beside it agree with the count in one place rather than two.
     const rows = plural(n, "row");
-    copyRows.textContent = `Copy ${rows}`;
+    // `UX-1165`: nothing shown, nothing to copy or to say of the rows.
+    for (const node of [copyRows, asMarkdown, copyRows.parentNode?.querySelector?.(".uniform-columns")]) {
+      if (node) node.hidden = !n;
+    }
+    say(copyRows, `Copy ${rows}`, named);
     copyRows.title = `Copy the ${rows} shown in this table as ${form}, `
       + `with their published values`;
   };
@@ -1116,7 +1147,7 @@ export function interrogable(table, specs, total, depth = 0) {
     // already use. This was the most numerous copy control on the page
     // (13 on `golden`, 23 on `macro_micro`) and the only one of the
     // four that reported nothing.
-    copyRows.textContent = "\u2713 copied";
+    say(copyRows, "\u2713 copied", named);
     // Back through `label`, not to a captured string: the count follows
     // the filter and the bound, so what it should say on the way back
     // is whatever it would say now.
@@ -1147,7 +1178,8 @@ export function interrogable(table, specs, total, depth = 0) {
   // number.** Its labels are the smallest and largest *rows* and a
   // count of rows; the p50 and p95 ticks are positions and nothing
   // else. A percentile worth printing enters the payload first.
-  const shape = distributionStrip(table, specs, total, state, refresh);
+  // `UX-1152` (styleguide §3d): at two rows or fewer `Copy N rows` is the one count.
+  shape = distributionStrip(table, specs, total, few);
 
   // `UX-318` (§3a.3): **every capped or nested table offers focus.** A
   // table that opened bounded is hiding rows behind a Top-N; a nested
@@ -1175,7 +1207,7 @@ export function interrogable(table, specs, total, depth = 0) {
   // a reader tabbing through matches what a sighted reader sees
   // (WCAG 2.4.3/1.3.2); `style.css`'s `margin-left: auto` on `top-n`
   // still carries the "nothing shares its trailing space" guarantee.
-  const tools = el("div", { class: "table-tools" }, copyRows, box, badge,
+  const tools = el("div", { class: "table-tools" }, copyRows, box, few ? null : badge,
                             pager, asMarkdown, expand, shape,
                             state.preset ?? null);
   // The badge and the count are the same claim; refresh both together.
@@ -1249,20 +1281,34 @@ function isExplanation(name) {
 }
 
 /**
+ * `UX-1141`: a map table's key column names a declared record member
+ * by its title, never its key; a data-keyed map's names are data.
+ */
+function memberTitle(column, raw, node) {
+  if (column !== "key" || !node || !BARE_KEY.test(raw)) return null;
+  if (readerLabel(raw) !== raw || dataKeyed(node, raw)) return null;
+  return title(raw, quantityFor(childNode(node, raw), raw));
+}
+
+/**
  * A long string as a truncated cell with the whole thing one click
  * away. The `…` is visible, never silent, and the full text stays
  * selectable - a reader who cannot select it has not been given it.
  */
-export function renderText(name, value) {
+export function renderText(name, value, shown = null) {
   const text = String(value);
   if (text.length <= CELL_TEXT_CAP || isExplanation(name)) {
-    return el("span", { "data-raw": text }, text);
+    return el("span", { "data-raw": text }, shown ?? readerLabel(text));
   }
-  const head = text.slice(0, CELL_TEXT_CAP).replace(/\s+\S*$/, "");
+  let head = text.slice(0, CELL_TEXT_CAP).replace(/\s+\S*$/, "");
+  // A cut inside a backtick span would print the raw backtick.
+  if ((head.match(/`/g) ?? []).length % 2) head = head.slice(0, head.lastIndexOf("`")).trimEnd();
   return el("details", { class: "long-text", "data-raw": text },
+            // `UX-1152`: the preview hides once open, so the text shows once; a count of chars is no label.
             el("summary", {},
-               el("span", {}, `${head}…`),
-               el("span", { class: "muted" }, ` ${text.length} chars`)),
+               el("span", { class: "long-text-head" }, `${head}… `),
+               el("span", { class: "long-text-more muted" }, "more"),
+               el("span", { class: "long-text-less muted" }, "less")),
             el("p", { class: "full-text" }, text));
 }
 
@@ -1272,3 +1318,5 @@ export function renderText(name, value) {
 // 122-deep critical path is 132 and does not. A bound that fired on
 // the ordinary case would train readers to reset it every load.
 export const TABLE_OPENS_BOUNDED_ABOVE = 40;
+// `UX-1152`: at or under this many rows a table's tools carry no badge and no strip.
+const FEW_ROWS = 2;

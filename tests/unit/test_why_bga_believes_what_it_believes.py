@@ -417,18 +417,24 @@ class TestThePageDrawsTheObject:
             value = entry["value"]
             if isinstance(value, float) and value.is_integer():
                 published.add(str(int(value)))
+        # `UX-1140`: a number is shown through the element card's
+        # formatter, so its formatted spelling is the record's value too.
+        published.update(out["formatted"])
+        # `UX-1159`: a path is drawn as its label - the leaf's title, a
+        # reading of the path's own words - and kept on `data-path`.
+        published.update(word for label in out["labels"] for word in label.split())
 
         # Layout, named one string at a time rather than allowed by a
-        # pattern. `UX-357` put the depth count on the summary (§3a.1)
-        # and a lead in front of the document; both are apparatus - the
-        # count is a fact about the record's own shape, not about the
-        # build - and neither may grow into a sentence without being
-        # written down here.
+        # pattern. `UX-357` put the depth count on the summary (§3a.1);
+        # it is apparatus - a fact about the record's own shape, not
+        # about the build - and may not grow into a sentence without
+        # being written down here. `UX-1159` moved the document to
+        # `data-document`, so "Paths resolve against" is not layout.
         layout = {
             "Why",
-            " in ",
-            "Paths resolve against ",
-            "No named threshold; computed in ",
+            # `UX-1141`: the rule's name and module moved off the text.
+            "Threshold",
+            "No named threshold; computed",
             # `UX-1025`: an unlabeled fold names its content
             # first ("The rule") - never depth and count alone.
             f"The rule · 1 level, {len(record['evidence'])} row{'' if len(record['evidence']) == 1 else 's'}",
@@ -439,11 +445,11 @@ class TestThePageDrawsTheObject:
                 return True
             if text.strip() in layout or text.strip() in published:
                 return True
-            # The rule line is `NAME observed comparison threshold` -
+            # The rule line is `Threshold label comparison threshold` -
             # published fields with punctuation between them, which is
             # layout rather than a further claim.
             words = [w.strip("()") for w in text.split()]
-            return all(w in published or w == "=" for w in words)
+            return all(w in published or w in layout or w == "=" for w in words)
 
         unaccounted = [text for text in out["text"] if text and not accounted(text)]
         assert unaccounted == [], f"the page shows text no field of the record holds: {unaccounted}"
@@ -510,9 +516,14 @@ const text = [], paths = [], raw = [];
   if (n.attrs["data-raw"] !== undefined) raw.push(n.attrs["data-raw"]);
   (n.children ?? []).forEach(walk);
 })(node);
+const formatted = (__RECORD__?.evidence ?? [])
+  .filter((e) => typeof e.value === "number")
+  .map((e) => views.quantity(e.value, views.quantityAt(null, e.path)));
+const labels = [...(__RECORD__?.evidence ?? []).map((e) => e.path), __RECORD__?.rule?.observed_path]
+  .filter(Boolean).map((p) => views.pathLabel(null, p));
 console.log(JSON.stringify({
   rendered: node !== null,
-  text, paths, raw,
+  text, paths, raw, formatted, labels,
   rule: node?.children?.find((c) => c.attrs["data-rule"])?.attrs["data-rule"] ?? null,
   threshold: node?.children?.find((c) => c.attrs["data-threshold"])
                ?.attrs["data-threshold"] ?? null,

@@ -306,7 +306,7 @@ def build_trend(rows: list[dict]) -> dict:
             'by_run': {row['run']: _subject_label(row.get('subject')) for row in rows},
             'message': (
                 f"{len(subjects)} different projects or target sets in this series "
-                f"- these are not repeated readings of one thing, so no band over "
+                f"— these are not repeated readings of one thing, so no band over "
                 f"them describes anything. The rows above are each real readings "
                 f"of their own run."
             ),
@@ -331,8 +331,8 @@ def build_trend(rows: list[dict]) -> dict:
         ),
         'note': (
             "Transfer seconds per artifact cannot separate a slower remote from a "
-            "larger artifact: Plane 1 records no artifact size (UX-907). The rate "
-            "column can, where the capture carries host byte counters (UX-897) - "
+            "larger artifact: Plane 1 records no artifact size. The rate "
+            "column can, where the capture carries host byte counters - "
             "it is the host's whole traffic over the wall-clock the transfers "
             "occupied, so an upper bound on this build's. A capture taken with "
             "remotes ignored has no transfer at all and reports None rather than "

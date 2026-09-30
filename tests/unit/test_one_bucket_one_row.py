@@ -126,6 +126,11 @@ class TestThePopulationIsStillOne:
         assert len(payload["attribution"]) == 8
 
 
+def _typeset(hint):
+    """The page sets a backtick span as `<code>` (`UX-1149`), so its text has no backticks."""
+    return hint.strip().replace("`", "")
+
+
 @pytest.mark.skipif(find_chrome() is None, reason=NO_BROWSER)
 class TestOneSection:
     def test_the_hints_have_no_section_of_their_own(self, seen):
@@ -140,7 +145,7 @@ class TestOneSection:
         """
         assert len(seen["attribution"]["advice"]) == len(payload["attribution_hints"]), seen["attribution"]["advice"]
         for bucket, hint in payload["attribution_hints"].items():
-            assert any(hint.strip() in shown for shown in seen["attribution"]["advice"]), bucket
+            assert any(_typeset(hint) in shown for shown in seen["attribution"]["advice"]), bucket
 
     def test_the_advice_is_on_the_row_of_its_bucket(self, seen, payload):
         """Not collected at the foot of the section.
@@ -162,7 +167,7 @@ class TestOneSection:
             label = bucket.removesuffix("_us").replace("_", " ").capitalize()
             mine = [row for row in rows if row["label"].lower() == label.lower()]
             assert mine, (label, [row["label"] for row in rows])
-            assert mine[0]["advice"] == [hint.strip()], mine[0]
+            assert mine[0]["advice"] == [_typeset(hint)], mine[0]
 
     def test_no_label_prints_the_unit_the_value_carries(self, seen):
         """`UX-351`, on the eight labels that never got the sweep."""

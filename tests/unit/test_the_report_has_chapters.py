@@ -239,7 +239,8 @@ console.log(JSON.stringify({
     // UX-317. The chapter's *name* is the heading without it - compared
     // against `aria-label` below, which is what a screen reader reads.
     title: (() => {
-      const head = n.children.find((c) => c.className === "chapter-title");
+      const row = n.children.find((c) => c.className === "chapter-head");
+      const head = (row?.children ?? n.children).find((c) => c.className === "chapter-title");
       if (!head) return undefined;
       const control = head.children.find(
         (c) => c.getAttribute?.("data-chapter-open"));

@@ -41,6 +41,7 @@ from typing import Any, Optional
 
 from . import findings as _findings
 from . import schemas as _schemas
+from . import shown as qty
 from .cache_effectiveness import HEALTHY_HIT_RATIO, POOR_HIT_RATIO, TRANSFER_SHARE_NOTABLE
 
 # The module every threshold below is defined in, published so a record
@@ -339,10 +340,10 @@ def _diagnosis_rule(claim, document):
         _findings.CHAIN_BOUND_RATIO,
         fired,
         "headline.chain_share",
-        f"The critical path is {ratio:.1%} of the task horizon (the span "
+        f"The critical path is {qty.share(ratio)} of the task horizon (the span "
         f"from the first task's start to the last one's finish, "
         f"excluding BuildStream's own startup), {above_or_below} the "
-        f"{_findings.CHAIN_BOUND_RATIO:.0%} line at which the chain "
+        f"{qty.share(_findings.CHAIN_BOUND_RATIO)} line at which the chain "
         f"rather than the scheduler is called the constraint, so this "
         f"build is {label}.",
     )
@@ -355,7 +356,7 @@ def _wait_category_rule(claim, document):
         _findings.OPPORTUNITY_FLOOR_PCT / 100,
         ">=",
         None,
-        f"The largest non-execution category is {share:.1%} of wall-clock, "
+        f"The largest non-execution category is {qty.share(share)} of wall-clock, "
         f"at or above the {_findings.OPPORTUNITY_FLOOR_PCT:.0f}% floor below "
         f"which the largest of the remainder is rounding rather than an "
         f"opportunity."
@@ -389,8 +390,8 @@ def _cache_hit_rule(claim, document):
         [POOR_HIT_RATIO, HEALTHY_HIT_RATIO],
         "banded",
         "cache.hit_share",
-        f"A {ratio:.0%} hit ratio is {band} "
-        f"({POOR_HIT_RATIO:.0%}/{HEALTHY_HIT_RATIO:.0%}), which is what sets "
+        f"A {qty.share(ratio)} hit ratio is {band} "
+        f"({qty.share(POOR_HIT_RATIO)}/{qty.share(HEALTHY_HIT_RATIO)}), which is what sets "
         f"this finding's severity.",
         module=CACHE_RULE_MODULE,
     )
@@ -438,8 +439,8 @@ def _mesh_rule(claim, document):
         _findings.MESH_ZERO_SLACK_SHARE,
         ">=",
         "elements.zero_slack_share",
-        f"{density:.0%} of elements have zero slack, at or above the "
-        f"{_findings.MESH_ZERO_SLACK_SHARE:.0%} at which the graph is called "
+        f"{qty.share(density)} of elements have zero slack, at or above the "
+        f"{qty.share(_findings.MESH_ZERO_SLACK_SHARE)} at which the graph is called "
         f"a mesh rather than a chain."
         if isinstance(density, (int, float))
         else "The zero-slack share cleared the mesh threshold.",
@@ -465,7 +466,7 @@ def _width_rule(claim, document):
         f"{count} elements group into {stages} dependency stages by their "
         f"dependencies alone; the widest holds {widest}, and nothing in a "
         f"stage can start before the stage above it finishes. Published "
-        f"whenever there is more than one stage - with one, the widest "
+        f"whenever there is more than one stage — with one, the widest "
         f"stage is the whole graph and the shape forbids nothing."
     )
 
@@ -485,7 +486,7 @@ def _chain_rule(claim, document):
         _findings.MESH_ZERO_SLACK_SHARE,
         ">=",
         "elements.zero_slack_share",
-        f"{density:.0%} of elements have zero slack and none is off the critical path, so the graph is one chain."
+        f"{qty.share(density)} of elements have zero slack and none is off the critical path, so the graph is one chain."
         if isinstance(density, (int, float))
         else "The zero-slack share cleared the threshold with nothing off the critical path.",
     )
@@ -554,7 +555,7 @@ _CLAIMS = {
         ("violations[type=build_failed].failed_count", "violations[type=build_failed].interrupted"),
         _unconditional(
             "Published whenever the run recorded a `build_failed` violation; "
-            "there is no threshold - a build that did not finish is not a "
+            "there is no threshold — a build that did not finish is not a "
             "matter of degree."
         ),
         (),
@@ -619,7 +620,7 @@ _CLAIMS = {
             "Published when the capture walked the local CAS for each "
             "element's artifact (`--artifact-weights`). Every byte is that "
             "artifact's own, summed over the distinct blobs under its "
-            "`files` tree - not BuildStream's `%{artifact-cas-digest}`, "
+            "`files` tree — not BuildStream's `%{artifact-cas-digest}`, "
             "which renders the root directory proto's own length."
         ),
         (),
@@ -650,7 +651,7 @@ _CLAIMS = {
         _unconditional(
             "Published whenever the critical path has measured elements on "
             "it; which elements, and their share, are the finding's own "
-            "`evidence.rows`."
+            "evidence rows."
         ),
         (),
     ),
@@ -674,7 +675,7 @@ _CLAIMS = {
     "memory-envelope": (
         (),
         _unconditional(
-            "Published whenever both halves were measured - the per-element "
+            "Published whenever both halves were measured — the per-element "
             "peaks from Plane 2 and the host's RAM from the capture."
         ),
         (
@@ -715,7 +716,7 @@ _CLAIMS = {
         (),
         _unconditional(
             "Published whenever an overcommitted window's own `swapped_out` "
-            "count is over zero - the span and the pages are the finding's "
+            "count is over zero — the span and the pages are the finding's "
             "own `evidence`."
         ),
         (),
@@ -731,8 +732,8 @@ _CLAIMS = {
         _unconditional(
             "Published whenever `bga sweep`'s own unbounded-capacity row "
             "priced the builder cap; the compiler-offload half needs a "
-            "Plane 2 `binary_cost` too, and is absent without one - both "
-            "numbers are the finding's own `evidence`."
+            "Plane 2 binary cost too, and is absent without one — both "
+            "numbers are the finding's own evidence."
         ),
         (),
     ),
@@ -779,7 +780,7 @@ _CLAIMS = {
             "total_duration_us",
         ),
         _unconditional(
-            "Published when the horizon has more than one step - a "
+            "Published when the horizon has more than one step — a "
             "single-step horizon is the first fix, which is already named."
         ),
         (),
@@ -809,9 +810,9 @@ _CLAIMS = {
         _blast_paths,
         _unconditional(
             "Published for every non-structural element something "
-            "actually depends on. Not a ranking - `UX-65`'s "
+            "actually depends on. Not a ranking — the "
             "who-depends-on-me ordering is a different claim and stays "
-            "on the scheduler-bound arm - but the answer to the "
+            "on the scheduler-bound arm — but the answer to the "
             "recipe-author's own question, which is true whichever way "
             "the build is bound. Elements with no dependents "
             "are left out rather than listed at zero: a row reading "
@@ -824,17 +825,17 @@ _CLAIMS = {
         _blast_paths,
         _unconditional(
             "Published when the elements with the widest reach are "
-            "structural kinds - a base image, a toolchain, a stack. Their "
+            "structural kinds — a base image, a toolchain, a stack. Their "
             "dependents are the graph's shape rather than a task, which is "
-            "why UX-258 reports them here instead of ranking them as work "
-            "(the rule UX-76 already applied to criticality)."
+            "why they are reported here instead of ranked as work "
+            "(the rule criticality already applies)."
         ),
         (),
     ),
     "fan-in-ranking": (
         _fan_in_paths,
         _unconditional(
-            "Published for every graph with something to rank - an "
+            "Published for every graph with something to rank — an "
             "element that pulls in nothing is left out rather than "
             "listed at zero, and a structural kind is reported by the "
             "claim below rather than ranked here. Unlike its "
@@ -848,7 +849,7 @@ _CLAIMS = {
     "fan-in-structural": (
         _fan_in_paths,
         _unconditional(
-            "Published when a structural kind - a stack, a base image - "
+            "Published when a structural kind — a stack, a base image — "
             "has the widest closure. It depends on everything on "
             "purpose, so the count is the graph's shape and not a "
             "task."
@@ -858,8 +859,8 @@ _CLAIMS = {
     "blast-radius-foundation": (
         _blast_paths,
         _unconditional(
-            "UX-683: published when the widest reach is a project-"
-            "declared foundation element - a toolchain or base image the "
+            "Published when the widest reach is a project-"
+            "declared foundation element — a toolchain or base image the "
             "kind-based exemption above misses, because it is an "
             "`autotools`/`manual`/`cmake` element by kind. Excluded from "
             "the ranking on the declaration, not a guess."
@@ -869,7 +870,7 @@ _CLAIMS = {
     "fan-in-foundation": (
         _fan_in_paths,
         _unconditional(
-            "UX-683: the fan-in mirror - a declared foundation element "
+            "The fan-in mirror — a declared foundation element "
             "has the widest closure on purpose, same rule as the blast "
             "claim above."
         ),
@@ -878,9 +879,9 @@ _CLAIMS = {
     "foundation-candidates": (
         _blast_paths,
         _unconditional(
-            "UX-683's discovery half: published when an element at or "
+            "Published when an element at or "
             "above the top p5 fan-out is neither a structural kind nor "
-            "already declared foundation - the owner declares, the tool "
+            "already declared foundation — the owner declares, the tool "
             "only proposes."
         ),
         (),
@@ -927,7 +928,7 @@ def record(claim: dict, claim_id: str, kind: str, document: dict) -> dict:
             "document": ANALYZE_DOCUMENT,
             "evidence": [],
             "rule": _unconditional(
-                "No rule is recorded for this claim - it is published without one rather than with an invented one."
+                "No rule is recorded for this claim — it is published without one rather than with an invented one."
             ),
             **_published_queries(claim_id),
             "unpublished_inputs": [],

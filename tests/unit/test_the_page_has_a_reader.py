@@ -318,7 +318,7 @@ class TestTheChoiceTravelsInTheLink:
 
     def test_the_reader_reaches_the_fragment(self, driven, label):
         out = driven[label]
-        assert f"r={out['wanted']}" in out["hash"], (
+        assert f"r={out['wanted']}" in pages.view_query(out["hash"]), (
             f"{label}: chose {out['wanted']!r} and the fragment says {out['hash']!r}"
         )
 

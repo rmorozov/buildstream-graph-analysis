@@ -165,7 +165,7 @@ class TestTheReportStatesTheResolution:
             )
         )
 
-        assert "±0.31s" in text
+        assert "±310 ms" in text
         assert "more than 5% of the duration for 8 of 8" in text
 
     def test_and_names_a_duration_that_did_not_happen(self):

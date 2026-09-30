@@ -284,14 +284,11 @@ class TestInvestigationIsOneClickAway:
         # block without a copy, and no copy carrying anything but a
         # block's exact text.
         #
-        # `UX-348`: as *sets*, not as sorted lists. The worked example
-        # draws one question twice on purpose - once in full above the
-        # library, once inside its category fold - so its SQL is
-        # copyable from two places, and counting renders would make the
-        # pitch look like a defect.
+        # `UX-1147`: the worked example is drawn once, above the library;
+        # its fold no longer repeats it.
         assert set(out["copies"]) == set(out["sql"]), "the copy text is not the block's exact SQL"
-        assert len(out["copies"]) == len(out["sql"]) + 1, (
-            "exactly one question is drawn twice - the worked example",
+        assert len(out["copies"]) == len(out["sql"]), (
+            "every question is drawn once - the worked example included",
             len(out["copies"]),
             len(out["sql"]),
         )
@@ -505,7 +502,7 @@ const hint = { "bga:columns": [
   { key: "duration_us", title: "Duration", quantity: "duration_us" } ] };
 const section = app.renderTable("elements", rows, hint);
 const table = section.children.find((c) => c.tagName === "table");
-const shown = tables.applyTopN(table, "duration_us", 10);
+const shown = tables.applyFilters(table, { top: { n: 10, column: "duration_us" } });
 const visible = table.querySelectorAll("tbody tr").filter((tr) => !tr.hidden).length;
 console.log(JSON.stringify({ shown, visible,
   badge: tables.badgeText(shown, rows.length) }));

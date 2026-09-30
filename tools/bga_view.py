@@ -779,7 +779,7 @@ EXPORT_BUDGET_B = 8 * 1024 * 1024
 #: so the stylesheet, `index.html`, the gzipped viewer module and its
 #: loader. The procedure and every earlier value are
 #: `test_the_report_you_can_attach.py`'s note on this name.
-PAGE_BUDGET_B = 150_000
+PAGE_BUDGET_B = 160_000
 # The trace is the one part that can be dropped without losing the
 # report, so it is the one part with its own ceiling.
 #
@@ -1284,9 +1284,9 @@ def _uncommented_css(text: str) -> str:
     only form, and a `/*` inside a `content:` string would be the only
     hazard, which this file does not have and a guard would catch.
 
-    Measured on round 23's stylesheet: 12,004 B become 10,765 B.
+    Indentation goes too; CSS never reads it (1,097 B in round 154).
     """
-    return "\n".join(line.rstrip() for line in re.sub(r"/\*.*?\*/", "", text, flags=re.S).splitlines() if line.strip())
+    return "\n".join(line.strip() for line in re.sub(r"/\*.*?\*/", "", text, flags=re.S).splitlines() if line.strip())
 
 
 def _degradation_steps():

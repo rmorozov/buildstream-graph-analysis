@@ -125,10 +125,10 @@ class TestOneRepositoryConsumedTwoWays:
         headline = sources.monorepo_headline(rows, element_count=8)
         assert headline is not None
         assert "monorepo" in headline and "7 of 8" in headline
-        assert "7.0h" in headline, headline
+        assert "7.0 h of measured" in headline, headline
         # A 22s build must not be headlined as "0.0h" (found live on
         # the real `examples/01` capture this was verified against).
-        assert sources.format_work(22.544) == "23s"
+        assert sources.format_work(22.544) == "22.5 s"
         # The same rows against a graph they are a small corner of.
         assert sources.monorepo_headline(rows, element_count=400) is None
 

@@ -20,7 +20,7 @@
 // The default is `headline.top_actions[0]` now, which is `core.bst`
 // on that one fixture by coincidence rather than by compilation.
 
-import { identify, labelFor } from "./controls.js";
+import { identify, labelFor, say } from "./controls.js";
 import { title } from "./format.js";
 
 // `UX-210`: **every query says which plane it is asking.**
@@ -77,7 +77,7 @@ export const QUESTIONS = [
     // from SQL they have not run is which columns come back and what
     // each one holds.
     returns: [
-      ["element", "the element uid - the same string this report "
+      ["element", "the element uid — the same string this report "
                   + "prints, because both planes tag their slices with it"],
       ["spans", "how many slices that element has on the timeline: one "
                 + "per task it ran"],
@@ -85,7 +85,7 @@ export const QUESTIONS = [
                   + "attribution table above is made of"],
     ],
     why:
-      "Plane 1's element spans, aggregated - scoped to the element " +
+      "Plane 1's element spans, aggregated — scoped to the element " +
       "plane, so Plane 2 command names cannot crowd the answer. The " +
       "figure bga analyze prints in the Attribution table; here to " +
       "cross-check it, or to slice it further.",
@@ -109,7 +109,7 @@ limit 25;`,
     // `UX-380`: the keys this asks on are new, and `UX-368`'s rule is
     // that a key nothing asks about is a key nobody finds.
     returns: [
-      ["graph_depth", "the level - the longest path in edges from a "
+      ["graph_depth", "the level — the longest path in edges from a "
                       + "source, which is what `parallelism.levels` "
                       + "decomposes by"],
       ["elements", "how many distinct elements sit at that level"],
@@ -117,7 +117,7 @@ limit 25;`,
       ["on_path", "how many of them are on the critical path"],
     ],
     why:
-      "Plane 1 only - the level rides the element task, and a Plane 2 " +
+      "Plane 1 only — the level rides the element task, and a Plane 2 " +
       "slice carries no `depth`. The shape of the build rather than " +
       "its timing: a level that is wide and quick is parallelism " +
       "working; one that is narrow and slow is a waist the whole build " +
@@ -163,7 +163,7 @@ order by graph_depth;`,
     title: "Which elements ran the most processes?",
     why:
       "Plane 2's processes, grouped by the element that ran them. A " +
-      "high count with low total time is a process-storm - many short " +
+      "high count with low total time is a process-storm — many short " +
       "execs, the shape examples/08-process-storm exists to show.",
     sql: `select extract_arg(s.arg_set_id, 'debug.element') as element,
        count(*) as processes,
@@ -207,7 +207,7 @@ limit 20;`,
     title: "Where are the longest stalls?",
     why:
       "Gaps on the element plane: the build was running and nothing " +
-      "was building. Windowed over element spans alone - measured " +
+      "was building. Windowed over element spans alone — measured " +
       "against every track, thousands of interleaved Plane 2 slices " +
       "close exactly the gaps this question is looking for.",
     sql: `select element, ts, dur,
@@ -236,18 +236,18 @@ limit 20;`,
                    + "CACHE for a cache query"],
       ["tasks", "how many tasks passed through it"],
       ["elements", "how many distinct elements they belong to"],
-      ["seconds", "their total occupancy - the time slots of this queue "
+      ["seconds", "their total occupancy — the time slots of this queue "
                   + "were held for"],
       ["window_seconds", "wall-clock from the queue's first task starting "
                          + "to its last one finishing"],
       ["mean_in_flight", "occupancy over that window: how many slots of "
                          + "this queue were held at once, on average. Read "
                          + "it against the limit that queue is configured "
-                         + "with - at the limit is a saturated queue, well "
+                         + "with — at the limit is a saturated queue, well "
                          + "under it is one nothing was waiting on"],
     ],
     why:
-      "Plane 1 only - the queue rides the scheduler's task, and a " +
+      "Plane 1 only — the queue rides the scheduler's task, and a " +
       "Plane 2 process holds no scheduler slot. When the report says " +
       "the biggest wait category is RESOURCE WAIT, this is the " +
       "question that says which resource: raising a limit only helps " +
@@ -278,7 +278,7 @@ order by seconds desc;`,
     plane: "Plane 2",
     title: "What did one element actually execute?",
     why:
-      "The micro half of the cycle - the commands Plane 2 recorded " +
+      "The micro half of the cycle — the commands Plane 2 recorded " +
       "inside one sandbox, longest first. Selected by the element uid " +
       "both planes carry, not by a lane name.",
     sql: `select s.name as command, s.dur / 1e6 as ms
@@ -299,20 +299,20 @@ limit 40;`,
     plane: "Plane 2",
     title: "Which programs is this run made of?",
     returns: [
-      ["exe", "the program, argv stripped - the path as it was exec'd"],
+      ["exe", "the program, argv stripped — the path as it was exec'd"],
       ["runs", "how many times it ran"],
       ["wall_seconds", "wall time summed over those runs"],
       ["cpu_seconds", "CPU time summed over them, which exceeds wall "
                       + "where they overlapped"],
       ["peak_rss_kb", "the largest single resident set any one of them "
-                      + "reached - never a sum, which no moment held"],
+                      + "reached — never a sum, which no moment held"],
     ],
     why:
-      "Plane 2 only - the executable rides the process record, and a " +
+      "Plane 2 only — the executable rides the process record, and a " +
       "Plane 1 slice is a task rather than a program. The pivot: how " +
       "much of this build is the compiler, how much the linker, how " +
       "much the shell. Wall time says what the build waited " +
-      "on and CPU says what it burned - a program whose CPU far exceeds " +
+      "on and CPU says what it burned — a program whose CPU far exceeds " +
       "its wall ran in parallel with itself, and one whose wall exceeds " +
       "its CPU was waiting. Group on the path rather than the basename " +
       "so a compiler's own `cc1` stays separate from the `cc` that ran " +
@@ -350,18 +350,18 @@ limit 40;`,
     plane: "Plane 2",
     title: "Which programs is one element made of?",
     returns: [
-      ["exe", "the program, argv stripped - the path as it was exec'd"],
+      ["exe", "the program, argv stripped — the path as it was exec'd"],
       ["runs", "how many times this element ran it"],
       ["wall_seconds", "wall time summed over those runs"],
       ["cpu_seconds", "CPU time summed over them, which exceeds wall "
                       + "where they overlapped"],
       ["peak_rss_kb", "the largest single resident set any one of them "
-                      + "reached - never a sum, which no moment held"],
+                      + "reached — never a sum, which no moment held"],
     ],
     why:
       "The micro half of `cost-by-executable`. A heavy element is "
       + "usually one program run many times, and the question a reader "
-      + "who has picked an element asks next is which one - a compiler "
+      + "who has picked an element asks next is which one — a compiler "
       + "and a shell loop are the same seconds and different fixes. "
       + "`element-commands` answers the same question one row per "
       + "invocation, which is the grain to use when the command lines "
@@ -393,7 +393,7 @@ limit 40;`,
     why:
       "The elements that finished last before it could start, on the " +
       "element plane only. A long gap here is a dependency shape " +
-      "problem rather than a scheduler one - the distinction the " +
+      "problem rather than a scheduler one — the distinction the " +
       "blast and criticality findings are about.",
     sql: `select element, (ts + dur) / 1e9 as ended_at_seconds
 from (select extract_arg(s.arg_set_id, 'debug.element') as element,
@@ -411,9 +411,9 @@ limit 15;`,
     plane: "Plane 1",
     title: "Which kinds of element cost the most?",
     why:
-      "`UX-308` put the element's kind on its Plane 1 slice, so this " +
+      "The element's kind is on its Plane 1 slice, so this " +
       "is one group-by rather than a join against the graph. A kind " +
-      "that dominates is a question about the build's shape - one " +
+      "that dominates is a question about the build's shape — one " +
       "cmake element is slow, forty of them is a toolchain decision.",
     sql: `select extract_arg(s.arg_set_id, 'debug.element_kind') as kind,
        count(*) as tasks,
@@ -429,12 +429,11 @@ order by seconds desc;`,
     plane: "Plane 2",
     title: "What failed, and what ran it?",
     why:
-      "`UX-308` gives a non-zero exit its own category, so the work " +
+      "A non-zero exit has its own category, so the work " +
       "that failed is one predicate away instead of a scan of every " +
-      "Plane 2 command line. The command is `s.name`: `UX-333` untrimmed the " +
-      "slice name and dropped the `debug.cmd` this question used to " +
-      "read, because the argv's distinguishing part is the file at " +
-      "the end and the 120-character cut fell before it.",
+      "Plane 2 command line. The command is `s.name`, the untrimmed " +
+      "slice name, because the argv's distinguishing part is the " +
+      "file at the end.",
     sql: `select extract_arg(s.arg_set_id, 'debug.element') as element,
        extract_arg(s.arg_set_id, 'debug.exit_status') as exit_status,
        s.name as command,
@@ -451,8 +450,8 @@ limit 40;`,
     plane: "Plane 2",
     title: "Which elements are waiting rather than computing?",
     why:
-      "Plane 2's own `debug.cpu_us` against wall time, per element, " +
-      "annotations alone - no containment join, so nothing another " +
+      "Plane 2's own CPU time against wall time, per element, " +
+      "annotations alone — no containment join, so nothing another " +
       "element did in parallel can be attributed here. A ratio far " +
       "below 1 is a process that waited; far above 1 is one that " +
       "used several cores. This is the sandbox-tax cross-check that " +
@@ -475,12 +474,12 @@ limit 25;`,
     plane: "Plane 2",
     title: "Which single process wanted the most memory?",
     why:
-      "Plane 2's `debug.max_rss_kb` is one process's own lifetime " +
+      "Plane 2's peak resident memory is one process's own lifetime " +
       "peak. It is " +
       "read as a maximum and never summed: two processes peaking at " +
       "different moments never held the sum between them, which is " +
-      "the same refusal `compute_peak_memory` makes and the reason " +
-      "`UX-310` declined to draw a memory curve.",
+      "the same refusal the peak-memory section makes and the reason " +
+      "the trace draws no memory curve.",
     sql: `select extract_arg(s.arg_set_id, 'debug.element') as element,
        max(extract_arg(s.arg_set_id, 'debug.max_rss_kb')) / 1024 as peak_mb,
        s.name as command
@@ -497,7 +496,7 @@ limit 25;`,
     reads: "flow",
     title: "What did this element wait for, by the graph?",
     why:
-      "Plane 1 again, by the graph rather than the clock: `UX-309` " +
+      "Plane 1 again, by the graph rather than the clock: the trace " +
       "draws the dependency edges as **flows**, so this is " +
       "the declared graph rather than whatever happened to finish " +
       "first. The timestamp-proximity version of this question is " +
@@ -523,10 +522,10 @@ limit 20;`,
     reads: "counter",
     title: "How many processes were running at once, over time?",
     why:
-      "Plane 2's concurrency as a curve: `UX-310`'s counter track, " +
+      "Plane 2's concurrency as a curve: a counter track, " +
       "sampled from the same records the " +
-      "process census counts. Its peak equals the `max_concurrency` " +
-      "the report publishes - by construction, because both read one " +
+      "process census counts. Its peak equals the peak " +
+      "the report publishes — by construction, because both read one " +
       "function. Read it against `host cores busy` below: a plateau of " +
       "processes over an idle machine is work that was blocked, not " +
       "work that filled the cores.",
@@ -545,7 +544,7 @@ limit 25;`,
     reads: "counter",
     title: "Were the cores busy, or just the machine loaded?",
     why:
-      "`UX-675` put the host's own `/proc/stat` series on the trace, " +
+      "The host's own `/proc/stat` series is on the trace, " +
       "against `traced processes running` above: a process blocked on " +
       "I/O holds a slot and no core. `host cores busy` against " +
       "`host cores` is the share actually drawn; `host load average` " +
@@ -572,10 +571,10 @@ limit 25;`,
     plane: "run",
     title: "Whose run is this, and did it finish?",
     why:
-      "`UX-311` puts the run's identity on its own track, so a trace " +
+      "The run's identity is on its own track, so a trace " +
       "that left the machine still says which project, which host " +
       "and which `bga` wrote it. `incomplete_reason` is the one key " +
-      "a finished run never emits - its absence is the only thing " +
+      "a finished run never emits — its absence is the only thing " +
       "its absence means, and a trace of an interrupted build is " +
       "not a measurement.",
     sql: `select extract_arg(s.arg_set_id, 'debug.run') as run,
@@ -611,7 +610,7 @@ export function inCategory(category) {
  * this renders in the served page, in `sql.html` and in the export, and
  * none of the three should own the element factory.
  */
-export function copyButton(make, text, deps = {}, noun = "query") {
+export function copyButton(make, text, deps = {}, noun = "query", of) {
   // UX-279: what it copies, not that it copies. One function draws two
   // different controls - the SQL a question renders, and a finding's
   // pasteable text - and both read `Copy`, which is the ambiguity the
@@ -619,7 +618,7 @@ export function copyButton(make, text, deps = {}, noun = "query") {
   // caller knows what it handed over.
   const button = make("button", { type: "button", class: "copy-sql" });
   const label = `Copy ${noun}`;
-  button.textContent = label;
+  say(button, label, of);
   button.setAttribute("data-copy", text);
   button.setAttribute("data-copies", noun);
   button.title = `Copy this ${noun} to the clipboard`;
@@ -637,10 +636,10 @@ export function copyButton(make, text, deps = {}, noun = "query") {
     } catch (error) {
       wrote = false;
     }
-    button.textContent = wrote ? "\u2713 copied" : "select and copy";
-    deps.setTimeout?.(() => { button.textContent = label; }, 1500)
-      ?? (typeof setTimeout !== "undefined"
-          && setTimeout(() => { button.textContent = label; }, 1500));
+    say(button, wrote ? "\u2713 copied" : "select and copy", of);
+    const back = () => say(button, label, of);
+    deps.setTimeout?.(back, 1500)
+      ?? (typeof setTimeout !== "undefined" && setTimeout(back, 1500));
   });
   return button;
 }
@@ -701,16 +700,18 @@ export const NEEDS_TRACKEVENT = {
   counter: "the `counter` and `counter_track` tables",
 };
 
-export function requirementLine(question, make) {
+// `UX-1156`: `said` spans one section, so the why is written once and later lines point up.
+export function requirementLine(question, make, said = new Set()) {
   const needs = NEEDS_TRACKEVENT[question?.reads];
   if (!needs) return null;
   const line = make("p", { class: "muted query-needs" });
   line.setAttribute("data-reads", question.reads);
-  line.textContent =
-    `Needs a trackevent trace: this reads ${needs}, which `
+  line.textContent = said.size ? "Needs a trackevent trace, as above."
+    : `Needs a trackevent trace: this reads ${needs}, which `
     + "`bga timeline --format chrome` does not write. Against the "
-    + "legacy JSON it returns no rows - which is the format missing "
+    + "legacy JSON it returns no rows — which is the format missing "
     + "the structure, not the build lacking it.";
+  said.add(line);
   return line;
 }
 
@@ -799,7 +800,7 @@ export function renderQuestions(make, options = {}) {
   } else if (!options.hasTimeline) {
     intro.textContent =
       "This snapshot carries no build log, so there is no timeline to "
-      + "open here - a capture made with `bga capture` records one, and "
+      + "open here — a capture made with `bga capture` records one, and "
       + "`bga timeline` writes the trace. The queries below are what to "
       + "ask it once there is one.";
   } else {
@@ -814,7 +815,7 @@ export function renderQuestions(make, options = {}) {
       ? "Both planes of this run land in one trace: Plane 1's element "
         + "spans and Plane 2's process lanes, on one clock, joined by "
         + "the element uid this report prints."
-      : "Plane 1's element spans land in this run's trace - one span "
+      : "Plane 1's element spans land in this run's trace — one span "
         + "per task, on the build's own clock. Plane 2 is not in it, so "
         + "the queries below that read process lanes return nothing "
         + "here and the ones scoped to Plane 1 answer.") + openIt;
@@ -836,8 +837,10 @@ export function renderQuestions(make, options = {}) {
   const chosen = elementPicker(section, make, options);
   const worked = byId(WORKED_EXAMPLE);
   if (worked) section.append(workedExample(worked, make, chosen));
+  const said = new Set();
   for (const category of CATEGORIES) {
-    const entries = inCategory(category);
+    // UX-1147: the worked question is already open above; a fold repeating it is a second heading.
+    const entries = inCategory(category).filter((q) => !worked || q.id !== worked.id);
     if (!entries.length) continue;
     // UX-209 item 4: one `<details>` per category, collapsed - with the
     // full SQL still in the DOM, because Ctrl-F must keep finding it
@@ -857,7 +860,7 @@ export function renderQuestions(make, options = {}) {
       heading.textContent = question.title;
       const why = make("p", { class: "muted" });
       why.textContent = question.why;
-      const needs = requirementLine(question, make);
+      const needs = requirementLine(question, make, said);
       fold.append(heading, why, ...(needs ? [needs] : []),
                   ...sqlBlock(question, make, chosen));
     }
@@ -979,7 +982,7 @@ function sqlBlock(question, make, element) {
   const code = make("code", { "data-sql-for": question.id });
   code.textContent = renderedSql(question, element);
   block.append(code);
-  const copy = copyButton(make, code.textContent);
+  const copy = copyButton(make, code.textContent, {}, "query", question.title);
   copy.setAttribute("data-sql-for", question.id);
   return [block, copy];
 }

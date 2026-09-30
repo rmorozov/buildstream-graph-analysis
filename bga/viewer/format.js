@@ -2,8 +2,8 @@
  * UX-337: the vocabulary every renderer speaks, in one module below them.
  *
  * `app.js`'s own first seam was called `format`, and this is that
- * chapter lifted out whole: the 18 `bga:` hint keys this module
- * declares (of the 21 `bga/schemas.py` emits), the readers that pull
+ * chapter lifted out whole: the 20 `bga:` hint keys this module
+ * declares (of the 23 `bga/schemas.py` emits), the readers that pull
  * them off a schema node (`hintsOf`, `childNode`, `quantityFor`), the
  * formatters that turn a number into a printed value under them, and
  * `el` - the one node constructor everything above builds with.
@@ -20,7 +20,7 @@
  * in exactly that order (`UX-199`, where a cycle shipped a report that
  * threw `ReferenceError` in `boot()` and rendered empty).
  */
-import { elementAnchor } from "./primitives.js";
+import { ABSENT, elementAnchor, findingAnchor, headRow } from "./primitives.js";
 
 export const QUANTITY = "bga:quantity";
 
@@ -61,6 +61,9 @@ export const PRESETS = "bga:presets";
 // *do* with the number.
 export const INLINE = "bga:inline";
 
+// UX-1143: the member that is a record section's answer, drawn first as a sentence.
+export const LEAD = "bga:lead";
+
 // `UX-391`: what a map's own keys *are*, where they are not names.
 //
 // `UX-374` made a published key render verbatim, which is right for an
@@ -99,6 +102,9 @@ export const EXPLAINED_BY = "bga:explained_by";
  * and `classify` reads it rather than sniffing for a verb.
  */
 export const COMMAND = "bga:command";
+
+// `UX-1166`: this string is a key path into this document; it reads as its steps' labels.
+export const KEY_PATH = "bga:key_path";
 
 /**
  * `UX-390`: the run's advice about one key of an explained map.
@@ -168,7 +174,7 @@ const ROLE = "bga:role";
 // ---------------------------------------------------------------- format
 
 export function duration(microseconds) {
-  if (microseconds === null || microseconds === undefined) return "—";
+  if (microseconds === null || microseconds === undefined) return ABSENT;
   const s = microseconds / 1e6;
   if (s < 1) return `${Math.round(microseconds / 1000)} ms`;
   if (s < 90) return `${s.toFixed(1)} s`;
@@ -178,7 +184,7 @@ export function duration(microseconds) {
 }
 
 export function bytes(value) {
-  if (value === null || value === undefined) return "—";
+  if (value === null || value === undefined) return ABSENT;
   const units = ["B", "KiB", "MiB", "GiB", "TiB"];
   let n = value, i = 0;
   while (n >= 1024 && i < units.length - 1) { n /= 1024; i += 1; }
@@ -186,7 +192,7 @@ export function bytes(value) {
 }
 
 export function quantity(value, kind) {
-  if (value === null || value === undefined) return "—";
+  if (value === null || value === undefined) return ABSENT;
   switch (kind) {
     case "duration_us": return duration(value);
     case "bytes": return bytes(value);
@@ -265,6 +271,76 @@ const UNIT_SUFFIX = {
   rate_per_day: /_per_day$/,
 };
 
+/** `UX-1144`: styleguide §6e.2's keyed concepts - one reader name per data key. */
+export const TERMS = {
+  t_infinity_observed: "Chain floor T∞", t_infinity_us: "Chain floor T∞", t_infinity_cold: "Chain floor T∞ (cold)",
+  lb: "Resource floor LB", lb_us: "Resource floor LB", t_c: "Replay makespan T_C",
+  scheduling_gap_us: "Scheduling gap",
+  plane2_processes: "Plane 2 processes", cpu_coverage: "Plane 2 coverage",
+  primary: "Confidence",
+  // `UX-1141`: a key whose trimmed title collides with a sibling's.
+  category_us: "Time waiting",
+  deeper_than_three_share: "Share deeper than three",
+  started_at_us: "Started at, since the epoch",
+};
+
+/**
+ * `UX-1141` (styleguide §4g.2): the one map from an enum value or gate
+ * id the payload publishes *as a value* to the phrase a reader sees.
+ * The raw value stays on `data-raw` and in the JSON door.
+ */
+export const READER_LABELS = {
+  chain_bound: "Chain-bound",
+  scheduler_bound: "Scheduler-bound",
+  task_horizon: "Time tasks were running",
+  wall_clock: "Wall clock",
+  detected_host_cpu_count: "Detected host cores",
+  declared_cpu_budget: "Declared CPU budget",
+  host_cpu_count: "Host cores",
+  cpu_budget: "Declared CPU budget",
+  native_max_jobs: "Native build jobs",
+  INSUFFICIENT_EVIDENCE: "Not enough evidence",
+  HIGH_CPU_UTILIZATION: "High CPU use",
+  CONCURRENT_TASKS_EXCEED_CPUS: "More tasks at once than cores",
+  idle_no_tasks: "Idle, no task ready",
+  idle_underparallel: "Idle, too little parallel work",
+  wasted_retry: "Wasted on retries",
+  wasted_rebuild: "Wasted on rebuilds",
+  "governing core count (host_cpu_count/cpu_budget)": "Governing core count",
+  pinned_to_one_job: "Pinned to one job", underachieved_requested_jobs: "Fewer jobs than requested",
+  overlap_exceeds_granted_width: "More processes than granted",
+  ordering_violations_zero: "Ordering: no violations",
+  critical_path_coverage_full: "Critical path: fully covered",
+  dominator_coverage_full: "Dominators: fully covered",
+  blame_chain_coverage_full: "Blame chain: fully covered",
+  run_identity_consistent: "Run identity: consistent",
+  occupancy_within_capacity: "Occupancy: within capacity",
+  untracked_head_us: "Before the first task",
+  execution_on_chain_us: "Execution on the chain",
+  dependency_wait_us: "Waiting on dependencies",
+  resource_wait_us: "Waiting on resources",
+  scheduler_wait_us: "Waiting on the scheduler",
+  retry_wait_us: "Retries",
+  idle_us: "Idle",
+  untracked_tail_us: "After the last task",
+  useful: "Useful",
+  untracked: "Untracked",
+  "Resource.PROCESS": "Builders",
+  "Resource.DOWNLOAD": "Fetchers",
+  "Resource.UPLOAD": "Pushers",
+};
+
+/** A published value as the reader's phrase; unmapped values pass. */
+export function readerLabel(value) {
+  const text = String(value);
+  if (Object.hasOwn(READER_LABELS, text)) return READER_LABELS[text];
+  // Kebab-case (`blast-radius-ranking`) is a finding id, not a phrase.
+  return /^[a-z]+(?:-[a-z]+)+$/.test(text) ? text[0].toUpperCase() + text.slice(1).replace(/-/g, " ") : text;
+}
+
+/** A bare `snake_case` or `UPPER_CASE` token - a key, never a phrase. */
+export const BARE_KEY = /^(?:[a-z][a-z0-9]*(?:_[a-z0-9]+)+|[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+)$/;
+
 /**
  * A payload key as a label.
  *
@@ -304,13 +380,18 @@ export function title(key, kind = null, published = false) {
   // its tail. So this returns before all three rather than skipping
   // one.
   if (published) return key;
+  if (Object.hasOwn(TERMS, key)) return TERMS[key];
   const suffix = UNIT_SUFFIX[kind];
   // Never trim a key down to nothing: `_us` alone is not a label.
   const trimmed = suffix ? key.replace(suffix, "") : key;
   const named = trimmed || key;
   // `UX-1020`: a claim id (`wait-category`) is kebab-case, not a
   // published name - the same word-join `_` already gets.
-  return named.replace(/[_-]/g, " ").replace(/^./, (c) => c.toUpperCase());
+  // The CPU floor's fields (`lb_cpu_*`) spell the floor's own name.
+  // `UX-1151`: one spelling of the planes and of the acronym on every label.
+  return named.replace(/[_-]/g, " ").replace(/^./, (c) => c.toUpperCase())
+    .replace(/^Lb /, "LB ")
+    .replace(/\bplane ?([12])\b/gi, "Plane $1").replace(/\bcpu(s?)\b/gi, "CPU$1");
 }
 
 /**
@@ -380,11 +461,12 @@ export function sectionHead(key, hint = {}) {
   // owns, not on all of them. `applyRole` fills it and the stylesheet
   // shows it only while the section is promoted. The declared roles
   // ride on it so nothing has to re-read the schema at click time.
+  const row = headRow(node, document);
   if (info.readers.length) {
-    node.append(el("span", { class: "reader-tag", "data-reader-tag": "",
-                             "data-readers": info.readers.join(" ") }));
+    row.append(el("span", { class: "reader-tag", "data-reader-tag": "",
+                            "data-readers": info.readers.join(" ") }));
   }
-  return node;
+  return row;
 }
 
 // `UX-391` moved this here from `structured.js`. It is a *label* -
@@ -454,9 +536,8 @@ export function describedTerm(name, description, attrs = {}, inline = null,
  * `UX-1021`: **one `?` door per block.** `describedTerm` no longer
  * builds a marker; this does, once, for every hidden `.description`
  * node the caller collected while building one block (a `dl`, `table`,
- * `ul` or `ol` - the nearest ancestor the styleguide's census already
- * walks to). Appended as the block's first child, so it is inside the
- * block for that same walk. A block that described nothing gets no
+ * `ul` or `ol`). The caller places it just before the block - `UX-1157`:
+ * a `dl` holds only `dt`/`dd`. A block that described nothing gets no
  * door - `UX-194`'s dead-control rule.
  */
 export function attachBlockDoor(block, descriptions) {
@@ -476,7 +557,6 @@ export function attachBlockDoor(block, descriptions) {
     marker.setAttribute("aria-expanded", open ? "false" : "true");
     for (const sentence of sentences) sentence.hidden = open;
   });
-  block.prepend(marker);
   return marker;
 }
 
@@ -486,6 +566,10 @@ export function elementColumn(specs = []) {
 }
 
 // ---------------------------------------------------------------- render
+
+/** `UX-1156`: a finding named off its own card - its title to the colon, linked there. */
+export const findingLink = ({ id, title }) => el("a", {
+  href: `#${findingAnchor(id)}`, "data-finding": id }, String(title ?? id).split(": ")[0]);
 
 export function el(tag, attrs = {}, ...children) {
   const node = document.createElement(tag);
@@ -512,6 +596,59 @@ export function el(tag, attrs = {}, ...children) {
   return node;
 }
 
+// `UX-1149`: reader text is typeset once, here - a paired backtick span
+// is `<code>`, `->` is `→`. Data (a table cell, code) is left verbatim.
+const TYPESET_SKIP = "code, pre, kbd, samp, script, style, svg, textarea, select, option, td";
+// `UX-1140`: and a number glued to its unit is spaced, as `duration`
+// spells it - only before a space, punctuation or the end, so `sdk-1s.bst` stays.
+const UNIT_AT = String.raw`(?<![\w.])(\d+(?:\.\d+)?)(ms|s)(?=$|[\s,;:)\]]|\.(?:\s|$))`;
+const GLUED_UNIT = new RegExp(UNIT_AT, "g");
+const TYPESET_MARK = new RegExp(String.raw`\x60[^\x60\n]+\x60|->|` + UNIT_AT);
+
+// A `td` is data, except a long-text fold: its preview and full text are prose.
+function skipped(node) {
+  const hit = node?.closest?.(TYPESET_SKIP);
+  return Boolean(hit) && !(hit.matches("td") && node.closest("details.long-text"));
+}
+
+function typesetNode(node) {
+  const parts = node.data.split(/`([^`\n]+)`/);
+  const fragment = document.createDocumentFragment();
+  parts.forEach((part, index) => {
+    if (index % 2) fragment.append(el("code", {}, part));
+    else if (part) fragment.append(part.replace(/->/g, "→").replace(GLUED_UNIT, "$1 $2"));
+  });
+  if (fragment.textContent !== node.data || parts.length > 1) node.replaceWith(fragment);
+}
+
+export function typeset(root) {
+  if (!root || typeof document.createTreeWalker !== "function") return;
+  if (root.nodeType === 3) root = root.parentNode;
+  if (!root || root.nodeType !== 1 || skipped(root)) return;
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  const found = [];
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    if (TYPESET_MARK.test(node.data) && !skipped(node.parentElement)) {
+      found.push(node);
+    }
+  }
+  found.forEach(typesetNode);
+}
+
+/** `typeset` now, and on every node inserted under `root` later. */
+export function typesetAlways(root) {
+  typeset(root);
+  if (typeof MutationObserver !== "function") return null;
+  const observer = new MutationObserver((records) => {
+    for (const record of records) {
+      if (record.type === "characterData") typeset(record.target);
+      for (const added of record.addedNodes ?? []) typeset(added);
+    }
+  });
+  observer.observe(root, { childList: true, subtree: true, characterData: true });
+  return observer;
+}
+
 /**
  * The hints on one schema node, plus the node itself so a renderer can
  * keep walking.
@@ -530,8 +667,8 @@ export function hintsOf(node) {
   for (const name of [QUANTITY, SEVERITY, COLUMNS, DIRECTION, QUESTION,
                       RAIL, READERS_SERVED, PRESETS, SERIES, DISTRIBUTION,
                       RUNBOOK,
-                      INLINE, DECOMPOSITION, INTERVAL, KEYED_BY,
-                      EXPLAINED_BY, COMMAND]) {
+                      INLINE, LEAD, DECOMPOSITION, INTERVAL, KEYED_BY,
+                      EXPLAINED_BY, COMMAND, KEY_PATH]) {
     if (name in node) hint[name] = node[name];
   }
   if (node.description) hint.description = node.description;
@@ -561,6 +698,49 @@ export function childNode(node, key) {
     return node.additionalProperties;
   }
   return undefined;
+}
+
+/**
+ * `UX-1140`: the quantity the schema declares at a published path
+ * (`floors.lb`, `elements.blast_radius[uid].downstream_count`); the
+ * leaf's guess where the schema says nothing or is absent.
+ */
+export function quantityAt(schema, path) {
+  let node = schema, key = null;
+  const above = [];
+  for (const part of String(path ?? "").match(/[^.[\]]+|\[[^\]]*\]/g) ?? []) {
+    above.push(node);
+    if (part.startsWith("[")) node = node?.items ?? node?.additionalProperties;
+    else { node = childNode(node, part); key = part; }
+  }
+  if (key === null) return null;
+  // A table column's unit is declared on the row's `bga:columns`, not on a property.
+  if (!hintsOf(node)[QUANTITY]) {
+    for (const holder of above.slice(-2)) {
+      const column = (holder?.[COLUMNS] ?? []).find((c) => c.key === key);
+      if (column?.quantity) return column.quantity;
+    }
+  }
+  return quantityFor(node, key);
+}
+
+/** `UX-1159`: a published path as a reader's label - the leaf's title, and the element it keys. */
+export function pathLabel(schema, path) {
+  let node = schema, key = null, row = "";
+  for (const part of String(path ?? "").match(/[^.[\]]+|\[[^\]]*\]/g) ?? []) {
+    if (part.startsWith("[")) {
+      node = node?.items ?? node?.additionalProperties;
+      if (!/^\[\d*\]$/.test(part)) row = ` (${part.slice(1, -1)})`;
+    } else { node = childNode(node, part); key = part; }
+  }
+  return key === null ? String(path ?? "")
+    : (node?.title ?? title(key, hintsOf(node)[QUANTITY] ?? guessQuantity(key))) + row;
+}
+
+/** `UX-1166`: a key path as each named step's label; the path stays on `data-raw`. */
+export function pathTrail(schema, path) {
+  const steps = String(path).split(".").filter((step) => step && step !== "[]");
+  return steps.map((_, at) => pathLabel(schema, steps.slice(0, at + 1).join("."))).join(" › ");
 }
 
 /**

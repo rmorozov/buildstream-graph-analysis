@@ -2256,7 +2256,7 @@ was:
 | constant | the bound | measured against | when it is the one that bit |
 | --- | --- | --- | --- |
 | `EXPORT_BUDGET_B` | 8 MiB | the whole written file: source + contract + data | nothing to do; the note says an attachment may not survive it |
-| `PAGE_BUDGET_B` | 150,000 B | the **page half**: the file less its data blocks — `index.html`, the stylesheet, and the viewer module gzipped with its loader (`UX-1052`) | nothing; it bounds the viewer `bga` writes, never your run. `--export` prints the page and data halves apart, and a release is held to it |
+| `PAGE_BUDGET_B` | 160,000 B | the **page half**: the file less its data blocks — `index.html`, the stylesheet, and the viewer module gzipped with its loader (`UX-1052`) | nothing; it bounds the viewer `bga` writes, never your run. `--export` prints the page and data halves apart, and a release is held to it |
 | `TRACE_BUDGET_B` | 4 MiB | the **gzipped trace** before it is base64-encoded — one part of the data half | the trace is left out and the page names the bound; `bga timeline` renders one beside the snapshot |
 | `TRACE_TRACK_BUDGET` | 8,000 tracks | the rows Perfetto opens: one process track per element, one thread track per traced pid — **processes**, not slices, so the spine's second record of one process is not a second row (`UX-406`) | nothing, for an export: it renders again with `--planes 1` and the handoff sentence says it did (`UX-530`). For `bga timeline`, `--planes 1` or `--only-element` narrow what is *drawn* rather than what is carried |
 

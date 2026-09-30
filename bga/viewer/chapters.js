@@ -40,6 +40,7 @@
  */
 
 import { duration, quantity, title } from "./format.js";
+import { headRow } from "./primitives.js";
 
 /**
  * `UX-347`: **the distance budget, and what a folded chapter says.**
@@ -85,7 +86,7 @@ export const CHAPTERS = [
     // the diagnosis between the findings and the blast control -
     // is a claim about what sits *after* them.
     sections: ["decision", "evidence", "overview",
-               "findings", "headline", "next_steps"],
+               "findings", "headline"],
   },
   {
     id: "change",
@@ -114,7 +115,7 @@ export const CHAPTERS = [
       return `A change to ${worst.key} rebuilds `
         + `${quantity(worst.value, "count")} elements`
         + (typeof cost === "number" ? ` (${duration(cost)} of work)` : "")
-        + " - the widest here.";
+        + " — the widest here.";
     },
   },
   {
@@ -464,6 +465,7 @@ function makeBox(chapter, doc, payload, first) {
   title.className = "chapter-title";
   title.textContent = chapter.title;
   box.append(title);
+  const head = headRow(title, doc, "chapter-head");
 
   // UX-347: the first chapter is the decision and stays open - a
   // reader who has to open the verdict has been handed nothing. Every
@@ -486,7 +488,7 @@ function makeBox(chapter, doc, payload, first) {
     toggle.setAttribute("aria-expanded", "false");
     toggle.setAttribute("aria-controls", `chapter-${chapter.id}`);
     toggle.addEventListener?.("click", () => setOpen(box, !isOpen(box)));
-    title.append(toggle);
+    head.append(toggle);
     labelFold(box);
   }
   return box;
@@ -687,6 +689,21 @@ function foldSection(section, shut) {
   return true;
 }
 
+// `UX-1145`: one unbreakable span per reader, so a tag breaks between readers, never inside one.
+function chipsInto(tag, words) {
+  const doc = tag.ownerDocument;
+  if (!doc?.createElement || typeof tag.replaceChildren !== "function") {
+    tag.textContent = words.join(", ");
+    return;
+  }
+  tag.replaceChildren(...words.flatMap((word, i) => {
+    const chip = doc.createElement("span");
+    chip.className = "reader-chip";
+    chip.textContent = word;
+    return i ? [", ", chip] : [chip];
+  }));
+}
+
 export function applyRole(root, role) {
   const chosen = role || null;
   const sections = [...(root?.querySelectorAll?.("section[data-section]") ?? [])];
@@ -703,9 +720,9 @@ export function applyRole(root, role) {
     // sees what each one would promote before choosing. A chosen role
     // still marks only what it owns (`UX-305`'s budget).
     if (tag) {
-      tag.textContent = owns ? readerWords(chosen)
-        : (!chosen && readers.length
-           ? readers.map(readerWords).join(", ") : "");
+      const words = owns ? [readerWords(chosen)]
+        : (!chosen ? readers.map(readerWords) : []);
+      chipsInto(tag, words);
     }
     // `UX-668`: the decision panel is never folded - it held the
     // picker before this item moved the control to the header, and it

@@ -134,7 +134,7 @@ def _open_set(hash_text):
     """The `o=` set out of a fragment, the way the page's reader is."""
     import urllib.parse
 
-    query = str(hash_text).lstrip("#").partition("~")[2]
+    query = pages.view_query(hash_text)
     got = urllib.parse.parse_qs(query, keep_blank_values=True).get("o", [""])
     return [name for name in got[0].split(",") if name]
 

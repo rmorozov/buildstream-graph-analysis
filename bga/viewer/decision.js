@@ -12,7 +12,7 @@
  */
 import { commandLine, identify, labelFor } from "./controls.js";
 import {
-  SVG, svg, seconds, mib, bar, OVERVIEW_SHOWN, elementAnchor,
+  SVG, svg, seconds, mib, bar, OVERVIEW_SHOWN, elementAnchor, plainValue,
 } from "./primitives.js";
 import {
   SCALE, GRADE_ANNOTATION, GRADE_EXHIBIT, exhibitAxis, exhibitTwin,
@@ -21,7 +21,7 @@ import {
 // to take this import unaliased - the export concatenates the modules
 // into one scope and drops the `import` line, so an alias resolves to
 // a name nothing declares.
-import { childNode, heading, hintsOf, title } from "./format.js";
+import { TERMS, childNode, el, findingLink, heading, hintsOf, pathLabel, quantity, quantityAt, title } from "./format.js";
 import {
   resolvePath, elementFacts, elementHistory, renderElementHistory,
 } from "./element.js";
@@ -52,8 +52,8 @@ import { plural } from "./tables.js";
  * Every string here is a field of `provenance`: the sentence is
  * `rule.sentence`, the threshold is `rule.threshold`, each row is an
  * `evidence[]` entry's own `path` and `value`. The page does not
- * compare anything, does not format a share, does not decide which
- * rule applies - it draws the object. That is the property the
+ * compare anything or decide which rule applies - it draws the object,
+ * a number through the element card's formatter (`UX-1140`). That is the property the
  * no-derivation guard asserts, and it is why the record carries a
  * sentence at all: wording the comparison here would make the terminal
  * and the page two explanations of one claim.
@@ -121,41 +121,17 @@ export function renderProvenance(provenance, options = {}) {
     // the first and rendered nowhere.
     if (provenance.rule.observed_path) {
       rule.setAttribute("data-observed", provenance.rule.observed_path);
+      rule.setAttribute("title", provenance.rule.observed_path);
     }
-    // `<span>` rather than `createTextNode`: the guards drive these
-    // renderers against a hand-built `document` that offers
-    // `createElement` and not much else, and a renderer that needs a
-    // DOM method thirty test stubs do not have is a renderer nothing
-    // can test. The shim exports `createTextNode`; the stubs predate
-    // it (`UX-264`'s complaint, still half-true).
-    const said = (text) => {
-      const span = document.createElement("span");
-      span.textContent = text;
-      return span;
-    };
-    if (provenance.rule.name) {
-      rule.append(said(`${provenance.rule.name} `));
-      const comparison = document.createElement("code");
-      comparison.textContent =
-        `${provenance.rule.observed_path ?? ""} `
-        + `${provenance.rule.comparison ?? "="} ${provenance.rule.threshold}`;
-      rule.append(comparison, said(" in "));
-    } else if (provenance.rule.observed_path) {
-      // A record can publish an observed path and no threshold -
-      // `confidence.run_mode present` is a rule with no number in it -
-      // and the address is the interesting half either way.
-      rule.append(said("No named threshold; "));
-      const observed = document.createElement("code");
-      observed.textContent =
-        `${provenance.rule.observed_path} `
-        + `${provenance.rule.comparison ?? ""}`.trim();
-      rule.append(observed, said(" read in "));
-    } else {
-      rule.append(said("No named threshold; computed in "));
-    }
-    const module = document.createElement("code");
-    module.textContent = provenance.rule.module ?? "";
-    rule.append(module);
+    // `UX-1141` (§4g.2): the constant and its file are the producer's -
+    // on the attributes and in the JSON door, never in the text.
+    rule.setAttribute("data-module", provenance.rule.module ?? "");
+    // `UX-1159`: the path is on the hover and `data-observed`; the text says its label.
+    const observed = provenance.rule.observed_path
+      ? `${pathLabel(options.schema, provenance.rule.observed_path)} ` : "";
+    rule.textContent = provenance.rule.name
+      ? `Threshold ${observed}${provenance.rule.comparison ?? "="} ${provenance.rule.threshold}`
+      : `No named threshold; ${observed ? observed + (provenance.rule.comparison ?? "") : "computed"}`.trim();
     details.append(rule);
   }
 
@@ -166,9 +142,8 @@ export function renderProvenance(provenance, options = {}) {
     for (const ref of refs) {
       const term = document.createElement("dt");
       term.setAttribute("data-path", ref.path ?? "");
-      const path = document.createElement("code");
-      path.textContent = ref.path ?? "";
-      term.append(path);
+      term.setAttribute("title", ref.path ?? "");
+      term.textContent = pathLabel(options.schema, ref.path);
       const value = document.createElement("dd");
       value.setAttribute("data-raw", ref.value === null || ref.value === undefined
         ? "" : String(ref.value));
@@ -183,37 +158,25 @@ export function renderProvenance(provenance, options = {}) {
       // what `String(ref.value)` produces for an absent key.
       value.textContent = ref.resolved === false
         ? "unresolved"
-        : (ref.elided ? `${ref.elided} - follow the path`
-                      : String(ref.value));
+        : (ref.elided ? `${ref.elided} — follow the path`
+                      : shownValue(ref.value, quantityAt(options.schema, ref.path)));
       list.append(term, value);
     }
     details.append(list);
   }
 
-  // `UX-357`: the document every path above walks. A record that
-  // travels - a `compare/v1` chain read beside an `analyze/v5` one -
-  // resolves against a different document, and the schema calls this
-  // load-bearing the moment it does.
-  if (provenance.document) {
-    const against = document.createElement("p");
-    against.className = "muted";
-    against.setAttribute("data-document", provenance.document);
-    const lead = document.createElement("span");
-    lead.textContent = "Paths resolve against ";
-    const named = document.createElement("code");
-    named.textContent = provenance.document;
-    against.append(lead, named);
-    details.append(against);
-  }
+  // `UX-357`: the document every path above walks - `UX-1159`: on the
+  // fold for the copy, not in the reader's text.
+  if (provenance.document) details.setAttribute("data-document", provenance.document);
 
   const unpublished = Array.isArray(provenance.unpublished_inputs)
     ? provenance.unpublished_inputs : [];
   if (unpublished.length) {
     const note = document.createElement("p");
     note.className = "muted unpublished";
-    note.setAttribute("data-unpublished", String(unpublished.length));
-    note.textContent =
-      `Also drawn from, and not published in this document: ${unpublished.join(", ")}`;
+    note.setAttribute("title", unpublished.join(", "));
+    note.textContent = "Also read, not published here: "
+      + unpublished.map((p) => pathLabel(options.schema, p)).join(", ");
     details.append(note);
   }
   return details;
@@ -248,15 +211,16 @@ export function renderProvenance(provenance, options = {}) {
  * twelve folded records is the relationship that item's own fix left
  * in place.
  */
-export function renderProvenanceRecords(payload, root) {
+export function renderProvenanceRecords(payload, root, schema = null) {
   const section = root?.querySelector?.('[data-section="provenance"]');
   if (!section) return 0;
   const records = Array.isArray(payload?.provenance) ? payload.provenance : [];
   let drawn = 0;
   for (const record of records) {
     const block = renderProvenance(record,
-      { label: record.claim ? title(record.claim) : "" });
+      { label: record.claim ? title(record.claim) : "", schema });
     if (!block) continue;
+    block.id = `provenance-${record.claim}`;
     section.append(block);
     drawn += 1;
   }
@@ -296,7 +260,8 @@ export function renderWhyRanked(payload, action, options = {}) {
   // to say: no facts, no rule and no history is no block, which is
   // `UX-194`'s dead-control rule applied to an explanation.
   const rows = facts?.rows ?? [];
-  const findings = facts?.findings ?? [];
+  const findings = (facts?.findings ?? []).filter(
+    (finding) => !options.said?.has(finding.id));
   const ownRule = record && options.ranking !== action?.finding_id;
   if (!rows.length && !findings.length && !ownRule && !history) return null;
 
@@ -312,7 +277,7 @@ export function renderWhyRanked(payload, action, options = {}) {
   // every action shares that record, in which case `renderDecision`
   // has already stated it once above the list (`UX-371`).
   if (ownRule) {
-    const chain = renderProvenance(record);
+    const chain = renderProvenance(record, { schema: options.reportSchema });
     if (chain) {
       chain.setAttribute("open", "");
       details.append(chain);
@@ -341,7 +306,7 @@ export function renderWhyRanked(payload, action, options = {}) {
     const line = document.createElement("p");
     line.className = "muted why-finding";
     line.setAttribute("data-finding", finding.id ?? "");
-    line.textContent = finding.title ?? finding.id ?? "";
+    line.append(findingLink(finding));
     details.append(line);
   }
 
@@ -349,12 +314,38 @@ export function renderWhyRanked(payload, action, options = {}) {
   return details;
 }
 
+/** `UX-1146`: the findings several Why folds share, each said once. */
+function renderSaidOnce(common) {
+  // Folded like the Why folds it came out of; the label is its count (§6e.13).
+  const box = document.createElement("details");
+  box.className = "why-shared";
+  const summary = document.createElement("summary");
+  // `UX-357` (§3a.1): one level, the findings are its rows.
+  box.setAttribute("data-levels", "1");
+  box.setAttribute("data-rows", String(common.length));
+  summary.textContent = `What they share \u00b7 1 level, ${common.length} `
+    + `row${common.length === 1 ? "" : "s"}`;
+  box.append(summary);
+  for (const { finding, ranks } of common) {
+    const line = document.createElement("p");
+    line.className = "muted why-finding";
+    line.setAttribute("data-finding", finding.id ?? "");
+    line.setAttribute("data-ranks", ranks.join(" "));
+    const which = ranks.map((rank) => `#${rank}`);
+    line.append(`${which.slice(0, -1).join(", ")} and ${which.at(-1)}: `, findingLink(finding));
+    box.append(line);
+  }
+  return box;
+}
+
 /** One fact, in the unit the source declared it in. */
 function factText(row) {
-  if (row.kind === "duration_us") return seconds(row.value);
-  if (row.kind === "share") return `${(row.value * 100).toFixed(1)}%`;
-  if (row.kind === "kilobytes") return mib(row.value * 1024);
-  return String(row.value);
+  return shownValue(row.value, row.kind);
+}
+
+// `UX-1140`: a number through the element card's formatter; anything else verbatim.
+function shownValue(value, kind) {
+  return typeof value === "number" ? quantity(value, kind) : plainValue(value);
 }
 
 /**
@@ -708,7 +699,8 @@ export function renderDecision(payload, investigate = null, copy = null,
   // UX-229: and why. Directly under the claim it explains, folded -
   // the panel is a decision, and the chain is what a reader opens
   // after doubting one.
-  const chain = renderProvenance(headline.provenance);
+  const chain = renderProvenance(headline.provenance,
+                                 { schema: options.reportSchema });
   if (chain) section.append(chain);
 
   // The opportunity split, both halves published. Absent stays absent -
@@ -717,7 +709,7 @@ export function renderDecision(payload, investigate = null, copy = null,
   split.className = "pairs opportunity";
   for (const [label, key, kind] of [
     ["Certified headroom", "certified_headroom_us", "duration_us"],
-    ["Beyond the chain", "scheduling_gap_us", "duration_us"],
+    [TERMS.scheduling_gap_us, "scheduling_gap_us", "duration_us"],
   ]) {
     const value = headline[key];
     if (typeof value !== "number") continue;
@@ -752,6 +744,17 @@ export function renderDecision(payload, investigate = null, copy = null,
     const shared = claim && actions.every((a) => a?.finding_id === claim)
       ? (payload?.provenance ?? []).find((e) => e?.claim === claim)
       : null;
+    // `UX-1146`: a finding naming two or more of the actions is said
+    // once, under the list, rather than inside each of their folds.
+    const facts = elementFacts(payload);
+    const namedBy = new Map();
+    for (const [index, action] of actions.entries()) {
+      for (const finding of facts.get(action?.element_uid)?.findings ?? []) {
+        if (!namedBy.has(finding.id)) namedBy.set(finding.id, { finding, ranks: [] });
+        namedBy.get(finding.id).ranks.push(index + 1);
+      }
+    }
+    const common = [...namedBy.values()].filter((entry) => entry.ranks.length > 1);
     const list = document.createElement("ol");
     list.className = "actions";
     for (const [index, action] of actions.entries()) {
@@ -760,17 +763,16 @@ export function renderDecision(payload, investigate = null, copy = null,
       // document draws.
       list.append(actionRow(action, investigate, renderWhyRanked(
         payload, action,
-        { ...options, rank: index + 1, ranking: shared && claim })));
+        { ...options, rank: index + 1, ranking: shared && claim,
+          said: new Set(common.map((entry) => entry.finding.id)) })));
     }
     section.append(list);
+    if (common.length) section.append(renderSaidOnce(common));
     // Below the list it explains, not above it: the reader came for
-    // the actions.
-    const how = shared ? renderProvenance(shared) : null;
-    if (how) {
-      const rule = document.createElement("h3");
-      rule.textContent = "How these were ranked";
-      rule.setAttribute("data-role", "ranking-rule");
-      section.append(rule, how);
+    // the actions. `UX-1156`: the rule is drawn once, in `#provenance`.
+    if (shared?.rule) {
+      section.append(el("p", { "data-role": "ranking-rule", "data-provenance": claim },
+                        el("a", { href: `#provenance-${claim}` }, "How these were ranked")));
     }
   }
 
@@ -779,8 +781,12 @@ export function renderDecision(payload, investigate = null, copy = null,
   // the terminal, CI and this panel give the same answer.
   const steps = Array.isArray(payload?.next_steps) ? payload.next_steps : [];
   if (steps.length) {
+    // `UX-1146`: the `next_steps` question, asked here once; the rail
+    // links it as this section's sub-entry (`nav.js`'s `subsections`).
     const head = document.createElement("h3");
-    head.textContent = "Next";
+    head.textContent = "What should I run next?";
+    head.setAttribute("id", "decision-next");
+    head.setAttribute("data-rail-sub", "next_steps");
     section.append(head);
     const list = document.createElement("ol");
     list.className = "next-steps";
@@ -838,8 +844,7 @@ function nextStepRow(step, copy, payload, reportSchema, isFirst = false) {
  * `follows_from` names either a published section or a finding id. A
  * section is linked by its own question - never its key, which is
  * §4b's rule and the raw `critical_path_detail` a reader met in the
- * table this replaces. A finding has no anchor of its own, so it links
- * the findings list and is labelled with its own claim.
+ * table this replaces. A finding links its own card, by its name.
  */
 function followsFrom(name, payload, reportSchema) {
   if (!name) return null;
@@ -853,9 +858,11 @@ function followsFrom(name, payload, reportSchema) {
   }
   const finding = (payload?.findings ?? []).find((one) => one.id === name);
   if (!finding) return null;
-  link.setAttribute("href", "#findings");
-  link.textContent = `from: ${finding.title ?? name}`;
-  return link;
+  // `UX-1156`: the finding named and linked to its card, whose title is its one drawing.
+  const named = findingLink(finding);
+  named.className = link.className;
+  named.prepend("from: ");
+  return named;
 }
 
 function actionRow(action, investigate, whyBlock = null) {

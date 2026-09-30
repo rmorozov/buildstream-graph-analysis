@@ -168,11 +168,9 @@ export function showAlso(body, rows) {
  * drawn from the 25 the bound shows is the wrong-population defect the
  * fixing guide's §5 names, arriving through a change of mechanism.
  */
-export function columnCells(table, key) {
+export function columnCells(table, key, rows = everyRow(ownBody(table))) {
   // `ownBody`, not `querySelector("tbody")`: `UX-532` again.
-  const body = ownBody(table);
-  if (!body) return [];
-  return everyRow(body)
+  return rows
     .map((tr) => [...(tr.children ?? [])].find(
       (td) => td.getAttribute?.("data-column") === key))
     .filter(Boolean);
@@ -255,6 +253,7 @@ export function applyFilters(table, options = {}) {
   // shows and the rows the document holds cannot disagree.
   showOnly(body, rows, shown);
   options.filtered = kept.length;
+  options.kept = kept;
   return shown.length;
 }
 
@@ -319,7 +318,9 @@ export function badgeText(shown, total) {
   const n = (value) => value.toLocaleString("en-US");
   // The `N of M` form needs no agreement: a denominator is always a
   // population, and `1 of 12` is right as it stands.
-  return shown === total ? plural(total, "row") : `${n(shown)} of ${n(total)}`;
+  // UX-1158: an emptied table says why beside the box that emptied it.
+  return shown === total ? plural(total, "row")
+    : shown ? `${n(shown)} of ${n(total)}` : `none of ${n(total)} match`;
 }
 
 /**
@@ -448,30 +449,6 @@ export function copy(value, deps = {}) {
   } catch (error) {
     return Promise.resolve(false);
   }
-}
-
-/**
- * `UX-208` item 4: a Top-N preset over a declared quantity column.
- *
- * Sorts by the published value and shows the first N. The badge keeps
- * reporting the truth - `10 of 1,202` - because the preset narrows what
- * is *shown*, it does not pretend the rest are gone.
- */
-export function applyTopN(table, column, n) {
-  const body = ownBody(table);
-  const rows = ownRows(table);
-  const value = (tr) => {
-    const cell = [...tr.children].find(
-      (td) => td.getAttribute("data-column") === column);
-    const raw = Number(cell ? cell.getAttribute("data-raw") : NaN);
-    return Number.isFinite(raw) ? raw : -Infinity;
-  };
-  rows.sort((a, b) => value(b) - value(a));
-  rows.forEach((tr, index) => {
-    tr.hidden = index >= n;
-    body.append(tr);
-  });
-  return Math.min(n, rows.length);
 }
 
 /** The quantity columns a Top-N preset can sort by, declared not

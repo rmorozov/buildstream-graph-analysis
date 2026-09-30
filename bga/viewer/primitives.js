@@ -56,6 +56,16 @@ export function mib(value) {
   return `${i === 0 ? n : n.toFixed(1)} ${units[i]}`;
 }
 
+/** `UX-1150`: the one word for an absent value, the word an empty collection already reads. */
+export const ABSENT = "none";
+
+/** `UX-1150`: a non-numeric leaf as a reader reads it - a boolean answers yes or no. */
+export function plainValue(value) {
+  if (value === null || value === undefined) return ABSENT;
+  if (typeof value === "boolean") return value ? "yes" : "no";
+  return String(value);
+}
+
 /** How many of the chain's elements are drawn before the fold. */
 // UX-207: how many attribution bars stay unfolded.
 export const OVERVIEW_SHOWN = 4;
@@ -70,6 +80,21 @@ export function elementAnchor(uid) {
 /** `UX-921`: the same spelling, for a finding's own id. */
 export function findingAnchor(id) {
   return `finding-${String(id).replace(/[^\w-]+/g, "-")}`;
+}
+
+/** `UX-1147` (§6e.1): the row a heading's controls sit in - beside the
+ *  heading, never inside it, so its accessible name is its question.
+ *  Wraps the heading in place on first use; a detached heading is
+ *  wrapped and the caller places the row. */
+export function headRow(heading, doc = document, kind = "section-head") {
+  const parent = heading.parentElement ?? heading.parentNode;
+  if (String(parent?.className ?? "").split(" ").includes(kind)) return parent;
+  const row = doc.createElement("div");
+  row.className = kind;
+  parent?.insertBefore?.(row, heading);
+  heading.remove?.();
+  row.append(heading);
+  return row;
 }
 
 export function bar(label, value, total, extra = {}) {

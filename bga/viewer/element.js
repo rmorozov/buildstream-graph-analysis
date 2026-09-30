@@ -15,7 +15,7 @@
  */
 import { identify, labelFor } from "./controls.js";
 import { plural } from "./tables.js";
-import { title } from "./format.js";
+import { READER_LABELS, TERMS, el, findingLink, title } from "./format.js";
 import {
   SVG, svg, seconds, mib, bar, OVERVIEW_SHOWN, elementAnchor,
 } from "./primitives.js";
@@ -29,6 +29,7 @@ import {
 // `views.js` inlines above this file (`dev_js_deps.py --order`).
 import { declareReaders, renderBand, verdictMarker,
          verdictMarkers } from "./views.js";
+import { sectionLabel } from "./nav.js";
 
 // -------------------------------------------------- the element object
 //
@@ -477,7 +478,7 @@ const SOURCES = [
     // number a sample rather than a measurement - and `saving_share`
     // is `potential_saving_us` as a share of the run, which is the
     // form the decision ranks in.
-    ["cpu_coverage", "Plane 2 coverage", "share"],
+    ["cpu_coverage", TERMS.cpu_coverage, "share"],
     ["saving_share", "Worth, as a share of the run", "share"],
     // `UX-383`: the quantity beside `cores_busy`'s rate, and `UX-379`'s
     // three pressure axes. `cores_busy` says an element was busy and
@@ -537,6 +538,7 @@ const JOIN_EVIDENCE = [
     ["max_element_duration_us", "Worst single element", "duration_us"],
     ["worst_element", "Worst element", null]]],
 ];
+const CLAIMED_BY = { dominant_binary: "cpu-concentration", serial_binary: "serialization-point" };
 
 /**
  * One section per element the report discusses.
@@ -563,8 +565,9 @@ export function renderElementSections(payload, root, options = {}) {
     }
     const key = owner?.getAttribute?.("data-section");
     if (!key || key.startsWith("element-")) continue;
-    if (!places.has(uid)) places.set(uid, new Set());
-    places.get(uid).add(key);
+    if (!places.has(uid)) places.set(uid, new Map());
+    // `UX-1152`: the link reads the section's own title, the one the rail shows.
+    places.get(uid).set(key, sectionLabel(owner, key));
   }
 
   const sections = [];
@@ -586,6 +589,13 @@ export function renderElementSections(payload, root, options = {}) {
   }
   return sections;
 }
+
+const shown = (row, format) => (typeof row.value === "number" ? format(row.value, row.kind) : String(row.value));
+// An element's rows as one `dl.pairs`; a Plane 2 row carries its `data-path`.
+const pairList = (rows, format) => el("dl", { class: "pairs" }, rows.flatMap((row) => [
+  el("dt", {}, row.label),
+  el("dd", { "data-field": row.field, "data-raw": String(row.value), "data-path": row.path,
+             class: typeof row.value === "number" ? "num" : "" }, shown(row, format))]));
 
 // `bounded(key, items)` (UX-1037): §1's folded list or table past the
 // table bound, else null - injected, so this chapter imports no `structured.js`.
@@ -618,46 +628,18 @@ function elementSection(record, places, investigate, format, bounded = null) {
   // Plain buttons carrying the element and the intent - `app.js` wires
   // one delegated listener at the root, so a control added to a view
   // later needs no second handler.
-  const controls = document.createElement("p");
-  controls.className = "element-controls";
-  controls.setAttribute("data-role", "element-controls");
-  const focusButton = document.createElement("button");
-  focusButton.setAttribute("type", "button");
-  focusButton.className = "focus-this";
-  // `UX-534`: born with the state, so an unfocus leaves the document
-  // byte-identical to never-focused (`UX-228`'s invariant).
-  focusButton.setAttribute("aria-pressed", "false");
-  focusButton.setAttribute("data-focus-element", uid);
-  focusButton.textContent = "Focus";
-  controls.append(focusButton);
+  const controls = el("p", { class: "element-controls", "data-role": "element-controls" });
+  // `UX-534`: born unpressed (`UX-228`); UX-1155: named for the element it acts on.
+  const press = (text, attrs) => controls.append(el("button", {
+    type: "button", ...attrs, "aria-pressed": "false", "aria-label": `${text}: ${uid}` }, text));
+  press("Focus", { class: "focus-this", "data-focus-element": uid });
   for (const mark of ELEMENT_MARKS) {
-    const button = document.createElement("button");
-    button.setAttribute("type", "button");
-    button.className = "mark-this";
-    button.setAttribute("aria-pressed", "false");
-    button.setAttribute("data-mark-element", uid);
-    button.setAttribute("data-mark-value", mark);
-    button.textContent = ELEMENT_MARK_LABELS[mark];
-    controls.append(button);
+    press(ELEMENT_MARK_LABELS[mark],
+          { class: "mark-this", "data-mark-element": uid, "data-mark-value": mark });
   }
   section.append(controls);
 
-  if (record.rows.length) {
-    const list = document.createElement("dl");
-    list.className = "pairs";
-    for (const row of record.rows) {
-      const term = document.createElement("dt");
-      term.textContent = row.label;
-      const detail = document.createElement("dd");
-      detail.setAttribute("data-field", row.field);
-      detail.setAttribute("data-raw", String(row.value));
-      detail.className = typeof row.value === "number" ? "num" : "";
-      detail.textContent = typeof row.value === "number"
-        ? format(row.value, row.kind) : String(row.value);
-      list.append(term, detail);
-    }
-    section.append(list);
-  }
+  if (record.rows.length) section.append(pairList(record.rows, format));
 
   // `UX-356` (§1b): the sentence the analyzer wrote for this reader,
   // above the evidence it rests on and above the findings that name
@@ -682,8 +664,19 @@ function elementSection(record, places, investigate, format, bounded = null) {
   // The Plane 2 evidence behind those sentences. Folded, because it is
   // the *why* under an answer already given - and the fold announces
   // its depth (§3a.1), like every other value fold on the page.
-  const evidenceRows = (record.evidence ?? [])
-    .reduce((total, block) => total + block.rows.length, 0);
+  // `UX-1156`: a block whose every pair, as shown, an earlier one shows is a clause on its label.
+  const pairs = (block) => block.rows.map((row) => `${row.label}=${shown(row, format)}`);
+  const blocks = [];
+  for (const block of record.evidence ?? []) {
+    const prior = blocks.find((had) => pairs(block).every((pair) => pairs(had).includes(pair)));
+    if (prior) {
+      prior.label += `, ${block.label.toLowerCase()}`;
+      prior.key += ` ${block.key}`;
+    } else blocks.push({ ...block });
+  }
+  // `UX-1163`: a label the card's advice states is not said again.
+  const claims = new Set((record.advice ?? []).map((advice) => advice.id));
+  const evidenceRows = blocks.reduce((total, block) => total + block.rows.length, 0);
   if (evidenceRows) {
     const fold = document.createElement("details");
     fold.className = "join-evidence";
@@ -695,26 +688,11 @@ function elementSection(record, places, investigate, format, bounded = null) {
       `What Plane 2 saw · 1 level, ${evidenceRows} `
       + `row${evidenceRows === 1 ? "" : "s"}`;
     fold.append(summary);
-    for (const block of record.evidence) {
-      const name = document.createElement("p");
-      name.className = "muted";
-      name.setAttribute("data-evidence", block.key);
-      name.textContent = block.label;
-      const list = document.createElement("dl");
-      list.className = "pairs";
-      for (const row of block.rows) {
-        const term = document.createElement("dt");
-        term.textContent = row.label;
-        const detail = document.createElement("dd");
-        detail.setAttribute("data-field", row.field);
-        detail.setAttribute("data-raw", String(row.value));
-        detail.setAttribute("data-path", row.path);
-        detail.className = typeof row.value === "number" ? "num" : "";
-        detail.textContent = typeof row.value === "number"
-          ? format(row.value, row.kind) : String(row.value);
-        list.append(term, detail);
+    for (const block of blocks) {
+      if (!block.key.split(" ").every((key) => claims.has(CLAIMED_BY[key]))) {
+        fold.append(el("p", { class: "muted", "data-evidence": block.key }, block.label));
       }
-      fold.append(name, list);
+      fold.append(pairList(block.rows, format));
     }
     section.append(fold);
   }
@@ -722,24 +700,13 @@ function elementSection(record, places, investigate, format, bounded = null) {
   // `UX-302`'s mapping: a short scalar array is an inline list, not a
   // table and not a `<pre>`.
   for (const named of record.lists ?? []) {
-    const line = document.createElement("p");
-    line.className = "muted";
-    line.setAttribute("data-list", named.key);
-    line.append(document.createTextNode(`${named.label}: `));
+    const line = el("p", { class: "muted", "data-list": named.key }, `${named.label}: `);
     const folded = bounded?.(named.key, named.items);
-    if (folded) {
-      section.append(line, folded);
-      continue;
-    }
-    named.items.forEach((item, index) => {
-      const code = document.createElement("code");
-      code.textContent = item;
-      line.append(code);
-      if (index < named.items.length - 1) {
-        line.append(document.createTextNode(", "));
-      }
-    });
     section.append(line);
+    if (folded) section.append(folded);
+    // `UX-1159`: a Plane 2 flag reads as its phrase; a name stays copyable.
+    else line.append(...named.items.flatMap((item) => [", ",
+      el(READER_LABELS[item] ? "span" : "code", { "data-raw": item }, READER_LABELS[item] ?? item)]).slice(1));
   }
 
   if (record.entering.length) {
@@ -754,27 +721,17 @@ function elementSection(record, places, investigate, format, bounded = null) {
     if (folded) section.append(folded);
   }
 
-  for (const finding of record.findings) {
-    const line = document.createElement("p");
-    line.className = `finding-ref sev-${String(finding.severity ?? "info")
-      .toLowerCase()}`;
-    line.setAttribute("data-finding", finding.id ?? "");
-    line.textContent = finding.title ?? finding.id ?? "";
-    section.append(line);
+  // `UX-1156`: named and linked; the finding's sentence is drawn once, on its own card.
+  if (record.findings.length) {
+    section.append(el("p", { class: "finding-ref muted" }, "Findings: ", record.findings
+      .flatMap((finding, at) => [at ? " · " : null, findingLink(finding)])));
   }
 
   if (places && places.size) {
-    const where = document.createElement("p");
-    where.className = "where muted";
-    where.append(document.createTextNode("Also in: "));
-    for (const key of [...places].sort()) {
-      const link = document.createElement("a");
-      link.setAttribute("href", `#${key}`);
-      link.setAttribute("data-where", key);
-      link.textContent = key.replace(/[-_]/g, " ");
-      where.append(link, document.createTextNode(" "));
-    }
-    section.append(where);
+    const named = [...places].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
+    section.append(el("p", { class: "where muted" }, "Also in: ",
+      named.flatMap(([key, name], at) => [el("a", { href: `#${key}`, "data-where": key }, name),
+                                      at < named.length - 1 ? " · " : ""])));
   }
 
   if (investigate) {
@@ -864,7 +821,7 @@ export function renderCulprits(compare) {
   caveat.setAttribute("data-role", "not-banded");
   caveat.textContent = deltas.banded
     ? "Each row is judged against its own noise band."
-    : "These are raw changes, not judged against a noise band - only the "
+    : "These are raw changes, not judged against a noise band — only the "
       + "run as a whole is.";
   section.append(caveat);
   return section;
@@ -887,7 +844,7 @@ function culpritRow(row) {
   // The values are the payload's. Nothing here subtracts anything: a
   // page computing its own delta is a second comparison.
   change.textContent = (row.delta_us === null || row.delta_us === undefined)
-    ? `${row.presence} - no delta to compare`
+    ? `${row.presence} — no delta to compare`
     : `${row.delta_us > 0 ? "+" : ""}${seconds(row.delta_us)}`
       + ` (${seconds(row.baseline_us)} → ${seconds(row.candidate_us)})`;
   item.append(name, document.createTextNode(" "), change);

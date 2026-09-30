@@ -7,19 +7,19 @@
         {
             "id": "wait-category",
             "severity": "high",
-            "title": "Biggest wait category: 5.9% of wall-clock time is UNTRACKED HEAD (2.72s)",
+            "title": "Biggest wait category: 5.9% of wall-clock time is untracked head (2.7 s)",
             "detail": [
-                "    -> real time before the tracked-task window started (BuildStream startup, cache query, sandbox staging) - see Pipeline Overhead, not a scheduling issue"
+                "    -> real time before the tracked-task window started (BuildStream startup, cache query, sandbox staging) \u2014 see Pipeline Overhead, not a scheduling issue"
             ],
             "elements": [],
             "evidence": {
                 "category": "untracked_head_us",
                 "category_us": 2717000,
                 "share": 0.058894934211952396,
-                "hint": "real time before the tracked-task window started (BuildStream startup, cache query, sandbox staging) - see Pipeline Overhead, not a scheduling issue"
+                "hint": "real time before the tracked-task window started (BuildStream startup, cache query, sandbox staging) \u2014 see Pipeline Overhead, not a scheduling issue"
             },
             "reader": "local-optimizer",
-            "copy_text": "BGA finding: Biggest wait category: 5.9% of wall-clock time is UNTRACKED HEAD (2.72s)\n      -> real time before the tracked-task window started (BuildStream startup, cache query, sandbox staging) - see Pipeline Overhead, not a scheduling issue\n  category untracked_head_us\n  category_us 2.7s\n  share 6%\n  hint real time before the tracked-task window started (BuildStream startup, cache query, sandbox staging) - see Pipeline Overhead, not a scheduling issue\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
+            "copy_text": "BGA finding: Biggest wait category: 5.9% of wall-clock time is untracked head (2.7 s)\n      -> real time before the tracked-task window started (BuildStream startup, cache query, sandbox staging) \u2014 see Pipeline Overhead, not a scheduling issue\n  category untracked_head_us\n  category_us 2.7 s\n  share 5.9%\n  hint real time before the tracked-task window started (BuildStream startup, cache query, sandbox staging) \u2014 see Pipeline Overhead, not a scheduling issue\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
             "trace_query": "resource-queues",
             "trace_queries": [
                 "resource-queues",
@@ -29,12 +29,12 @@
         {
             "id": "time-concentration",
             "severity": "high",
-            "title": "Where the time is: 4 elements are 71.9% of the 43.2s critical path - this build is chain-bound, not scheduler-bound",
+            "title": "Where the time is: 4 elements are 71.9% of the 43.2 s critical path \u2014 this build is chain-bound, not scheduler-bound",
             "detail": [
-                "    core.bst       19.1s (44.1% of path)  -> fixing it saves 12.1s (26.1% of the build)",
-                "    lib-b.bst       4.0s ( 9.3% of path)  -> fixing it saves 4.0s (8.7% of the build)",
-                "    lib-d.bst       4.0s ( 9.3% of path)  -> fixing it saves 4.0s (8.7% of the build)",
-                "    lib-f.bst       4.0s ( 9.3% of path)  -> fixing it saves 4.0s (8.7% of the build)"
+                "    core.bst     19.1 s ( 44.1% of path)  -> fixing it saves 12.1 s (26.1% of the build)",
+                "    lib-b.bst     4.0 s (  9.3% of path)  -> fixing it saves 4.0 s (8.7% of the build)",
+                "    lib-d.bst     4.0 s (  9.3% of path)  -> fixing it saves 4.0 s (8.7% of the build)",
+                "    lib-f.bst     4.0 s (  9.3% of path)  -> fixing it saves 4.0 s (8.7% of the build)"
             ],
             "elements": [
                 "core.bst",
@@ -74,13 +74,13 @@
                 ]
             },
             "reader": "local-optimizer",
-            "copy_text": "BGA finding: Where the time is: 4 elements are 71.9% of the 43.2s critical path - this build is chain-bound, not scheduler-bound\n      core.bst       19.1s (44.1% of path)  -> fixing it saves 12.1s (26.1% of the build)\n      lib-b.bst       4.0s ( 9.3% of path)  -> fixing it saves 4.0s (8.7% of the build)\n      lib-d.bst       4.0s ( 9.3% of path)  -> fixing it saves 4.0s (8.7% of the build)\n      lib-f.bst       4.0s ( 9.3% of path)  -> fixing it saves 4.0s (8.7% of the build)\n  path_us 43.2s\n  share_of_path 72%\n  chain_bound True\n  Elements: core.bst, lib-b.bst, lib-d.bst, lib-f.bst\n  Next: bga blast core.bst <fixture>/run\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
+            "copy_text": "BGA finding: Where the time is: 4 elements are 71.9% of the 43.2 s critical path \u2014 this build is chain-bound, not scheduler-bound\n      core.bst     19.1 s ( 44.1% of path)  -> fixing it saves 12.1 s (26.1% of the build)\n      lib-b.bst     4.0 s (  9.3% of path)  -> fixing it saves 4.0 s (8.7% of the build)\n      lib-d.bst     4.0 s (  9.3% of path)  -> fixing it saves 4.0 s (8.7% of the build)\n      lib-f.bst     4.0 s (  9.3% of path)  -> fixing it saves 4.0 s (8.7% of the build)\n  path_us 43.2 s\n  share_of_path 71.9%\n  chain_bound True\n  Elements: core.bst, lib-b.bst, lib-d.bst, lib-f.bst\n  Next: bga blast core.bst <fixture>/run\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
             "trace_query": "cost-by-executable"
         },
         {
             "id": "chain-graph",
             "severity": "info",
-            "title": "Note: 91% of elements have zero slack, all on the critical path - no second chain of equal length, so a saving on any of them is worth its own duration",
+            "title": "Note: 90.9% of elements have zero slack, all on the critical path \u2014 no second chain of equal length, so a saving on any of them is worth its own duration",
             "detail": [],
             "elements": [],
             "evidence": {
@@ -89,110 +89,13 @@
             },
             "indent": "    ",
             "reader": "graph-owner",
-            "copy_text": "BGA finding: Note: 91% of elements have zero slack, all on the critical path - no second chain of equal length, so a saving on any of them is worth its own duration\n  zero_slack_share 91%\n  zero_slack_off_path 0\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
-            "trace_query": "graph-levels"
-        },
-        {
-            "id": "blast-radius-reach",
-            "severity": "medium",
-            "title": "What a change to these rebuilds: core.bst (8 downstream), codegen.bst (8 downstream), lib-a.bst (7 downstream) - the cost of touching them is not their own duration but everything downstream that has to be built again",
-            "detail": [],
-            "elements": [
-                "core.bst",
-                "codegen.bst",
-                "lib-a.bst"
-            ],
-            "evidence": {},
-            "reader": "recipe-author",
-            "copy_text": "BGA finding: What a change to these rebuilds: core.bst (8 downstream), codegen.bst (8 downstream), lib-a.bst (7 downstream) - the cost of touching them is not their own duration but everything downstream that has to be built again\n  Elements: core.bst, codegen.bst, lib-a.bst\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
-            "trace_query": "dependency-wait"
-        },
-        {
-            "id": "blast-radius-structural",
-            "severity": "info",
-            "title": "Reaching most of the graph by design: toolchain.bst (10 downstream) - structural elements (import) whose dependents are the graph's shape, not a task",
-            "detail": [],
-            "elements": [
-                "toolchain.bst"
-            ],
-            "evidence": {},
-            "reader": "recipe-author",
-            "copy_text": "BGA finding: Reaching most of the graph by design: toolchain.bst (10 downstream) - structural elements (import) whose dependents are the graph's shape, not a task\n  Elements: toolchain.bst\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
-            "trace_query": "dependency-wait"
-        },
-        {
-            "id": "fan-in-ranking",
-            "severity": "info",
-            "title": "Elements that pull in the most (by upstream closure):",
-            "detail": [
-                "    1. app.bst (9 upstream, 8 named directly, at or above p90 of this run)",
-                "    2. lib-f.bst (8 upstream, 4 named directly, at or above p80 of this run)",
-                "    3. lib-e.bst (7 upstream, 4 named directly, at or above p70 of this run)",
-                "    Shape: half of this run's 11 elements pull in 5 or fewer, the top tenth pull in 9 or more (max 10)"
-            ],
-            "elements": [
-                "app.bst",
-                "lib-f.bst",
-                "lib-e.bst"
-            ],
-            "evidence": {
-                "fan_in_distribution": {
-                    "n": 11,
-                    "min": 0,
-                    "max": 10,
-                    "deciles": {
-                        "p10": 1,
-                        "p20": 1,
-                        "p30": 3,
-                        "p40": 4,
-                        "p50": 5,
-                        "p60": 6,
-                        "p70": 7,
-                        "p80": 8,
-                        "p90": 9
-                    },
-                    "p95": 10,
-                    "p99": 10,
-                    "mean": 5,
-                    "is_flat": false
-                }
-            },
-            "reader": "graph-owner",
-            "copy_text": "BGA finding: Elements that pull in the most (by upstream closure):\n      1. app.bst (9 upstream, 8 named directly, at or above p90 of this run)\n      2. lib-f.bst (8 upstream, 4 named directly, at or above p80 of this run)\n      3. lib-e.bst (7 upstream, 4 named directly, at or above p70 of this run)\n      Shape: half of this run's 11 elements pull in 5 or fewer, the top tenth pull in 9 or more (max 10)\n  Elements: app.bst, lib-f.bst, lib-e.bst\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
-            "trace_query": "dependency-wait"
-        },
-        {
-            "id": "fan-in-structural",
-            "severity": "info",
-            "title": "Pulling in most of the graph by design: all.bst (10 upstream) - structural elements (stack) whose dependencies are the graph's shape, not a task",
-            "detail": [],
-            "elements": [
-                "all.bst"
-            ],
-            "evidence": {},
-            "reader": "recipe-author",
-            "copy_text": "BGA finding: Pulling in most of the graph by design: all.bst (10 upstream) - structural elements (stack) whose dependencies are the graph's shape, not a task\n  Elements: all.bst\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
-            "trace_query": "dependency-wait"
-        },
-        {
-            "id": "graph-width",
-            "severity": "info",
-            "title": "The graph is 11 elements in 10 dependency stages, and its widest stage holds 2 - so no more than 2 can ever be building at once, whatever the capacity",
-            "detail": [],
-            "elements": [],
-            "evidence": {
-                "element_count": 11,
-                "dependency_stages": 10,
-                "widest_stage": 2
-            },
-            "reader": "graph-owner",
-            "copy_text": "BGA finding: The graph is 11 elements in 10 dependency stages, and its widest stage holds 2 - so no more than 2 can ever be building at once, whatever the capacity\n  element_count 11\n  dependency_stages 10\n  widest_stage 2\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
+            "copy_text": "BGA finding: Note: 90.9% of elements have zero slack, all on the critical path \u2014 no second chain of equal length, so a saving on any of them is worth its own duration\n  zero_slack_share 90.9%\n  zero_slack_off_path 0\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
             "trace_query": "graph-levels"
         },
         {
             "id": "joint-saving",
             "severity": "high",
-            "title": "Together, the top 3 are worth 23.1s (50% of the build) - more than the 16.1s they are worth one at a time - codegen.bst pays off only once core.bst is fixed, so work them in the order listed",
+            "title": "Together, the top 3 are worth 23.1 s (50.0% of the build) \u2014 more than the 16.1 s alone: codegen.bst pays off after core.bst",
             "detail": [],
             "elements": [
                 "core.bst",
@@ -206,15 +109,15 @@
                 "relation": "compound"
             },
             "reader": "local-optimizer",
-            "copy_text": "BGA finding: Together, the top 3 are worth 23.1s (50% of the build) - more than the 16.1s they are worth one at a time - codegen.bst pays off only once core.bst is fixed, so work them in the order listed\n  joint_saving_us 23.1s\n  sum_of_individual_us 16.1s\n  savings_add False\n  relation compound\n  Elements: core.bst, codegen.bst, lib-b.bst\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
+            "copy_text": "BGA finding: Together, the top 3 are worth 23.1 s (50.0% of the build) \u2014 more than the 16.1 s alone: codegen.bst pays off after core.bst\n  joint_saving_us 23.1 s\n  sum_of_individual_us 16.1 s\n  savings_add False\n  relation compound\n  Elements: core.bst, codegen.bst, lib-b.bst\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
             "trace_query": "waited-on-flow"
         },
         {
             "id": "optimization-horizon",
             "severity": "high",
-            "title": "Work them in this order (by what a fix is worth, not by size), with what the build drops to: core.bst (31s) -> codegen.bst (24s) -> lib-b.bst (20s)",
+            "title": "Work them in this order (by what a fix is worth, not by size), with what the build drops to: core.bst (31.1 s) -> codegen.bst (24.1 s) -> lib-b.bst (20.1 s)",
             "detail": [
-                "    - the last of those leaves 50% of the build removed, projected from this run without building again"
+                "    - the last of those leaves 50.0% of the build removed, projected from this run without building again"
             ],
             "elements": [
                 "core.bst",
@@ -249,15 +152,30 @@
                 ]
             },
             "reader": "local-optimizer",
-            "copy_text": "BGA finding: Work them in this order (by what a fix is worth, not by size), with what the build drops to: core.bst (31s) -> codegen.bst (24s) -> lib-b.bst (20s)\n      - the last of those leaves 50% of the build removed, projected from this run without building again\n  Elements: core.bst, codegen.bst, lib-b.bst\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
+            "copy_text": "BGA finding: Work them in this order (by what a fix is worth, not by size), with what the build drops to: core.bst (31.1 s) -> codegen.bst (24.1 s) -> lib-b.bst (20.1 s)\n      - the last of those leaves 50.0% of the build removed, projected from this run without building again\n  Elements: core.bst, codegen.bst, lib-b.bst\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
             "trace_query": "time-by-kind"
+        },
+        {
+            "id": "blast-radius-reach",
+            "severity": "medium",
+            "title": "What a change to these rebuilds: core.bst (8 downstream), codegen.bst (8 downstream), lib-a.bst (7 downstream) \u2014 the cost of touching them is not their own duration but everything downstream that has to be built again",
+            "detail": [],
+            "elements": [
+                "core.bst",
+                "codegen.bst",
+                "lib-a.bst"
+            ],
+            "evidence": {},
+            "reader": "recipe-author",
+            "copy_text": "BGA finding: What a change to these rebuilds: core.bst (8 downstream), codegen.bst (8 downstream), lib-a.bst (7 downstream) \u2014 the cost of touching them is not their own duration but everything downstream that has to be built again\n  Elements: core.bst, codegen.bst, lib-a.bst\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
+            "trace_query": "dependency-wait"
         },
         {
             "id": "latent-heavies",
             "severity": "medium",
-            "title": "Waiting off the critical path, worth nothing to fix today: codegen.bst (7s) - they bound how far shortening the chain can go",
+            "title": "Waiting off the critical path, worth nothing to fix today: codegen.bst (7.0 s) \u2014 they bound how far shortening the chain can go",
             "detail": [
-                "    (structural projections over this run's measured durations, where \"fixed\" means the element becomes instant - a re-capture is still the ground truth)"
+                "    (structural projections over this run's measured durations, where \"fixed\" means the element becomes instant \u2014 a re-capture is still the ground truth)"
             ],
             "elements": [
                 "codegen.bst"
@@ -271,7 +189,7 @@
                 ]
             },
             "reader": "recipe-author",
-            "copy_text": "BGA finding: Waiting off the critical path, worth nothing to fix today: codegen.bst (7s) - they bound how far shortening the chain can go\n      (structural projections over this run's measured durations, where \"fixed\" means the element becomes instant - a re-capture is still the ground truth)\n  Elements: codegen.bst\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
+            "copy_text": "BGA finding: Waiting off the critical path, worth nothing to fix today: codegen.bst (7.0 s) \u2014 they bound how far shortening the chain can go\n      (structural projections over this run's measured durations, where \"fixed\" means the element becomes instant \u2014 a re-capture is still the ground truth)\n  Elements: codegen.bst\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
             "trace_query": "element-commands",
             "trace_queries": [
                 "element-commands",
@@ -279,11 +197,93 @@
             ]
         },
         {
+            "id": "blast-radius-structural",
+            "severity": "info",
+            "title": "Reaching most of the graph by design: toolchain.bst (10 downstream) \u2014 structural elements (import) whose dependents are the graph's shape, not a task",
+            "detail": [],
+            "elements": [
+                "toolchain.bst"
+            ],
+            "evidence": {},
+            "reader": "recipe-author",
+            "copy_text": "BGA finding: Reaching most of the graph by design: toolchain.bst (10 downstream) \u2014 structural elements (import) whose dependents are the graph's shape, not a task\n  Elements: toolchain.bst\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
+            "trace_query": "dependency-wait"
+        },
+        {
+            "id": "fan-in-ranking",
+            "severity": "info",
+            "title": "Elements that pull in the most, by upstream closure",
+            "detail": [
+                "    1. app.bst (9 upstream, 8 named directly, at or above p90 of this run)",
+                "    2. lib-f.bst (8 upstream, 4 named directly, at or above p80 of this run)",
+                "    3. lib-e.bst (7 upstream, 4 named directly, at or above p70 of this run)",
+                "    Shape: half of this run's 11 elements pull in 5 or fewer, the top tenth pull in 9 or more (max 10)"
+            ],
+            "elements": [
+                "app.bst",
+                "lib-f.bst",
+                "lib-e.bst"
+            ],
+            "evidence": {
+                "fan_in_distribution": {
+                    "n": 11,
+                    "min": 0,
+                    "max": 10,
+                    "deciles": {
+                        "p10": 1,
+                        "p20": 1,
+                        "p30": 3,
+                        "p40": 4,
+                        "p50": 5,
+                        "p60": 6,
+                        "p70": 7,
+                        "p80": 8,
+                        "p90": 9
+                    },
+                    "p95": 10,
+                    "p99": 10,
+                    "mean": 5,
+                    "is_flat": false
+                }
+            },
+            "reader": "graph-owner",
+            "copy_text": "BGA finding: Elements that pull in the most, by upstream closure\n      1. app.bst (9 upstream, 8 named directly, at or above p90 of this run)\n      2. lib-f.bst (8 upstream, 4 named directly, at or above p80 of this run)\n      3. lib-e.bst (7 upstream, 4 named directly, at or above p70 of this run)\n      Shape: half of this run's 11 elements pull in 5 or fewer, the top tenth pull in 9 or more (max 10)\n  Elements: app.bst, lib-f.bst, lib-e.bst\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
+            "trace_query": "dependency-wait"
+        },
+        {
+            "id": "fan-in-structural",
+            "severity": "info",
+            "title": "Pulling in most of the graph by design: all.bst (10 upstream) \u2014 structural elements (stack) whose dependencies are the graph's shape, not a task",
+            "detail": [],
+            "elements": [
+                "all.bst"
+            ],
+            "evidence": {},
+            "reader": "recipe-author",
+            "copy_text": "BGA finding: Pulling in most of the graph by design: all.bst (10 upstream) \u2014 structural elements (stack) whose dependencies are the graph's shape, not a task\n  Elements: all.bst\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
+            "trace_query": "dependency-wait"
+        },
+        {
+            "id": "graph-width",
+            "severity": "info",
+            "title": "The graph is 11 elements in 10 dependency stages, and its widest stage holds 2 \u2014 so no more than 2 can ever be building at once, whatever the capacity",
+            "detail": [],
+            "elements": [],
+            "evidence": {
+                "element_count": 11,
+                "dependency_stages": 10,
+                "widest_stage": 2
+            },
+            "reader": "graph-owner",
+            "copy_text": "BGA finding: The graph is 11 elements in 10 dependency stages, and its widest stage holds 2 \u2014 so no more than 2 can ever be building at once, whatever the capacity\n  element_count 11\n  dependency_stages 10\n  widest_stage 2\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
+            "trace_query": "graph-levels"
+        },
+        {
             "id": "cache-hit-ratio",
             "severity": "info",
-            "title": "Caches off: all 11 elements built from source, none reused - this is the nightly scenario, so a 0% hit ratio is the intent rather than a finding",
+            "title": "Caches off: all 11 elements built from source, none reused \u2014 this is the nightly scenario, so a 0.0% hit ratio is the intent rather than a finding",
             "detail": [
-                "    -> for all.bst's own closure it is 0% (0 of 11 elements cached)"
+                "    -> for all.bst's own closure it is 0.0% (0 of 11 elements cached)"
             ],
             "elements": [],
             "evidence": {
@@ -293,13 +293,13 @@
                 "run_mode": "full"
             },
             "reader": "ci-gatekeeper",
-            "copy_text": "BGA finding: Caches off: all 11 elements built from source, none reused - this is the nightly scenario, so a 0% hit ratio is the intent rather than a finding\n      -> for all.bst's own closure it is 0% (0 of 11 elements cached)\n  hit_share 0%\n  built_elements 11\n  cached_elements 0\n  run_mode full\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
+            "copy_text": "BGA finding: Caches off: all 11 elements built from source, none reused \u2014 this is the nightly scenario, so a 0.0% hit ratio is the intent rather than a finding\n      -> for all.bst's own closure it is 0.0% (0 of 11 elements cached)\n  hit_share 0.0%\n  built_elements 11\n  cached_elements 0\n  run_mode full\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
             "trace_query": null
         },
         {
             "id": "confidence",
             "severity": "info",
-            "title": "Confidence: 0.97 (high)",
+            "title": "Confidence: 96.8% (high)",
             "detail": [],
             "elements": [],
             "evidence": {
@@ -308,15 +308,15 @@
                 "violation_count": 0
             },
             "reader": "ci-gatekeeper",
-            "copy_text": "BGA finding: Confidence: 0.97 (high)\n  primary 97%\n  band high\n  violation_count 0\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
+            "copy_text": "BGA finding: Confidence: 96.8% (high)\n  primary 96.8%\n  band high\n  violation_count 0\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
             "trace_query": null
         },
         {
             "id": "remote-execution-whatif",
             "severity": "info",
-            "title": "Remote execution (builder cap only, no Plane 2 `binary_cost`): unbounded builders 43.2s -> 43.2s",
+            "title": "Remote execution (builder cap only, no Plane 2 per-binary cost): unbounded builders 43.2 s -> 43.2 s",
             "detail": [
-                "    Unbounded builders (REAPI moves whole sandboxes): 43.2s -> 43.2s (0.0s); assumes staging and wait per element unchanged, workers never queue"
+                "    Unbounded builders (REAPI moves whole sandboxes): 43.2 s -> 43.2 s (0 ms); assumes staging and wait per element unchanged, workers never queue"
             ],
             "elements": [],
             "evidence": {
@@ -331,13 +331,13 @@
                 }
             },
             "reader": "ci-gatekeeper",
-            "copy_text": "BGA finding: Remote execution (builder cap only, no Plane 2 `binary_cost`): unbounded builders 43.2s -> 43.2s\n      Unbounded builders (REAPI moves whole sandboxes): 43.2s -> 43.2s (0.0s); assumes staging and wait per element unchanged, workers never queue\n  additive False\n  why_not_additive Not additive: both remove the same critical-path seconds, so buying both is not buying their sum.\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
+            "copy_text": "BGA finding: Remote execution (builder cap only, no Plane 2 per-binary cost): unbounded builders 43.2 s -> 43.2 s\n      Unbounded builders (REAPI moves whole sandboxes): 43.2 s -> 43.2 s (0 ms); assumes staging and wait per element unchanged, workers never queue\n  additive False\n  why_not_additive Not additive: both remove the same critical-path seconds, so buying both is not buying their sum.\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
             "trace_query": null
         },
         {
             "id": "efficiency-score",
             "severity": "info",
-            "title": "Efficiency Score: 1.00 (scheduling is near the certified floor for this graph - further gains need the graph or the work itself to change, not the scheduler (see Dispatch Occupancy and Critical Path))",
+            "title": "Efficiency score: 100.0% (scheduling is near the certified floor for this graph \u2014 further gains need the graph or the work itself to change, not the scheduler (see Dispatch Occupancy and Critical Path))",
             "detail": [],
             "elements": [],
             "evidence": {
@@ -345,7 +345,7 @@
                 "low_confidence": false
             },
             "reader": "ci-gatekeeper",
-            "copy_text": "BGA finding: Efficiency Score: 1.00 (scheduling is near the certified floor for this graph - further gains need the graph or the work itself to change, not the scheduler (see Dispatch Occupancy and Critical Path))\n  efficiency_score 100%\n  low_confidence False\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
+            "copy_text": "BGA finding: Efficiency score: 100.0% (scheduling is near the certified floor for this graph \u2014 further gains need the graph or the work itself to change, not the scheduler (see Dispatch Occupancy and Critical Path))\n  efficiency_score 100.0%\n  low_confidence False\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
             "trace_query": "cpu-versus-wall"
         }
     ],
@@ -354,7 +354,7 @@
         "chain_share": 1.0,
         "chain_bound_share": 0.9,
         "chain_share_of": "task_horizon",
-        "sentence": "This build is chain-bound, not scheduler-bound: the critical path is 100% of the time tasks were running, at or above the 90% chain-bound line, so the way to a shorter build is a shorter chain.",
+        "sentence": "This build is chain-bound, not scheduler-bound: the critical path is 100.0% of the time tasks were running, at or above the 90.0% chain-bound line, so the way to a shorter build is a shorter chain.",
         "certified_headroom_us": 0,
         "scheduling_gap_us": 2933000,
         "top_actions": [
@@ -374,7 +374,7 @@
                 "saving_us": 4000000
             }
         ],
-        "graph_shape": "Half of this graph's 11 elements reach 5 others or fewer; the top tenth reach 8 others or more, up to 10. Reach is spread across many elements - there is no single choke point to fix."
+        "graph_shape": "Half of this graph's 11 elements reach 5 others or fewer; the top tenth reach 8 others or more, up to 10. Reach is spread across many elements \u2014 there is no single choke point to fix."
     },
     "readers": [
         {
@@ -398,9 +398,9 @@
             "leads_with": "blast-radius-reach",
             "findings": [
                 "blast-radius-reach",
+                "latent-heavies",
                 "blast-radius-structural",
-                "fan-in-structural",
-                "latent-heavies"
+                "fan-in-structural"
             ]
         },
         {
@@ -432,7 +432,7 @@
     "next_steps": [
         {
             "id": "shorten-what-the-build-waits-for",
-            "reason": "core.bst is the longest thing on the critical path at 19.1s, 44% of it - the build cannot finish sooner than this chain.",
+            "reason": "core.bst is the longest thing on the critical path at 19.1 s, 44.1% of it \u2014 the build cannot finish sooner than this chain.",
             "argv": [
                 "bga",
                 "blast",
@@ -443,7 +443,7 @@
         },
         {
             "id": "blast-the-top-element",
-            "reason": "core.bst is the first thing to fix, worth 12.1s - this is what changing it rebuilds.",
+            "reason": "core.bst is the first thing to fix, worth 12.1 s \u2014 this is what changing it rebuilds.",
             "argv": [
                 "bga",
                 "blast",
@@ -466,9 +466,10 @@
         "cold_confidence": null,
         "cold_duration_sources": {},
         "cold_critical_path_duration_sources": {},
-        "capacity_model_note": "LB/Efficiency Score certify against this run's recorded resource capacities (builders/fetchers/pushers), not real host CPU cores or any declared CPU budget - native build-system parallelism (--max-jobs) is a separate, currently unmodeled axis. Capacity checks (over/under-subscription, memory) did not run for this run - missing: native_max_jobs. They are inert here, not passing; a wrapped log records --max-jobs on its own first line, or declare the missing value explicitly at extraction time."
+        "capacity_model_note": "LB/Efficiency Score certify against this run's recorded resource capacities (builders/fetchers/pushers), not real host CPU cores or any declared CPU budget \u2014 native build-system parallelism (--max-jobs) is a separate, currently unmodeled axis. Capacity checks (over/under-subscription, memory) did not run for this run \u2014 missing: the --max-jobs value. They are inert here, not passing; a wrapped log records --max-jobs on its own first line, or declare the missing value explicitly at extraction time."
     },
     "capacity_verdict": {
+        "verdict": "The capacity checks did not run \u2014 the --max-jobs value missing \u2014 so neither over- nor undersubscription was tested.",
         "oversubscribed": false,
         "undersubscribed": false,
         "checks_ran": false,
@@ -478,7 +479,7 @@
     },
     "utilization_envelope": {
         "available": false,
-        "absence": "this capture has no host-samples.jsonl - it was taken before host memory sampling was added, or the host exposes no /proc/meminfo"
+        "absence": "this capture has no host memory series \u2014 it was taken before host memory sampling was added, or the host exposes no /proc/meminfo"
     },
     "plane2_absence": "Plane 2 was not captured for this run, so there is no per-process detail. `bga snapshot -- bst build TARGET` captures both planes.",
     "attribution": {
@@ -492,14 +493,14 @@
         "untracked_tail_us": 216000
     },
     "attribution_hints": {
-        "execution_on_chain_us": "real work on the critical path - the only way to reduce this is to reduce the work itself",
-        "dependency_wait_us": "waiting on an upstream element to finish - shorten or parallelize that dependency chain",
-        "resource_wait_us": "a resource (PROCESS/DOWNLOAD/UPLOAD) was saturated - whether raising capacity would help depends on how loaded this host already is, and this run's capacity checks could not run (see the Certified Floors note), so this hint is unconditioned; `bga sweep` shows the shape of the curve either way",
-        "scheduler_wait_us": "capacity was available but nothing was dispatched - try a different --heuristic in `bga replay`",
-        "idle_us": "nothing was dependency-ready at all - likely a critical-path/graph-shape issue, not a capacity one; check Critical Path",
-        "retry_wait_us": "this element needed a retry - investigate why the first attempt failed/was discarded",
-        "untracked_head_us": "real time before the tracked-task window started (BuildStream startup, cache query, sandbox staging) - see Pipeline Overhead, not a scheduling issue",
-        "untracked_tail_us": "real time after the last tracked task finished - outside per-task tracking, not a scheduling issue"
+        "execution_on_chain_us": "real work on the critical path \u2014 the only way to reduce this is to reduce the work itself",
+        "dependency_wait_us": "waiting on an upstream element to finish \u2014 shorten or parallelize that dependency chain",
+        "resource_wait_us": "a resource (PROCESS/DOWNLOAD/UPLOAD) was saturated \u2014 whether raising capacity would help depends on how loaded this host already is, and this run's capacity checks could not run (see the Certified Floors note), so this hint is unconditioned; `bga sweep` shows the shape of the curve either way",
+        "scheduler_wait_us": "capacity was available but nothing was dispatched \u2014 try a different --heuristic in `bga replay`",
+        "idle_us": "nothing was dependency-ready at all \u2014 likely a critical-path/graph-shape issue, not a capacity one; check Critical Path",
+        "retry_wait_us": "this element needed a retry \u2014 investigate why the first attempt failed/was discarded",
+        "untracked_head_us": "real time before the tracked-task window started (BuildStream startup, cache query, sandbox staging) \u2014 see Pipeline Overhead, not a scheduling issue",
+        "untracked_tail_us": "real time after the last tracked task finished \u2014 outside per-task tracking, not a scheduling issue"
     },
     "occupancy": {
         "average_concurrency": 1.162037037037037,
@@ -1758,7 +1759,7 @@
         ],
         "total_us": 1441000,
         "fraction_of_horizon": 0.03123577482496261,
-        "note": "Not attributable to individual elements - BuildStream logs these as pipeline-level operations, not per-element tasks."
+        "note": "Not attributable to individual elements \u2014 BuildStream logs these as pipeline-level operations, not per-element tasks."
     },
     "timestamp_agreement": {
         "tasks_compared": 11,
@@ -1802,7 +1803,7 @@
                 "threshold": 0.9,
                 "comparison": ">=",
                 "observed_path": "headline.chain_share",
-                "sentence": "The critical path is 100.0% of the task horizon (the span from the first task's start to the last one's finish, excluding BuildStream's own startup), at or above the 90% line at which the chain rather than the scheduler is called the constraint, so this build is chain-bound.",
+                "sentence": "The critical path is 100.0% of the task horizon (the span from the first task's start to the last one's finish, excluding BuildStream's own startup), at or above the 90.0% line at which the chain rather than the scheduler is called the constraint, so this build is chain-bound.",
                 "module": "bga/findings.py",
                 "threshold_quantity": "share"
             },
@@ -1865,7 +1866,7 @@
                 "threshold": null,
                 "comparison": "present",
                 "observed_path": null,
-                "sentence": "Published whenever the critical path has measured elements on it; which elements, and their share, are the finding's own `evidence.rows`.",
+                "sentence": "Published whenever the critical path has measured elements on it; which elements, and their share, are the finding's own evidence rows.",
                 "module": "bga/findings.py"
             },
             "trace_query": "cost-by-executable",
@@ -1888,141 +1889,9 @@
                 "threshold": 0.5,
                 "comparison": ">=",
                 "observed_path": "elements.zero_slack_share",
-                "sentence": "91% of elements have zero slack and none is off the critical path, so the graph is one chain.",
+                "sentence": "90.9% of elements have zero slack and none is off the critical path, so the graph is one chain.",
                 "module": "bga/findings.py",
                 "threshold_quantity": "share"
-            },
-            "trace_query": "graph-levels",
-            "unpublished_inputs": []
-        },
-        {
-            "claim": "blast-radius-reach",
-            "kind": "finding",
-            "document": "analyze/v6",
-            "evidence": [
-                {
-                    "path": "elements.blast_radius[core.bst].downstream_count",
-                    "resolved": true,
-                    "value": 8,
-                    "quantity": "count"
-                },
-                {
-                    "path": "elements.blast_radius[codegen.bst].downstream_count",
-                    "resolved": true,
-                    "value": 8,
-                    "quantity": "count"
-                },
-                {
-                    "path": "elements.blast_radius[lib-a.bst].downstream_count",
-                    "resolved": true,
-                    "value": 7,
-                    "quantity": "count"
-                }
-            ],
-            "rule": {
-                "name": null,
-                "threshold": null,
-                "comparison": "present",
-                "observed_path": null,
-                "sentence": "Published for every non-structural element something actually depends on. Not a ranking - `UX-65`'s who-depends-on-me ordering is a different claim and stays on the scheduler-bound arm - but the answer to the recipe-author's own question, which is true whichever way the build is bound. Elements with no dependents are left out rather than listed at zero: a row reading \"0 downstream\" answers the question with a number meaning nobody.",
-                "module": "bga/findings.py"
-            },
-            "trace_query": "dependency-wait",
-            "unpublished_inputs": []
-        },
-        {
-            "claim": "blast-radius-structural",
-            "kind": "finding",
-            "document": "analyze/v6",
-            "evidence": [
-                {
-                    "path": "elements.blast_radius[toolchain.bst].downstream_count",
-                    "resolved": true,
-                    "value": 10,
-                    "quantity": "count"
-                }
-            ],
-            "rule": {
-                "name": null,
-                "threshold": null,
-                "comparison": "present",
-                "observed_path": null,
-                "sentence": "Published when the elements with the widest reach are structural kinds - a base image, a toolchain, a stack. Their dependents are the graph's shape rather than a task, which is why UX-258 reports them here instead of ranking them as work (the rule UX-76 already applied to criticality).",
-                "module": "bga/findings.py"
-            },
-            "trace_query": "dependency-wait",
-            "unpublished_inputs": []
-        },
-        {
-            "claim": "fan-in-ranking",
-            "kind": "finding",
-            "document": "analyze/v6",
-            "evidence": [
-                {
-                    "path": "elements.fan_in[app.bst].transitive_count",
-                    "resolved": true,
-                    "value": 9,
-                    "quantity": "count"
-                },
-                {
-                    "path": "elements.fan_in[lib-f.bst].transitive_count",
-                    "resolved": true,
-                    "value": 8,
-                    "quantity": "count"
-                },
-                {
-                    "path": "elements.fan_in[lib-e.bst].transitive_count",
-                    "resolved": true,
-                    "value": 7,
-                    "quantity": "count"
-                }
-            ],
-            "rule": {
-                "name": null,
-                "threshold": null,
-                "comparison": "present",
-                "observed_path": null,
-                "sentence": "Published for every graph with something to rank - an element that pulls in nothing is left out rather than listed at zero, and a structural kind is reported by the claim below rather than ranked here. Unlike its mirror it is not gated on the diagnosis: what an element is built on is true whichever way the build is bound, and the claim is a description of the graph rather than an ordering of work.",
-                "module": "bga/findings.py"
-            },
-            "trace_query": "dependency-wait",
-            "unpublished_inputs": []
-        },
-        {
-            "claim": "fan-in-structural",
-            "kind": "finding",
-            "document": "analyze/v6",
-            "evidence": [
-                {
-                    "path": "elements.fan_in[all.bst].transitive_count",
-                    "resolved": true,
-                    "value": 10,
-                    "quantity": "count"
-                }
-            ],
-            "rule": {
-                "name": null,
-                "threshold": null,
-                "comparison": "present",
-                "observed_path": null,
-                "sentence": "Published when a structural kind - a stack, a base image - has the widest closure. It depends on everything on purpose, so the count is the graph's shape and not a task.",
-                "module": "bga/findings.py"
-            },
-            "trace_query": "dependency-wait",
-            "unpublished_inputs": []
-        },
-        {
-            "claim": "graph-width",
-            "kind": "finding",
-            "document": "analyze/v6",
-            "evidence": [],
-            "rule": {
-                "name": null,
-                "threshold": null,
-                "comparison": "present",
-                "observed_path": null,
-                "sentence": "11 elements group into 10 dependency stages by their dependencies alone; the widest holds 2, and nothing in a stage can start before the stage above it finishes. Published whenever there is more than one stage - with one, the widest stage is the whole graph and the shape forbids nothing.",
-                "module": "bga/findings.py"
             },
             "trace_query": "graph-levels",
             "unpublished_inputs": []
@@ -2101,10 +1970,45 @@
                 "threshold": null,
                 "comparison": "present",
                 "observed_path": null,
-                "sentence": "Published when the horizon has more than one step - a single-step horizon is the first fix, which is already named.",
+                "sentence": "Published when the horizon has more than one step \u2014 a single-step horizon is the first fix, which is already named.",
                 "module": "bga/findings.py"
             },
             "trace_query": "time-by-kind",
+            "unpublished_inputs": []
+        },
+        {
+            "claim": "blast-radius-reach",
+            "kind": "finding",
+            "document": "analyze/v6",
+            "evidence": [
+                {
+                    "path": "elements.blast_radius[core.bst].downstream_count",
+                    "resolved": true,
+                    "value": 8,
+                    "quantity": "count"
+                },
+                {
+                    "path": "elements.blast_radius[codegen.bst].downstream_count",
+                    "resolved": true,
+                    "value": 8,
+                    "quantity": "count"
+                },
+                {
+                    "path": "elements.blast_radius[lib-a.bst].downstream_count",
+                    "resolved": true,
+                    "value": 7,
+                    "quantity": "count"
+                }
+            ],
+            "rule": {
+                "name": null,
+                "threshold": null,
+                "comparison": "present",
+                "observed_path": null,
+                "sentence": "Published for every non-structural element something actually depends on. Not a ranking \u2014 the who-depends-on-me ordering is a different claim and stays on the scheduler-bound arm \u2014 but the answer to the recipe-author's own question, which is true whichever way the build is bound. Elements with no dependents are left out rather than listed at zero: a row reading \"0 downstream\" answers the question with a number meaning nobody.",
+                "module": "bga/findings.py"
+            },
+            "trace_query": "dependency-wait",
             "unpublished_inputs": []
         },
         {
@@ -2132,6 +2036,103 @@
                 "element-commands",
                 "executables-in-element"
             ],
+            "unpublished_inputs": []
+        },
+        {
+            "claim": "blast-radius-structural",
+            "kind": "finding",
+            "document": "analyze/v6",
+            "evidence": [
+                {
+                    "path": "elements.blast_radius[toolchain.bst].downstream_count",
+                    "resolved": true,
+                    "value": 10,
+                    "quantity": "count"
+                }
+            ],
+            "rule": {
+                "name": null,
+                "threshold": null,
+                "comparison": "present",
+                "observed_path": null,
+                "sentence": "Published when the elements with the widest reach are structural kinds \u2014 a base image, a toolchain, a stack. Their dependents are the graph's shape rather than a task, which is why they are reported here instead of ranked as work (the rule criticality already applies).",
+                "module": "bga/findings.py"
+            },
+            "trace_query": "dependency-wait",
+            "unpublished_inputs": []
+        },
+        {
+            "claim": "fan-in-ranking",
+            "kind": "finding",
+            "document": "analyze/v6",
+            "evidence": [
+                {
+                    "path": "elements.fan_in[app.bst].transitive_count",
+                    "resolved": true,
+                    "value": 9,
+                    "quantity": "count"
+                },
+                {
+                    "path": "elements.fan_in[lib-f.bst].transitive_count",
+                    "resolved": true,
+                    "value": 8,
+                    "quantity": "count"
+                },
+                {
+                    "path": "elements.fan_in[lib-e.bst].transitive_count",
+                    "resolved": true,
+                    "value": 7,
+                    "quantity": "count"
+                }
+            ],
+            "rule": {
+                "name": null,
+                "threshold": null,
+                "comparison": "present",
+                "observed_path": null,
+                "sentence": "Published for every graph with something to rank \u2014 an element that pulls in nothing is left out rather than listed at zero, and a structural kind is reported by the claim below rather than ranked here. Unlike its mirror it is not gated on the diagnosis: what an element is built on is true whichever way the build is bound, and the claim is a description of the graph rather than an ordering of work.",
+                "module": "bga/findings.py"
+            },
+            "trace_query": "dependency-wait",
+            "unpublished_inputs": []
+        },
+        {
+            "claim": "fan-in-structural",
+            "kind": "finding",
+            "document": "analyze/v6",
+            "evidence": [
+                {
+                    "path": "elements.fan_in[all.bst].transitive_count",
+                    "resolved": true,
+                    "value": 10,
+                    "quantity": "count"
+                }
+            ],
+            "rule": {
+                "name": null,
+                "threshold": null,
+                "comparison": "present",
+                "observed_path": null,
+                "sentence": "Published when a structural kind \u2014 a stack, a base image \u2014 has the widest closure. It depends on everything on purpose, so the count is the graph's shape and not a task.",
+                "module": "bga/findings.py"
+            },
+            "trace_query": "dependency-wait",
+            "unpublished_inputs": []
+        },
+        {
+            "claim": "graph-width",
+            "kind": "finding",
+            "document": "analyze/v6",
+            "evidence": [],
+            "rule": {
+                "name": null,
+                "threshold": null,
+                "comparison": "present",
+                "observed_path": null,
+                "sentence": "11 elements group into 10 dependency stages by their dependencies alone; the widest holds 2, and nothing in a stage can start before the stage above it finishes. Published whenever there is more than one stage \u2014 with one, the widest stage is the whole graph and the shape forbids nothing.",
+                "module": "bga/findings.py"
+            },
+            "trace_query": "graph-levels",
             "unpublished_inputs": []
         },
         {
@@ -2223,7 +2224,7 @@
                 "threshold": null,
                 "comparison": "present",
                 "observed_path": null,
-                "sentence": "Published whenever `bga sweep`'s own unbounded-capacity row priced the builder cap; the compiler-offload half needs a Plane 2 `binary_cost` too, and is absent without one - both numbers are the finding's own `evidence`.",
+                "sentence": "Published whenever `bga sweep`'s own unbounded-capacity row priced the builder cap; the compiler-offload half needs a Plane 2 binary cost too, and is absent without one \u2014 both numbers are the finding's own evidence.",
                 "module": "bga/findings.py"
             },
             "trace_query": null,
@@ -2264,10 +2265,10 @@
         }
     ],
     "document_shape": {
-        "leaves": 1524,
+        "leaves": 1525,
         "deepest_depth": 7,
         "deepest_path": "findings.[].evidence.steps.[].entering.[]",
         "deeper_than_three": 913,
-        "deeper_than_three_share": 0.5990813648293963
+        "deeper_than_three_share": 0.598688524590164
     }
 }

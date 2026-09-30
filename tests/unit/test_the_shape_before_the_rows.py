@@ -358,10 +358,10 @@ console.log(JSON.stringify({ present: Boolean(strip),
         assert out["present"], "a twelve-row table draws no strip"
         assert out["drawn"] == "true", out
 
-    def test_a_table_under_the_sample_floor_states_it(self):
-        """The floor that replaced the cap, and the only one left:
-        `UX-226`'s rule that fewer than three points is a sentence. Two
-        rows have no shape to show, at any table length."""
+    def test_a_table_under_the_sample_floor_draws_no_strip(self):
+        """The floor that replaced the cap, and the only one left: two
+        rows have no shape to show. `UX-1163`: and the rows are the
+        values, so no strip stands beside them to say so."""
         out = _js(
             _TABLE % 2
             + """
@@ -371,9 +371,7 @@ console.log(JSON.stringify({ present: Boolean(strip),
     (n) => n.attrs["data-role"] === "density-sentence")[0]) : null }));
 """
         )
-        assert out["present"], "the strip's box is still drawn"
-        assert out["drawn"] == "false", out
-        assert "too few to have a shape" in (out["sentence"] or ""), out
+        assert not out["present"], out
 
     def test_the_export_strip_is_static(self):
         """`UX-194`'s rule: an affordance whose precondition is absent
@@ -429,7 +427,7 @@ console.log(JSON.stringify({
 @needs_node
 class TestAPresetOffersOnlyWhatItCanFill:
     """UX-673: a `Top 10` on a three-row table is a menu with no effect
-    - `applyTopN` already clamps at render, so this is the *menu*
+    - `applyFilters` already clamps at render, so this is the *menu*
     catching up to what the table already does."""
 
     @staticmethod

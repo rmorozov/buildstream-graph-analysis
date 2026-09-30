@@ -18,7 +18,7 @@
 // `import` lines, and a re-export is a module it would never inline
 // (`UX-199`).
 import { served, safeStorage } from "./primitives.js";
-import { bytes, el, heading, quantity, title } from "./format.js";
+import { bytes, el, heading, quantity, title, typesetAlways } from "./format.js";
 import { handOff, deepLink, tracedSize, openTab, perfettoCanFetch,
          PERFETTO_FRIENDLY_URL } from "./perfetto.js";
 // `renderBlastTree` is *not* imported here: `views.js` draws the tree
@@ -236,12 +236,7 @@ export function wireJumpBox(nav, root, payload, context = {}) {
     const key = target.kind === "section" ? target.key
       : node.closest?.("[data-section]")?.getAttribute("data-section");
     if (key) {
-      const next = joinHash(key, splitHash(location.hash).query);
-      if (window.history?.replaceState) {
-        window.history.replaceState(window.history.state, "", next || " ");
-      } else {
-        location.hash = next;
-      }
+      history.replaceState(history.state, "", joinHash(key, splitHash(location.hash).query));
       root.dispatchEvent?.(new Event("change", { bubbles: true }));
     }
   };
@@ -706,6 +701,7 @@ export async function load(name, fallback = null) {
 
 async function boot() {
   const root = document.getElementById("report");
+  typesetAlways(document.body);
   try {
     const [payload, schemas, run] = await Promise.all([
       load("report"),
@@ -947,7 +943,7 @@ async function boot() {
     // the chapters file the sections. The same relationship `elements`
     // has with the element sections - an index over the population and
     // a detail block per row.
-    renderProvenanceRecords(payload, root);
+    renderProvenanceRecords(payload, root, schemas[payload.schema]);
 
     chapters(root, document, payload);
 
@@ -1123,13 +1119,18 @@ async function boot() {
     const fragment = (event) => event?.target?.closest?.("a[href^=\"#\"]")
       ?.getAttribute?.("href");
     // UX-1056: capture phase, so the snapshot precedes nav.js's own reveal.
+    // UX-1158: a rail chapter press is navigation too, with an entry of its own.
     document.addEventListener?.("click", (event) => {
-      if (fragment(event)?.length > 1 && window.history?.replaceState) {
+      const chapter = event.target?.closest?.("[data-toc-chapter]")?.dataset.tocChapter;
+      if (fragment(event)?.length > 1 || chapter) {
         // Chrome's own restore lands after popstate and overrides it.
         window.history.scrollRestoration = "manual";
         window.history.replaceState({ ...window.history.state,
           folds: foldSnapshot(root),
           scrollY: window.scrollY }, "");
+        if (chapter) {
+          window.history.pushState(null, "", joinHash(`chapter-${chapter}`, splitHash(location.hash).query));
+        }
       }
     }, true);
     document.addEventListener?.("click", (event) => {

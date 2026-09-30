@@ -142,14 +142,23 @@ let ROUTE_SEQ = 0;
  * table twin where one is drawn, and the sentence span itself where it
  * is not: either already carries every published mark with its label.
  */
-export function nameDrawing(drawing, sentence, routeNode) {
+export function nameDrawing(drawing, sentence, routeNode, name) {
   if (!drawing?.setAttribute) return drawing;
-  if (sentence) drawing.setAttribute("aria-label", sentence);
+  // UX-1155: led by what it shows, where the caller knows; a range alone names nothing.
+  if (sentence) drawing.setAttribute("aria-label", name ? `${name}: ${sentence}` : sentence);
   if (routeNode?.setAttribute) {
     if (!routeNode.getAttribute?.("id")) {
       routeNode.setAttribute("id", `drawing-route-${ROUTE_SEQ++}`);
     }
-    drawing.setAttribute("aria-details", routeNode.getAttribute("id"));
+    const id = routeNode.getAttribute("id");
+    drawing.setAttribute("aria-details", id);
+    // UX-1162: a twin's toggle is named by its own text, then the drawing it turns.
+    const toggle = routeNode.querySelector?.(".twin-toggle");
+    if (toggle) {
+      drawing.setAttribute("id", `${id}-of`);
+      toggle.setAttribute("id", `${id}-as`);
+      toggle.setAttribute("aria-labelledby", `${id}-as ${id}-of`);
+    }
   }
   return drawing;
 }
@@ -277,6 +286,8 @@ export function exhibitAxis(doc, ticks) {
     if (label.style) {
       if (flow && !isEdgeMark(tick)) label.style.marginLeft = `${at}%`;
       else if (!flow) label.style.left = `${at}%`;
+      // `UX-1153`: read by `.decomposition .draw-tick`, which shifts a label by its position.
+      label.style.setProperty?.("--at", at);
     }
     row.append(label);
   }
@@ -586,7 +597,7 @@ function stripSvg(doc, marks, { printed, size }) {
  */
 export function strip(distribution, {
   countKey = "n", format = String, doc = document, label = null,
-  grade = undefined,
+  grade = undefined, name,
 } = {}) {
   const size = scaleFor(grade);
   const marks = marksOf(distribution, countKey);
@@ -653,7 +664,7 @@ export function strip(distribution, {
     route = valueRoute(doc, rows.map(([k, v]) => `${k} ${v}`).join(", ") + ".");
     wrap.append(route);
   }
-  nameDrawing(drawn, sentenceText, route);
+  nameDrawing(drawn, sentenceText, route, name);
   return wrap;
 }
 
@@ -745,6 +756,8 @@ function stripTicks(marks, format) {
  */
 export const AXIS_TICK_MIN_SHARE = 0.02;
 
+const capital = (text) => String(text).replace(/^./, (c) => c.toUpperCase());
+
 export function decomposition(parts, {
   total = null, format = String, doc = document, label = null,
   grade = undefined, mark = null,
@@ -820,16 +833,19 @@ export function decomposition(parts, {
       (sum, before) => sum + Number(before.value), 0) / whole) * 100,
   })).filter((tick) => tick.share >= AXIS_TICK_MIN_SHARE);
   wrap.append(exhibitAxis(doc, ticks));
-  const sentenceText = `${format(whole)} in total: `
-    + named.map((part) => `${format(part.value)} ${part.label}`).join(", ")
-    + (mark ? `. ${mark.label} ${format(mark.value)}.` : ".");
+  // `UX-1163`: beside its twin, the sentence says what no tick does.
+  const twinned = grade === GRADE_EXHIBIT;
+  const rest = named.filter((part) => !twinned || !ticks.some((tick) => tick.name === part.key));
+  const sentenceText = `${format(whole)} in total${rest.length ? ": " : ""}`
+    + rest.map((part) => `${format(part.value)} ${part.label}`).join(", ")
+    + (mark ? `. ${capital(mark.label)} ${format(mark.value)}.` : ".");
   const sentence = box(doc, "span", { class: "density-sentence",
                                       "data-role": "density-sentence" },
                        sentenceText);
   wrap.append(sentence);
   // §2a: the exhibit never hoards data a reader wants as rows.
   let twin = null;
-  if (grade === GRADE_EXHIBIT) {
+  if (twinned) {
     const rows = named.map((part) => [part.label, format(part.value)]);
     if (mark && Number.isFinite(Number(mark.value))) {
       rows.push([mark.label, format(mark.value)]);
@@ -871,7 +887,9 @@ export function interval(marks, {
   const named = (marks ?? []).filter(
     (one) => one && Number.isFinite(Number(one.value)));
   const span = Number(high) - Number(low);
-  if (named.length < 2 || !Number.isFinite(span) || span <= 0) {
+  // `UX-1153`: marks that all read alike are one value, whatever their count.
+  const alike = new Set(named.map((one) => format(one.value))).size;
+  if (named.length < 2 || alike < 2 || !Number.isFinite(span) || span <= 0) {
     // One value on an axis is a value, not a comparison. `UX-226`'s
     // floor again: below two marks the sentence says what the numbers
     // are and the drawing goes.
@@ -880,21 +898,27 @@ export function interval(marks, {
                                    "data-role": "density-sentence" },
                     named.length
                       ? named.map((one) => `${one.label} ${format(one.value)}`)
-                        .join(", ") + " — one value is not a comparison."
+                        .join(", ") + (named.length > 1
+                          ? " — all one value, so there is nothing to compare."
+                          : " — one value is not a comparison.")
                       : "No comparable values published here."));
     return wrap;
   }
   wrap.setAttribute("data-drawn", "true");
   wrap.setAttribute("data-n", String(named.length));
 
-  const place = (value) => ((Number(value) - Number(low)) / span) * size.width;
+  const radius = Math.max(size.strip / 6, 1);
+  // `UX-1153`: the axis is inset by a mark's radius, so a mark at either end stays whole.
+  const pad = radius;
+  const place = (value) => pad
+    + ((Number(value) - Number(low)) / span) * (size.width - 2 * pad);
   const drawing = make(doc, "svg", {
     viewBox: `0 0 ${size.width} ${size.strip}`,
     preserveAspectRatio: "none", class: "draw interval-axis",
     role: "img",
   });
   drawing.append(make(doc, "line", {
-    x1: "0", x2: String(size.width),
+    x1: String(pad), x2: String(size.width - pad),
     y1: String(size.strip / 2), y2: String(size.strip / 2),
     class: "interval-rule",
   }));
@@ -909,7 +933,7 @@ export function interval(marks, {
   for (const one of named) {
     const mark = make(doc, "circle", {
       cx: place(one.value).toFixed(3), cy: String(size.strip / 2),
-      r: String(Math.max(size.strip / 6, 1)),
+      r: String(radius),
       class: `interval-mark mark-${one.key}`,
       "data-mark": one.key, "data-raw": String(one.value),
     });
@@ -947,13 +971,14 @@ export function interval(marks, {
 }
 
 export function columnStrip(values, { format = String, doc = document,
-                                      label = null,
-                                      grade = GRADE_ANNOTATION } = {}) {
+                                      label = null, of,
+                                      grade = GRADE_ANNOTATION, name } = {}) {
   // `UX-316`: annotation grade by construction and by argument both -
   // a strip drawn beside a table *is* the §2a annotation case, and the
   // parameter exists so the guard reads one rule rather than two.
   const size = scaleFor(grade);
   const numbers = (values ?? []).filter(numeric).slice().sort((a, b) => a - b);
+  const n = of ? `${numbers.length} of ${of}` : numbers.length;
   const wrap = box(doc, "div", { class: "density density-self",
                                  "data-role": "density",
                                  "data-grade": grade });
@@ -962,7 +987,7 @@ export function columnStrip(values, { format = String, doc = document,
     wrap.setAttribute("data-drawn", "false");
     wrap.append(box(doc, "span", { class: "density-sentence muted",
                                    "data-role": "density-sentence" },
-                    `${numbers.length} row${numbers.length === 1 ? "" : "s"}`
+                    `${n} row${n === 1 ? "" : "s"}`
                     + " — too few to have a shape."));
     return wrap;
   }
@@ -979,17 +1004,14 @@ export function columnStrip(values, { format = String, doc = document,
   const drawn = stripSvg(doc, marks, { printed: "rows", size });
   wrap.append(drawn);
   // Actual row values and a count. Nothing derived is spelled out.
-  const sentenceText = `${format(marks.min)} → ${format(marks.max)} across `
-    + `${marks.n} rows.`;
+  const sentenceText = `${format(marks.min)} → ${format(marks.max)} across ${n} rows.`;
   const sentence = box(doc, "span", { class: "density-sentence",
                                       "data-role": "density-sentence" },
                        sentenceText);
+  // UX-1162: the route is every row value it plots - rows, never its p50/p95.
+  const route = valueRoute(doc, numbers.map((v) => format(v)).join(", "));
   wrap.append(sentence);
-  // `UX-1017`: never exhibit grade, so its route is always the sentence.
-  // Review #295 left this one alone on purpose: its p50/p95 ticks are
-  // the "geometry only, no derived number" boundary above, so widening
-  // the route to name them would print the derived number this
-  // function's whole reason for existing refuses to print.
-  nameDrawing(drawn, sentenceText, sentence);
+  wrap.append(route);
+  nameDrawing(drawn, sentenceText, route, name);
   return wrap;
 }

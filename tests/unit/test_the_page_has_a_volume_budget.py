@@ -135,6 +135,8 @@ LANDED_HEIGHT_PX = 7_600
 #: is the regular class's own bound and was never asked at this width.
 #: Measured: `golden` 8,308 px, `macro_micro` 11,193 px - headroom kept
 #: under 200 px each, the convention above.
+#: Round 154's merged tree (`UX-1145`'s stacked pairs with `UX-1146`/`UX-1147`'s
+#: cuts): 8,433 and 10,704 measured, 3 runs, spread 0 - under the bounds unraised.
 COMPACT_LANDED_HEIGHT_PX = {"golden": 8_500, "macro_micro": 11_400}
 
 #: `UX-367`: the opened bounds, per size class, largest class last.
@@ -372,6 +374,8 @@ BUDGETS = (
     # The UI batch: words 12,800 -> 13,200. macro_micro reads 13,046;
     # `UX-1034`'s reader words, `UX-1021`'s block doors and `UX-1031`'s
     # `bga:grows` descriptions are words and nothing else. 154 of headroom.
+    # Round 154's merged tree: macro_micro 37,847 px, 13,113 words (3 runs,
+    # spread 0) - `UX-1152`'s card links fit once `UX-1146`/`UX-1147` cut.
     (50, 38_200, 13_200, 800, 7_900),
     # `UX-1050`: px 36,500 -> 43,500, words 9,600 -> 13,200, nodes
     # 6,000 -> 7,500 on the 4,100 class: `xl_both` (Plane 2 and a store)

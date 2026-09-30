@@ -114,7 +114,8 @@ export function renderFindingEvidence(evidence, node = undefined) {
 const elementLink = (uid) => el("a", { href: `#${cssId(uid)}`, "data-element": uid },
                                 el("code", {}, uid));
 
-export function renderFindings(findings, investigate = null, node = undefined) {
+export function renderFindings(findings, investigate = null, node = undefined,
+                               root = undefined, payload = undefined) {
   const section = el("section", { "data-section": "findings" },
     el("h2", {}, `Findings (${findings.length})`));
   const evidenceNode = childNode(node?.items, "evidence");
@@ -129,11 +130,19 @@ export function renderFindings(findings, investigate = null, node = undefined) {
       el("p", { class: "title" },
         el("span", { class: "badge" }, title(severity)),
         finding.title ?? finding.id ?? ""));
+    // `UX-1143`: a section on this page draws the evidence, so the card links there instead.
+    const drawnIn = finding.section && payload?.[finding.section]
+      ? finding.section : null;
     // UX-921: `_hydrate` appends the rest once; a second call no-ops.
     article._hydrate = () => {
       // UX-1136: native `append` prints a null child as the text "null"; `el` skips it.
       article.append(...[
-        ...detail.map((line) => el("p", { class: "detail muted" }, line)),
+        ...(drawnIn ? [] : detail).map((line) => el("p", { class: "detail muted" }, line)),
+        drawnIn
+          ? el("p", { class: "section-link" }, "The evidence: ",
+               el("a", { href: `#${drawnIn}`, "data-section-link": drawnIn },
+                  heading(drawnIn, hintsOf(childNode(root, drawnIn))).label))
+          : null,
         // UX-216: a finding names elements; each is a link to that
         // element's own section, and carries `data-element` so the
         // cross-reference finds this finding from the other direction.
@@ -146,7 +155,7 @@ export function renderFindings(findings, investigate = null, node = undefined) {
               ...finding.elements.flatMap((uid, i) => [
                 i ? ", " : "", elementLink(uid)]))
           : null,
-        renderFindingEvidence(finding.evidence, evidenceNode),
+        drawnIn ? null : renderFindingEvidence(finding.evidence, evidenceNode),
         // UX-229: the chain behind this finding, from the published
         // record. `views.js` draws it, so the decision panel and every
         // finding show one shape.
@@ -497,7 +506,7 @@ export function renderSection(key, value, hint = {}, node = undefined,
   if (hint[SEVERITY] && Array.isArray(value)) {
     // UX-217: the schema node travels with the value, so the evidence
     // renders in its declared units rather than by name-sniffing.
-    return renderFindings(value, investigate, node);
+    return renderFindings(value, investigate, node, root, payload);
   }
   if (Array.isArray(value)) {
     // `UX-302`: §1 again, at section level. Three of its rows reach
@@ -587,7 +596,10 @@ export function renderSection(key, value, hint = {}, node = undefined,
     // analyzer (Direction 7).
     const shaped = declaredDrawing(key, hint, node, payload);
     const body = renderPairs(key, value, hint, node, payload, root);
-    if (shaped && body) body.insertBefore(shaped, body.children[1] ?? null);
+    if (shaped && body) {
+      const led = body.children[1]?.getAttribute?.("data-lead") ? 1 : 0;
+      body.insertBefore(shaped, body.children[1 + led] ?? null);
+    }
     // UX-289: the whole document, because a preset's population is a
     // selection published elsewhere in it - `bottleneck`
     // for the choke points. The section renders its own value; the

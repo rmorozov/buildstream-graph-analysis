@@ -5,7 +5,7 @@
  * points back.
  */
 import { served } from "./primitives.js";
-import { COLUMNS, DIRECTION, QUESTION, PRESETS, INLINE, attachBlockDoor,
+import { COLUMNS, DIRECTION, QUESTION, PRESETS, INLINE, LEAD, attachBlockDoor,
          childNode, dataKeyed, describedTerm, el, guessQuantity, heading,
          hintsOf, adviceFor, keyAsShown, quantity, quantityFor, sectionHead,
          title } from "./format.js";
@@ -251,8 +251,11 @@ export function renderPairs(key, object, hint = {}, node = undefined,
                          childNode(root, "element_join"))
     : null;
   const merged = new Set(joined?.merged ?? []);
+  // `UX-1143`: the declared answer is drawn first, as a sentence, and not again as a pair.
+  const leadKey = hintsOf(node)[LEAD] ?? hint[LEAD];
+  const lead = typeof object?.[leadKey] === "string" ? object[leadKey] : null;
   for (const [name, value] of Object.entries(object)) {
-    if (merged.has(name)) continue;
+    if (merged.has(name) || (lead !== null && name === leadKey)) continue;
     // UX-270: the critical path is its own section, not a row inside
     // this one. It is also the one member that rendered a whole
     // `<section>` into a `<dd>` - the nesting UX-267 removed
@@ -341,6 +344,7 @@ export function renderPairs(key, object, hint = {}, node = undefined,
   }
   attachBlockDoor(list, doors);
   const parts = [sectionHead(key, hint)];
+  if (lead !== null) parts.push(el("p", { class: "section-lead", "data-lead": leadKey }, lead));
   if (joined) {
     // One row per element, before the scalars - it is the thing a
     // reader came for, and `UX-261` put the same argument to the

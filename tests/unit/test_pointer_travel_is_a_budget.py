@@ -60,12 +60,12 @@ DX_ONLY = ("button.copy-rows", "select.top-n")
 #: `(label, width): {journey: (bits, wheel px)}`, 3 runs (spread 0 on
 #: every value) after `UX-1055`'s reorder; J2 is its worst chapter. J4
 #: (table tools) is the journey `UX-1055`'s own Decomposition names as
-#: extended; `UX-1044`'s fold label lengthens both_scale 390 J3; `UX-1137` re-bases both 390 J3s.
+#: extended; `UX-1044`'s fold label lengthens both_scale 390 J3; `UX-1137` and `UX-1143` (the capacity lead) re-base both 390 J3s.
 MEASURED = {
     ("macro_micro", 1440): {"J1": (4.53, 0), "J2": (18.5, 0), "J3": (15.67, 38172), "J4": (14.8, 11761)},
-    ("macro_micro", 390): {"J1": (2.09, 424), "J2": (17.58, 0), "J3": (23.76, 51692), "J4": (9.99, 17717)},
+    ("macro_micro", 390): {"J1": (2.09, 424), "J2": (17.58, 0), "J3": (24.39, 51554), "J4": (9.99, 17717)},
     ("both_scale", 1440): {"J1": (4.48, 0), "J2": (19.67, 0), "J3": (12.49, 45945), "J4": (14.78, 12568)},
-    ("both_scale", 390): {"J1": (1.68, 771), "J2": (18.94, 0), "J3": (30.32, 60317), "J4": (10.63, 22257)},
+    ("both_scale", 390): {"J1": (1.68, 771), "J2": (18.94, 0), "J3": (30.88, 60426), "J4": (10.63, 22257)},
 }
 HEADROOM_BITS = 0.5
 HEADROOM_WHEEL = 1.10

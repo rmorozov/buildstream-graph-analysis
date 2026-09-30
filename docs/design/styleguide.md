@@ -2268,7 +2268,8 @@ as the census; a change that moves a control reports the journeys it
 lengthened. Held on `macro_micro` and the two-plane 1,202-element page
 at 1440x900 and 390x844: fold, door, JSON toggle and chapter fold at one
 place; four journeys at their measured Fitts bits plus 0.5 and wheel
-plus 10%. `button.copy-rows` and `select.top-n` join them at `UX-1055`
+plus 10%, walked with every section drawn - a `content-visibility`
+placeholder is 600 px, not the page (`UX-1160`). `button.copy-rows` and `select.top-n` join them at `UX-1055`
 (DOM order in `structured.js`, no CSS `order`: dx 0px against
 `.table-tools` on every table measured); `UX-1043` and `UX-1044` are
 the two placements before it.

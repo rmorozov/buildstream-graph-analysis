@@ -640,6 +640,9 @@ LARGE = (
     # `UX-1076`: two 1,202-element opens passes, no browser.
     # Measured alone in one process: 15.96 / 14.91 / 16.37s.
     "tests/unit/test_the_open_paths_are_interned.py",  #   16.0s
+    # `UX-1178`, round 158's merged tree with its follow-up clause: eighteen
+    # Chromium loads at 390/320/1440. Alone in one process: 23.84 / 24.01 / 23.96s.
+    "tests/unit/test_the_narrow_page_keeps_its_place.py",  #   24.0s
 )
 
 MEDIUM = (
@@ -1144,4 +1147,7 @@ MEDIUM = (
     "tests/unit/test_a_traced_elements_binaries_reach_the_page.py",  #  4.1s
     # UX-1187's 1,202-element export and one Chromium read 4.46s.
     "tests/unit/test_an_element_view_answers_whole.py",  #  4.5s
+    # UX-1182's three gen-synthetic stores, merged tree: 2.06 / 2.05 / 2.07s.
+    # UX-1181's test_a_page_half_is_read_once.py, 0.56 / 0.53 / 0.53s, stays small.
+    "tests/unit/test_the_synthetic_workload_runs_hundreds_of_binaries.py",  #  2.1s
 )

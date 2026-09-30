@@ -126,9 +126,10 @@ import skip_reasons
 #: `test_a_column_is_named_for_its_field.py`, same form again.
 #: `UX-1186` argues **one** more, to 82:
 #: `test_a_population_key_is_declared.py`, same form again.
-#: `UX-1192` argues **one** more, to 83:
-#: `test_a_mark_says_its_value.py`, same form again.
-UNRESOLVABLE = 83
+#: `UX-1192`'s `test_a_mark_says_its_value.py` and `UX-1178`'s
+#: `test_the_narrow_page_keeps_its_place.py` import `NO_BROWSER` from
+#: `tests.browser`, which the scan reads: none more, 82 on round 158's merged tree.
+UNRESOLVABLE = 82
 
 
 def test_every_declared_skip_reason_is_known():

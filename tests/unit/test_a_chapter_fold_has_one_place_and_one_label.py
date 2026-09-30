@@ -39,7 +39,7 @@ _READ = r"""
   const read = () => [...document.querySelectorAll("button.chapter-open")].map((b) => {
     const id = b.getAttribute("data-chapter-open");
     const box = b.closest("section.chapter");
-    const head = b.closest("h2.chapter-title").getBoundingClientRect();
+    const head = b.closest(".chapter-head").getBoundingClientRect();
     const r = b.getBoundingClientRect();
     const rail = document.querySelector(`nav.toc [data-toc-chapter="${id}"]`);
     return {

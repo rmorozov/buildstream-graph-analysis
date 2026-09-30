@@ -77,7 +77,7 @@ _LABELS = """
     return {
       key,
       rail: (link.textContent || "").trim(),
-      heading: head && head.parentElement === section ? own(head) : null,
+      heading: head && head.closest("section[data-section]") === section ? own(head) : null,
     };
   });
 })()
@@ -158,7 +158,7 @@ _PALETTE = """
   for (const section of document.querySelectorAll("section[data-section]")) {
     const key = section.getAttribute("data-section");
     const head = section.querySelector("h2, h3");
-    const heading = head && head.parentElement === section ? own(head) : null;
+    const heading = head && head.closest("section[data-section]") === section ? own(head) : null;
     if (!heading) { out.push({ key, heading: null, palette: null }); continue; }
     box.value = heading;
     box.dispatchEvent(new Event("input", { bubbles: true }));

@@ -25,6 +25,7 @@
 //     way is a defect, and stays one.
 
 import { copy } from "./tables.js";
+import { headRow } from "./primitives.js";
 
 /**
  * Which published value produced which section.
@@ -149,7 +150,7 @@ export function jsonToggles(root, { document: doc } = {}) {
     // stylesheet's flex row pins it to the head's right edge
     // (`margin-left: auto`) regardless of DOM order, title length or
     // wrapping, and reserves its width itself on every reflow.
-    heading.append(button);
+    headRow(heading, doc).append(button);
     given.push(key);
   }
   return given;

@@ -3288,7 +3288,7 @@ _RESTRUCTURING_HINT = {
 # unit census only ever walked the analyze payload, which is why the
 # gap could sit there.
 _RUN_INSTANCE_HINT = {
-    QUESTION: 'Which run is this?',
+    QUESTION: 'When, and on what machine, was this captured?',
     RAIL: 'raw',
     "properties": {
         "started_at_us": {
@@ -4416,7 +4416,7 @@ _ANALYZE_HINTS = {
         },
     },
     "confidence": {
-        QUESTION: 'How much of this can be believed?',
+        QUESTION: 'How confident is each part of this report?',
         RAIL: 'prove',
         # `UX-361`: five published scores on one axis, so a reader sees
         # which one is the weak leg rather than reading five numbers

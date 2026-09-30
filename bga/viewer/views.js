@@ -26,7 +26,7 @@ import { plural } from "./tables.js";
 // `UX-337`: the primitives the chapters share. Extracted because the
 // chapters were *not* acyclic without them - see `primitives.js`.
 import {
-  SVG, svg, seconds, mib, bar, OVERVIEW_SHOWN, elementAnchor,
+  SVG, svg, seconds, mib, bar, OVERVIEW_SHOWN, elementAnchor, headRow,
 } from "./primitives.js";
 
 // UX-699: `eqeqeq` disallows `== null`, so a null-or-undefined check is
@@ -52,7 +52,8 @@ export function declareReaders(section, roles) {
   tag.className = "reader-tag";
   tag.setAttribute("data-reader-tag", "");
   tag.setAttribute("data-readers", roles.join(" "));
-  (section.querySelector?.("h2, h3") ?? section).append(tag);  // UX-1018
+  const head = section.querySelector?.("h2, h3");  // UX-1018
+  (head ? headRow(head) : section).append(tag);
   return section;
 }
 

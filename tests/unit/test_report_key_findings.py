@@ -147,16 +147,16 @@ def test_key_findings_names_the_correct_dominant_wait_category(analyzed_result):
     key_findings_section = output.split("Certified Floors:")[0]
     # `UX-365`: the superlative names the population it is over.
     assert "Biggest wait category" in key_findings_section
-    assert "DEPENDENCY WAIT" in key_findings_section
+    assert "is dependency wait" in key_findings_section
     # Not any of the other categories, which are all much smaller here.
-    assert "RESOURCE WAIT" not in key_findings_section
-    assert "SCHEDULER WAIT" not in key_findings_section
+    assert "is resource wait" not in key_findings_section
+    assert "is scheduler wait" not in key_findings_section
 
 
 def test_key_findings_names_the_correct_worst_blast_radius_element(analyzed_result):
     output = format_text(analyzed_result)
     key_findings_section = output.split("Certified Floors:")[0]
-    assert "Elements Most Worth Optimizing First" in key_findings_section
+    assert "Elements most worth optimizing first" in key_findings_section
     assert "root.bst" in key_findings_section
     assert "3 downstream elements" in key_findings_section
 
@@ -168,7 +168,7 @@ def test_key_findings_drops_a_degenerate_criticality_list(analyzed_result):
     elements the block above already named. It is dropped."""
     output = format_text(analyzed_result)
     key_findings_section = output.split("Certified Floors:")[0]
-    assert "Highest Criticality Elements:" not in key_findings_section
+    assert "Highest-criticality elements" not in key_findings_section
 
 
 def test_key_findings_criticality_list_excludes_zero_probability_elements(analyzed_result):
@@ -184,7 +184,7 @@ def test_key_findings_criticality_list_excludes_zero_probability_elements(analyz
     analyzed_result.signals["criticality_probability"]["a.bst"]["probability"] = 0.4
     output = format_text(analyzed_result)
     key_findings_section = output.split("Certified Floors:")[0]
-    criticality_section = key_findings_section.split("Highest Criticality Elements:")[1]
+    criticality_section = key_findings_section.split("Highest-criticality elements")[1]
     assert "root.bst" in criticality_section
     assert "a.bst" in criticality_section
     assert "b.bst" not in criticality_section
@@ -199,7 +199,7 @@ def test_key_findings_shows_confidence_headline(analyzed_result):
 def test_key_findings_shows_certified_headroom_in_plain_language(analyzed_result):
     output = format_text(analyzed_result)
     key_findings_section = output.split("Certified Floors:")[0]
-    assert "Certified Headroom" in key_findings_section
+    assert "Certified headroom" in key_findings_section
     assert "available" in key_findings_section
 
 
@@ -220,7 +220,7 @@ def test_low_confidence_efficiency_score_carries_a_caveat(analyzed_result):
     assert analyzed_result.confidence["primary"] < 0.8
     output = format_text(analyzed_result)
     key_findings_section = output.split("Certified Floors:")[0]
-    assert "Efficiency Score:" in key_findings_section
+    assert "Efficiency score:" in key_findings_section
     assert "low-confidence data" in key_findings_section
 
 
@@ -249,7 +249,7 @@ def test_fully_packed_high_confidence_run_scores_high_with_no_caveat():
     assert result.confidence["primary"] >= 0.8
     output = format_text(result)
     key_findings_section = output.split("Certified Floors:")[0]
-    assert "Efficiency Score: 1.00 (scheduling is near the certified floor for this graph" in key_findings_section
+    assert "Efficiency score: 1.00 (scheduling is near the certified floor for this graph" in key_findings_section
     assert "low-confidence" not in key_findings_section
 
 

@@ -133,7 +133,7 @@ _DOCUMENT = (
     .filter((b) => b.getAttribute("aria-expanded") !== "true").length;
   const head = (n) => {
     const s = n.closest("section[data-section]");
-    const h = s && s.querySelector("h2, h3");
+    const h = s && s.querySelector(".section-head");
     return h && h.contains(n) ? h : null;
   };
   const blockOf = {
@@ -141,7 +141,7 @@ _DOCUMENT = (
     "button.json-toggle": head,
     // `attachBlockDoor` prepends the door to the block it describes.
     "button.describe": (n) => head(n) || n.closest("h2, h3, h4") || n.parentNode,
-    "button.chapter-open": (n) => n.closest("h2.chapter-title"),
+    "button.chapter-open": (n) => n.closest(".chapter-head"),
     // `UX-1055`: the block is the tool row itself, not the whole table
     // - the Motivation's own claim is that both follow a variable run
     // of *siblings inside `.table-tools`* (the badge, preset, pager),
@@ -171,7 +171,7 @@ _DOCUMENT = (
   // purpose; a nested one (`button.page-prev`/`-next`, inside
   // `.table-pager`) is `.table-tools`'s own row and not this one's.
   const containers = document.querySelectorAll(
-    "section[data-section] h2, section[data-section] h3, h2.chapter-title, .table-tools");
+    "section[data-section] .section-head, .chapter-head, .table-tools");
   const census = new Set();
   for (const root of containers) {
     for (const n of root.querySelectorAll(":scope > button, :scope > select")) {

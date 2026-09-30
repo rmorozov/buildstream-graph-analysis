@@ -7,7 +7,7 @@
         {
             "id": "wait-category",
             "severity": "high",
-            "title": "Biggest wait category: 5.9% of wall-clock time is UNTRACKED HEAD (2.72s)",
+            "title": "Biggest wait category: 5.9% of wall-clock time is untracked head (2.72s)",
             "detail": [
                 "    -> real time before the tracked-task window started (BuildStream startup, cache query, sandbox staging) - see Pipeline Overhead, not a scheduling issue"
             ],
@@ -19,7 +19,7 @@
                 "hint": "real time before the tracked-task window started (BuildStream startup, cache query, sandbox staging) - see Pipeline Overhead, not a scheduling issue"
             },
             "reader": "local-optimizer",
-            "copy_text": "BGA finding: Biggest wait category: 5.9% of wall-clock time is UNTRACKED HEAD (2.72s)\n      -> real time before the tracked-task window started (BuildStream startup, cache query, sandbox staging) - see Pipeline Overhead, not a scheduling issue\n  category untracked_head_us\n  category_us 2.7s\n  share 6%\n  hint real time before the tracked-task window started (BuildStream startup, cache query, sandbox staging) - see Pipeline Overhead, not a scheduling issue\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
+            "copy_text": "BGA finding: Biggest wait category: 5.9% of wall-clock time is untracked head (2.72s)\n      -> real time before the tracked-task window started (BuildStream startup, cache query, sandbox staging) - see Pipeline Overhead, not a scheduling issue\n  category untracked_head_us\n  category_us 2.7s\n  share 6%\n  hint real time before the tracked-task window started (BuildStream startup, cache query, sandbox staging) - see Pipeline Overhead, not a scheduling issue\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
             "trace_query": "resource-queues",
             "trace_queries": [
                 "resource-queues",
@@ -212,7 +212,7 @@
         {
             "id": "fan-in-ranking",
             "severity": "info",
-            "title": "Elements that pull in the most (by upstream closure):",
+            "title": "Elements that pull in the most, by upstream closure",
             "detail": [
                 "    1. app.bst (9 upstream, 8 named directly, at or above p90 of this run)",
                 "    2. lib-f.bst (8 upstream, 4 named directly, at or above p80 of this run)",
@@ -247,7 +247,7 @@
                 }
             },
             "reader": "graph-owner",
-            "copy_text": "BGA finding: Elements that pull in the most (by upstream closure):\n      1. app.bst (9 upstream, 8 named directly, at or above p90 of this run)\n      2. lib-f.bst (8 upstream, 4 named directly, at or above p80 of this run)\n      3. lib-e.bst (7 upstream, 4 named directly, at or above p70 of this run)\n      Shape: half of this run's 11 elements pull in 5 or fewer, the top tenth pull in 9 or more (max 10)\n  Elements: app.bst, lib-f.bst, lib-e.bst\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
+            "copy_text": "BGA finding: Elements that pull in the most, by upstream closure\n      1. app.bst (9 upstream, 8 named directly, at or above p90 of this run)\n      2. lib-f.bst (8 upstream, 4 named directly, at or above p80 of this run)\n      3. lib-e.bst (7 upstream, 4 named directly, at or above p70 of this run)\n      Shape: half of this run's 11 elements pull in 5 or fewer, the top tenth pull in 9 or more (max 10)\n  Elements: app.bst, lib-f.bst, lib-e.bst\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
             "trace_query": "dependency-wait"
         },
         {
@@ -337,7 +337,7 @@
         {
             "id": "efficiency-score",
             "severity": "info",
-            "title": "Efficiency Score: 1.00 (scheduling is near the certified floor for this graph - further gains need the graph or the work itself to change, not the scheduler (see Dispatch Occupancy and Critical Path))",
+            "title": "Efficiency score: 1.00 (scheduling is near the certified floor for this graph - further gains need the graph or the work itself to change, not the scheduler (see Dispatch Occupancy and Critical Path))",
             "detail": [],
             "elements": [],
             "evidence": {
@@ -345,7 +345,7 @@
                 "low_confidence": false
             },
             "reader": "ci-gatekeeper",
-            "copy_text": "BGA finding: Efficiency Score: 1.00 (scheduling is near the certified floor for this graph - further gains need the graph or the work itself to change, not the scheduler (see Dispatch Occupancy and Critical Path))\n  efficiency_score 100%\n  low_confidence False\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
+            "copy_text": "BGA finding: Efficiency score: 1.00 (scheduling is near the certified floor for this graph - further gains need the graph or the work itself to change, not the scheduler (see Dispatch Occupancy and Critical Path))\n  efficiency_score 100%\n  low_confidence False\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
             "trace_query": "cpu-versus-wall"
         }
     ],

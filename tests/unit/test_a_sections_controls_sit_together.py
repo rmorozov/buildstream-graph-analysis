@@ -61,7 +61,7 @@ _SCAN = r"""
     const heading = s.querySelector("h2, h3");
     const toggle = s.querySelector("button.json-toggle");
     if (!heading || !toggle) return;
-    const hr = heading.getBoundingClientRect();
+    const hr = (heading.closest(".section-head") ?? heading).getBoundingClientRect();
     const tr = toggle.getBoundingClientRect();
     out.push({key: s.getAttribute("data-section"), offset: hr.right - tr.right});
   });

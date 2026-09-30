@@ -67,7 +67,7 @@ listed under its topic as `§6e.N`; since round 142 every one is binding.
 | | §5b | what the header's picker already lists is not drawn again | binding |
 | **Colour, type, emphasis** | §4 | no categorical hues; one accent; status tone never alone; one emphasis per block | binding |
 | | §4f | four type sizes; prose lines at most 72 characters | binding |
-| | §6e.1 | one outline: one `h1` the run, `h2` chapter at `--font-h1` (the one allowed tie), `h3` section, `h4` block, no level skipped | binding |
+| | §6e.1 | one outline: one `h1` the run, `h2` chapter at `--font-h1` (the one allowed tie), `h3` section, `h4` block, no level skipped; no two headings ask one question, and a heading holds only its question - fold, chip and JSON toggle sit beside it in its row (`UX-1147`) | binding |
 | | §6e.6 | spacing comes from a 4px scale of tokens | binding |
 | | §5 | dark is the design surface; light and print carry the same tokens | binding |
 | **Controls** | §4c | a control acts on the scope its label names, and acknowledges the press | binding |
@@ -82,7 +82,7 @@ listed under its topic as `§6e.N`; since round 142 every one is binding.
 | | §4b | a label drops the payload's unit suffix | binding |
 | | §4g | no task id, payload key or producer word in anything a reader sees | binding |
 | | §6e.2 | one concept, one word, on every bga surface (the terminology matrix) | binding |
-| | §6e.3 | sentence case everywhere; a plural follows its count | binding |
+| | §6e.3 | sentence case everywhere, finding titles included - no trailing colon, no shouted word (`UX-1147`); a plural follows its count | binding |
 | | §6e.12 | an absence is one sentence; no separator beside an empty value | binding |
 | **Handoffs** | §4d | a handed-over query or command carries this run's values | binding |
 | | §4e | a handoff states what it could not carry | binding |
@@ -2306,7 +2306,7 @@ headings, so a renumber there moves it.
 | §6b | `test_one_factory_builds_every_table.py`, `test_the_handoff_rides_the_rail.py` | |
 | §6c | `test_the_browser_is_the_library.py`, `test_the_report_you_can_attach.py`, `test_find_in_page_reaches_folded_chapters.py` | |
 | §6d | `test_every_control_has_a_resting_appearance.py` | |
-| §6e | `test_a_reader_never_sees_the_register.py`, `test_an_absence_is_one_sentence.py`, `test_one_disclosure_glyph_pair.py`, `test_one_door_per_block.py`, `test_the_chain_folds_and_clicks_are_counted.py`, `test_the_heading_outline_has_three_levels.py`, `test_spacing_comes_from_a_scale.py`, `test_controls_meet_the_target_size.py`, `test_every_control_has_a_resting_appearance.py`, `test_a_new_control_class_lands_declared.py`, `test_a_keyboard_journey_reaches_every_chapter.py`, `test_every_drawing_has_a_name_and_a_data_route.py`, `test_find_in_page_reaches_folded_chapters.py`, `test_the_page_has_a_volume_budget.py`, `test_a_chapter_fold_has_one_place_and_one_label.py` | binding since round 142; each rule's guard is the one its row (`UX-1015`-`UX-1027`) closed with |
+| §6e | `test_a_reader_never_sees_the_register.py`, `test_an_absence_is_one_sentence.py`, `test_one_disclosure_glyph_pair.py`, `test_one_door_per_block.py`, `test_the_chain_folds_and_clicks_are_counted.py`, `test_the_heading_outline_has_three_levels.py`, `test_spacing_comes_from_a_scale.py`, `test_controls_meet_the_target_size.py`, `test_every_control_has_a_resting_appearance.py`, `test_a_new_control_class_lands_declared.py`, `test_a_keyboard_journey_reaches_every_chapter.py`, `test_every_drawing_has_a_name_and_a_data_route.py`, `test_find_in_page_reaches_folded_chapters.py`, `test_the_page_has_a_volume_budget.py`, `test_a_chapter_fold_has_one_place_and_one_label.py`, `test_a_heading_is_its_question_alone.py` | binding since round 142; each rule's guard is the one its row (`UX-1015`-`UX-1027`) closed with |
 | §7 | `test_emphasis_is_a_budget.py`, `test_the_styleguide_names_its_guards.py` | named |
 
 What the rows with no guard were written from, rounds 58 and 69, kept

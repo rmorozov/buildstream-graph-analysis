@@ -1,6 +1,6 @@
 # UX-1168: the rail's mark goes stale when no section enters or leaves
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** round 156's full suite, `test_three_backs_restore_rail_and_chapters` once red (2026-09-30) | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** judgement | **Reading:** container
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — | **Found by:** round 156's full suite, `test_three_backs_restore_rail_and_chapters` once red (2026-09-30) | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** judgement | **Reading:** container
 
 **Guard:** `tests/unit/test_the_rail_mark_follows_the_reading_line.py`
 

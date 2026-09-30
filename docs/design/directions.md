@@ -2107,6 +2107,7 @@ lives in `agent-runs.md`'s rows, counted per round from there.
 | [153](../audits/round-153.md) | the view page on a two-plane capture, reviewed - no "null" in a finding card (`UX-1136`), the `?` door off the first term's cell (`UX-1137`), pinned from the resolved width rather than `make -j1 install` (`UX-1138`), the costliest pins named first (`UX-1139`); the review's 25 findings filed as `UX-1140`-`UX-1153` - four closed |
 | [154](../audits/round-154.md) | the review's fourteen rows fixed - `UX-1140`-`UX-1153`, seven tracks merged (30 then 7 merged-tree reds to 0), five verifier holds closed by a residue pass; the walk's 14 defect classes filed as `UX-1154`-`UX-1160` |
 | [155](../audits/round-155.md) | the round-154 walk's seven rows fixed - `UX-1154`-`UX-1160`, seven tracks merged (34 B over the page budget recovered to 255 B under, 6 reds fixed), one verifier hold recorded; the walk's residue filed as `UX-1161`-`UX-1167`, the last asking the owner about the 150,000 B budget |
+| [156](../audits/round-156.md) | the round-155 walk's seven rows fixed - `UX-1161`-`UX-1167`, seven tracks merged, the page budget raised to 160,000 B on the owner's call, one suite flake traced and fixed as `UX-1168`; the walk's residue filed as `UX-1169`-`UX-1175` |
 
 ## Verification Log
 

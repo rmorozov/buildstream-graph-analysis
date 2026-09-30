@@ -619,6 +619,18 @@ pairing for every merged row from round 103 on.
 | 155 | verifier | sonnet | verifier: 6 PASS, UX-1160 HOLD (clause selector) | ~110k | — | ~25m | see round-155 | classifier denied mutation sed, no mutations run |
 | 155 | walker | sonnet | walker: 12 defects, 6 shots | ~450k | — | ~55m | see round-155 | no PDF text extractor; two-plane baseline not rebuilt |
 | 155 | closer | opus | closer: UX-1154..UX-1160, UX-1161..UX-1167 filed | — | — | — | see round-155 | 7 rows moved, round document |
+| 156 | implementer | opus | implementer: UX-1167 page budget raised to 160 KB | ~85k | — | ~25m | see round-156 | cost: xl_both controls breakdown; brief switched mid-track, new guard needs tiers.py and ci_reference rows, minifier yield 5,148 B JS + ~3,480 B CSS left for a later row |
+| 156 | implementer | opus | implementer: UX-1161 print | ~120k | — | ~25m | see round-156 | cost: own PDF reader; +142 B, prints every .description (reverses UX-346), strict xfail naming UX-1164, .path-more hides in print with no fixture, raw **flows** in the Perfetto question |
+| 156 | implementer | opus | implementer: UX-1165 filter and link state | ~140k | — | ~45m | see round-156 | cost: browser runs; +188 B golden, dev_sizes --adopt hit a pylint error, UX-1158 strip test and _FILTER re-based, applyTopN removed |
+| 156 | implementer | opus | implementer: UX-1162 accessible names | ~178k | — | ~75m | see round-156 | cost: mutation matrix x3; +316 B golden, guard opens only the first question fold (cdp.mjs --ax unsettled await), As-table toggle loses its name after Show all |
+| 156 | implementer | opus | implementer: UX-1164 layout at 1440 and 390 | ~150k | — | ~75m | see round-156 | cost: chapter-head second approach; +336 B golden, volume budget not run, 1161's xfail XPASSes now, #horizon link runs to x=387 |
+| 156 | implementer | opus | implementer: UX-1166 key paths and dashes | ~210k | — | ~75m | see round-156 | cost: sourcing 219 dashes; +152 B page but +395 by the guard (subtracts data characters, not bytes), 395 spaced hyphens to em dashes, cli.py:168 no space |
+| 156 | implementer | opus | implementer: UX-1163 said once | ~230k | — | ~2h | see round-156 | cost: page-byte base and 4 rebased guards; +244 B, M3b did not discriminate, headerless one-column table bends §3d sorting |
+| 156 | integrator | opus | integrator: merged 7 at 11e1a905, 4 holds left | ~86k | — | ~40m | see round-156 | cost: push-check 8 min; session fixed the holds in b58ffeb4 (hint count 23, skip reason, UX-1164 and UX-1167 Shape mechanical) |
+| 156 | verifier | sonnet | verifier: 6 PASS, 1 red of 11232 in the full suite | ~50k | — | ~13m | see round-156 | cost: make test on a loaded box (7m38s); test_three_backs two_plane 390 back_twice read a stale rail mark, passed 3/3 alone |
+| 156 | implementer | opus | implementer: UX-1168 rail mark follows the reading line | ~75k | — | ~25m | see round-156 | cost: scripts via scratch; second IO observer on a zero-height line strip, 11 of 11 stale crossings to 0, +72 B, task file hand-written |
+| 156 | walker | sonnet | walker: 6 new defects, 9 pre-existing | ~350k | — | ~37m | see round-156 | cost: sandbox refused object literals, drivers rewritten 4-6x |
+| 156 | closer | opus | closer: UX-1161..UX-1168, UX-1169..UX-1175 filed | — | — | — | see round-156 | — |
 
 Round 101's four tracks are **not** here: this session could not
 identify their transcripts with certainty after a context rebuild, and
@@ -631,7 +643,7 @@ committed cleanly once told to run in the foreground. Three of the five
 left a derived figure or a §6 context-map row behind - the same class
 the round itself was about, arriving in the tracks' own work.
 
-What the six hundred and two rows already say: a researcher that reads a document
+What the six hundred and fourteen rows already say: a researcher that reads a document
 whole costs 100-180k; a walker that drives every control costs 336k;
 the two cuts cost a re-run each. The `walk` and `design-review`
 skills fix the report shape so the next rows are smaller, and the

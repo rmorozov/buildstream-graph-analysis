@@ -145,8 +145,9 @@ _DOCUMENT = (
   const blockOf = {
     "button.collapse": head,
     "button.json-toggle": head,
-    // `attachBlockDoor` prepends the door to the block it describes.
-    "button.describe": (n) => head(n) || n.closest("h2, h3, h4") || n.parentNode,
+    // `UX-1157`: the door sits just before the `dl` it describes.
+    "button.describe": (n) => head(n) || n.closest("h2, h3, h4")
+      || (n.nextElementSibling?.matches("dl") ? n.nextElementSibling : n.parentNode),
     "button.chapter-open": (n) => n.closest(".chapter-head"),
     // `UX-1055`: the block is the tool row itself, not the whole table
     // - the Motivation's own claim is that both follow a variable run
@@ -172,8 +173,8 @@ _DOCUMENT = (
   // head or a tool row - read off the page itself, never off
   // `blockOf`'s own keys, so a class removed from both PLACEMENT and
   // UNPLACED still shows up here. Direct children only: `button.describe`
-  // owns its block, not a head (`attachBlockDoor` prepends it into the
-  // `dl`/`table`/`ul`, per `format.js`), so it is out of this census on
+  // owns its block, not a head (it sits just before its `dl`, per
+  // `format.js`), so it is out of this census on
   // purpose; a nested one (`button.page-prev`/`-next`, inside
   // `.table-pager`) is `.table-tools`'s own row and not this one's.
   const containers = document.querySelectorAll(

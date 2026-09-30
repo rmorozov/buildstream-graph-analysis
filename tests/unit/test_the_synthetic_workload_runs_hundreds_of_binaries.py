@@ -6,26 +6,16 @@ default store and Plane 1 as they were."""
 import collections
 import gzip
 import json
-import pathlib
-import subprocess
-import sys
 from datetime import datetime, timezone
 
 import pytest
 
-from tests.pages import REPO, REVIEW_SHAPE, heavy_binary_run
+from tests.pages import REVIEW_SHAPE, heavy_binary_run, two_plane_run
 from tools.gen_synthetic_scale_run import DISTRIBUTIONS, STORE_STAMP
 
 
-def _store(into, *shape):
-    project = pathlib.Path(into)
-    subprocess.run(
-        [sys.executable, "-m", "bga.cli", "gen-synthetic", str(project), "--seed", "1", "--store", *shape],
-        check=True,
-        capture_output=True,
-        cwd=str(REPO),
-    )
-    return sorted((project / ".bga" / "runs").iterdir())
+def _store(into, name, *shape):
+    return sorted(two_plane_run(into, shape, name=name).parents[1].iterdir())
 
 
 def _plane2(snapshot):
@@ -43,8 +33,8 @@ def stores(tmp_path_factory):
     run = heavy_binary_run(root)
     return {
         "heavy": sorted(run.parents[1].iterdir()),
-        "again": _store(root / "again", "--workload", "binaries", *REVIEW_SHAPE),
-        "default": _store(root / "default", *REVIEW_SHAPE),
+        "again": _store(root, "again", "--workload", "binaries", *REVIEW_SHAPE),
+        "default": _store(root, "default", *REVIEW_SHAPE),
     }
 
 

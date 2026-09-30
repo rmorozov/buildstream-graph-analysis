@@ -430,9 +430,11 @@ export function sparkline(values, {
   const peak = points.indexOf(high);
   const says = (at) => `${unit} ${at + origin} ${format(points[at])}`;
   // UX-1192: every point, not the three it dots, says its value on hover.
+  // Clamped to the viewBox: the end points' half-steps would overhang the sheet.
   const step = size.width / (points.length - 1);
+  const edge = (at) => Math.min(Math.max(x(at) + step / 2, 0), size.width);
   points.forEach((v, at) => line.append(titled(make(doc, "rect", {
-    x: (x(at) - step / 2).toFixed(2), y: "0", width: step.toFixed(2),
+    x: edge(at - 1).toFixed(2), y: "0", width: (edge(at) - edge(at - 1)).toFixed(2),
     height: String(size.spark), fill: "transparent",
   }), says(at))));
   for (const [at, role] of [[0, "first"], [points.length - 1, "last"],

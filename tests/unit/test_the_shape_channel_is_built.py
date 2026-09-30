@@ -218,11 +218,11 @@ class TestTheTablesWearTheirShape:
     def test_a_strip_below_the_sample_floor_states_it(self, browser, pages, label):
         """`UX-226`'s rule reaches every strip. A table too short to
         have a shape gets the sentence, not a range bar over two
-        values - and both fixtures have such a table, so this is
-        measured rather than argued."""
+        values. `UX-1163`: a two-row table draws no strip at all, so
+        neither fixture has one under the floor now; the sentence is
+        `test_the_shape_before_the_rows.py`'s unit clause."""
         out = browser.measure(pages[label], _LOOK, 1440, 900)
         stated = [strip for strip in out["strips"] if strip["drawn"] == "false"]
-        assert stated, f"{label}: no strip is under the floor on this page"
         for strip in stated:
             assert "too few to have a shape" in strip["sentence"], strip
 

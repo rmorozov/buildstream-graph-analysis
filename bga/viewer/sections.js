@@ -373,6 +373,7 @@ export const FIELDS_DRAWN_ELSEWHERE = {
     note: "the section's lead (`SECTION_ANSWERS`), the same claim in the page's units",
     element_count: "the section's lead, which opens with the count",
   },
+  confidence: { ordering_violations: "the hard gates' ordering row (`UX-1163`)" },
 };
 
 //: `UX-401`: the fourth destination, and the only silent one allowed.

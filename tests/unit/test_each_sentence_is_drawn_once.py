@@ -6,6 +6,9 @@ twice, and under a section's lead no pair draws a member the lead says
 (`data-said`) or a verdict the lead answers; no element card's evidence block
 repeats an earlier one's pairs, and no strip label restates the row count.
 A link's text names a place and a stock line an absence; neither is a sentence.
+UX-1163: an evidence label its card's advice says, a strip under the sample
+floor, a table's row count twice in its tools, a tick its sentence restates,
+a one-column header and `#confidence`'s gate pair each read 0.
 """
 
 import pathlib
@@ -89,7 +92,38 @@ _MEASURE = (
   const links = [...document.querySelectorAll("main a")].map((a) => flat(a.textContent).replace(/^\w+: /, ""))
     .filter((t) => /[.:;] \S/.test(t));
   const counted = [...document.querySelectorAll(".density-label")].map((n) => flat(n.textContent)).filter((t) => /\d+ rows?\b/.test(t));
-  return { sentences: drawn.size, twice, leads, keys, restated, evidence, blocksTwice, counted, links };
+  // UX-1163: the five strings the round-155 walk read more than once, each as its own count.
+  const seen = (n) => n.checkVisibility({ visibilityProperty: true });
+  const CLAIMS = { dominant_binary: "cpu-concentration", serial_binary: "serialization-point" };
+  const said = {
+    evidenceLabel: [...document.querySelectorAll("p[data-evidence]")].filter((p) => seen(p)
+      && p.getAttribute("data-evidence").split(" ").every((k) => p.closest("section")
+        .querySelector(`[data-advice="${CLAIMS[k]}"]`))).map((p) => flat(p.textContent)),
+    sampleFloor: [...document.querySelectorAll(".table-tools .density-sentence")].filter(seen)
+      .map((n) => flat(n.textContent)).filter((t) => /sample floor|too few/i.test(t)),
+    rowCount: [...document.querySelectorAll(".table-tools")].filter(seen).flatMap((tools) => {
+      const counts = [...tools.querySelectorAll("*")].filter((n) => !n.closest("button, select, label, a")
+        && !n.children.length && seen(n)).flatMap((n) => flat(n.textContent).match(/\d[\d,]* rows?\b/g) ?? []);
+      return counts.length > 1 ? [counts] : [];
+    }),
+    floorTick: [...document.querySelectorAll(".decomposition[data-drawn='true']")].flatMap((box) => {
+      const words = new Set(flat(box.querySelector(":scope > .density-sentence")?.textContent ?? "").toLowerCase()
+        .replace(/[.,:](?=\s|$)/g, "").split(" "));
+      return [...box.querySelectorAll(".draw-tick")].map((t) => flat(t.textContent))
+        .filter((t) => t.toLowerCase().split(/\s+/).every((w) => words.has(w)));
+    }),
+    header: [...document.querySelectorAll("table")].filter((t) => seen(t)
+      && t.querySelectorAll(":scope > thead th").length === 1).map((t) => t.getAttribute("data-table")),
+    gatePair: [...document.querySelectorAll("#confidence dt[data-key='ordering_violations']")].filter(seen).length,
+    // Not a repeat but its other half: a bounded table's `N of M` stays drawn.
+    hiddenBadge: [...document.querySelectorAll(".table-tools .badge[hidden]")].map((b) => b.textContent)
+      .filter((t) => / of /.test(t)),
+  };
+  const reach = { claims: document.querySelectorAll("section[data-element] [data-advice='cpu-concentration']").length,
+    tools: document.querySelectorAll(".table-tools").length, ticks: document.querySelectorAll(".decomposition .draw-tick").length,
+    gates: document.querySelectorAll("#confidence table").length,
+    bounded: document.querySelectorAll(".table-tools .badge:not([hidden])").length };
+  return { sentences: drawn.size, twice, leads, keys, restated, evidence, blocksTwice, counted, links, said, reach };
 })()
 """.replace("__WORDS__", str(WORDS))
 )
@@ -139,3 +173,20 @@ class TestEachSentenceIsDrawnOnce:
 
     def test_a_strip_label_names_its_column_not_the_count(self, measured):
         assert not measured["counted"], measured["counted"]
+
+
+@needs_browser
+class TestEachRepeatedStringIsSaidOnce:
+    """UX-1163: the round-155 walk's five repeats, each a count that reads 0."""
+
+    def test_the_census_reaches_each_string(self, measured):
+        reach = measured["reach"]
+        assert reach["tools"] > 5 and reach["ticks"] >= 2 and reach["gates"] >= 1, reach
+        if measured["label"] == "two_plane":
+            assert reach["claims"] >= 5 and reach["bounded"] >= 1, reach
+
+    @pytest.mark.parametrize(
+        "name", ["evidenceLabel", "sampleFloor", "rowCount", "floorTick", "header", "gatePair", "hiddenBadge"]
+    )
+    def test_the_string_is_said_once(self, measured, name):
+        assert not measured["said"][name], measured["said"][name]

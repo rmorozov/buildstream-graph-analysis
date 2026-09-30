@@ -833,8 +833,11 @@ export function decomposition(parts, {
       (sum, before) => sum + Number(before.value), 0) / whole) * 100,
   })).filter((tick) => tick.share >= AXIS_TICK_MIN_SHARE);
   wrap.append(exhibitAxis(doc, ticks));
-  const sentenceText = `${format(whole)} in total: `
-    + named.map((part) => `${format(part.value)} ${part.label}`).join(", ")
+  // `UX-1163`: beside its twin, the sentence says what no tick does.
+  const twinned = grade === GRADE_EXHIBIT;
+  const rest = named.filter((part) => !twinned || !ticks.some((tick) => tick.name == part.key));
+  const sentenceText = `${format(whole)} in total${rest.length ? ": " : ""}`
+    + rest.map((part) => `${format(part.value)} ${part.label}`).join(", ")
     + (mark ? `. ${capital(mark.label)} ${format(mark.value)}.` : ".");
   const sentence = box(doc, "span", { class: "density-sentence",
                                       "data-role": "density-sentence" },
@@ -842,7 +845,7 @@ export function decomposition(parts, {
   wrap.append(sentence);
   // §2a: the exhibit never hoards data a reader wants as rows.
   let twin = null;
-  if (grade === GRADE_EXHIBIT) {
+  if (twinned) {
     const rows = named.map((part) => [part.label, format(part.value)]);
     if (mark && Number.isFinite(Number(mark.value))) {
       rows.push([mark.label, format(mark.value)]);
@@ -968,7 +971,7 @@ export function interval(marks, {
 }
 
 export function columnStrip(values, { format = String, doc = document,
-                                      label = null, counted = true, of,
+                                      label = null, of,
                                       grade = GRADE_ANNOTATION, name } = {}) {
   // `UX-316`: annotation grade by construction and by argument both -
   // a strip drawn beside a table *is* the §2a annotation case, and the
@@ -984,9 +987,7 @@ export function columnStrip(values, { format = String, doc = document,
     wrap.setAttribute("data-drawn", "false");
     wrap.append(box(doc, "span", { class: "density-sentence muted",
                                    "data-role": "density-sentence" },
-                    // `UX-1152`: uncounted where the table's tools already say how many rows.
-                    (counted ? `${n} row${n === 1 ? "" : "s"}`
-                             : "Below the sample floor")
+                    `${n} row${n === 1 ? "" : "s"}`
                     + " — too few to have a shape."));
     return wrap;
   }

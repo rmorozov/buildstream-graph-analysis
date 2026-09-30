@@ -538,6 +538,7 @@ const JOIN_EVIDENCE = [
     ["max_element_duration_us", "Worst single element", "duration_us"],
     ["worst_element", "Worst element", null]]],
 ];
+const CLAIMED_BY = { dominant_binary: "cpu-concentration", serial_binary: "serialization-point" };
 
 /**
  * One section per element the report discusses.
@@ -668,9 +669,13 @@ function elementSection(record, places, investigate, format, bounded = null) {
   const blocks = [];
   for (const block of record.evidence ?? []) {
     const prior = blocks.find((had) => pairs(block).every((pair) => pairs(had).includes(pair)));
-    if (prior) prior.label += `, ${block.label.toLowerCase()}`;
-    else blocks.push({ ...block });
+    if (prior) {
+      prior.label += `, ${block.label.toLowerCase()}`;
+      prior.key += ` ${block.key}`;
+    } else blocks.push({ ...block });
   }
+  // `UX-1163`: a label the card's advice states is not said again.
+  const claims = new Set((record.advice ?? []).map((advice) => advice.id));
   const evidenceRows = blocks.reduce((total, block) => total + block.rows.length, 0);
   if (evidenceRows) {
     const fold = document.createElement("details");
@@ -684,11 +689,10 @@ function elementSection(record, places, investigate, format, bounded = null) {
       + `row${evidenceRows === 1 ? "" : "s"}`;
     fold.append(summary);
     for (const block of blocks) {
-      const name = document.createElement("p");
-      name.className = "muted";
-      name.setAttribute("data-evidence", block.key);
-      name.textContent = block.label;
-      fold.append(name, pairList(block.rows, format));
+      if (!block.key.split(" ").every((key) => claims.has(CLAIMED_BY[key]))) {
+        fold.append(el("p", { class: "muted", "data-evidence": block.key }, block.label));
+      }
+      fold.append(pairList(block.rows, format));
     }
     section.append(fold);
   }

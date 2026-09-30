@@ -770,10 +770,13 @@ function statedOnce(table, specs, total) {
     head?.remove?.();
   }
   if (!said.length) return { note: null, gone };
+  // `UX-1163`: a short table left one column is a list, with no header.
+  const head = table.children[0];
+  if (total <= TABLE_OPENS_BOUNDED_ABOVE && head.children[0].children.length < 2) head.remove();
   const note = el("p", { class: "muted uniform-columns",
                          "data-role": "uniform-columns",
                          "data-columns": String(said.length) });
-  note.textContent = `All ${total.toLocaleString("en-US")} rows: `
+  note.textContent = "Every row: "
     + said.map(([name, value]) => `${name} ${value}`).join(", ") + ".";
   return { note, gone };
 }
@@ -845,7 +848,9 @@ export function interrogable(table, specs, total, depth = 0) {
   const key = table.getAttribute?.("data-table") ?? "table";
   // `UX-1162`: each tool's accessible name ends with its table's.
   const named = key.split(".").map((part) => title(part, guessQuantity(part))).join(" ");
-  const badge = el("span", { class: "badge" }, badgeText(total, total));
+  // `UX-1163`: at rest `Copy N rows` is the count; the badge says `N of M`.
+  const rest = badgeText(total, total);
+  const badge = el("span", { class: "badge", hidden: true }, rest);
   // Review (#295), `UX-1028`: `filtered` - the text/threshold
   // population, before `top`'s slice - is what the paging step below
   // measures its position and bounds against, not `total`, which
@@ -856,6 +861,7 @@ export function interrogable(table, specs, total, depth = 0) {
   const refresh = () => {
     // `applyFilters` also writes `state.filtered` and `state.kept` - the pre-`top` population.
     badge.textContent = badgeText(applyFilters(table, state), total);
+    badge.hidden = badge.textContent == rest;
     pagerRefresh?.();
     // UX-1158: the strip draws, and counts, the rows the filter kept.
     shape?.replaceWith?.(shape = distributionStrip(table, specs, total, few, state.kept) ?? el("span"));
@@ -1172,7 +1178,7 @@ export function interrogable(table, specs, total, depth = 0) {
   // number.** Its labels are the smallest and largest *rows* and a
   // count of rows; the p50 and p95 ticks are positions and nothing
   // else. A percentile worth printing enters the payload first.
-  // `UX-1152` (styleguide §3d): at two rows or fewer `Copy N rows` is the one count; the strip only states the floor (`UX-226`).
+  // `UX-1152` (styleguide §3d): at two rows or fewer `Copy N rows` is the one count.
   shape = distributionStrip(table, specs, total, few);
 
   // `UX-318` (§3a.3): **every capped or nested table offers focus.** A

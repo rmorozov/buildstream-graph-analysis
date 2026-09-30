@@ -239,7 +239,8 @@ export function distributionStrip(table, specs, total, few = false, rows) {
   // draws below `SERIES_MIN_POINTS`, so a two-row table is still a
   // sentence.
   const spec = specs.find((s) => s && s.quantity && s.numeric !== false);
-  if (!spec) return null;
+  // `UX-1163`: at two rows or fewer the rows are the values.
+  if (!spec || few) return null;
   // The column key, not `cssId`: that normalises an *element uid* into
   // an anchor, and a column key is already a schema identifier.
   // Over every row the filter keeps, not the shown ones: `UX-526`, `UX-1158`.
@@ -252,9 +253,7 @@ export function distributionStrip(table, specs, total, few = false, rows) {
   const drawn = columnStrip(raw, {
     grade: GRADE_ANNOTATION, name,
     format: (n) => quantity(n, spec.quantity),
-    // `UX-1156`: the column's name; the count is the sentence's and the badge's.
-    label: few ? null : name,
-    counted: !few,
+    label: name,
     // `UX-1165`: filtered, the sentence counts K of M; the label stays the column.
     of: rows?.length < total && total,
   });

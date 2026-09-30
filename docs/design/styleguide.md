@@ -49,7 +49,7 @@ listed under its topic as `§6e.N`; since round 142 every one is binding.
 | | §6e.9 | a drawing's accessible name is its sentence, with a route to its values | binding |
 | **Tables and folds** | §3 | tables open bounded, numbers right, one tool row, folds labeled with a count | binding |
 | | §3a | depth is announced; deeper than one level opens in table focus | binding |
-| | §3d | table tools appear at the row cap; a one-value column is a sentence | binding |
+| | §3d | table tools appear at the row cap; a one-value column is a sentence; the tools say the count once (`UX-1163`) | binding |
 | | §3j | a fold bounds its hidden controls, not only its visible rows | binding |
 | | §3k | every population opens at a named bound, and the step past it is bounded too | binding |
 | **Navigation** | §3b | any section is at most two interactions from the rail | binding |
@@ -600,6 +600,10 @@ the placeholder `> 10`.
 - **A filter's placeholder is derived from the column's declared
   quantity.** `> 10` under a boolean is the tell that a default was
   chosen where a declaration was available.
+- **A table's tools say its count once** (`UX-1163`): `Copy N rows` at
+  rest, the badge only as `N of M`, the one-value sentence as "Every
+  row:", and a short table left one column draws no header. At two rows
+  or fewer no self-built strip is drawn: the rows are the values.
 
 Sorting is exempt from all of this: it costs no ink and helps at every
 length.
@@ -1148,7 +1152,9 @@ has one drawing, and every other place **names and links** it - a
 finding off its own card by its title to the colon, the ranking rule
 by its `#provenance` block. A lead's `data-said` members leave its
 pairs. A link, a command and a stock absence line are not sentences
-(`test_each_sentence_is_drawn_once.py`).
+(`test_each_sentence_is_drawn_once.py`). `UX-1163` carries it to labels:
+an evidence label the card's advice states leaves, and an exhibit's
+sentence says only what no tick does.
 
 ## 6b. What this page may depend on (round 65)
 

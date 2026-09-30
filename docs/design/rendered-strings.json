@@ -1570,9 +1570,14 @@
     "text": "Calls"
   },
   {
-    "exception": null,
+    "exception": "acronym",
     "role": "th",
-    "text": "Cpu"
+    "text": "CPU"
+  },
+  {
+    "exception": "acronym",
+    "role": "th",
+    "text": "Share of CPU"
   },
   {
     "exception": null,
@@ -1753,11 +1758,6 @@
     "exception": null,
     "role": "option",
     "text": "Top # by rank"
-  },
-  {
-    "exception": null,
-    "role": "option",
-    "text": "Top # by length"
   },
   {
     "exception": "code",

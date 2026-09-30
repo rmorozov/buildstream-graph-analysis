@@ -327,6 +327,9 @@ export function renderPairs(key, object, hint = {}, node = undefined,
       shown ? shown.element : name, described, {}, hintsOf(child)[INLINE],
       kind, shown ? true : dataKeyed(node, name));
     doors.push(describe);
+    // `UX-1151`: JSON Schema's own `title` names a field its key would name like another.
+    const named = node?.properties?.[name]?.title;
+    if (!shown && typeof named === "string") term.textContent = named;
     if (shown) {
       term.setAttribute?.("data-key", name);
       if (shown.qualifier) term.append(

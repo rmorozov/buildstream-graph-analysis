@@ -193,6 +193,12 @@ kept twice diverges**: the shapes, the rails and the verdict markers
 are all declared in `bga/schemas.py` and read by the viewer, never
 re-listed in JavaScript.
 
+JSON Schema's own `title` is not a hint and is not in the table: on a
+property it is that pair's label, where the key alone would name two
+measures alike (`UX-1151`: "Peak processes at once" and "Peak tasks at
+once", both once "Max concurrency"), and in `bga:columns` it names a
+column.
+
 ## 2. Sparklines and density strips
 
 Adopted, and widened from the user's proposal: any published value

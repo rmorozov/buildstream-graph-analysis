@@ -310,7 +310,9 @@ export function title(key, kind = null, published = false) {
   const named = trimmed || key;
   // `UX-1020`: a claim id (`wait-category`) is kebab-case, not a
   // published name - the same word-join `_` already gets.
-  return named.replace(/[_-]/g, " ").replace(/^./, (c) => c.toUpperCase());
+  // `UX-1151`: one spelling of the planes and of the acronym on every label.
+  return named.replace(/[_-]/g, " ").replace(/^./, (c) => c.toUpperCase())
+    .replace(/\bplane ?([12])\b/gi, "Plane $1").replace(/\bcpu(s?)\b/gi, "CPU$1");
 }
 
 /**

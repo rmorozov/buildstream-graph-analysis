@@ -665,6 +665,97 @@ export function renderSummary(payload, hints) {
             el("h2", {}, "Run"), list);
 }
 
+const many = (n, noun, plural = `${noun}s`) =>
+  `${n.toLocaleString("en-US")} ${n === 1 ? noun : plural}`;
+
+/**
+ * `UX-1151`: each Plane 2 section's answer, one sentence read off
+ * published fields - a sum or a max over a published column at most.
+ * `null` where the fields are not there to say it.
+ */
+export const SECTION_ANSWERS = {
+  plane2_coverage(value) {
+    const seen = value?.processes;
+    if (typeof seen !== "number") return null;
+    const alive = value.max_concurrency;
+    const span = value.wall_span_us;
+    const opened = value.opens_covered_processes;
+    const traced = value.process_count;
+    return `Plane 2 saw ${many(seen, "process", "processes")}`
+      + (typeof alive === "number" ? `, at most ${alive} alive at once` : "")
+      + (typeof span === "number" ? ` over ${quantity(span, "duration_us")}` : "")
+      + (opened === 0 ? "; the files they opened were not recorded."
+        : typeof opened === "number"
+          ? `; the files they opened were recorded for ${opened} of them.` : ".")
+      + (typeof traced === "number" && traced !== seen
+        ? ` The capture traced ${many(traced, "process", "processes")} in all.` : "");
+  },
+  binary_cost(rows) {
+    if (!Array.isArray(rows) || !rows.length) return null;
+    const by = new Map();
+    const elements = new Set();
+    for (const row of rows) {
+      const one = by.get(row.binary) ?? { cpu: 0, calls: 0, elements: 0 };
+      one.cpu += Number(row.cpu_us) || 0;
+      one.calls += Number(row.calls) || 0;
+      one.elements += 1;
+      by.set(row.binary, one);
+      elements.add(row.element);
+    }
+    const [name, top] = [...by].sort(
+      (a, b) => b[1].cpu - a[1].cpu || b[1].calls - a[1].calls)[0];
+    const cost = `${many(top.calls, "call")}, `
+      + `${quantity(top.cpu, "duration_us")} of CPU`;
+    return by.size === 1
+      ? `One binary, ${name}, ran in ${many(top.elements, "element")}: ${cost}.`
+      : `${many(by.size, "binary", "binaries")} ran in `
+        + `${many(elements.size, "element")}; ${name} cost the most, `
+        + `${cost} in ${many(top.elements, "element")}.`;
+  },
+  peak_memory(value, payload) {
+    const rows = (Array.isArray(payload?.element_join) ? payload.element_join : [])
+      .filter((row) => typeof row?.peak_rss_bytes === "number");
+    if (!rows.length) {
+      return "No element published a per-process peak, so there is no figure here.";
+    }
+    const top = rows.reduce(
+      (a, b) => (b.peak_rss_bytes > a.peak_rss_bytes ? b : a));
+    return `No single process exceeded ${bytes(top.peak_rss_bytes)}; `
+      + `the largest ran in ${top.element}.`;
+  },
+  element_join_coverage(value) {
+    const counts = [value?.joined_elements, value?.plane1_elements,
+                    value?.plane2_elements];
+    if (!counts.every((n) => typeof n === "number") || counts[2] === 0) return null;
+    const [joined, one, two] = counts;
+    return joined === one && joined === two
+      ? `The two planes agree on all ${many(joined, "element")}.`
+      : `The two planes agree on ${joined} of ${many(one, "element")}; `
+        + `Plane 2 saw ${two}.`;
+  },
+};
+
+/** The answer as the section's first block; `processes` is dropped where
+ * `process_count` says the same number (§1b's guard holds the latter). */
+function leadWith(section, key, value, payload) {
+  const said = SECTION_ANSWERS[key]?.(value, payload);
+  const own = (node, tag) => [...(node?.children ?? [])].filter(
+    (child) => String(child.tagName).toLowerCase() === tag);
+  const head = [...own(section, "h2"), ...own(section, "h3")][0];
+  if (!said || !head) return;
+  const lead = el("p", { class: "section-answer", "data-role": "section-answer" }, said);
+  section.insertBefore(lead, head.nextSibling ?? null);
+  if (key !== "plane2_coverage" || value.process_count !== value.processes) return;
+  for (const list of own(section, "dl")) {
+    const term = own(list, "dt").find(
+      (dt) => dt.getAttribute?.("data-key") === "processes");
+    if (!term) continue;
+    const kids = [...list.children];
+    kids[kids.indexOf(term) + 1]?.remove?.();
+    term.remove?.();
+  }
+}
+
 export function render(payload, schema, root, investigate = null) {
   const hints = {};
   for (const [key, sub] of Object.entries(schema?.properties ?? {})) {
@@ -692,6 +783,7 @@ export function render(payload, schema, root, investigate = null) {
     // one; a section the page composes from several places has no
     // single payload slice, and gets no toggle rather than a misleading
     // one.
+    if (section) leadWith(section, key, value, payload);
     if (section) root.append(recordSource(section, value));
   }
   const summary = renderSummary(payload, hints);

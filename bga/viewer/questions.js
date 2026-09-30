@@ -411,7 +411,7 @@ limit 15;`,
     plane: "Plane 1",
     title: "Which kinds of element cost the most?",
     why:
-      "`UX-308` put the element's kind on its Plane 1 slice, so this " +
+      "The element's kind is on its Plane 1 slice, so this " +
       "is one group-by rather than a join against the graph. A kind " +
       "that dominates is a question about the build's shape - one " +
       "cmake element is slow, forty of them is a toolchain decision.",
@@ -429,12 +429,11 @@ order by seconds desc;`,
     plane: "Plane 2",
     title: "What failed, and what ran it?",
     why:
-      "`UX-308` gives a non-zero exit its own category, so the work " +
+      "A non-zero exit has its own category, so the work " +
       "that failed is one predicate away instead of a scan of every " +
-      "Plane 2 command line. The command is `s.name`: `UX-333` untrimmed the " +
-      "slice name and dropped the `debug.cmd` this question used to " +
-      "read, because the argv's distinguishing part is the file at " +
-      "the end and the 120-character cut fell before it.",
+      "Plane 2 command line. The command is `s.name`, the untrimmed " +
+      "slice name, because the argv's distinguishing part is the " +
+      "file at the end.",
     sql: `select extract_arg(s.arg_set_id, 'debug.element') as element,
        extract_arg(s.arg_set_id, 'debug.exit_status') as exit_status,
        s.name as command,
@@ -480,7 +479,7 @@ limit 25;`,
       "read as a maximum and never summed: two processes peaking at " +
       "different moments never held the sum between them, which is " +
       "the same refusal `compute_peak_memory` makes and the reason " +
-      "`UX-310` declined to draw a memory curve.",
+      "the trace draws no memory curve.",
     sql: `select extract_arg(s.arg_set_id, 'debug.element') as element,
        max(extract_arg(s.arg_set_id, 'debug.max_rss_kb')) / 1024 as peak_mb,
        s.name as command
@@ -497,7 +496,7 @@ limit 25;`,
     reads: "flow",
     title: "What did this element wait for, by the graph?",
     why:
-      "Plane 1 again, by the graph rather than the clock: `UX-309` " +
+      "Plane 1 again, by the graph rather than the clock: the trace " +
       "draws the dependency edges as **flows**, so this is " +
       "the declared graph rather than whatever happened to finish " +
       "first. The timestamp-proximity version of this question is " +
@@ -523,7 +522,7 @@ limit 20;`,
     reads: "counter",
     title: "How many processes were running at once, over time?",
     why:
-      "Plane 2's concurrency as a curve: `UX-310`'s counter track, " +
+      "Plane 2's concurrency as a curve: a counter track, " +
       "sampled from the same records the " +
       "process census counts. Its peak equals the `max_concurrency` " +
       "the report publishes - by construction, because both read one " +
@@ -545,7 +544,7 @@ limit 25;`,
     reads: "counter",
     title: "Were the cores busy, or just the machine loaded?",
     why:
-      "`UX-675` put the host's own `/proc/stat` series on the trace, " +
+      "The host's own `/proc/stat` series is on the trace, " +
       "against `traced processes running` above: a process blocked on " +
       "I/O holds a slot and no core. `host cores busy` against " +
       "`host cores` is the share actually drawn; `host load average` " +
@@ -572,7 +571,7 @@ limit 25;`,
     plane: "run",
     title: "Whose run is this, and did it finish?",
     why:
-      "`UX-311` puts the run's identity on its own track, so a trace " +
+      "The run's identity is on its own track, so a trace " +
       "that left the machine still says which project, which host " +
       "and which `bga` wrote it. `incomplete_reason` is the one key " +
       "a finished run never emits - its absence is the only thing " +

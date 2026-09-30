@@ -1021,7 +1021,7 @@
                 "threshold": null,
                 "comparison": "present",
                 "observed_path": null,
-                "sentence": "Published for every non-structural element something actually depends on. Not a ranking - `UX-65`'s who-depends-on-me ordering is a different claim and stays on the scheduler-bound arm - but the answer to the recipe-author's own question, which is true whichever way the build is bound. Elements with no dependents are left out rather than listed at zero: a row reading \"0 downstream\" answers the question with a number meaning nobody.",
+                "sentence": "Published for every non-structural element something actually depends on. Not a ranking - the who-depends-on-me ordering is a different claim and stays on the scheduler-bound arm - but the answer to the recipe-author's own question, which is true whichever way the build is bound. Elements with no dependents are left out rather than listed at zero: a row reading \"0 downstream\" answers the question with a number meaning nobody.",
                 "module": "bga/findings.py"
             },
             "trace_query": "dependency-wait",

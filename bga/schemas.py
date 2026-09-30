@@ -665,7 +665,7 @@ _CAPACITY_MODEL_HINTS = {
                         "mean_us": {
                             QUANTITY: "duration_us",
                             "description": "The mean service time. The "
-                            "*mean*, not `UX-234`'s "
+                            "*mean*, not the "
                             "median: waiting is a "
                             "function of the mean and "
                             "the spread around it.",
@@ -844,7 +844,7 @@ _SWEEP_HINTS = {
         # Same shape as `knee_points`: a map keyed by resource name, so
         # its values cannot be named in `properties`.
         "additionalProperties": {QUANTITY: "count"},
-        "description": "`UX-678`: per resource, the largest swept "
+        "description": "Per resource, the largest swept "
         "capacity whose own replayed schedule's concurrent "
         "elements' peak RSS still fit host RAM - `{}` "
         "unless `--plane2` supplied both a measured peak "
@@ -853,7 +853,7 @@ _SWEEP_HINTS = {
         "then, unlike `knee_points`.",
     },
     "binding_constraints": {
-        "description": "`UX-678`: per resource, which of the sweep's own "
+        "description": "Per resource, which of the sweep's own "
         "two capacities - `knee_points` or "
         "`memory_knee_points` - is the tighter one, as "
         "`{name, builders}`. `{}` under the same condition "
@@ -1370,7 +1370,7 @@ _JOIN_ITEM_PROPERTIES = {
     "on_critical_path": {
         "type": "boolean",
         "description": "Whether this element is on the chain that sets the "
-        "run's finish time. `UX-382`: the second of the "
+        "run's finish time. The second of the "
         "join's two denormalised Plane 1 facts, and the one "
         "that hides - it is "
         "`elements.criticality_probability[<uid>]"
@@ -1399,7 +1399,7 @@ _JOIN_ITEM_PROPERTIES = {
     },
     "blast_radius": {
         QUANTITY: "count",
-        "description": "How many elements a change here rebuilds. `UX-382`: "
+        "description": "How many elements a change here rebuilds. "
         "the one attribute in both of the entity's shapes, "
         "and an int here where `elements.blast_radius[<uid>]` "
         "is a record - this is that record's own "
@@ -1830,7 +1830,7 @@ EVIDENCE_QUANTITIES.update(
                     "allows": {QUANTITY: "count", "description": "How many builders this particular ceiling permits."},
                     "clamped_from": {
                         QUANTITY: "count",
-                        "description": "`UX-861`: the CPU figure before it was capped "
+                        "description": "The CPU figure before it was capped "
                         "to `host_cpu_count` - present only when it was.",
                     },
                 }
@@ -2961,7 +2961,7 @@ _SIGNALS_TABLES = {
                 "hold and what the volume under it can "
                 "give. Does not carry per-element "
                 "artifact size: BuildStream 2.8.0 has no "
-                "cheap exact source for it (UX-907).",
+                "cheap exact source for it.",
                 "properties": {
                     "cachedir": {"description": "The cache directory these numbers are about."},
                     "quota_declared": {
@@ -3341,7 +3341,7 @@ _RUN_INSTANCE_HINT = {
                 },
                 "seed": {
                     QUANTITY: "count",
-                    "description": "Tokens the FIFO opened holding (UX-858): "
+                    "description": "Tokens the FIFO opened holding: "
                     "max(0, ceiling - builders) under auto, "
                     "ceiling - 1 otherwise; null when off.",
                 },
@@ -3584,7 +3584,7 @@ _ANALYZE_HINTS = {
         "capped at 40 - more rows than a reader will act on. "
         "The row names what was building and each element's "
         "own `max-jobs`, and what was ready and not "
-        "dispatched; deciding between those two is `UX-677`.",
+        "dispatched; deciding between those two is what the per-element max-jobs advice does.",
         COLUMNS: _INTERVAL_COLUMNS,
     },
     "overcommitted_intervals": {
@@ -3635,7 +3635,7 @@ _ANALYZE_HINTS = {
                 "element draws more, so the CPU ceiling "
                 "below is optimistic - and, when the raw "
                 "figure exceeds the host's own cores, "
-                "clamped to them (`UX-861`; see "
+                "clamped to them (see "
                 "`clamped_from`).",
             },
             "constraints": {
@@ -3663,7 +3663,7 @@ _ANALYZE_HINTS = {
                         "title": "Before clamping",
                         "quantity": "count",
                         "sortable": True,
-                        "description": "`UX-861`: present only on the CPU row, "
+                        "description": "Present only on the CPU row, "
                         "and only when the derived figure "
                         "exceeded `host_cpu_count` - the "
                         "unclamped value `allows` was capped "
@@ -3703,19 +3703,19 @@ _ANALYZE_HINTS = {
                 "use.",
             },
             "max_jobs_advice": {
-                "description": "`UX-677`: per element, `--max-jobs` under a "
+                "description": "Per element, `--max-jobs` under a "
                 "no-overcommit constraint - the sum of "
                 "recommended values for elements building at "
                 "once must not exceed `host_cpu_count`, and "
                 "the sum of their measured peak RSS must not "
                 "exceed the host's memory. Evidence is "
-                "`UX-675`'s host CPU series joined directly "
+                "the host CPU series joined directly "
                 "to each element's BUILD span, not "
-                "`UX-676`'s ranked, capped interval tables. "
+                "the ranked, capped interval tables. "
                 "An element with too few overlapping samples, "
                 "or whose overlap already overcommits "
                 "memory, carries `refusal` instead of a "
-                "number. `UX-739`: `priced_jointly` and "
+                "number. `priced_jointly` and "
                 "`pricing_assumptions` price it by replay - "
                 "see `elements[].price_cost_us` below.",
                 "properties": {
@@ -3742,7 +3742,7 @@ _ANALYZE_HINTS = {
                         "already explains.",
                     },
                     "priced_jointly": {
-                        "description": "`UX-739`: every priced, lowered "
+                        "description": "Every priced, lowered "
                         "recommendation applied together in "
                         "one replay - a recompute, not a "
                         "sum, because prices do not add. "
@@ -3751,7 +3751,7 @@ _ANALYZE_HINTS = {
                         "Absent when nothing was priced."
                     },
                     "pricing_assumptions": {
-                        "description": "`UX-739`: two sentences, always "
+                        "description": "Two sentences, always "
                         "together - what dispatch order the "
                         "replay assumes, and which way the "
                         "floor errs. Absent only alongside "
@@ -3769,7 +3769,7 @@ _ANALYZE_HINTS = {
             },
             "sweep_memory_builders": {
                 QUANTITY: "count",
-                "description": "`UX-678`: the largest swept builder count "
+                "description": "The largest swept builder count "
                 "whose own replayed schedule's concurrent "
                 "elements' peak RSS still fit host RAM - "
                 "summed over the sweep's real concurrent "
@@ -3779,7 +3779,7 @@ _ANALYZE_HINTS = {
                 "memory total.",
             },
             "sweep_binding": {
-                "description": "`UX-678`: which of the sweep's own two "
+                "description": "Which of the sweep's own two "
                 "capacities - the graph's knee or "
                 "`sweep_memory_builders` - is the tighter "
                 "one, as `{name, builders}`. Present only "
@@ -4246,9 +4246,7 @@ _ANALYZE_HINTS = {
                 },
                 "role": {
                     "type": "string",
-                    "description": "That reader's row in "
-                    "`docs/design/roles.md` - `R1` "
-                    "through `R5` - so the payload "
+                    "description": "That reader's role, so the payload "
                     "and the role model share one "
                     "vocabulary rather than two.",
                 },
@@ -4575,9 +4573,7 @@ _ANALYZE_HINTS = {
             "undeclared_plane2_elements": {
                 GROWS: "elements Plane 2 named that the declared graph does not contain (no cap)",
                 "items": {"type": "string", "description": "element uid"},
-                "description": "Names Plane 2 produced that look like "
-                "elements and are not - `UX-66`'s "
-                "unreliable-name case.",
+                "description": "Names Plane 2 produced that look like elements and are not - the unreliable-name case.",
             },
         },
     },
@@ -4811,7 +4807,7 @@ _ANALYZE_HINTS = {
                 "failed ends a series rather than "
                 "reading zero."
             },
-            "note": {"description": "What a CPU figure here means, in a sentence - `UX-346`'s door."},
+            "note": {"description": "What a CPU figure here means, in a sentence."},
         },
     },
     "peak_memory": {
@@ -5331,8 +5327,8 @@ _ELEMENTS = {
 _ANALYZE_HINTS["jobserver"] = {
     QUESTION: 'Did the pool or the graph bind the wall?',
     RAIL: 'act',
-    "description": "The dynamic pool's own record (Direction 20, "
-    "UX-845/UX-846): tokens on offer with nothing "
+    "description": "The dynamic pool's own record: "
+    "tokens on offer with nothing "
     "claiming them against tokens everyone waited on, "
     "and which elements actually drew from the shared "
     "pool. Present only when this run's `--plane2` "
@@ -5340,7 +5336,7 @@ _ANALYZE_HINTS["jobserver"] = {
     "properties": {
         "mode": {
             "description": "fixed or dynamic - whether the pool moved "
-            "with busy cores (UX-845) or held its "
+            "with busy cores or held its "
             "seeded token count for the whole run."
         },
         "pool_ceiling": {
@@ -5368,11 +5364,9 @@ _ANALYZE_HINTS["jobserver"] = {
                     "joined": {
                         "description": "yes, pinned, held or "
                         "unknown_kind - pinned is "
-                        "BuildStream's own `-j1` "
-                        "(UX-842), held is a wrapper "
+                        "BuildStream's own `-j1`, held is a wrapper "
                         "tool that kept its tokens "
-                        "instead of reading the pipe "
-                        "(UX-846), unknown_kind is "
+                        "instead of reading the pipe, unknown_kind is "
                         "neither the shim nor a wrapper "
                         "named this element."
                     },
@@ -5399,7 +5393,7 @@ _ANALYZE_HINTS["jobserver"] = {
                         "`joined` and never read drew; "
                         "outside the pool when pinned or "
                         "unknown_kind and the peak "
-                        "exceeded `max-jobs` + 1 (UX-1008); "
+                        "exceeded `max-jobs` + 1; "
                         "null when joined with no peak or "
                         "no `max-jobs` to compare."
                     },
@@ -5408,8 +5402,7 @@ _ANALYZE_HINTS["jobserver"] = {
                         DIRECTION: "lower_is_better",
                         "description": "Time the shim blocked this "
                         "element on an admission token "
-                        "before its sandbox started "
-                        "(UX-1005); the admission token "
+                        "before its sandbox started; the admission token "
                         "is the element's own slot, not a "
                         "draw. Null when no wait was "
                         "recorded.",
@@ -5418,7 +5411,7 @@ _ANALYZE_HINTS["jobserver"] = {
                         QUANTITY: "count",
                         "description": "Median tokens a wrapper tool "
                         "held at once, for this "
-                        "element - from UX-846's own "
+                        "element - from the wrapper's own "
                         "acquire rows, joined to this "
                         "element by the pid that "
                         "acquired them; null when the "
@@ -5464,7 +5457,7 @@ _ANALYZE_HINTS["jobserver"] = {
                         QUANTITY: "count",
                         "description": "Intervals no release ever "
                         "closed - a wrapper killed "
-                        "before its trap (UX-852). "
+                        "before its trap. "
                         "Closed at the element's span "
                         "end and counted here rather "
                         "than left running.",
@@ -6040,7 +6033,7 @@ _STORE_AGGREGATE_HINTS = {
     "host_classes": {
         QUESTION: 'What does a build cost on each machine?',
         "description": "One entry per host class - the grouping "
-        "UX-186's compared fields already distinguish. "
+        "the compared fields already distinguish. "
         "Durations are never scaled across classes.",
         "items": {
             "properties": {
@@ -6111,7 +6104,7 @@ _STORE_AGGREGATE_HINTS = {
                     },
                     "description": "Present instead of `cores_busy` and "
                     "`peak_rss_bytes` when no run in this "
-                    "class carries them. UX-296: the "
+                    "class carries them. The "
                     "scalars are written beside the "
                     "Plane 2 report at capture time, so a "
                     "snapshot older than that sidecar has "
@@ -6142,7 +6135,7 @@ _STORE_AGGREGATE_HINTS = {
     "store_bytes": {
         QUESTION: "What is this store costing me?",
         RAIL: "raw",
-        "description": "What `.bga/runs` weighs. UX-300: published at "
+        "description": "What `.bga/runs` weighs. Published at "
         "the document level rather than inside `blended`, "
         "because a duration measured on two machines is "
         "two populations and a byte is a byte - a reader "
@@ -6169,7 +6162,7 @@ _STORE_AGGREGATE_HINTS = {
     },
     "refusal": {
         "description": "Why no blended figure is published, when none "
-        "is. UX-186's grammar: durations are not scaled "
+        "is. Durations are not scaled "
         "across machines, so a mixed distribution is a "
         "claim the tool declines to make on its own.",
         "properties": {
@@ -6219,7 +6212,7 @@ _STORE_HINTS = {
                     "memory of the machine this "
                     "snapshot was measured on, "
                     "as the single label "
-                    "UX-186's compared fields "
+                    "the compared fields "
                     "reduce to. The label rather "
                     "than the manifest: this row "
                     "is drawn for every snapshot "

@@ -331,8 +331,8 @@ def build_trend(rows: list[dict]) -> dict:
         ),
         'note': (
             "Transfer seconds per artifact cannot separate a slower remote from a "
-            "larger artifact: Plane 1 records no artifact size (UX-907). The rate "
-            "column can, where the capture carries host byte counters (UX-897) - "
+            "larger artifact: Plane 1 records no artifact size. The rate "
+            "column can, where the capture carries host byte counters - "
             "it is the host's whole traffic over the wall-clock the transfers "
             "occupied, so an upper bound on this build's. A capture taken with "
             "remotes ignored has no transfer at all and reports None rather than "

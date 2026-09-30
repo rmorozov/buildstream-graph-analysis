@@ -73,6 +73,11 @@ needs_browser = pytest.mark.skipif(chrome is None, reason=NO_BROWSER)
 #: which is about the rule and not about where to look next.
 EXEMPT = {"trace_query", "trace_queries"}
 
+#: `UX-1141` (styleguide §4g.2): the rule's constant and its source file
+#: are the producer's - on `data-rule`/`data-module` and in the JSON
+#: door, never in the text.
+BEHIND_THE_DOOR = {"rule.name", "rule.module"}
+
 _LOOK = """
 (() => {
   for (const box of document.querySelectorAll("section.chapter")) {
@@ -94,6 +99,8 @@ _LOOK = """
         rule: (block.querySelector("p.rule")?.textContent || "").trim(),
         observed: block.querySelector("p.rule")
           ?.getAttribute("data-observed") ?? null,
+        name: block.querySelector("p.rule")?.getAttribute("data-rule") ?? null,
+        module: block.querySelector("p.rule")?.getAttribute("data-module") ?? null,
         why: (block.querySelector("p.why")?.textContent || "").trim(),
         unpublished: (block.querySelector("p.unpublished")?.textContent
                       || "").trim(),
@@ -169,7 +176,9 @@ class TestEveryPublishedFieldReachesAReader:
                 withheld.setdefault(field, 0)
                 withheld[field] += 1
         unexpected = {
-            field: count for field, count in withheld.items() if field.split(".")[-1].rstrip("[]") not in EXEMPT
+            field: count
+            for field, count in withheld.items()
+            if field.split(".")[-1].rstrip("[]") not in EXEMPT and field not in BEHIND_THE_DOOR
         }
         assert unexpected == {}, f"{label}: provenance field(s) that reach no rendered node: {unexpected}"
 
@@ -221,11 +230,13 @@ class TestTheSectionIsAnIndexAndItsRecords:
             # claim is computed rather than gated. The module is on the
             # page either way; the name is where there is one.
             assert rule.get("module") or "", rule
-            assert rule["module"] in block["rule"], (block, rule)
+            assert block["module"] == rule["module"], (block, rule)
+            assert rule["module"] not in block["rule"], (block, rule)
             assert record["rule"].get("sentence", "") == block["why"], block
             if rule.get("name"):
                 named += 1
-                assert rule["name"] in block["rule"], (block, rule)
+                assert block["name"] == rule["name"], (block, rule)
+                assert rule["name"] not in block["rule"], (block, rule)
             else:
                 assert "No named threshold" in block["rule"], block
             if rule.get("observed_path"):

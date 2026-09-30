@@ -133,13 +133,16 @@ export function renderProvenance(provenance, options = {}) {
       span.textContent = text;
       return span;
     };
+    // `UX-1141` (§4g.2): the constant and its file are the producer's -
+    // on the attributes and in the JSON door, never in the text.
+    rule.setAttribute("data-module", provenance.rule.module ?? "");
     if (provenance.rule.name) {
-      rule.append(said(`${provenance.rule.name} `));
+      rule.append(said("Threshold "));
       const comparison = document.createElement("code");
       comparison.textContent =
         `${provenance.rule.observed_path ?? ""} `
         + `${provenance.rule.comparison ?? "="} ${provenance.rule.threshold}`;
-      rule.append(comparison, said(" in "));
+      rule.append(comparison);
     } else if (provenance.rule.observed_path) {
       // A record can publish an observed path and no threshold -
       // `confidence.run_mode present` is a rule with no number in it -
@@ -149,13 +152,10 @@ export function renderProvenance(provenance, options = {}) {
       observed.textContent =
         `${provenance.rule.observed_path} `
         + `${provenance.rule.comparison ?? ""}`.trim();
-      rule.append(observed, said(" read in "));
+      rule.append(observed);
     } else {
-      rule.append(said("No named threshold; computed in "));
+      rule.append(said("No named threshold; computed"));
     }
-    const module = document.createElement("code");
-    module.textContent = provenance.rule.module ?? "";
-    rule.append(module);
     details.append(rule);
   }
 

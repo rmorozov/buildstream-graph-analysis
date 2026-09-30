@@ -72,7 +72,7 @@ class TestPoolFromTheCalibratedKnee:
             ready_set_width=25, host_cpu_count=16, critical_path_max_jobs=8, calibrated_cores=2
         )
         assert recommendation["pool_size"] == 2
-        assert "UX-1004" in recommendation["pool_reading"]
+        assert "calibrated knee" in recommendation["pool_reading"]
 
     def test_pool_is_not_the_raw_host_cpu_count_when_a_knee_is_supplied(self):
         """UX-1005 Decision mutation: pool from `host_cpu_count` reddens

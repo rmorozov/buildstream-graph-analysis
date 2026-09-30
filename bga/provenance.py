@@ -809,7 +809,7 @@ _CLAIMS = {
         _blast_paths,
         _unconditional(
             "Published for every non-structural element something "
-            "actually depends on. Not a ranking - `UX-65`'s "
+            "actually depends on. Not a ranking - the "
             "who-depends-on-me ordering is a different claim and stays "
             "on the scheduler-bound arm - but the answer to the "
             "recipe-author's own question, which is true whichever way "
@@ -826,8 +826,8 @@ _CLAIMS = {
             "Published when the elements with the widest reach are "
             "structural kinds - a base image, a toolchain, a stack. Their "
             "dependents are the graph's shape rather than a task, which is "
-            "why UX-258 reports them here instead of ranking them as work "
-            "(the rule UX-76 already applied to criticality)."
+            "why they are reported here instead of ranked as work "
+            "(the rule criticality already applies)."
         ),
         (),
     ),
@@ -858,7 +858,7 @@ _CLAIMS = {
     "blast-radius-foundation": (
         _blast_paths,
         _unconditional(
-            "UX-683: published when the widest reach is a project-"
+            "Published when the widest reach is a project-"
             "declared foundation element - a toolchain or base image the "
             "kind-based exemption above misses, because it is an "
             "`autotools`/`manual`/`cmake` element by kind. Excluded from "
@@ -869,7 +869,7 @@ _CLAIMS = {
     "fan-in-foundation": (
         _fan_in_paths,
         _unconditional(
-            "UX-683: the fan-in mirror - a declared foundation element "
+            "The fan-in mirror - a declared foundation element "
             "has the widest closure on purpose, same rule as the blast "
             "claim above."
         ),
@@ -878,7 +878,7 @@ _CLAIMS = {
     "foundation-candidates": (
         _blast_paths,
         _unconditional(
-            "UX-683's discovery half: published when an element at or "
+            "Published when an element at or "
             "above the top p5 fan-out is neither a structural kind nor "
             "already declared foundation - the owner declares, the tool "
             "only proposes."

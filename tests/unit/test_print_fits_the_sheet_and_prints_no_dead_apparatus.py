@@ -72,18 +72,11 @@ def printed(tmp_path_factory):
 
 CASES = [(label, w) for label in (*pages.FIXTURES, *_BUILD) for w, _ in WIDTHS]
 IDS = [f"{label}-{w}" for label, w in CASES]
-#: `UX-1164` owns `macro_micro`'s distribution ticks past 390 on screen; strict, so its fix reds this mark.
-EDGE = [
-    pytest.param(case, id=i, marks=pytest.mark.xfail(strict=True, reason="UX-1164: ticks past 390"))
-    if case == ("macro_micro", 390)
-    else pytest.param(case, id=i)
-    for case, i in zip(CASES, IDS)
-]
 
 
 @needs_browser
 class TestPrintFitsTheSheetAndPrintsNoDeadApparatus:
-    @pytest.mark.parametrize("case", EDGE)
+    @pytest.mark.parametrize("case", CASES, ids=IDS)
     def test_nothing_passes_the_right_edge_of_the_sheet(self, printed, case):
         out = printed[case]
         assert not out["over"] and not out["clipped"], (

@@ -73,6 +73,12 @@ needs_browser = pytest.mark.skipif(chrome is None, reason=NO_BROWSER)
 #: which is about the rule and not about where to look next.
 EXEMPT = {"trace_query", "trace_queries"}
 
+
+def _typeset(text):
+    """`UX-1149`: the page sets a backtick span as `<code>` and `->` as `→`."""
+    return text.replace("`", "").replace("→", "->")
+
+
 _LOOK = """
 (() => {
   for (const box of document.querySelectorAll("section.chapter")) {
@@ -156,6 +162,7 @@ class TestEveryPublishedFieldReachesAReader:
         without an edit here."""
         out = browser.measure(booted[label], _LOOK, 1440, 900)
         reachable = set(out["raws"])
+        shown = _typeset(out["text"])
         withheld = {}
         for record in _records(label):
             for field, value in _leaves(record):
@@ -164,7 +171,7 @@ class TestEveryPublishedFieldReachesAReader:
                 spelled = str(value)
                 if len(spelled) < 2:
                     continue
-                if spelled in reachable or spelled in out["text"]:
+                if spelled in reachable or _typeset(spelled) in shown:
                     continue
                 withheld.setdefault(field, 0)
                 withheld[field] += 1
@@ -222,7 +229,7 @@ class TestTheSectionIsAnIndexAndItsRecords:
             # page either way; the name is where there is one.
             assert rule.get("module") or "", rule
             assert rule["module"] in block["rule"], (block, rule)
-            assert record["rule"].get("sentence", "") == block["why"], block
+            assert _typeset(record["rule"].get("sentence", "")) == _typeset(block["why"]), block
             if rule.get("name"):
                 named += 1
                 assert rule["name"] in block["rule"], (block, rule)

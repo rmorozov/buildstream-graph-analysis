@@ -18,7 +18,7 @@
 // `import` lines, and a re-export is a module it would never inline
 // (`UX-199`).
 import { served, safeStorage } from "./primitives.js";
-import { bytes, el, heading, quantity, title } from "./format.js";
+import { bytes, el, heading, quantity, title, typesetAlways } from "./format.js";
 import { handOff, deepLink, tracedSize, openTab, perfettoCanFetch,
          PERFETTO_FRIENDLY_URL } from "./perfetto.js";
 // `renderBlastTree` is *not* imported here: `views.js` draws the tree
@@ -706,6 +706,7 @@ export async function load(name, fallback = null) {
 
 async function boot() {
   const root = document.getElementById("report");
+  typesetAlways(document.body);
   try {
     const [payload, schemas, run] = await Promise.all([
       load("report"),

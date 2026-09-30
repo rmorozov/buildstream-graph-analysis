@@ -265,6 +265,15 @@ const UNIT_SUFFIX = {
   rate_per_day: /_per_day$/,
 };
 
+/** `UX-1144`: styleguide §6e.2's keyed concepts - one reader name per data key. */
+export const TERMS = {
+  t_infinity_observed: "T∞", t_infinity_us: "T∞", t_infinity_cold: "T∞ (cold)",
+  lb: "LB", lb_us: "LB", t_c: "T_C",
+  scheduling_gap_us: "Scheduling gap",
+  plane2_processes: "Plane 2 processes", cpu_coverage: "Plane 2 coverage",
+  primary: "Confidence",
+};
+
 /**
  * `UX-1141` (styleguide §4g.2): the one map from an enum value or gate
  * id the payload publishes *as a value* to the phrase a reader sees.
@@ -359,6 +368,7 @@ export function title(key, kind = null, published = false) {
   // its tail. So this returns before all three rather than skipping
   // one.
   if (published) return key;
+  if (Object.hasOwn(TERMS, key)) return TERMS[key];
   if (Object.prototype.hasOwnProperty.call(TERM_LABELS, key)) return TERM_LABELS[key];
   const suffix = UNIT_SUFFIX[kind];
   // Never trim a key down to nothing: `_us` alone is not a label.
@@ -366,7 +376,9 @@ export function title(key, kind = null, published = false) {
   const named = trimmed || key;
   // `UX-1020`: a claim id (`wait-category`) is kebab-case, not a
   // published name - the same word-join `_` already gets.
-  return named.replace(/[_-]/g, " ").replace(/^./, (c) => c.toUpperCase());
+  // The CPU floor's fields (`lb_cpu_*`) spell the floor's own name.
+  return named.replace(/[_-]/g, " ").replace(/^./, (c) => c.toUpperCase())
+    .replace(/^Lb /, "LB ");
 }
 
 /**

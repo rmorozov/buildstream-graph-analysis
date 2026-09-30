@@ -15,7 +15,7 @@
  */
 import { identify, labelFor } from "./controls.js";
 import { plural } from "./tables.js";
-import { title } from "./format.js";
+import { TERMS, title } from "./format.js";
 import {
   SVG, svg, seconds, mib, bar, OVERVIEW_SHOWN, elementAnchor,
 } from "./primitives.js";
@@ -477,7 +477,7 @@ const SOURCES = [
     // number a sample rather than a measurement - and `saving_share`
     // is `potential_saving_us` as a share of the run, which is the
     // form the decision ranks in.
-    ["cpu_coverage", "Plane 2 coverage", "share"],
+    ["cpu_coverage", TERMS.cpu_coverage, "share"],
     ["saving_share", "Worth, as a share of the run", "share"],
     // `UX-383`: the quantity beside `cores_busy`'s rate, and `UX-379`'s
     // three pressure axes. `cores_busy` says an element was busy and

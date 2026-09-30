@@ -21,7 +21,7 @@ import {
 // to take this import unaliased - the export concatenates the modules
 // into one scope and drops the `import` line, so an alias resolves to
 // a name nothing declares.
-import { childNode, heading, hintsOf, quantity, quantityAt, title } from "./format.js";
+import { TERMS, childNode, heading, hintsOf, quantity, quantityAt, title } from "./format.js";
 import {
   resolvePath, elementFacts, elementHistory, renderElementHistory,
 } from "./element.js";
@@ -720,7 +720,7 @@ export function renderDecision(payload, investigate = null, copy = null,
   split.className = "pairs opportunity";
   for (const [label, key, kind] of [
     ["Certified headroom", "certified_headroom_us", "duration_us"],
-    ["Beyond the chain", "scheduling_gap_us", "duration_us"],
+    [TERMS.scheduling_gap_us, "scheduling_gap_us", "duration_us"],
   ]) {
     const value = headline[key];
     if (typeof value !== "number") continue;

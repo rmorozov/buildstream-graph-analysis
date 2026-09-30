@@ -1418,6 +1418,31 @@ bga measured this?" names the analyzer's own software build, never
 the run - and the guard excepts that one string rather than widen
 the rule to a sense it does not name.
 
+#### 6e.2.1. Keyed concepts (UX-1144)
+
+A value the page labels on several surfaces takes one reader name,
+read off `TERMS` in `bga/viewer/format.js` (schema drawing labels
+repeat it). A data key is a `dt`'s `data-key`, a `dd`'s or waterfall
+row's `data-field` suffix, or a drawing tick's `data-mark`. Measured
+on the two-plane synthetic page before: 3 names for the floors, 3 for
+the gap, 1 name for 2 coverages.
+
+| concept | data keys | word | rejected spelling |
+|---|---|---|---|
+| the critical-path floor | `t_infinity_observed`, `t_infinity_us`, `chain` | T∞ | T∞ (observed), T infinity observed, T infinity, critical path |
+| the cold critical-path floor | `t_infinity_cold` | T∞ (cold) | T infinity cold |
+| the resource floor | `lb`, `lb_us` | LB | Lb, certified lower bound |
+| the replay makespan | `t_c` | T_C | T c |
+| wall clock beyond the critical path | `scheduling_gap_us`, `gap` | Scheduling gap | Beyond the chain, off the path |
+| the processes Plane 2 saw | `plane2_coverage.processes` | Plane 2 processes | Plane 2 coverage |
+| an element's CPU share Plane 2 attributed | `cpu_coverage` | Plane 2 coverage | — |
+| the headline confidence score | `primary` | Confidence | Primary |
+
+`tests/unit/test_one_concept_has_one_label.py` reads this table,
+collects each concept's labels by data key on the two-plane page,
+`golden` and `macro_micro`, and reds on more than one (first letter folded).
+Values - `1.00` against `100%` - are §6e's number format, not this row.
+
 **Rule 8, the keyboard journey.** A computed `:focus-visible` outline
 shows a ring exists, not that the page is operable. The guard drives
 one journey with the keyboard alone and asserts each landing: Tab to

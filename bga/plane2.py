@@ -268,7 +268,7 @@ def provenance(report: Optional[dict]) -> Optional[dict]:
         "records_embedded": embedded,
         "records": len((report or {}).get(RECORDS_KEY) or []) if embedded else 0,
         "note": (
-            "This run's Plane 2 report predates `UX-297` and embeds its "
+            "This run's Plane 2 report predates the aggregate-only format and embeds its "
             "per-process record list, which no published number reads. "
             "The aggregates below are the same either way; the file is "
             "large for a reason that is now historical."

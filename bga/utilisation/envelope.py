@@ -182,7 +182,7 @@ def compute(samples: dict, run: dict) -> dict:
             "available": False,
             "absence": "this capture has fewer than two host CPU samples - "
             "`cpu_busy_cores` is a rate over a gap, and one reading "
-            "is not a gap (`UX-675`)",
+            "is not a gap",
         }
     cores = series[-1].get("cores")
     configured = ((run.get("builders") or 0) * (run.get("native_max_jobs") or 0)) or None

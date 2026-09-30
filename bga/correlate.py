@@ -1321,7 +1321,7 @@ def compute_builder_pool_recommendation(
     safe_cap = max(1, host_cpu_count - critical_path_max_jobs) if critical_path_max_jobs else None
     if calibrated_cores:
         pool_size = min(calibrated_cores, host_cpu_count)
-        pool_reading = f"UX-1004's calibrated knee ({_count(calibrated_cores, 'effective core')})"
+        pool_reading = f"the calibrated knee ({_count(calibrated_cores, 'effective core')})"
     else:
         pool_size = host_cpu_count
         pool_reading = (
@@ -1349,8 +1349,8 @@ def compute_builder_pool_recommendation(
         'pool_size': pool_size,
         'pool_reading': pool_reading,
         'caveat': (
-            "Wide builders pay off only with admission in place (UX-1005 "
-            "tracks B/C); until then, the safe cap is the cores the "
+            "Wide builders pay off only with admission in place; "
+            "until then, the safe cap is the cores the "
             "critical-path element's own max-jobs leaves free."
         ),
     }

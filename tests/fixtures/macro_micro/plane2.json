@@ -756,7 +756,7 @@
  "cpu_time": {
   "available": true,
   "measured_processes": 663,
-  "note": "Real CPU time (getrusage utime+stime) for processes that exited normally. Processes killed by a signal or replaced by exec run no destructor and are counted as unmeasured, never as zero. This is Plane 2 only - it is not wired into Plane 1's utilisation buckets, which remain slot occupancy (UX-36).",
+  "note": "Real CPU time (getrusage utime+stime) for processes that exited normally. Processes killed by a signal or replaced by exec run no destructor and are counted as unmeasured, never as zero. This is Plane 2 only - it is not wired into Plane 1's utilisation buckets, which remain slot occupancy.",
   "per_element": {
    "app.bst": {
     "children_cpu_us": 22414691,
@@ -1182,7 +1182,7 @@
  },
  "peak_memory": {
   "available": true,
-  "note": "Peak resident set size of the single largest process in each element (getrusage ru_maxrss at exit, KiB). A per-process peak, deliberately NOT summed across processes: two processes peaking at different moments never held the sum between them. Use it as 'no single process here exceeded this', which is what UX-21's per-job memory estimate wants.",
+  "note": "Peak resident set size of the single largest process in each element (getrusage ru_maxrss at exit, KiB). A per-process peak, deliberately NOT summed across processes: two processes peaking at different moments never held the sum between them. Use it as 'no single process here exceeded this', which is what a per-job memory estimate wants.",
   "per_element": {
    "app.bst": {
     "measured": 71,
@@ -1729,14 +1729,14 @@
  "redundant_operations_coverage": {
   "excluded_element_command_blocks": 0,
   "excluded_unresolved_only": 0,
-  "note": "Each finding's `max_element_duration_s` is an upper bound on what sharing that one operation could recover, for the single worst-affected element. They are per-signature maxima over elements that ran concurrently: they must not be summed, and on a real capture their sum exceeds the build's own duration. A signature is a finding only when it ran under 2+ *resolved* elements (UX-73); processes in the unresolved attribution bucket and each element's own top-level command block are excluded, and counted above."
+  "note": "Each finding's `max_element_duration_s` is an upper bound on what sharing that one operation could recover, for the single worst-affected element. They are per-signature maxima over elements that ran concurrently: they must not be summed, and on a real capture their sum exceeds the build's own duration. A signature is a finding only when it ran under 2+ *resolved* elements; processes in the unresolved attribution bucket and each element's own top-level command block are excluded, and counted above."
  },
  "spine_policy": {
   "policy": "off",
   "sandboxes": 9,
   "spine_traced": 0
  },
- "static_binary_disclaimer": "LD_PRELOAD only affects dynamically-linked executables. Any statically-linked process invoked inside the sandbox (e.g. a musl-based toolchain, busybox, some Rust/Go tooling) ran but produced no trace entry, silently - this tool cannot detect its own absence. Treat the process list below as a lower bound, not an exhaustive trace, unless the toolchain being profiled is known to be entirely dynamically-linked (the common case for a real C/C++ gcc/clang toolchain - see docs/backlog/scenarios/UX-0011-native-build-system-profiler-tool.md's Deep Experiment Findings).",
+ "static_binary_disclaimer": "LD_PRELOAD only affects dynamically-linked executables. Any statically-linked process invoked inside the sandbox (e.g. a musl-based toolchain, busybox, some Rust/Go tooling) ran but produced no trace entry, silently - this tool cannot detect its own absence. Treat the process list below as a lower bound, not an exhaustive trace, unless the toolchain being profiled is known to be entirely dynamically-linked (the common case for a real C/C++ gcc/clang toolchain).",
  "static_census": {
   "elements_at_risk": [],
   "note": "Read from the project's own `local` sources before anything runs: an ELF executable with no PT_INTERP never invokes the dynamic linker, so LD_PRELOAD never reaches it. A binary arriving from a remote artifact cache or produced by the build is not visible here, and a staged-but-never-exec'd static binary inflates the risk count rather than the missed-process count - this bounds what Plane 2 can miss, not what it did miss.",

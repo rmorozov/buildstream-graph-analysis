@@ -192,7 +192,7 @@
         {
             "id": "joint-saving",
             "severity": "high",
-            "title": "Together, the top 3 are worth 23.1s (50% of the build) - more than the 16.1s they are worth one at a time - codegen.bst pays off only once core.bst is fixed, so work them in the order listed",
+            "title": "Together, the top 3 are worth 23.1s (50% of the build) - more than the 16.1s alone: codegen.bst pays off after core.bst",
             "detail": [],
             "elements": [
                 "core.bst",
@@ -206,7 +206,7 @@
                 "relation": "compound"
             },
             "reader": "local-optimizer",
-            "copy_text": "BGA finding: Together, the top 3 are worth 23.1s (50% of the build) - more than the 16.1s they are worth one at a time - codegen.bst pays off only once core.bst is fixed, so work them in the order listed\n  joint_saving_us 23.1s\n  sum_of_individual_us 16.1s\n  savings_add False\n  relation compound\n  Elements: core.bst, codegen.bst, lib-b.bst\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
+            "copy_text": "BGA finding: Together, the top 3 are worth 23.1s (50% of the build) - more than the 16.1s alone: codegen.bst pays off after core.bst\n  joint_saving_us 23.1s\n  sum_of_individual_us 16.1s\n  savings_add False\n  relation compound\n  Elements: core.bst, codegen.bst, lib-b.bst\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
             "trace_query": "waited-on-flow"
         },
         {
@@ -1924,7 +1924,7 @@
                 "threshold": null,
                 "comparison": "present",
                 "observed_path": null,
-                "sentence": "Published for every non-structural element something actually depends on. Not a ranking - `UX-65`'s who-depends-on-me ordering is a different claim and stays on the scheduler-bound arm - but the answer to the recipe-author's own question, which is true whichever way the build is bound. Elements with no dependents are left out rather than listed at zero: a row reading \"0 downstream\" answers the question with a number meaning nobody.",
+                "sentence": "Published for every non-structural element something actually depends on. Not a ranking - the who-depends-on-me ordering is a different claim and stays on the scheduler-bound arm - but the answer to the recipe-author's own question, which is true whichever way the build is bound. Elements with no dependents are left out rather than listed at zero: a row reading \"0 downstream\" answers the question with a number meaning nobody.",
                 "module": "bga/findings.py"
             },
             "trace_query": "dependency-wait",
@@ -1947,7 +1947,7 @@
                 "threshold": null,
                 "comparison": "present",
                 "observed_path": null,
-                "sentence": "Published when the elements with the widest reach are structural kinds - a base image, a toolchain, a stack. Their dependents are the graph's shape rather than a task, which is why UX-258 reports them here instead of ranking them as work (the rule UX-76 already applied to criticality).",
+                "sentence": "Published when the elements with the widest reach are structural kinds - a base image, a toolchain, a stack. Their dependents are the graph's shape rather than a task, which is why they are reported here instead of ranked as work (the rule criticality already applies).",
                 "module": "bga/findings.py"
             },
             "trace_query": "dependency-wait",

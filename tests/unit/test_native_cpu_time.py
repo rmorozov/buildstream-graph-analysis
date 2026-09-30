@@ -57,7 +57,7 @@ def test_pre_ux45_trace_reports_unavailable_not_zero():
 
     assert report["cpu_time"]["available"] is False
     assert report["cpu_time"]["total_cpu_us"] == 0
-    assert "before UX-45" in report["cpu_time"]["note"]
+    assert "predates CPU accounting" in report["cpu_time"]["note"]
 
 
 def test_pre_ux45_trace_still_parses_everything_else():

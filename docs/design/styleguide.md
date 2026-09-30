@@ -617,7 +617,8 @@ the placeholder `> 10`.
   or fewer no self-built strip is drawn: the rows are the values —
   filtered to them too (`UX-1170`). A bound over a filter reads
   `25 of 112 matched, of 114`; a threshold that empties the table hides
-  the copy tools as the text box does.
+  the copy tools as the text box does. A name that stands alone in the
+  rail or the accessibility tree may repeat its cell's label (`UX-1177`).
 
 Sorting is exempt from all of this: it costs no ink and helps at every
 length.
@@ -1430,7 +1431,7 @@ distinct margin/padding/gap lengths                23 in style.css
 | 10 | **Adaptivity** | two size classes, regular (≥ 60rem) and compact; the budgets (§3c, §3e) are measured in both, and compact draws no empty chrome; in compact a term stacks above its value, a chip is one line, and only the header sticks (`UX-1145`) | budgets at 1440x900 only; an empty band under "Sections" at 390px | 2 | the volume guard gains a compact column |
 | 11 | **Search** | find-in-page reaches folded content: a folded chapter's sections are `hidden="until-found"`, and the reveal goes through the same state setter as the chapter's control | 5 of 6 chapters are `display: none` to Ctrl+F | 1 | find, fragments, controls and print, below |
 | 12 | **Clarity** | an absence is one sentence: what is missing, why, and the command that fills it; no punctuation around an empty value | the header's orphan "—" with the reader "anyone" | 2 | booted: no separator beside an empty node |
-| 13 | **Progressive disclosure** | one glyph pair, ▸ closed and ▾ open, at the start of the label; the label names the content and its count first; a nested fold then adds §3a.1's depth after it ("inputs: 2 rows, 1 level"), never the depth alone | "1 level, 2 rows" | 2 | booted: one glyph pair; no label is depth and count alone |
+| 13 | **Progressive disclosure** | one glyph pair, ▸ closed and ▾ open, at the start of the label; the label names the content and its count first; a nested fold then adds §3a.1's depth after it ("inputs: 2 rows, 1 level"), never the depth alone; a fold name two rows share takes its row ("Elements · Level 3"), since the rail, the tree and Jump read it alone - it may repeat its cell's label (`UX-1177`) | "1 level, 2 rows" | 2 | booted: one glyph pair; no label is depth and count alone (`test_one_disclosure_glyph_pair.py`); level folds read apart (`test_jump_finds_what_the_rail_lists.py`) |
 
 **Rule 1, the outline.** `chapters.js` makes both the chapter title and
 the section title an `h2` today, and the viewer's CSS and JS select on

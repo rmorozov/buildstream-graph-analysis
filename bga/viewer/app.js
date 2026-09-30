@@ -208,7 +208,7 @@ export function foldOnNarrow(nav, doc) {
 }
 
 export function wireJumpBox(nav, root, payload, context = {}) {
-  const targets = jumpTargets(root, payload);
+  const targets = jumpTargets(root, payload, nav);
   const box = document.createElement("input");
   box.setAttribute("type", "search");
   box.setAttribute("id", "jump");
@@ -228,6 +228,7 @@ export function wireJumpBox(nav, root, payload, context = {}) {
   box.setAttribute("aria-describedby", "jump-none");
 
   const go = (target) => {
+    if (target.kind === "rail") { target.link.click(); return; }
     const escaped = CSS?.escape?.(target.key) ?? target.key;
     const node = target.kind === "section"
       ? document.getElementById(target.key)

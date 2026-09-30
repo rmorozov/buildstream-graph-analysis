@@ -971,7 +971,12 @@ function elementPicker(section, make, options) {
     // reader still typing, not a request to substitute nothing.
     if (population.includes(search.value)) applyElement(section, current = search.value);
     // `UX-1170`: a box that matches nothing says so, and what the queries still ask about.
-    const says = hits ? told
+    // `UX-1177`: a partial uid several elements share says how many it matched.
+    const typed = search.value.trim();
+    const says = hits > 1 && typed && !population.includes(search.value)
+      ? `${hits.toLocaleString("en-US")} elements match "${typed}"; the box offers the first `
+        + `${Math.min(hits, PICKER_SHOWN)}, and the queries still ask about ${current}.`
+      : hits ? told
       : `Nothing in this run's ${population.length} elements matches "${search.value.trim()}"; `
         + `the queries still ask about ${current}.`;
     if (note.textContent !== says) note.textContent = says;

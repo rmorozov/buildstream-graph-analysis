@@ -808,6 +808,8 @@ const LAND_SETTLE_FRAME_CAP = 12;
 // `at` (`UX-1171`): the viewport top to land `node` on, in place of its scroll margin.
 export function revealAndLand(node, behavior, at) {
   const box = revealChapter(node);
+  // `UX-1177`: a fold an anchor names is opened, with every fold around it.
+  for (let fold = node?.closest?.("details"); fold; fold = fold.parentElement?.closest?.("details")) fold.open = true;
   const view = node?.ownerDocument?.defaultView ?? globalThis;
   let landed = null;
   let landedAt = null;

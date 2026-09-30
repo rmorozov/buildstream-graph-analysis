@@ -1124,6 +1124,8 @@ MEDIUM = (
     "tests/unit/test_a_key_column_matches_exactly.py",  #  7.2s
     # `UX-1176`: 7.23 / 7.51s.
     "tests/unit/test_a_status_is_announced.py",  #  7.4s
+    # `UX-1177`: 2.63 / 2.70s.
+    "tests/unit/test_jump_finds_what_the_rail_lists.py",  #  2.7s
     # Round 147, tiered on the merged tree: three single-process runs
     # alone each (setup+call+teardown).
     # `UX-1083`: 4.17 / 4.08 / 4.23s.

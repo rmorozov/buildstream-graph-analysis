@@ -902,13 +902,18 @@ export function scrollspy(root, nav, { observer } = {}) {
  * anything - `UX-205` is where finding things *inside* a section
  * lives.
  */
-export function jumpTargets(root, payload) {
+export function jumpTargets(root, payload, rail = null) {
   // `UX-648`: the same label authority the rail asks, so rail, palette
   // and heading carry one string per section.
   const targets = anchor(root).map((key) => ({
     kind: "section", key,
     text: sectionLabel(root.querySelector?.(`[data-section="${key}"]`), key),
   }));
+  // `UX-1177`: and every fold and preset the rail lists, by its entry's text; a hit presses the entry.
+  for (const link of rail?.querySelectorAll?.("a[data-toc-sub], a[data-toc-view]") ?? []) {
+    const text = String(link.textContent ?? "").trim();
+    if (text) targets.push({ kind: "rail", key: link.getAttribute("href"), text, link });
+  }
 
   const seen = new Set();
   for (const node of root.querySelectorAll?.("[data-element]") ?? []) {
@@ -998,7 +1003,7 @@ export function paletteResults(targets, query, payload, context = {}, limit = 8)
   const hits = matches(targets, query, limit);
   const elements = hits.filter((hit) => hit.kind === "element")
     .map((hit) => ({ ...hit, facts: paletteFacts(payload, hit.key) }));
-  const sections = hits.filter((hit) => hit.kind === "section");
+  const sections = hits.filter((hit) => hit.kind === "section" || hit.kind === "rail");
   const binaries = hits.filter((hit) => hit.kind === "binary");
 
   const actions = [];

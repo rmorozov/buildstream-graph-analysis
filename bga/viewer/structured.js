@@ -687,6 +687,20 @@ export function buildTable(key, rows, hint = {}, node = undefined,
     body.append(tr);
   }
   table.append(body);
+  // `UX-1177`: a fold name two record rows share takes its row, so it reads alone in the rail, the tree and Jump.
+  const shared = specs.map(() => []);
+  for (const tr of body.children) {
+    const first = tr.children[0];
+    if (!first || first.getAttribute("data-column") === "key") continue;
+    [...tr.children].forEach((td, at) => {
+      const fold = at ? [...td.children].find((node) => node.className === "map") : null;
+      const name = [...(fold?.children[0]?.children ?? [])].find((node) => node.className === "map-name");
+      if (name) shared[at].push([name, first.getAttribute("data-raw") || first.textContent]);
+    });
+  }
+  for (const [name, row] of shared.filter((names) => names.length > 1).flat()) {
+    name.textContent += ` \u00b7 ${specs[0].title} ${row}`;
+  }
   sortable(table, specs);
   // UX-205: the tools. Sorting alone cannot reduce 1,202 rows to the
   // twelve that matter, and the page renders every row of every array
@@ -887,7 +901,13 @@ export function interrogable(table, specs, total, depth = 0) {
   // control's `name` and its bookmarked parameter say the same word.
   const key = table.getAttribute?.("data-table") ?? "table";
   // `UX-1162`: each tool's accessible name ends with its table's.
-  const named = key.split(".").map((part) => title(part, guessQuantity(part))).join(" ");
+  // `UX-1177`: a phrase - "levels.1.elements" reads "Level 1 elements"; a published name keeps its case.
+  const parts = key.split(".");
+  const named = parts.map((part, i) => {
+    const said = title(part, guessQuantity(part));
+    const word = i && said !== part ? said.toLowerCase() : said;
+    return /^\d+$/.test(parts[i + 1] ?? "") ? word.replace(/s$/, "") : word;
+  }).join(" ");
   // `UX-1163`: at rest `Copy N rows` is the count; the badge says `N of M`.
   const rest = badgeText(total, total);
   // UX-1169: a live region, so a typist hears the count the filter leaves; `UX-1176`: mounted empty at rest.

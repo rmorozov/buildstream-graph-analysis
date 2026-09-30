@@ -1115,6 +1115,8 @@ MEDIUM = (
     "tests/unit/test_a_column_is_named_for_its_field.py",  #  7.0s
     # `UX-1186`: 5.21 / 5.08s.
     "tests/unit/test_a_population_key_is_declared.py",  #  5.2s
+    # `UX-1192`: 8.38 / 8.49 / 9.43s.
+    "tests/unit/test_a_mark_says_its_value.py",  #  8.5s
     # Round 147, tiered on the merged tree: three single-process runs
     # alone each (setup+call+teardown).
     # `UX-1083`: 4.17 / 4.08 / 4.23s.

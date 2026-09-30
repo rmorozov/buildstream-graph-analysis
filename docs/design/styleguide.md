@@ -46,7 +46,7 @@ listed under its topic as `§6e.N`; since round 142 every one is binding.
 | | §2e | a ranked map is a sortable table, not a drawing | binding |
 | | §2f | a distribution's table twin has one row per published mark | binding |
 | | §6 | a drawing carries its sentence, then the drawing, then its `n` | binding |
-| | §6e.9 | a drawing's accessible name is its sentence, with a route to its values | binding |
+| | §6e.9 | a drawing's accessible name is its sentence, with a route to its values; a mark says its value, a strip names its outliers | binding |
 | **Tables and folds** | §3 | tables open bounded, numbers right, one tool row, folds labeled with a count | binding |
 | | §3a | depth is announced; deeper than one level opens in table focus | binding |
 | | §3d | table tools appear at the row cap; a one-value column is a sentence; the tools say the count once (`UX-1163`) | binding |
@@ -1550,7 +1550,12 @@ comparison band and the store trend, have no twin named here, so the
 row that lands this rule draws one for each. The guard asserts, per
 `svg[role=img]`, a non-empty name and a route that resolves to a node
 carrying every published mark with its label - a node the accessibility
-tree exposes, never a `hidden` one (`UX-1169`).
+tree exposes, never a `hidden` one (`UX-1169`). A mark says its own
+value on hover: every mark carries a `<title>` with its value, and a
+sparkline gives every point one, not only the points it dots. A strip
+names its outliers: past 10x its p90, the rest scale to a break at 90%
+of its width and the max sits at the edge, named by its row where the
+strip is a column's (`UX-1192`).
 
 **Rule 11, the mechanism.** A `hidden="until-found"` element that CSS
 also gives `display: none` is not revealed by find

@@ -25,7 +25,7 @@ import { chapters } from "./chapters.js";
 import { renderProvenance } from "./decision.js";
 import { GRADE_EXHIBIT, decomposition, interval, strip } from "./drawings.js";
 import { resolvePath } from "./element.js";
-import { COLUMNS, DECOMPOSITION, DISTRIBUTION, INLINE, INTERVAL, KEYED_BY, KEYED_BY_TASK_UID, QUANTITY, SERIES, SEVERITY, attachBlockDoor, bytes, childNode, cssId, describedTerm, el, guessQuantity, heading, hintsOf, keyAsShown, quantity, quantityFor, readerLabel, sectionHead, spoken, TERMS, title } from "./format.js";
+import { COLUMNS, DECOMPOSITION, DISTRIBUTION, INLINE, INTERVAL, KEYED_BY, KEYED_BY_TASK_UID, QUANTITY, SERIES, SEVERITY, attachBlockDoor, bytes, childNode, cssId, describedTerm, el, guessQuantity, heading, hintsOf, keyAsShown, quantity, quantityFor, readerLabel, sectionHead, spoken, taskUid, TERMS, title } from "./format.js";
 import { matches } from "./nav.js";
 import { handOff } from "./perfetto.js";
 import { findingAnchor, plainValue, served } from "./primitives.js";
@@ -524,6 +524,11 @@ function mapSectionLabels(box, key, hint, node) {
                      ` ${shown.qualifier}`));
     }
     if (inspect) cell.append(inspect);
+  }
+  // UX-1192: the strip's outlier is named as its row now reads.
+  for (const tip of taskUidKeyed ? box.querySelectorAll?.("[data-outlier] title") ?? [] : []) {
+    const raw = tip.parentNode.getAttribute("data-outlier");
+    tip.textContent = tip.textContent.replace(raw, taskUid(raw).element);
   }
   return box;
 }

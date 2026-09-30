@@ -244,14 +244,16 @@ export function distributionStrip(table, specs, total, few = false, rows) {
   // The column key, not `cssId`: that normalises an *element uid* into
   // an anchor, and a column key is already a schema identifier.
   // Over every row the filter keeps, not the shown ones: `UX-526`, `UX-1158`.
-  const raw = columnCells(table, spec.key, rows)
-    .map((td) => Number(td.getAttribute("data-raw")))
-    .filter((n) => Number.isFinite(n));
+  const cells = columnCells(table, spec.key, rows)
+    .filter((td) => Number.isFinite(Number(td.getAttribute("data-raw"))));
+  const raw = cells.map((td) => Number(td.getAttribute("data-raw")));
   if (!raw.length) return null;
 
   const name = spec.title ?? title(spec.key, spec.quantity);
   const drawn = columnStrip(raw, {
     grade: GRADE_ANNOTATION, name,
+    names: cells.map((td) => td.closest?.("tr")).map((tr) =>
+      tr?.getAttribute("data-element") ?? tr?.cells?.[0]?.textContent),
     format: (n) => quantity(n, spec.quantity),
     label: name,
     // `UX-1165`: filtered, the sentence counts K of M; the label stays the column.

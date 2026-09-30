@@ -126,7 +126,9 @@ import skip_reasons
 #: `test_a_column_is_named_for_its_field.py`, same form again.
 #: `UX-1186` argues **one** more, to 82:
 #: `test_a_population_key_is_declared.py`, same form again.
-UNRESOLVABLE = 82
+#: `UX-1192` argues **one** more, to 83:
+#: `test_a_mark_says_its_value.py`, same form again.
+UNRESOLVABLE = 83
 
 
 def test_every_declared_skip_reason_is_known():

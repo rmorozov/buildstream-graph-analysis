@@ -281,7 +281,9 @@ export function collapsible(root, { document: doc, storage,
     button.setAttribute("aria-label", `Fold ${named}`);
     // A finding card names its own; a nested section comes later and names its own over these.
     for (const door of section.querySelectorAll?.(".describe") ?? []) {
-      if (!door.closest("article")) door.setAttribute("aria-label", `What these mean: ${named}`);
+      // A record's door inside a pair also names the term it sits under.
+      const term = door.closest?.("dd")?.previousElementSibling?.textContent?.trim();
+      if (!door.closest("article")) door.setAttribute("aria-label", `What these mean: ${named}${term ? ` › ${term}` : ""}`);
     }
     button.setAttribute("aria-expanded", String(!collapsed.has(key)));
     button.setAttribute("data-collapse", key);

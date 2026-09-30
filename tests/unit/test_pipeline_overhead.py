@@ -289,7 +289,7 @@ def test_text_report_includes_pipeline_overhead_section(result_with_overhead):
     assert "Pipeline Overhead (not attributable to individual elements):" in output
     assert "Resolving elements" in output
     assert "Query cache" in output
-    assert "Total: 0.01s (70.0% of total duration)" in output
+    assert "Total: 7 ms (70.0% of total duration)" in output
 
 
 def test_text_report_omits_section_when_no_overhead_present(result_without_overhead):

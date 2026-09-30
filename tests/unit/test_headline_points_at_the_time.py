@@ -311,7 +311,7 @@ def test_the_joint_saving_of_the_recommended_set_is_stated():
     leave the reader to guess whether they compose."""
     text = _key_findings(_with_outlook())
 
-    assert "2605.8s (73% of the build)" in text
+    assert "43.4 min (72.6% of the build)" in text
     assert "exactly the sum" in text
 
 
@@ -333,8 +333,8 @@ def test_a_set_whose_savings_do_not_add_says_so():
 def test_the_horizon_is_shown_with_what_the_build_drops_to():
     text = _key_findings(_with_outlook())
 
-    assert "components/_private/cmake-stage1.bst (2041s)" in text
-    assert "components/doxygen.bst (1005s)" in text
+    assert "components/_private/cmake-stage1.bst (34.0 min)" in text
+    assert "components/doxygen.bst (16.7 min)" in text
 
 
 def test_the_latent_heavies_are_named():
@@ -342,7 +342,7 @@ def test_the_latent_heavies_are_named():
     the build, and they appear in no other ranking."""
     text = _key_findings(_with_outlook())
 
-    assert "components/_private/git-minimal.bst (548s)" in text
+    assert "components/_private/git-minimal.bst (9.1 min)" in text
     assert "worth nothing to fix today" in text
 
 

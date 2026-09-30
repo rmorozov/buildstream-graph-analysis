@@ -41,6 +41,7 @@ from typing import Any, Optional
 
 from . import findings as _findings
 from . import schemas as _schemas
+from . import shown as qty
 from .cache_effectiveness import HEALTHY_HIT_RATIO, POOR_HIT_RATIO, TRANSFER_SHARE_NOTABLE
 
 # The module every threshold below is defined in, published so a record
@@ -339,10 +340,10 @@ def _diagnosis_rule(claim, document):
         _findings.CHAIN_BOUND_RATIO,
         fired,
         "headline.chain_share",
-        f"The critical path is {ratio:.1%} of the task horizon (the span "
+        f"The critical path is {qty.share(ratio)} of the task horizon (the span "
         f"from the first task's start to the last one's finish, "
         f"excluding BuildStream's own startup), {above_or_below} the "
-        f"{_findings.CHAIN_BOUND_RATIO:.0%} line at which the chain "
+        f"{qty.share(_findings.CHAIN_BOUND_RATIO)} line at which the chain "
         f"rather than the scheduler is called the constraint, so this "
         f"build is {label}.",
     )
@@ -355,7 +356,7 @@ def _wait_category_rule(claim, document):
         _findings.OPPORTUNITY_FLOOR_PCT / 100,
         ">=",
         None,
-        f"The largest non-execution category is {share:.1%} of wall-clock, "
+        f"The largest non-execution category is {qty.share(share)} of wall-clock, "
         f"at or above the {_findings.OPPORTUNITY_FLOOR_PCT:.0f}% floor below "
         f"which the largest of the remainder is rounding rather than an "
         f"opportunity."
@@ -389,8 +390,8 @@ def _cache_hit_rule(claim, document):
         [POOR_HIT_RATIO, HEALTHY_HIT_RATIO],
         "banded",
         "cache.hit_share",
-        f"A {ratio:.0%} hit ratio is {band} "
-        f"({POOR_HIT_RATIO:.0%}/{HEALTHY_HIT_RATIO:.0%}), which is what sets "
+        f"A {qty.share(ratio)} hit ratio is {band} "
+        f"({qty.share(POOR_HIT_RATIO)}/{qty.share(HEALTHY_HIT_RATIO)}), which is what sets "
         f"this finding's severity.",
         module=CACHE_RULE_MODULE,
     )
@@ -438,8 +439,8 @@ def _mesh_rule(claim, document):
         _findings.MESH_ZERO_SLACK_SHARE,
         ">=",
         "elements.zero_slack_share",
-        f"{density:.0%} of elements have zero slack, at or above the "
-        f"{_findings.MESH_ZERO_SLACK_SHARE:.0%} at which the graph is called "
+        f"{qty.share(density)} of elements have zero slack, at or above the "
+        f"{qty.share(_findings.MESH_ZERO_SLACK_SHARE)} at which the graph is called "
         f"a mesh rather than a chain."
         if isinstance(density, (int, float))
         else "The zero-slack share cleared the mesh threshold.",
@@ -485,7 +486,7 @@ def _chain_rule(claim, document):
         _findings.MESH_ZERO_SLACK_SHARE,
         ">=",
         "elements.zero_slack_share",
-        f"{density:.0%} of elements have zero slack and none is off the critical path, so the graph is one chain."
+        f"{qty.share(density)} of elements have zero slack and none is off the critical path, so the graph is one chain."
         if isinstance(density, (int, float))
         else "The zero-slack share cleared the threshold with nothing off the critical path.",
     )

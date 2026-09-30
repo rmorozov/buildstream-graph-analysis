@@ -61,7 +61,7 @@ class TestTheCriticalPathComesFirst:
         )
         assert steps[0]["id"] == "shorten-what-the-build-waits-for", steps
         assert "slow.bst" in steps[0]["reason"]
-        assert "60.0s" in steps[0]["reason"]
+        assert "60.0 s" in steps[0]["reason"]
         assert steps[1]["id"] == "blast-the-top-element", steps
 
     def test_it_names_the_longest_not_the_first_on_the_path(self):

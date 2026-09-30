@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Optional
 
 from . import hostinfo, progress
+from . import shown as qty
 from .attribution.blame_chain import BlameChainAnalyzer
 from .cache_effectiveness import compute_cache_accounting
 from .diagnostics import analyze_diagnostics
@@ -1392,7 +1393,7 @@ class BuildEfficiencyAnalyzer:
             "tasks": sorted(erased),
             "note": (
                 f"{plural(len(elements), 'element')} ran for less than half this capture's "
-                f"{epsilon_us} us resolution, so every duration and share computed for them "
+                f"{qty.duration(epsilon_us)} resolution, so every duration and share computed for them "
                 f"is published as zero. They are unmeasurable at this epsilon, not instantaneous."
             ),
         }

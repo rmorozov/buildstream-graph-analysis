@@ -213,7 +213,7 @@ def test_a_group_header_carries_the_impact_the_findings_no_longer_do():
         ],
     )
     assert header == (
-        "lib-a.bst, lib-b.bst (2 elements, 6-9% of the critical path each, 2.0-3.0s apiece, 5.0s together):"
+        "lib-a.bst, lib-b.bst (2 elements, 6-9% of the critical path each, 2.0-3.0 s apiece, 5.0 s together):"
     )
 
 

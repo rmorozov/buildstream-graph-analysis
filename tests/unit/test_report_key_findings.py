@@ -249,7 +249,7 @@ def test_fully_packed_high_confidence_run_scores_high_with_no_caveat():
     assert result.confidence["primary"] >= 0.8
     output = format_text(result)
     key_findings_section = output.split("Certified Floors:")[0]
-    assert "Efficiency score: 1.00 (scheduling is near the certified floor for this graph" in key_findings_section
+    assert "Efficiency score: 100.0% (scheduling is near the certified floor for this graph" in key_findings_section
     assert "low-confidence" not in key_findings_section
 
 

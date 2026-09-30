@@ -4,6 +4,7 @@ from typing import Optional
 
 from .. import findings as findings_mod
 from .. import provenance, schemas, sources
+from .. import shown as qty
 from ..findings import compute_findings, compute_headline, compute_next_steps, render_findings
 from ..floors.cpu import ASSUMPTIONS as cpu_floor_assumptions
 from ..ingest.models import AnalysisResult
@@ -415,7 +416,7 @@ def _format_timestamp_resolution(result: AnalysisResult) -> list[str]:
         return []
     share = (agreement.get('material_share') or 0.05) * 100
     lines = [
-        f"  Duration resolution: ±{resolution / US_PER_S:.2f}s, measured - each task's length "
+        f"  Duration resolution: ±{qty.duration(resolution)}, measured - each task's length "
         f"is in this capture twice (the wrapped log's own timestamps, stamped when "
         f"the wrapper read each line, against BuildStream's own elapsed) and "
         f"{plural(agreement['tasks_compared'], 'task')} were compared",
@@ -424,7 +425,7 @@ def _format_timestamp_resolution(result: AnalysisResult) -> list[str]:
         lines.append(
             f"    that is more than {share:.0f}% of the duration for "
             f"{material} of {plural(agreement.get('tasks_measured', material), 'measured task')} - "
-            f"the shortest is {agreement['shortest_task_us'] / US_PER_S:.2f}s"
+            f"the shortest is {qty.duration(agreement['shortest_task_us'])}"
         )
     if provably_short:
         worst = (agreement.get('shorter_than_bst') or [{}])[0]
@@ -476,9 +477,9 @@ def _format_pipeline_overhead(result: AnalysisResult) -> list[str]:
     total_us = overhead.get('total_us', 0)
     fraction = overhead.get('fraction_of_horizon')
     if fraction is not None:
-        lines.append(f"  Total: {total_us / 1e6:.2f}s ({fraction * 100:.1f}% of total duration)")
+        lines.append(f"  Total: {qty.duration(total_us)} ({qty.share(fraction)} of total duration)")
     else:
-        lines.append(f"  Total: {total_us / 1e6:.2f}s")
+        lines.append(f"  Total: {qty.duration(total_us)}")
     lines.append("")
     return lines
 
@@ -610,7 +611,7 @@ def _format_blast_ranking(signals: dict) -> list[str]:
             continue
         cost = entry.get('weighted_duration_us') or 0
         kind = entry.get('element_kind') or 'unknown'
-        suffix = f", {cost / 1e6:.1f}s of rebuilding below it" if cost else ""
+        suffix = f", {qty.duration(cost)} of rebuilding below it" if cost else ""
         assembles = "" if sources.is_building_kind(kind) else " - assembles, does not build"
         lines.append(f"    {uid} ({kind}): {entry.get('downstream_count', 0)} downstream{suffix}{assembles}")
     return lines
@@ -707,12 +708,12 @@ def _render_floors_section(result: AnalysisResult, section, by_kind, full_sectio
         t_inf = floors.get('t_infinity_observed') or floors.get('t_infinity_observed_us', 0)
         lb_val = floors.get('lb') or floors.get('lb_us', 0)
         headroom = floors.get('certified_headroom') or floors.get('certified_headroom_us', 0)
-        lines.append(f"  T∞ (observed critical path): {t_inf / 1e6:.2f}s")
-        lines.append(f"  LB (resource lower bound):   {lb_val / 1e6:.2f}s")
-        lines.append(f"  Certified Headroom:          {headroom / 1e6:.2f}s")
+        lines.append(f"  T∞ (observed critical path): {qty.duration(t_inf)}")
+        lines.append(f"  LB (resource lower bound):   {qty.duration(lb_val)}")
+        lines.append(f"  Certified Headroom:          {qty.duration(headroom)}")
         t_replay = floors.get('t_c') or floors.get('t_replay_us')
         if t_replay is not None:
-            lines.append(f"  T_C (replay makespan):       {t_replay / 1e6:.2f}s")
+            lines.append(f"  T_C (replay makespan):       {qty.duration(t_replay)}")
         efficiency_score = floors.get('efficiency_score')
         if efficiency_score is not None:
             lines.append(
@@ -737,7 +738,7 @@ def _render_floors_section(result: AnalysisResult, section, by_kind, full_sectio
             coverage = floors.get('lb_cpu_coverage')
             share = f", coverage {coverage:.2f}" if coverage is not None else ""
             lines.append(
-                f"  LB_cpu (CPU over cores):     {lb_cpu_us / 1e6:.2f}s "
+                f"  LB_cpu (CPU over cores):     {qty.duration(lb_cpu_us)} "
                 f"({floors.get('lb_cpu_governing_cores')} cores from "
                 f"{floors.get('lb_cpu_cores_source')}{share})" + (" - binding" if floors.get('lb_cpu_binds') else "")
             )
@@ -745,7 +746,7 @@ def _render_floors_section(result: AnalysisResult, section, by_kind, full_sectio
                 lines.append(f"    assumes: {sentence}")
         if floors.get('t_infinity_cold') is not None:
             partial_note = " (partial, confidence=low)" if floors.get('cold_partial') else ""
-            lines.append(f"  T∞,cold (advisory):          {floors['t_infinity_cold'] / 1e6:.2f}s{partial_note}")
+            lines.append(f"  T∞,cold (advisory):          {qty.duration(floors['t_infinity_cold'])}{partial_note}")
         # P2-06: per-tier duration-source breakdown for the cold critical
         # path specifically - shown whenever cold analysis was attempted
         # at all (including the "unavailable" case, where it's the
@@ -788,9 +789,9 @@ def _render_replay_section(result: AnalysisResult, section, by_kind, full_sectio
         t_replay = result.floors.get('t_c')
         model_slack = result.floors.get('model_slack')
         if t_replay is not None:
-            lines.append(f"  T_C (replay makespan): {t_replay / 1e6:.2f}s")
+            lines.append(f"  T_C (replay makespan): {qty.duration(t_replay)}")
         if model_slack is not None:
-            lines.append(f"  Model Slack (T_C - LB): {model_slack / 1e6:.2f}s")
+            lines.append(f"  Model Slack (T_C - LB): {qty.duration(model_slack)}")
         lines.append("")
     return lines
 
@@ -1088,8 +1089,8 @@ def _render_structural_sensitivity(sensitivity: dict) -> list[str]:
         ceiling = f"{speedup:.2f}x" if speedup is not None else "unbounded (every element is on the critical path)"
         lines.append(
             f"  Top Improvement Opportunities (critical path "
-            f"{critical_path_us / 1e6:.2f}s; structural ceiling "
-            f"{ceiling}, i.e. up to {improvable_us / 1e6:.2f}s off it "
+            f"{qty.duration(critical_path_us)}; structural ceiling "
+            f"{ceiling}, i.e. up to {qty.duration(improvable_us)} off it "
             f"if every critical-path element were free):"
         )
         # `UX-343`: rows with named fields. The saving is read
@@ -1105,7 +1106,7 @@ def _render_structural_sensitivity(sensitivity: dict) -> list[str]:
             else:
                 key, score = row[0], row[1]
                 saving_us = score * critical_path_us
-            lines.append(f"    - {key}: up to {saving_us / 1e6:.2f}s off the finish ({score * 100:.1f}%)")
+            lines.append(f"    - {key}: up to {qty.duration(saving_us)} off the finish ({score * 100:.1f}%)")
         lines.append(
             "    (graph-only upper bound, not a target: each saving is capped "
             "where the next path becomes critical, and the savings are not "
@@ -1152,10 +1153,10 @@ def _render_structural_batch_opportunities(batch_opportunities: dict) -> list[st
         for group in batch_groups:
             lines.append(
                 f"    - {', '.join(group['elements'])}: fixing all together -> "
-                f"makespan {group['baseline_makespan_us'] / 1e6:.2f}s -> "
-                f"{group['combined_makespan_us'] / 1e6:.2f}s "
-                f"(saves {group['combined_savings_us'] / 1e6:.2f}s combined, "
-                f"vs. {', '.join(f'{k}={v / 1e6:.2f}s' for k, v in group['individual_savings_us'].items())} fixed alone)"
+                f"makespan {qty.duration(group['baseline_makespan_us'])} -> "
+                f"{qty.duration(group['combined_makespan_us'])} "
+                f"(saves {qty.duration(group['combined_savings_us'])} combined, "
+                f"vs. {', '.join(f'{k}={qty.duration(v)}' for k, v in group['individual_savings_us'].items())} fixed alone)"
             )
     omitted_zero_savings_groups = batch_opportunities.get('omitted_zero_savings_groups') or []
     if omitted_zero_savings_groups:
@@ -1638,7 +1639,7 @@ def _format_invalidation_roots(churn: dict) -> list[str]:
             f"  Invalidated at {root['element_uid']}: its cache key changed "
             f"({root['baseline_cache_key'][:8]} -> "
             f"{root['candidate_cache_key'][:8]}){downstream}, "
-            f"{total_us / 1e6:.1f}s of rebuilding in total. Nothing it depends on "
+            f"{qty.duration(total_us)} of rebuilding in total. Nothing it depends on "
             f"changed, so the change starts here"
         )
     return lines
@@ -1795,8 +1796,8 @@ def format_compare_text(comparison) -> str:
         more = f" (+{len(marginal['added_elements']) - 4} more)" if len(marginal['added_elements']) > 4 else ""
         lines.append(
             f"  New this change: {added}{more} - "
-            f"{marginal['added_work_us'] / 1e6:.1f}s of work added, "
-            f"{marginal['added_critical_path_us'] / 1e6:.1f}s of it on the critical "
+            f"{qty.duration(marginal['added_work_us'])} of work added, "
+            f"{qty.duration(marginal['added_critical_path_us'])} of it on the critical "
             f"path (stretch {marginal['stretch']:.2f})"
         )
         if marginal['on_critical_path']:
@@ -1821,7 +1822,7 @@ def format_compare_text(comparison) -> str:
             lines.append(
                 f"  Cache retention: {plural(churn['rebuilt_in_both_count'], 'element')} "
                 f"rebuilt in BOTH runs with the same cache key, costing "
-                f"{churn['rebuilt_in_both_us'] / 1e6:.1f}s here - {named}{more}. The "
+                f"{qty.duration(churn['rebuilt_in_both_us'])} here - {named}{more}. The "
                 f"artifact is not surviving between runs (deliberate cut, eviction, "
                 f"or a remote that is not serving it): a question about the cache, "
                 f"not about the project"
@@ -1832,7 +1833,7 @@ def format_compare_text(comparison) -> str:
             lines.append(
                 f"  Cache churn: {plural(churn['churned_count'], 'element')} rebuilt with an "
                 f"unchanged cache key, costing "
-                f"{churn['wasted_rebuild_us'] / 1e6:.1f}s - {named}{more}. Nothing "
+                f"{qty.duration(churn['wasted_rebuild_us'])} - {named}{more}. Nothing "
                 f"they depend on changed, so that time bought nothing"
             )
         lines.extend(_format_invalidation_roots(churn))

@@ -34,6 +34,8 @@ import sys
 
 import pytest
 
+from bga import shown
+
 REPO = pathlib.Path(__file__).resolve().parents[2]
 README = REPO / "README.md"
 
@@ -163,7 +165,7 @@ class TestTheBoundSentenceNamesItsThreshold:
         from bga import findings
 
         headline = next(line for line in fresh if "bound, not" in line)
-        assert f"{findings.CHAIN_BOUND_RATIO:.0%} chain-bound line" in headline, (
+        assert f"{shown.share(findings.CHAIN_BOUND_RATIO)} chain-bound line" in headline, (
             "the diagnosis sentence does not name the threshold that decided it",
             headline,
         )
@@ -175,7 +177,7 @@ class TestTheBoundSentenceNamesItsThreshold:
         from bga import findings
 
         for name in (findings.DIAGNOSIS_CHAIN_BOUND, findings.DIAGNOSIS_SCHEDULER_BOUND):
-            assert "{bound:" in findings.DIAGNOSIS_SENTENCES[name], f"the {name} sentence does not carry the threshold"
+            assert "{bound}" in findings.DIAGNOSIS_SENTENCES[name], f"the {name} sentence does not carry the threshold"
 
     def test_the_number_is_formatted_from_the_constant_not_written_out(self):
         """One copy. `UX-229`'s rule: a rule whose threshold has no name
@@ -199,7 +201,7 @@ class TestTheBoundSentenceNamesItsThreshold:
         rule = _headline_rule()
         assert rule["name"] == "CHAIN_BOUND_RATIO", rule
         assert rule["threshold"] == findings.CHAIN_BOUND_RATIO
-        assert f"{findings.CHAIN_BOUND_RATIO:.0%}" in rule["sentence"], (
+        assert shown.share(findings.CHAIN_BOUND_RATIO) in rule["sentence"], (
             "the record's sentence does not quote the threshold the headline now names",
             rule["sentence"],
         )

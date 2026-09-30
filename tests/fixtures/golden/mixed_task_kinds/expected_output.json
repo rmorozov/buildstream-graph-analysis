@@ -7,7 +7,7 @@
         {
             "id": "wait-category",
             "severity": "high",
-            "title": "Biggest wait category: 12.5% of wall-clock time is untracked tail (0.00s)",
+            "title": "Biggest wait category: 12.5% of wall-clock time is untracked tail (2 ms)",
             "detail": [
                 "    -> real time after the last tracked task finished - outside per-task tracking, not a scheduling issue"
             ],
@@ -19,7 +19,7 @@
                 "hint": "real time after the last tracked task finished - outside per-task tracking, not a scheduling issue"
             },
             "reader": "local-optimizer",
-            "copy_text": "BGA finding: Biggest wait category: 12.5% of wall-clock time is untracked tail (0.00s)\n      -> real time after the last tracked task finished - outside per-task tracking, not a scheduling issue\n  category untracked_tail_us\n  category_us 0.0s\n  share 12%\n  hint real time after the last tracked task finished - outside per-task tracking, not a scheduling issue\n  Run: golden-fixture-manifest-hash-v1",
+            "copy_text": "BGA finding: Biggest wait category: 12.5% of wall-clock time is untracked tail (2 ms)\n      -> real time after the last tracked task finished - outside per-task tracking, not a scheduling issue\n  category untracked_tail_us\n  category_us 2 ms\n  share 12.5%\n  hint real time after the last tracked task finished - outside per-task tracking, not a scheduling issue\n  Run: golden-fixture-manifest-hash-v1",
             "trace_query": "resource-queues",
             "trace_queries": [
                 "resource-queues",
@@ -29,11 +29,11 @@
         {
             "id": "time-concentration",
             "severity": "high",
-            "title": "Where the time is: 3 elements are 100.0% of the 0.0s critical path - this build is chain-bound, not scheduler-bound",
+            "title": "Where the time is: 3 elements are 100.0% of the 14 ms critical path - this build is chain-bound, not scheduler-bound",
             "detail": [
-                "    base.bst       0.0s (42.9% of path)  -> fixing it saves 0.0s (37.5% of the build)",
-                "    lib.bst        0.0s (35.7% of path)  -> fixing it saves 0.0s (31.2% of the build)",
-                "    app.bst        0.0s (21.4% of path)  -> fixing it saves 0.0s (18.8% of the build)"
+                "    base.bst      6 ms ( 42.9% of path)  -> fixing it saves 6 ms (37.5% of the build)",
+                "    lib.bst       5 ms ( 35.7% of path)  -> fixing it saves 5 ms (31.2% of the build)",
+                "    app.bst       3 ms ( 21.4% of path)  -> fixing it saves 3 ms (18.8% of the build)"
             ],
             "elements": [
                 "base.bst",
@@ -66,13 +66,13 @@
                 ]
             },
             "reader": "local-optimizer",
-            "copy_text": "BGA finding: Where the time is: 3 elements are 100.0% of the 0.0s critical path - this build is chain-bound, not scheduler-bound\n      base.bst       0.0s (42.9% of path)  -> fixing it saves 0.0s (37.5% of the build)\n      lib.bst        0.0s (35.7% of path)  -> fixing it saves 0.0s (31.2% of the build)\n      app.bst        0.0s (21.4% of path)  -> fixing it saves 0.0s (18.8% of the build)\n  path_us 0.0s\n  share_of_path 100%\n  chain_bound True\n  Elements: base.bst, lib.bst, app.bst\n  Next: bga blast base.bst <run>\n  Run: golden-fixture-manifest-hash-v1",
+            "copy_text": "BGA finding: Where the time is: 3 elements are 100.0% of the 14 ms critical path - this build is chain-bound, not scheduler-bound\n      base.bst      6 ms ( 42.9% of path)  -> fixing it saves 6 ms (37.5% of the build)\n      lib.bst       5 ms ( 35.7% of path)  -> fixing it saves 5 ms (31.2% of the build)\n      app.bst       3 ms ( 21.4% of path)  -> fixing it saves 3 ms (18.8% of the build)\n  path_us 14 ms\n  share_of_path 100.0%\n  chain_bound True\n  Elements: base.bst, lib.bst, app.bst\n  Next: bga blast base.bst <run>\n  Run: golden-fixture-manifest-hash-v1",
             "trace_query": "cost-by-executable"
         },
         {
             "id": "chain-graph",
             "severity": "info",
-            "title": "Note: 75% of elements have zero slack, all on the critical path - no second chain of equal length, so a saving on any of them is worth its own duration",
+            "title": "Note: 75.0% of elements have zero slack, all on the critical path - no second chain of equal length, so a saving on any of them is worth its own duration",
             "detail": [],
             "elements": [],
             "evidence": {
@@ -81,13 +81,13 @@
             },
             "indent": "    ",
             "reader": "graph-owner",
-            "copy_text": "BGA finding: Note: 75% of elements have zero slack, all on the critical path - no second chain of equal length, so a saving on any of them is worth its own duration\n  zero_slack_share 75%\n  zero_slack_off_path 0\n  Run: golden-fixture-manifest-hash-v1",
+            "copy_text": "BGA finding: Note: 75.0% of elements have zero slack, all on the critical path - no second chain of equal length, so a saving on any of them is worth its own duration\n  zero_slack_share 75.0%\n  zero_slack_off_path 0\n  Run: golden-fixture-manifest-hash-v1",
             "trace_query": "graph-levels"
         },
         {
             "id": "joint-saving",
             "severity": "high",
-            "title": "Together, the top 3 are worth 0.0s (69% of the build) - exactly the sum of their individual savings, so they are separate pieces of work that do not overlap",
+            "title": "Together, the top 3 are worth 11 ms (68.8% of the build) - exactly the sum of their individual savings, so they are separate pieces of work that do not overlap",
             "detail": [],
             "elements": [
                 "base.bst",
@@ -101,15 +101,15 @@
                 "relation": "add"
             },
             "reader": "local-optimizer",
-            "copy_text": "BGA finding: Together, the top 3 are worth 0.0s (69% of the build) - exactly the sum of their individual savings, so they are separate pieces of work that do not overlap\n  joint_saving_us 0.0s\n  sum_of_individual_us 0.0s\n  savings_add True\n  relation add\n  Elements: base.bst, lib.bst, extra.bst\n  Run: golden-fixture-manifest-hash-v1",
+            "copy_text": "BGA finding: Together, the top 3 are worth 11 ms (68.8% of the build) - exactly the sum of their individual savings, so they are separate pieces of work that do not overlap\n  joint_saving_us 11 ms\n  sum_of_individual_us 11 ms\n  savings_add True\n  relation add\n  Elements: base.bst, lib.bst, extra.bst\n  Run: golden-fixture-manifest-hash-v1",
             "trace_query": "waited-on-flow"
         },
         {
             "id": "optimization-horizon",
             "severity": "high",
-            "title": "Work them in this order (by what a fix is worth, not by size), with what the build drops to: base.bst (0s) -> lib.bst (0s) -> extra.bst (0s)",
+            "title": "Work them in this order (by what a fix is worth, not by size), with what the build drops to: base.bst (8 ms) -> lib.bst (4 ms) -> extra.bst (3 ms)",
             "detail": [
-                "    - the last of those leaves 69% of the build removed, projected from this run without building again"
+                "    - the last of those leaves 68.8% of the build removed, projected from this run without building again"
             ],
             "elements": [
                 "base.bst",
@@ -144,7 +144,7 @@
                 ]
             },
             "reader": "local-optimizer",
-            "copy_text": "BGA finding: Work them in this order (by what a fix is worth, not by size), with what the build drops to: base.bst (0s) -> lib.bst (0s) -> extra.bst (0s)\n      - the last of those leaves 69% of the build removed, projected from this run without building again\n  Elements: base.bst, lib.bst, extra.bst\n  Run: golden-fixture-manifest-hash-v1",
+            "copy_text": "BGA finding: Work them in this order (by what a fix is worth, not by size), with what the build drops to: base.bst (8 ms) -> lib.bst (4 ms) -> extra.bst (3 ms)\n      - the last of those leaves 68.8% of the build removed, projected from this run without building again\n  Elements: base.bst, lib.bst, extra.bst\n  Run: golden-fixture-manifest-hash-v1",
             "trace_query": "time-by-kind"
         },
         {
@@ -164,7 +164,7 @@
         {
             "id": "latent-heavies",
             "severity": "medium",
-            "title": "Waiting off the critical path, worth nothing to fix today: extra.bst (0s) - they bound how far shortening the chain can go",
+            "title": "Waiting off the critical path, worth nothing to fix today: extra.bst (4 ms) - they bound how far shortening the chain can go",
             "detail": [
                 "    (structural projections over this run's measured durations, where \"fixed\" means the element becomes instant - a re-capture is still the ground truth)"
             ],
@@ -180,7 +180,7 @@
                 ]
             },
             "reader": "recipe-author",
-            "copy_text": "BGA finding: Waiting off the critical path, worth nothing to fix today: extra.bst (0s) - they bound how far shortening the chain can go\n      (structural projections over this run's measured durations, where \"fixed\" means the element becomes instant - a re-capture is still the ground truth)\n  Elements: extra.bst\n  Run: golden-fixture-manifest-hash-v1",
+            "copy_text": "BGA finding: Waiting off the critical path, worth nothing to fix today: extra.bst (4 ms) - they bound how far shortening the chain can go\n      (structural projections over this run's measured durations, where \"fixed\" means the element becomes instant - a re-capture is still the ground truth)\n  Elements: extra.bst\n  Run: golden-fixture-manifest-hash-v1",
             "trace_query": "element-commands",
             "trace_queries": [
                 "element-commands",
@@ -222,7 +222,7 @@
         {
             "id": "confidence",
             "severity": "info",
-            "title": "Confidence: 0.88 (high)",
+            "title": "Confidence: 87.5% (high)",
             "detail": [],
             "elements": [],
             "evidence": {
@@ -231,15 +231,15 @@
                 "violation_count": 0
             },
             "reader": "ci-gatekeeper",
-            "copy_text": "BGA finding: Confidence: 0.88 (high)\n  primary 88%\n  band high\n  violation_count 0\n  Run: golden-fixture-manifest-hash-v1",
+            "copy_text": "BGA finding: Confidence: 87.5% (high)\n  primary 87.5%\n  band high\n  violation_count 0\n  Run: golden-fixture-manifest-hash-v1",
             "trace_query": null
         },
         {
             "id": "remote-execution-whatif",
             "severity": "info",
-            "title": "Remote execution (builder cap only, no Plane 2 per-binary cost): unbounded builders 0.0s -> 0.0s",
+            "title": "Remote execution (builder cap only, no Plane 2 per-binary cost): unbounded builders 14 ms -> 14 ms",
             "detail": [
-                "    Unbounded builders (REAPI moves whole sandboxes): 0.0s -> 0.0s (0.0s); assumes staging and wait per element unchanged, workers never queue"
+                "    Unbounded builders (REAPI moves whole sandboxes): 14 ms -> 14 ms (0 ms); assumes staging and wait per element unchanged, workers never queue"
             ],
             "elements": [],
             "evidence": {
@@ -254,13 +254,13 @@
                 }
             },
             "reader": "ci-gatekeeper",
-            "copy_text": "BGA finding: Remote execution (builder cap only, no Plane 2 per-binary cost): unbounded builders 0.0s -> 0.0s\n      Unbounded builders (REAPI moves whole sandboxes): 0.0s -> 0.0s (0.0s); assumes staging and wait per element unchanged, workers never queue\n  additive False\n  why_not_additive Not additive: both remove the same critical-path seconds, so buying both is not buying their sum.\n  Run: golden-fixture-manifest-hash-v1",
+            "copy_text": "BGA finding: Remote execution (builder cap only, no Plane 2 per-binary cost): unbounded builders 14 ms -> 14 ms\n      Unbounded builders (REAPI moves whole sandboxes): 14 ms -> 14 ms (0 ms); assumes staging and wait per element unchanged, workers never queue\n  additive False\n  why_not_additive Not additive: both remove the same critical-path seconds, so buying both is not buying their sum.\n  Run: golden-fixture-manifest-hash-v1",
             "trace_query": null
         },
         {
             "id": "efficiency-score",
             "severity": "info",
-            "title": "Efficiency score: 1.00 (scheduling is near the certified floor for this graph - further gains need the graph or the work itself to change, not the scheduler (see Dispatch Occupancy and Critical Path))",
+            "title": "Efficiency score: 100.0% (scheduling is near the certified floor for this graph - further gains need the graph or the work itself to change, not the scheduler (see Dispatch Occupancy and Critical Path))",
             "detail": [],
             "elements": [],
             "evidence": {
@@ -268,7 +268,7 @@
                 "low_confidence": false
             },
             "reader": "ci-gatekeeper",
-            "copy_text": "BGA finding: Efficiency score: 1.00 (scheduling is near the certified floor for this graph - further gains need the graph or the work itself to change, not the scheduler (see Dispatch Occupancy and Critical Path))\n  efficiency_score 100%\n  low_confidence False\n  Run: golden-fixture-manifest-hash-v1",
+            "copy_text": "BGA finding: Efficiency score: 100.0% (scheduling is near the certified floor for this graph - further gains need the graph or the work itself to change, not the scheduler (see Dispatch Occupancy and Critical Path))\n  efficiency_score 100.0%\n  low_confidence False\n  Run: golden-fixture-manifest-hash-v1",
             "trace_query": "cpu-versus-wall"
         }
     ],
@@ -277,7 +277,7 @@
         "chain_share": 1.0,
         "chain_bound_share": 0.9,
         "chain_share_of": "task_horizon",
-        "sentence": "This build is chain-bound, not scheduler-bound: the critical path is 100% of the time tasks were running, at or above the 90% chain-bound line, so the way to a shorter build is a shorter chain.",
+        "sentence": "This build is chain-bound, not scheduler-bound: the critical path is 100.0% of the time tasks were running, at or above the 90.0% chain-bound line, so the way to a shorter build is a shorter chain.",
         "certified_headroom_us": 0,
         "scheduling_gap_us": 2000,
         "top_actions": [
@@ -351,7 +351,7 @@
     "next_steps": [
         {
             "id": "shorten-what-the-build-waits-for",
-            "reason": "base.bst is the longest thing on the critical path, 43% of it - the build cannot finish sooner than this chain.",
+            "reason": "base.bst is the longest thing on the critical path, 42.9% of it - the build cannot finish sooner than this chain.",
             "argv": [
                 "bga",
                 "blast",
@@ -906,7 +906,7 @@
                 "threshold": 0.9,
                 "comparison": ">=",
                 "observed_path": "headline.chain_share",
-                "sentence": "The critical path is 100.0% of the task horizon (the span from the first task's start to the last one's finish, excluding BuildStream's own startup), at or above the 90% line at which the chain rather than the scheduler is called the constraint, so this build is chain-bound.",
+                "sentence": "The critical path is 100.0% of the task horizon (the span from the first task's start to the last one's finish, excluding BuildStream's own startup), at or above the 90.0% line at which the chain rather than the scheduler is called the constraint, so this build is chain-bound.",
                 "module": "bga/findings.py",
                 "threshold_quantity": "share"
             },
@@ -992,7 +992,7 @@
                 "threshold": 0.5,
                 "comparison": ">=",
                 "observed_path": "elements.zero_slack_share",
-                "sentence": "75% of elements have zero slack and none is off the critical path, so the graph is one chain.",
+                "sentence": "75.0% of elements have zero slack and none is off the critical path, so the graph is one chain.",
                 "module": "bga/findings.py",
                 "threshold_quantity": "share"
             },

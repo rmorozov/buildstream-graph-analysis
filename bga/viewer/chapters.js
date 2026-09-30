@@ -810,6 +810,7 @@ export function revealAndLand(node, behavior, at) {
   const box = revealChapter(node);
   const view = node?.ownerDocument?.defaultView ?? globalThis;
   let landed = null;
+  let landedAt = null;
   const land = () => {
     if (!node?.getBoundingClientRect) return;
     const margin = at ?? (parseFloat(
@@ -817,6 +818,7 @@ export function revealAndLand(node, behavior, at) {
     const top = (view.scrollY ?? 0) + node.getBoundingClientRect().top - margin;
     view.scrollTo?.(behavior ? { top, behavior } : { top });
     landed = behavior ? null : view.scrollY;
+    landedAt = (view.scrollY ?? 0) + node.getBoundingClientRect().top;
   };
   land();
   const frame = globalThis.requestAnimationFrame;
@@ -833,11 +835,13 @@ export function revealAndLand(node, behavior, at) {
     let seen = 0;
     const settle = () => frame(() => {
       seen += 1;
-      if (moved || (landed !== null && Math.abs((view.scrollY ?? 0) - landed) > 1)) {
+      const cur = node.getBoundingClientRect().top;
+      const y = view.scrollY ?? 0;
+      // A reader's scroll leaves the node where it was in the document; a fold opening above moves it.
+      if (moved || (landed !== null && Math.abs(y - landed) > 1 && Math.abs(y + cur - landedAt) <= 1)) {
         release();
         return;
       }
-      const cur = node.getBoundingClientRect().top;
       if ((prev !== null && cur === prev) || seen >= LAND_SETTLE_FRAME_CAP) {
         release();
         land();

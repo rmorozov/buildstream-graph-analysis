@@ -325,8 +325,8 @@ body[data-has-toc] > header {
    independent of it). One line, truncated, rather than a second. */
 #run-name {
   display: inline-block; margin: 0 var(--space-3) 0 0; vertical-align: middle;
-  /* `UX-1153`: of the viewport - 55% of a shrink-to-fit parent cut a name with room beside it. */
-  max-width: 55vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  /* `UX-1153`: of the viewport; `UX-1157`: 65vw holds a 16-character name beside the wordmark at 390; 55vw cut it. */
+  max-width: 65vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 /* The height the sticky heading occupies, named once so the rail's
    offset and every anchor's landing clear it by the same amount. A
@@ -426,7 +426,7 @@ a:not(p a) { display: inline-flex; align-items: center; justify-content: center;
 table { border-collapse: collapse; width: 100%; margin: var(--space-2) 0 var(--space-4); }
 th, td {
   text-align: left; padding: var(--space-1) var(--space-2); border-bottom: 1px solid var(--line);
-  vertical-align: top;
+  vertical-align: top; overflow-wrap: break-word;
 }
 th { cursor: pointer; user-select: none; white-space: nowrap; }
 th::after { content: ""; }
@@ -458,6 +458,9 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 @media (max-width: 60rem) {
   .pairs { grid-template-columns: minmax(0, 1fr); row-gap: 0; }
   .pairs dd + dt { margin-top: var(--space-2); }
+  /* `UX-1157`: a header wraps between words, and a table of tables stacks its cells. */
+  th, td { white-space: normal; font-size: var(--font-small); padding: var(--space-1); }
+  table:has(td table) > * > tr, table:has(td table) > * > tr > * { display: block; }
 }
 details { margin: var(--space-1) 0; }
 /* `UX-1025` (styleguide §6e.13): one disclosure glyph pair, ▸ closed
@@ -1078,13 +1081,9 @@ button.describe {
   font: inherit; font-size: var(--font-small); line-height: 1; cursor: help;
   background: transparent; color: var(--muted);
   border: 1px solid var(--line); border-radius: 50%;
-  width: 1.1em; height: 1.1em; padding: 0; margin-left: var(--space-1);
-  vertical-align: super;
+  width: 1.1em; height: 1.1em; padding: 0;
 }
 button.describe:hover, button.describe[aria-expanded="true"] { color: var(--fg); }
-/* UX-1137: the block's door is the `dl`'s first child, so it takes a row of its own
-   rather than the first term's cell, which pushed every pair one cell over. */
-.pairs > button.describe { grid-column: 1 / -1; justify-self: start; margin-left: 0; }
 .description {
   font-size: var(--font-small); color: var(--muted);
   display: block; margin-top: var(--space-1);
@@ -1411,6 +1410,8 @@ button.json-toggle:hover { color: var(--fg); }
 }
 /* `UX-1153`: a part's label shifts by its own position, so it never leaves the bar. */
 .decomposition .draw-tick { transform: translateX(calc(var(--at, 50) * -1%)); }
+/* `UX-1157`: the label names its part; a reader-mark suffix only widened it into its neighbour. */
+.decomposition .draw-tick::after { content: none; }
 /* `UX-674`: a single middle tick between two edge ticks lays out in
    normal flow instead of by absolute percentage - flow never overlaps
    a sibling, a percentage `left` can once either label's own text

@@ -4,8 +4,8 @@ Measured on `main` at `98ab850`: 191 doors in 39 blocks on
 `macro_micro`, 127 in 29 on `golden` - a described value drew its own
 door rather than the block sharing one. `attachBlockDoor` (`format.js`)
 builds one marker per block that opens every collected `.description`
-in place; a block's own selector is the styleguide's own census one
-(`dl, table, section[data-section], ul, ol`, nearest ancestor first).
+in place; a block is the `dl` a door stands before (`UX-1157`), else the
+census selector (`dl, table, section[data-section], ul, ol`, nearest first).
 """
 
 import pathlib
@@ -24,7 +24,9 @@ needs_browser = pytest.mark.skipif(chrome is None, reason=NO_BROWSER)
 
 _MEASURE = r"""
 (() => {
-  const blockOf = (node) => node.closest("dl, table, section[data-section], ul, ol");
+  // `UX-1157`: a door stands just before the `dl` it opens.
+  const blockOf = (node) => (node.nextElementSibling?.matches("dl") ? node.nextElementSibling
+                             : node.closest("dl, table, section[data-section], ul, ol"));
   const counts = new Map();
   for (const door of document.querySelectorAll("button.describe")) {
     const block = blockOf(door);

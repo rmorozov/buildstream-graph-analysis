@@ -93,8 +93,8 @@ export function renderFindingEvidence(evidence, node = undefined, said = new Set
            : readerLabel(plainValue(value)),
          describe));
   }
-  attachBlockDoor(list, doors);
-  if (scalars.length <= EVIDENCE_SHOWN) return list;
+  const door = attachBlockDoor(list, doors);
+  if (scalars.length <= EVIDENCE_SHOWN) return [door, list];
   // UX-209's fold, for the same reason: the evidence is the point, and
   // eight rows of it above the next finding is a wall.
   //
@@ -109,7 +109,7 @@ export function renderFindingEvidence(evidence, node = undefined, said = new Set
             el("summary", {},
                `Evidence · 1 level, `
                + `${rows} row${rows === 1 ? "" : "s"}`),
-            list);
+            door, list);
 }
 
 // `UX-216`: a finding's element links to its section; `data-element` feeds the cross-reference.
@@ -163,8 +163,9 @@ export function renderFindings(findings, investigate = null, node = undefined,
               ...finding.elements.flatMap((uid, i) => [
                 i ? ", " : "", elementLink(uid)]))
           : null,
-        drawnIn ? null : renderFindingEvidence(finding.evidence, evidenceNode,
-                                               new Set(detail.map((line) => line.trim()))),
+        // `UX-1157`: the door and its list are two children, so spread.
+        ...[drawnIn ? null : renderFindingEvidence(finding.evidence, evidenceNode,
+                                                   new Set(detail.map((line) => line.trim())))].flat(),
         // UX-229: the chain behind this finding, from the published
         // record. `views.js` draws it, so the decision panel and every
         // finding show one shape.
@@ -693,9 +694,9 @@ export function renderSummary(payload, hints) {
       }, typeof value === "number" ? quantity(value, kind)
          : plainValue(value)), describe));
   }
-  attachBlockDoor(list, doors);
+  const door = attachBlockDoor(list, doors);
   return el("section", { "data-section": "summary" },
-            el("h2", {}, "Run"), list);
+            el("h2", {}, "Run"), door, list);
 }
 
 const many = (n, noun, plural = `${noun}s`) =>

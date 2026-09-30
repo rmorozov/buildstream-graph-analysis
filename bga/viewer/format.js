@@ -530,9 +530,8 @@ export function describedTerm(name, description, attrs = {}, inline = null,
  * `UX-1021`: **one `?` door per block.** `describedTerm` no longer
  * builds a marker; this does, once, for every hidden `.description`
  * node the caller collected while building one block (a `dl`, `table`,
- * `ul` or `ol` - the nearest ancestor the styleguide's census already
- * walks to). Appended as the block's first child, so it is inside the
- * block for that same walk. A block that described nothing gets no
+ * `ul` or `ol`). The caller places it just before the block - `UX-1157`:
+ * a `dl` holds only `dt`/`dd`. A block that described nothing gets no
  * door - `UX-194`'s dead-control rule.
  */
 export function attachBlockDoor(block, descriptions) {
@@ -552,7 +551,6 @@ export function attachBlockDoor(block, descriptions) {
     marker.setAttribute("aria-expanded", open ? "false" : "true");
     for (const sentence of sentences) sentence.hidden = open;
   });
-  block.prepend(marker);
   return marker;
 }
 

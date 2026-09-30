@@ -351,7 +351,7 @@ export function renderPairs(key, object, hint = {}, node = undefined,
                          advice ? el("p", { class: "run-advice" }, advice)
                                 : null));
   }
-  attachBlockDoor(list, doors);
+  const door = attachBlockDoor(list, doors);
   const parts = [sectionHead(key, hint)];
   if (lead !== null) parts.push(el("p", { class: "section-lead", "data-lead": leadKey }, lead));
   if (joined) {
@@ -388,7 +388,7 @@ export function renderPairs(key, object, hint = {}, node = undefined,
     }
   }
   // `UX-419`: a map grows with the payload too, and had no bound at all.
-  parts.push(list, boundPairs(list, TABLE_OPENS_BOUNDED_ABOVE));
+  parts.push(door, list, boundPairs(list, TABLE_OPENS_BOUNDED_ABOVE));
   return el("section", { "data-section": key, "data-rail": heading(key, hint).rail },
                         ...parts);
 }

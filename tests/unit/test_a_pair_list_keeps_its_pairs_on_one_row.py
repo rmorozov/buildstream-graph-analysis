@@ -1,8 +1,8 @@
 """UX-1137: in every `dl.pairs`, each term sits on its value's row, left of it.
 
-`UX-1021`'s block door is the `dl`'s first child; in a two-column grid it
-took the first cell and pushed every pair one cell over, so a term sat
-beside the previous value and its own value started the next row.
+`UX-1021`'s block door was the `dl`'s first child; in a two-column grid it
+took the first cell and pushed every pair one cell over. `UX-1157` moved
+it to the `dl`'s previous sibling.
 """
 
 import pathlib
@@ -28,7 +28,7 @@ _MEASURE = r"""
   const split = [];
   let pairs = 0, doors = 0;
   for (const list of document.querySelectorAll("dl.pairs")) {
-    if (list.querySelector(":scope > button.describe")) doors += 1;
+    if (list.previousElementSibling?.matches("button.describe")) doors += 1;
     for (const term of list.querySelectorAll(":scope > dt")) {
       const value = term.nextElementSibling;
       if (!value || value.tagName !== "DD") continue;

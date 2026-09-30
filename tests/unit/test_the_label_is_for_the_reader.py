@@ -95,7 +95,9 @@ _LABELS = """
     const column = node.getAttribute("data-column");
     const cell = node.closest("table")?.querySelector(
       `td[data-column="${CSS.escape(column)}"]`);
-    out.push({ key: column, label: own(node), numeric: numeric(cell) });
+    // `UX-1190`: a sortable header's label is its sort button's text.
+    const sort = node.querySelector(":scope > button.th-sort");
+    out.push({ key: column, label: own(sort ?? node), numeric: numeric(cell) });
   }
   return out;
 })()

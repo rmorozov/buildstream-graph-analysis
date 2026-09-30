@@ -42,6 +42,7 @@ nothing reached it from the section path.
 """
 
 import pathlib
+import re
 import sys
 
 import pytest
@@ -77,6 +78,14 @@ EXEMPT = {"trace_query", "trace_queries"}
 #: are the producer's - on `data-rule`/`data-module` and in the JSON
 #: door, never in the text.
 BEHIND_THE_DOOR = {"rule.name", "rule.module"}
+
+
+def _typeset(text):
+    """`UX-1149`: the page sets a backtick span as `<code>` and `->` as `→`;
+    `UX-1140`: and spaces a number from its `s`/`ms`."""
+    text = text.replace("`", "").replace("→", "->")
+    return re.sub(r"(?<![\w.])(\d+(?:\.\d+)?) (ms|s)\b", r"\1\2", text)
+
 
 _LOOK = """
 (() => {
@@ -163,6 +172,7 @@ class TestEveryPublishedFieldReachesAReader:
         without an edit here."""
         out = browser.measure(booted[label], _LOOK, 1440, 900)
         reachable = set(out["raws"])
+        shown = _typeset(out["text"])
         withheld = {}
         for record in _records(label):
             for field, value in _leaves(record):
@@ -171,7 +181,7 @@ class TestEveryPublishedFieldReachesAReader:
                 spelled = str(value)
                 if len(spelled) < 2:
                     continue
-                if spelled in reachable or spelled in out["text"]:
+                if spelled in reachable or _typeset(spelled) in shown:
                     continue
                 withheld.setdefault(field, 0)
                 withheld[field] += 1
@@ -232,7 +242,7 @@ class TestTheSectionIsAnIndexAndItsRecords:
             assert rule.get("module") or "", rule
             assert block["module"] == rule["module"], (block, rule)
             assert rule["module"] not in block["rule"], (block, rule)
-            assert record["rule"].get("sentence", "") == block["why"], block
+            assert _typeset(record["rule"].get("sentence", "")) == _typeset(block["why"]), block
             if rule.get("name"):
                 named += 1
                 assert block["name"] == rule["name"], (block, rule)

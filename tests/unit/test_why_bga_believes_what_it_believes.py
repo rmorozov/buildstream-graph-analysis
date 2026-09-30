@@ -417,6 +417,9 @@ class TestThePageDrawsTheObject:
             value = entry["value"]
             if isinstance(value, float) and value.is_integer():
                 published.add(str(int(value)))
+        # `UX-1140`: a number is shown through the element card's
+        # formatter, so its formatted spelling is the record's value too.
+        published.update(out["formatted"])
 
         # Layout, named one string at a time rather than allowed by a
         # pattern. `UX-357` put the depth count on the summary (§3a.1)
@@ -512,9 +515,12 @@ const text = [], paths = [], raw = [];
   if (n.attrs["data-raw"] !== undefined) raw.push(n.attrs["data-raw"]);
   (n.children ?? []).forEach(walk);
 })(node);
+const formatted = (__RECORD__?.evidence ?? [])
+  .filter((e) => typeof e.value === "number")
+  .map((e) => views.quantity(e.value, views.quantityAt(null, e.path)));
 console.log(JSON.stringify({
   rendered: node !== null,
-  text, paths, raw,
+  text, paths, raw, formatted,
   rule: node?.children?.find((c) => c.attrs["data-rule"])?.attrs["data-rule"] ?? null,
   threshold: node?.children?.find((c) => c.attrs["data-threshold"])
                ?.attrs["data-threshold"] ?? null,

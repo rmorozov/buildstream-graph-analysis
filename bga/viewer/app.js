@@ -18,7 +18,7 @@
 // `import` lines, and a re-export is a module it would never inline
 // (`UX-199`).
 import { served, safeStorage } from "./primitives.js";
-import { bytes, el, heading, quantity, title } from "./format.js";
+import { bytes, el, heading, quantity, title, typesetAlways } from "./format.js";
 import { handOff, deepLink, tracedSize, openTab, perfettoCanFetch,
          PERFETTO_FRIENDLY_URL } from "./perfetto.js";
 // `renderBlastTree` is *not* imported here: `views.js` draws the tree
@@ -706,6 +706,7 @@ export async function load(name, fallback = null) {
 
 async function boot() {
   const root = document.getElementById("report");
+  typesetAlways(document.body);
   try {
     const [payload, schemas, run] = await Promise.all([
       load("report"),
@@ -947,7 +948,7 @@ async function boot() {
     // the chapters file the sections. The same relationship `elements`
     // has with the element sections - an index over the population and
     // a detail block per row.
-    renderProvenanceRecords(payload, root);
+    renderProvenanceRecords(payload, root, schemas[payload.schema]);
 
     chapters(root, document, payload);
 

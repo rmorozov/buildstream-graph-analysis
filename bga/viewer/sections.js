@@ -133,7 +133,9 @@ export function renderFindings(findings, investigate = null, node = undefined) {
     article._hydrate = () => {
       // UX-1136: native `append` prints a null child as the text "null"; `el` skips it.
       article.append(...[
-        ...detail.map((line) => el("p", { class: "detail muted" }, line)),
+        // UX-1149: the detail line leads with its sentence, not an arrow.
+        ...detail.map((line) => el("p", { class: "detail muted" },
+                                   String(line).replace(/^\s*->\s*/, ""))),
         // UX-216: a finding names elements; each is a link to that
         // element's own section, and carries `data-element` so the
         // cross-reference finds this finding from the other direction.

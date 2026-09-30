@@ -12,7 +12,7 @@
  */
 import { commandLine, identify, labelFor } from "./controls.js";
 import {
-  SVG, svg, seconds, mib, bar, OVERVIEW_SHOWN, elementAnchor,
+  SVG, svg, seconds, bar, OVERVIEW_SHOWN, elementAnchor,
 } from "./primitives.js";
 import {
   SCALE, GRADE_ANNOTATION, GRADE_EXHIBIT, exhibitAxis, exhibitTwin,
@@ -21,7 +21,7 @@ import {
 // to take this import unaliased - the export concatenates the modules
 // into one scope and drops the `import` line, so an alias resolves to
 // a name nothing declares.
-import { childNode, heading, hintsOf, title } from "./format.js";
+import { childNode, heading, hintsOf, quantity, quantityAt, title } from "./format.js";
 import {
   resolvePath, elementFacts, elementHistory, renderElementHistory,
 } from "./element.js";
@@ -52,8 +52,8 @@ import { plural } from "./tables.js";
  * Every string here is a field of `provenance`: the sentence is
  * `rule.sentence`, the threshold is `rule.threshold`, each row is an
  * `evidence[]` entry's own `path` and `value`. The page does not
- * compare anything, does not format a share, does not decide which
- * rule applies - it draws the object. That is the property the
+ * compare anything or decide which rule applies - it draws the object,
+ * a number through the element card's formatter (`UX-1140`). That is the property the
  * no-derivation guard asserts, and it is why the record carries a
  * sentence at all: wording the comparison here would make the terminal
  * and the page two explanations of one claim.
@@ -184,7 +184,7 @@ export function renderProvenance(provenance, options = {}) {
       value.textContent = ref.resolved === false
         ? "unresolved"
         : (ref.elided ? `${ref.elided} - follow the path`
-                      : String(ref.value));
+                      : shownValue(ref.value, quantityAt(options.schema, ref.path)));
       list.append(term, value);
     }
     details.append(list);
@@ -248,14 +248,14 @@ export function renderProvenance(provenance, options = {}) {
  * twelve folded records is the relationship that item's own fix left
  * in place.
  */
-export function renderProvenanceRecords(payload, root) {
+export function renderProvenanceRecords(payload, root, schema = null) {
   const section = root?.querySelector?.('[data-section="provenance"]');
   if (!section) return 0;
   const records = Array.isArray(payload?.provenance) ? payload.provenance : [];
   let drawn = 0;
   for (const record of records) {
     const block = renderProvenance(record,
-      { label: record.claim ? title(record.claim) : "" });
+      { label: record.claim ? title(record.claim) : "", schema });
     if (!block) continue;
     section.append(block);
     drawn += 1;
@@ -312,7 +312,7 @@ export function renderWhyRanked(payload, action, options = {}) {
   // every action shares that record, in which case `renderDecision`
   // has already stated it once above the list (`UX-371`).
   if (ownRule) {
-    const chain = renderProvenance(record);
+    const chain = renderProvenance(record, { schema: options.reportSchema });
     if (chain) {
       chain.setAttribute("open", "");
       details.append(chain);
@@ -351,10 +351,12 @@ export function renderWhyRanked(payload, action, options = {}) {
 
 /** One fact, in the unit the source declared it in. */
 function factText(row) {
-  if (row.kind === "duration_us") return seconds(row.value);
-  if (row.kind === "share") return `${(row.value * 100).toFixed(1)}%`;
-  if (row.kind === "kilobytes") return mib(row.value * 1024);
-  return String(row.value);
+  return shownValue(row.value, row.kind);
+}
+
+// `UX-1140`: a number through the element card's formatter; anything else verbatim.
+function shownValue(value, kind) {
+  return typeof value === "number" ? quantity(value, kind) : String(value);
 }
 
 /**
@@ -708,7 +710,8 @@ export function renderDecision(payload, investigate = null, copy = null,
   // UX-229: and why. Directly under the claim it explains, folded -
   // the panel is a decision, and the chain is what a reader opens
   // after doubting one.
-  const chain = renderProvenance(headline.provenance);
+  const chain = renderProvenance(headline.provenance,
+                                 { schema: options.reportSchema });
   if (chain) section.append(chain);
 
   // The opportunity split, both halves published. Absent stays absent -
@@ -765,7 +768,8 @@ export function renderDecision(payload, investigate = null, copy = null,
     section.append(list);
     // Below the list it explains, not above it: the reader came for
     // the actions.
-    const how = shared ? renderProvenance(shared) : null;
+    const how = shared
+      ? renderProvenance(shared, { schema: options.reportSchema }) : null;
     if (how) {
       const rule = document.createElement("h3");
       rule.textContent = "How these were ranked";

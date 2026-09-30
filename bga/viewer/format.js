@@ -568,6 +568,53 @@ export function el(tag, attrs = {}, ...children) {
   return node;
 }
 
+// `UX-1149`: reader text is typeset once, here - a paired backtick span
+// is `<code>`, `->` is `→`. Data (a table cell, code) is left verbatim.
+const TYPESET_SKIP = "code, pre, kbd, samp, script, style, svg, textarea, select, option, td";
+// `UX-1140`: and a number glued to its unit is spaced, as `duration`
+// spells it - only before a space, punctuation or the end, so `sdk-1s.bst` stays.
+const UNIT_AT = String.raw`(?<![\w.])(\d+(?:\.\d+)?)(ms|s)(?=$|[\s,;:)\]]|\.(?:\s|$))`;
+const GLUED_UNIT = new RegExp(UNIT_AT, "g");
+const TYPESET_MARK = new RegExp(String.raw`\x60[^\x60\n]+\x60|->|` + UNIT_AT);
+
+function typesetNode(node) {
+  const parts = node.data.split(/`([^`\n]+)`/);
+  const fragment = document.createDocumentFragment();
+  parts.forEach((part, index) => {
+    if (index % 2) fragment.append(el("code", {}, part));
+    else if (part) fragment.append(part.replace(/->/g, "→").replace(GLUED_UNIT, "$1 $2"));
+  });
+  if (fragment.textContent !== node.data || parts.length > 1) node.replaceWith(fragment);
+}
+
+export function typeset(root) {
+  if (!root || typeof document.createTreeWalker !== "function") return;
+  if (root.nodeType === 3) root = root.parentNode;
+  if (!root || root.nodeType !== 1 || root.closest?.(TYPESET_SKIP)) return;
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  const found = [];
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    if (TYPESET_MARK.test(node.data) && !node.parentElement?.closest(TYPESET_SKIP)) {
+      found.push(node);
+    }
+  }
+  found.forEach(typesetNode);
+}
+
+/** `typeset` now, and on every node inserted under `root` later. */
+export function typesetAlways(root) {
+  typeset(root);
+  if (typeof MutationObserver !== "function") return null;
+  const observer = new MutationObserver((records) => {
+    for (const record of records) {
+      if (record.type === "characterData") typeset(record.target);
+      for (const added of record.addedNodes ?? []) typeset(added);
+    }
+  });
+  observer.observe(root, { childList: true, subtree: true, characterData: true });
+  return observer;
+}
+
 /**
  * The hints on one schema node, plus the node itself so a renderer can
  * keep walking.
@@ -617,6 +664,20 @@ export function childNode(node, key) {
     return node.additionalProperties;
   }
   return undefined;
+}
+
+/**
+ * `UX-1140`: the quantity the schema declares at a published path
+ * (`floors.lb`, `elements.blast_radius[uid].downstream_count`); the
+ * leaf's guess where the schema says nothing or is absent.
+ */
+export function quantityAt(schema, path) {
+  let node = schema, key = null;
+  for (const part of String(path ?? "").match(/[^.[\]]+|\[[^\]]*\]/g) ?? []) {
+    if (part.startsWith("[")) node = node?.items ?? node?.additionalProperties;
+    else { node = childNode(node, part); key = part; }
+  }
+  return key === null ? null : quantityFor(node, key);
 }
 
 /**

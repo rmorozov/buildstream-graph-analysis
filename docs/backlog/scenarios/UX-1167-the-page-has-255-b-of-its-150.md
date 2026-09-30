@@ -1,6 +1,6 @@
 # UX-1167: the page has 255 B of its 150,000 B budget left, and every viewer row now pays with cuts
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-155 walk; the page-byte and control budgets at `8b7e3d3b` (2026-09-30) | **Serves:** R1 | **Topic:** guards | **Area:** tests | **Shape:** judgement | **Reading:** container
+**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-155 walk; the page-byte and control budgets at `8b7e3d3b` (2026-09-30) | **Serves:** R1 | **Topic:** guards | **Area:** tests | **Shape:** mechanical | **Reading:** container
 
 **Guard:** `tests/unit/test_the_ceilings_table_states_each_bound.py::test_each_row_states_the_value_its_constant_holds`; the bound itself: `tests/unit/test_the_viewer_js_ships_compressed.py::test_the_page_half_is_under_its_bound`
 

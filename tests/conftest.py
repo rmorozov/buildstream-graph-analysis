@@ -428,6 +428,10 @@ KNOWN_SKIP_REASONS = {
         "the UX-1144 concept census, read on the two-plane page only",
         2,
     ),
+    "the review page's #utilisation carries the buckets strip": (
+        "the UX-1162 utilisation-strip clause, read on the two-plane page only",
+        2,
+    ),
 }
 
 # One file going quiet is what this exists to catch, and it is also the

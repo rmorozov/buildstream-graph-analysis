@@ -709,7 +709,8 @@ function elementSection(record, places, investigate, format, bounded = null) {
       el("table", {}, el("tr", {}, ["Binary", "Calls", "CPU", "Wall"].map((head) => el("th", {}, head))),
         top.map((row) => el("tr", {}, el("td", {}, el("code", {}, row.binary)), cell(row.calls, "count"),
           cell(row.cpu_us, "duration_us"), cell(row.wall_us, "duration_us")))),
-      more > 0 ? el("p", { class: "muted", "data-more": more }, `+${more} more`) : null));
+      more > 0 ? el("p", { class: "muted", "data-more": more },
+        el("a", { href: "#binary_cost" }, `+${more} more`)) : null));
   }
 
   // `UX-302`'s mapping: a short scalar array is an inline list, not a
@@ -742,8 +743,10 @@ function elementSection(record, places, investigate, format, bounded = null) {
       .flatMap((finding, at) => [at ? " · " : null, findingLink(finding)])));
   }
 
-  if (places && places.size) {
-    const named = [...places].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
+  // The card's own Binaries fold is `binary_cost`'s rows for this element; "Also in" does not name it twice.
+  const where = [...(places ?? [])].filter((place) => !(ran.length > 1 && [place].flat()[0] === "binary_cost"));
+  if (where.length) {
+    const named = where.sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
     section.append(el("p", { class: "where muted" }, "Also in: ",
       named.flatMap(([key, name], at) => [el("a", { href: `#${key}`, "data-where": key }, name),
                                       at < named.length - 1 ? " · " : ""])));

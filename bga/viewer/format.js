@@ -282,6 +282,8 @@ export const TERMS = {
   category_us: "Time waiting",
   deeper_than_three_share: "Share deeper than three",
   started_at_us: "Started at, since the epoch",
+  // `UX-1184`: a task's share of the window, never its duration.
+  wall_clock_share_us: "Wall-clock share",
 };
 
 /**

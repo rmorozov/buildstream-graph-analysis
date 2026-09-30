@@ -25,7 +25,7 @@ import { chapters } from "./chapters.js";
 import { renderProvenance } from "./decision.js";
 import { GRADE_EXHIBIT, decomposition, interval, strip } from "./drawings.js";
 import { resolvePath } from "./element.js";
-import { COLUMNS, DECOMPOSITION, DISTRIBUTION, INLINE, INTERVAL, KEYED_BY, KEYED_BY_TASK_UID, QUANTITY, SERIES, SEVERITY, attachBlockDoor, bytes, childNode, cssId, describedTerm, el, guessQuantity, heading, hintsOf, keyAsShown, quantity, quantityFor, readerLabel, sectionHead, spoken, title } from "./format.js";
+import { COLUMNS, DECOMPOSITION, DISTRIBUTION, INLINE, INTERVAL, KEYED_BY, KEYED_BY_TASK_UID, QUANTITY, SERIES, SEVERITY, attachBlockDoor, bytes, childNode, cssId, describedTerm, el, guessQuantity, heading, hintsOf, keyAsShown, quantity, quantityFor, readerLabel, sectionHead, spoken, TERMS, title } from "./format.js";
 import { matches } from "./nav.js";
 import { handOff } from "./perfetto.js";
 import { findingAnchor, plainValue, served } from "./primitives.js";
@@ -497,7 +497,14 @@ function mapSectionLabels(box, key, hint, node) {
     const record = Boolean(node?.properties);
     const measure = hintsOf(node)[QUANTITY] ?? guessQuantity(key)
       ?? (record ? null : "count");
-    relabelHead(valueHead, measure ? title(measure, measure) : "Value");
+    // `UX-1184`: a field that names its own quantity titles its column; the bare unit is for the rest.
+    const named = measure && (Object.hasOwn(TERMS, key) || title(key, measure) !== title(key));
+    relabelHead(valueHead, named ? title(key, measure) : measure ? title(measure, measure) : "Value");
+    if (named && measure === "duration_us") {
+      box.prepend(el("p", { class: "section-lead", "data-lead": key },
+        "A share of the active window, not a duration: each element's own is in ",
+        el("a", { href: "#elements" }, "the element table"), "."));
+    }
   }
   for (const cell of columnCells(table, "key")) {
     const raw = cell.getAttribute("data-raw");

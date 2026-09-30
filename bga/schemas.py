@@ -2260,7 +2260,7 @@ _STRUCTURAL_TABLES = {
                     {"key": "length", "title": "Length", "quantity": "count", "sortable": True},
                     {
                         "key": "weighted_duration_us",
-                        "title": "Duration",
+                        "title": "Total",
                         "quantity": "duration_us",
                         "sortable": True,
                         "description": "The members' durations, summed.",
@@ -2289,7 +2289,7 @@ _STRUCTURAL_TABLES = {
                         {"key": "length", "title": "Length", "quantity": "count", "sortable": True},
                         {
                             "key": "weighted_duration_us",
-                            "title": "Duration",
+                            "title": "Total",
                             "quantity": "duration_us",
                             "sortable": True,
                         },

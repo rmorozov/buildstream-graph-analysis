@@ -638,7 +638,7 @@ console.log(JSON.stringify({
         assert seen["dataRows"] == "1202", seen
         assert seen["hasFilter"], seen
         assert seen["sortable"] == ["true", "true"], seen
-        assert seen["headers"] == ["Task", "Duration"], seen
+        assert seen["headers"] == ["Task", "Wall-clock share"], seen
         # `UX-391`'s rule, read here: the composite survives as the
         # row's identity and the reader sees the element it names -
         # `renderPairs`'s own qualifier span, no separator invented.

@@ -1007,6 +1007,11 @@
   {
     "exception": null,
     "role": "th",
+    "text": "Total"
+  },
+  {
+    "exception": null,
+    "role": "th",
     "text": "Of longest path"
   },
   {
@@ -1302,7 +1307,7 @@
   {
     "exception": null,
     "role": "button",
-    "text": "Duration"
+    "text": "Wall-clock share"
   },
   {
     "exception": null,
@@ -1368,6 +1373,11 @@
     "exception": null,
     "role": "button",
     "text": "Split this first"
+  },
+  {
+    "exception": null,
+    "role": "button",
+    "text": "Total"
   },
   {
     "exception": null,
@@ -1757,7 +1767,7 @@
   {
     "exception": null,
     "role": "option",
-    "text": "Top # by Wall clock share"
+    "text": "Top # by Wall-clock share"
   },
   {
     "exception": null,
@@ -1807,7 +1817,7 @@
   {
     "exception": null,
     "role": "option",
-    "text": "Top # by Duration"
+    "text": "Top # by Total"
   },
   {
     "exception": null,
@@ -1828,6 +1838,11 @@
     "exception": null,
     "role": "button",
     "text": "Kind"
+  },
+  {
+    "exception": null,
+    "role": "button",
+    "text": "Duration"
   },
   {
     "exception": null,
@@ -1963,6 +1978,11 @@
     "exception": "product name",
     "role": "option",
     "text": "layer#/mod#.bst"
+  },
+  {
+    "exception": null,
+    "role": "option",
+    "text": "Top # by Duration"
   },
   {
     "exception": null,

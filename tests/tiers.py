@@ -1111,6 +1111,8 @@ MEDIUM = (
     "tests/unit/test_a_sortable_header_is_a_button.py",  #  8.3s
     # `UX-1189`: 8.48s.
     "tests/unit/test_copy_takes_the_matched_population.py",  #  8.5s
+    # `UX-1184`: 6.85 / 7.18s.
+    "tests/unit/test_a_column_is_named_for_its_field.py",  #  7.0s
     # Round 147, tiered on the merged tree: three single-process runs
     # alone each (setup+call+teardown).
     # `UX-1083`: 4.17 / 4.08 / 4.23s.

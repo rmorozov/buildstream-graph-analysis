@@ -459,9 +459,13 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
   /* `UX-1157`: a header wraps between words, and a table of tables stacks its cells. */
   th, td { white-space: normal; font-size: var(--font-small); padding: var(--space-1); }
   table:has(td table) > * > tr, table:has(td table) > * > tr > * { display: block; }
-  /* Round 155: a part's label names its floor in words (`UX-1159`), so every second one takes a row below. */
-  .decomposition .draw-axis { height: 3.2em; }
-  .decomposition .draw-tick:nth-child(even) { top: 1.6em; }
+  /* `UX-1164`: no tick label, part or question is cut. */
+  .draw-axis:not([data-layout]) { height: 3.2em; }
+  .draw-tick:nth-child(even) { top: 1.6em; }
+  .decomposition .draw-axis, [data-layout] { height: auto; flex-wrap: wrap; }
+  .decomposition .draw-tick { position: relative; display: table; top: 0; }
+  .chapter-head { flex-wrap: wrap; }
+  .chapter-head > h2 { order: 1; flex-basis: 100%; }
 }
 details { margin: var(--space-1) 0; }
 /* `UX-1025` (styleguide §6e.13): one disclosure glyph pair, ▸ closed
@@ -729,6 +733,9 @@ main table table { display: table; max-width: none; overflow: visible; }
 /* A published command is long by nature (`bga whatif a.bst b.bst …`)
    and must not set the page's width. */
 main code, main pre { overflow-wrap: anywhere; max-width: 100%; }
+/* `UX-1164`: a query scrolls in its box; a table of tables wraps its headers. */
+main pre { overflow-x: auto; }
+table:has(td table) th { white-space: normal; }
 input.table-filter { max-width: 100%; }
 
 /* UX-254: below this there is no room for two columns, so the page
@@ -1398,7 +1405,7 @@ button.json-toggle:hover { color: var(--fg); }
 /* `UX-1153`: a part's label shifts by its own position, so it never leaves the bar. */
 .decomposition .draw-tick { transform: translateX(calc(var(--at, 50) * -1%)); }
 /* `UX-1157`: the label names its part; a reader-mark suffix only widened it into its neighbour. */
-.decomposition .draw-tick::after { content: none; }
+.decomposition .draw-tick::after, .draw-tick[data-mark*=" "]::after { content: none; }
 /* `UX-674`: a single middle tick between two edge ticks lays out in
    normal flow instead of by absolute percentage - flow never overlaps
    a sibling, a percentage `left` can once either label's own text
@@ -1436,11 +1443,7 @@ p.run-advice {
 /* `UX-393`: the rail's own step controls. In the rail, not a banner:
    `UX-347`'s distance budget measures the reading column, and a
    sticky bar costs it on every screen. */
-.toc-steps {
-  display: flex;
-  gap: var(--space-1);
-  margin: var(--space-1) 0 var(--space-2);
-}
+.toc-steps { display: flex; flex-wrap: wrap; gap: var(--space-1); margin: var(--space-1) 0 var(--space-2); }
 /* `UX-667`: one row of three, not the wrap the default button font
    gave three in a 208px column ("41px two-line buttons", round 90's
    design review). `white-space` is not one of the fields
@@ -1450,11 +1453,8 @@ p.run-advice {
 .toc-steps button { flex: 1; white-space: nowrap; }
 /* `UX-536`: the two accelerators, said where the controls they drive
    are. Muted and last, so it reads as a note rather than a fourth
-   control. */
-.toc-keys {
-  flex: 0 0 auto; align-self: center;
-  color: var(--muted); font-size: var(--font-small); white-space: nowrap;
-}
+   control. On its own row (`UX-1164`). */
+.toc-keys { flex: 0 0 100%; color: var(--muted); font-size: var(--font-small); white-space: nowrap; }
 /* `UX-1153`: a key cap, so "[ ]" does not read as an empty checkbox. */
 .toc-keys kbd {
   font-family: var(--font-mono); border: 1px solid var(--line);

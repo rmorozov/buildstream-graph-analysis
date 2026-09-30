@@ -62,3 +62,5 @@ Document height at 1440: 7,577 px before and after.
 Reverted: 18 passed.
 
 **Deviation.** Re-based guards, each for the structure this row changed: `test_pointer_travel_is_a_budget.py`, `test_a_sections_controls_sit_together.py`, `test_a_chapter_fold_has_one_place_and_one_label.py` (offsets read against the head row); `test_the_rail_says_what_the_heading_says.py`, `test_the_report_has_chapters.py` (the heading's section through the row); `test_one_click_from_investigation.py` (the worked query is drawn once, not twice - `UX-348` drew it twice on purpose); `test_report_key_findings.py`, `test_headline_points_at_the_time.py` (the new title strings). Regenerated: `docs/design/rendered-strings.json` (also carries `UX-1148`'s reordered provenance labels) and both committed analyses. Styleguide §6e.1 and §6e.3 rows amended, and the §6e guard-ledger row names the guard. `bga/schemas.py` is a surface the Decomposition did not name.
+
+Round-154 fixer: test_attribution_hints re-based to the sentence-case "dependency wait" label; the README pasted block re-pasted from a fresh run (untracked tail, Efficiency score).

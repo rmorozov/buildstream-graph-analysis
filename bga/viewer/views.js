@@ -22,6 +22,7 @@ import { SCALE, GRADE_ANNOTATION, GRADE_EXHIBIT, exhibitAxis, exhibitTwin,
 // one. `controls.js` imports nothing, which is why this module may use
 // it where it may not use `app.js` - see the note below.
 import { commandLine, identify, labelFor } from "./controls.js";
+import { TERMS } from "./format.js";
 import { plural } from "./tables.js";
 // `UX-337`: the primitives the chapters share. Extracted because the
 // chapters were *not* acyclic without them - see `primitives.js`.
@@ -742,9 +743,9 @@ const WATERFALL = [
 
 // The certified floors, read the same way.
 const FLOORS = [
-  { key: "t_infinity_observed", label: "T∞ (observed)" },
-  { key: "lb", label: "LB" },
-  { key: "t_c", label: "T_C" },
+  { key: "t_infinity_observed", label: TERMS.t_infinity_observed },
+  { key: "lb", label: TERMS.lb },
+  { key: "t_c", label: TERMS.t_c },
   { key: "certified_headroom", label: "Certified headroom" },
 ];
 
@@ -847,7 +848,7 @@ export function renderEvidence(payload) {
   // truth is that nobody looked.
   const plane2 = payload?.plane2_coverage;
   if (plane2 && typeof plane2.processes === "number") {
-    rows.push(["Plane 2 coverage",
+    rows.push([TERMS.plane2_processes,
                `${plane2.processes} processes`
                + (typeof plane2.opens_coverage === "number"
                   ? `, opens ${(plane2.opens_coverage * 100).toFixed(0)}%` : ""),

@@ -4049,10 +4049,10 @@ _ANALYZE_HINTS = {
             "total": "total_duration_us",
             "quantity": "duration_us",
             "parts": [
-                {"path": "floors.t_infinity_observed", "key": "chain", "label": "critical path"},
-                {"path": "headline.scheduling_gap_us", "key": "gap", "label": "off the path"},
+                {"path": "floors.t_infinity_observed", "key": "chain", "label": "T∞"},
+                {"path": "headline.scheduling_gap_us", "key": "gap", "label": "scheduling gap"},
             ],
-            "mark": {"path": "floors.lb", "key": "lb", "label": "certified lower bound"},
+            "mark": {"path": "floors.lb", "key": "lb", "label": "LB"},
         },
         "description": "Lower bounds this run certifies: what no schedule "
         "of the same recorded work could have beaten. "

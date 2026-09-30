@@ -36,6 +36,18 @@ task file, which is the only place it ever lived twice.
 | UX-1179 | [print and find-in-page lose content the page has](UX-1179-print-and-find-in-page-lose-content-the.md) | viewer | Low | R1 | 🔴 Not Started |
 | UX-1180 | [values and console: a zero-length ratio, an epoch as hours, a tooltip-only explanation, a spaced hyphen, seven warnings](UX-1180-values-and-console-a-zero-length-ratio-an.md) | viewer | Low | R1 | 🔴 Not Started |
 | UX-1181 | [two page-half instruments disagree by 169 B, and two tests still count characters](UX-1181-two-page-half-instruments-disagree-by-169-b.md) | guards | Medium | R1 | 🔴 Not Started |
+| UX-1182 | [a synthetic example runs hundreds of fake binaries per element, drawn from named distributions](UX-1182-a-synthetic-example-runs-hundreds-of-fake-binaries.md) | capture | High | R1 | 🔴 Not Started |
+| UX-1183 | [a traced element's binaries reach the page whole or counted](UX-1183-a-traced-element-s-binaries-reach-the-page.md) | capture | High | R1 | 🔴 Not Started |
+| UX-1184 | [the task table's share column says it is a share, not a duration](UX-1184-the-task-table-s-share-column-says-it.md) | viewer | High | R1 | 🔴 Not Started |
+| UX-1185 | [paging continues the ranking, and the copy label follows the page](UX-1185-paging-continues-the-ranking-and-the-copy-label.md) | viewer | High | R1 | 🔴 Not Started |
+| UX-1186 | [the element, task and binary tables join Focus, Inspect and the jump box](UX-1186-the-element-task-and-binary-tables-join-focus.md) | viewer | High | R1 | 🔴 Not Started |
+| UX-1187 | [every element view carries duration and level, and the card lists what an element blocks, bounded](UX-1187-every-element-view-carries-duration-and-level-and.md) | viewer | High | R1 | 🔴 Not Started |
+| UX-1188 | [the compare chapter states how many elements moved and offers them as a bounded, filterable table](UX-1188-the-compare-chapter-states-how-many-elements-moved.md) | viewer | Medium | R1 | 🔴 Not Started |
+| UX-1189 | [Copy exports the filtered population, not the page](UX-1189-copy-exports-the-filtered-population-not-the-page.md) | viewer | Medium | R1 | 🔴 Not Started |
+| UX-1190 | [table sort is keyboard-reachable, shows its state, and ranks the whole population](UX-1190-table-sort-is-keyboard-reachable-shows-its-state.md) | viewer | Medium | R1 | 🔴 Not Started |
+| UX-1191 | [a key column matches exactly, and a one-op task table says its op once](UX-1191-a-key-column-matches-exactly-and-a-one.md) | viewer | Medium | R1 | 🔴 Not Started |
+| UX-1192 | [table strips and the level profile say their values on hover and survive an outlier](UX-1192-table-strips-and-the-level-profile-say-their.md) | viewer | Low | R1 | 🔴 Not Started |
+| UX-1193 | [the element preset and the latent-heavies section use one population or two names](UX-1193-the-element-preset-and-the-latent-heavies-section.md) | viewer | Low | R1 | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

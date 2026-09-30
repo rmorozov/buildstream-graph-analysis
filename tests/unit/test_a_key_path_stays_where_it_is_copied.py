@@ -14,8 +14,8 @@ no viewer or `shown.py` literal draws a dash for a null.
 
 UX-1172: nor does a block's whole text or an accessible name, and
 neither holds a leading "- ", "->", "**", "[]" or a raw YAML key; a
-chain name wraps only at a separator; Markdown copy and the CLI say
-their unit.
+chain name wraps only at a separator; Markdown copy says its unit
+(the command line's is pinned beside its CPU floor).
 """
 
 import json
@@ -242,16 +242,3 @@ console.log(JSON.stringify(rowsMarkdown([tr], [{ key: "duration_us", title: "Dur
     )
     assert done.returncode == 0, done.stderr[-2000:]
     assert json.loads(done.stdout).splitlines()[0] == "| Duration (\u00b5s) |"
-
-
-def test_the_cli_spaces_its_unit(monkeypatch):
-    from types import SimpleNamespace
-
-    from bga import cli
-    from bga.floors import cpu
-
-    floor = {"lb_cpu_us": 1_500_000, "lb_cpu_binds": True, "lb_cpu_cores_source": "host", "lb_cpu_governing_cores": 4}
-    monkeypatch.setattr(cpu, "compute_cpu_floor", lambda *_: dict(floor))
-    result = SimpleNamespace(floors={"lb": 1})
-    cli._add_cpu_floor(result, {}, None)
-    assert "1.50 s," in result.floors["capacity_model_note"], result.floors["capacity_model_note"]

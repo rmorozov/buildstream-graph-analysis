@@ -3447,6 +3447,15 @@ _BLAST_COUNTS = {
     },
 }
 
+#: `resource_blast`'s rows: the same counts, of a shared resource rather than an element.
+_RESOURCE_COUNTS = {
+    "direct_count": "Elements that source this resource themselves.",
+    "blast_count": "Everything a change to this resource rebuilds: its elements and all they reach.",
+    "building_count": "Of those, the ones that do real build work.",
+    "assembling_count": "Of those, the ones that only gather what is below them.",
+    "measured_us": "Recorded build time across that set, measured elements only, so a lower bound.",
+}
+
 _ANALYZE_HINTS = {
     "timestamp_agreement": {
         QUESTION: 'Do the two planes agree about the clock?',
@@ -3551,7 +3560,10 @@ _ANALYZE_HINTS = {
                 "items": {
                     "type": "object",
                     "properties": {
-                        **{k: {QUANTITY: v[QUANTITY]} for k, v in _BLAST_COUNTS.items() if k != "element_count"},
+                        **{
+                            k: {QUANTITY: _BLAST_COUNTS[k][QUANTITY], "description": v}
+                            for k, v in _RESOURCE_COUNTS.items()
+                        },
                         "direct_elements": {
                             GROWS: "elements directly sourcing that resource (subset, no cap)",
                             "items": {"type": "string", "description": "element uid"},
@@ -3568,7 +3580,10 @@ _ANALYZE_HINTS = {
                 },
                 "description": "One row per resource more than one element sources.",
             },
-            "element_count": {QUANTITY: "count"},
+            "element_count": {
+                QUANTITY: "count",
+                "description": "Elements in the project, the denominator for each row's reach.",
+            },
         },
     },
     "utilization_envelope": {

@@ -2,8 +2,8 @@
  * UX-337: the vocabulary every renderer speaks, in one module below them.
  *
  * `app.js`'s own first seam was called `format`, and this is that
- * chapter lifted out whole: the 20 `bga:` hint keys this module
- * declares (of the 23 `bga/schemas.py` emits), the readers that pull
+ * chapter lifted out whole: the 21 `bga:` hint keys this module
+ * declares (of the 24 `bga/schemas.py` emits), the readers that pull
  * them off a schema node (`hintsOf`, `childNode`, `quantityFor`), the
  * formatters that turn a number into a printed value under them, and
  * `el` - the one node constructor everything above builds with.

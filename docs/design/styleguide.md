@@ -938,6 +938,11 @@ and the bound.
 - **A control's label names its scope, and the scope is the layer the
   reader is looking at.** When a fold moves to a new layer, every
   control that names "all" moves with it.
+- **A repeated control's accessible name says what it acts on**
+  (`UX-1155`): its visible label first, then the thing - "What these
+  mean: <heading>", "Fold <heading>", "Focus: <uid>", "Copy command:
+  <argv>". Two controls of one kind share a name only when they act on
+  the same thing; a name is never the heading it sits under.
 - **Every action is acknowledged where the finger is.** A clipboard
   write is invisible by construction, so the control says so itself.
   `UX-279` made every copy control say *what* it copies; this makes it
@@ -1494,7 +1499,9 @@ fine pointer and once under touch emulation (`hasTouch`,
 `pointer: coarse`).
 
 **Rule 9, the name and the route.** A sentence names the image; it does
-not make its marks, values or threshold readable. Each drawing shape
+not make its marks, values or threshold readable. A sentence that is only
+a range and a count ("0 ms → 8.1 min across 6 rows") names no image, so
+a column strip's name leads with its column ("Buckets: 0 ms → …", `UX-1155`). Each drawing shape
 names its route: the density strip, decomposition and interval draw
 their table twin (§2a, §2f) behind a control in the same figure, and an
 annotation-grade drawing points at the table or values it sits beside

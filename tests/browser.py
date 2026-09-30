@@ -363,6 +363,12 @@ class Browser:
             extra.append(f"--media={media}")
         return self._drive(url, expression, width, height, extra)
 
+    def ax(self, url, expression, width=1440, height=900):
+        """`UX-1155`: run `expression`, which returns a list of roles, then
+        read Chromium's accessibility tree - `[{"role", "name", "attrs"}]`
+        for every unignored node of those roles."""
+        return self._drive(url, expression, width, height, ("--ax",))
+
     def journey(self, url, steps, width=1440, height=900):
         """`UX-1016`: real `Tab`/`Enter`/`Escape` key events, one
         navigated session for the whole sequence. `steps` is

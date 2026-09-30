@@ -181,6 +181,8 @@ export function renderFindings(findings, investigate = null, node = undefined,
           ? copyButton(el, finding.copy_text, {}, "finding")
           : null,
       ].filter((child) => child !== null && child !== undefined));
+      article.querySelector?.(".describe")?.setAttribute("aria-label",
+        `What these mean: ${finding.title}`);
       article._hydrate = null;
     };
     if (index < bound) article._hydrate();
@@ -211,7 +213,9 @@ export function investigateButton(finding, investigate) {
   const wrapper = el("div", { class: "investigate",
                               "data-query-id": context.queryId,
                               "data-element": context.element ?? "" });
-  const button = el("button", { type: "button" }, "Investigate in Perfetto");
+  // UX-1155: named for what it investigates.
+  const button = el("button", { type: "button", "aria-label":
+    `Investigate in Perfetto: ${context.element || finding.title}` }, "Investigate in Perfetto");
   // `UX-448`: one paste per grain the claim offers, not one button
   // per grain. The handoff opens one trace into one tab whichever
   // question the reader came with, so a second button would send the

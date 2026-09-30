@@ -258,11 +258,14 @@ export function collapsible(root, { document: doc, storage,
 
     const button = doc.createElement("button");
     button.className = "collapse";
-    // `UX-536`: 65 of these had no accessible name and defaulted to
-    // `type=submit`. The name is the heading's, read before the button
-    // joins it; `aria-expanded` beside it carries the state.
+    // UX-536, UX-1155: named for the heading it folds, and its own `?` doors for what they describe.
     button.setAttribute("type", "button");
-    button.setAttribute("aria-label", (heading.textContent || key).trim());
+    const named = (heading.textContent || key).trim();
+    button.setAttribute("aria-label", `Fold ${named}`);
+    // A finding card names its own; a nested section comes later and names its own over these.
+    for (const door of section.querySelectorAll?.(".describe") ?? []) {
+      if (!door.closest("article")) door.setAttribute("aria-label", `What these mean: ${named}`);
+    }
     button.setAttribute("aria-expanded", String(!collapsed.has(key)));
     button.setAttribute("data-collapse", key);
     button.textContent = collapsed.has(key) ? "▸" : "▾";

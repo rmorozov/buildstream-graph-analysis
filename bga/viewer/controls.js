@@ -150,6 +150,7 @@ export function commandLine(argv, { make = el, copy = null, deps = {} } = {}) {
   const label = "Copy command";
   const button = make("button", {
     type: "button", class: "copy-step", "data-copies": "command",
+    "aria-label": `${label}: ${text}`,
     title: "Copy this command to the clipboard, ready to run" });
   button.textContent = label;
   button.addEventListener?.("click", () => {

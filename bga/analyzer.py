@@ -344,6 +344,24 @@ def _blast_signals(diag_result, kind_by_uid: dict, foundation: frozenset = froze
     return out
 
 
+def _capacity_verdict_sentence(over: bool, under: bool, skipped: list) -> str:
+    """`UX-1150`: the capacity verdict's three booleans as the one sentence they answer."""
+    if skipped:
+        return (
+            f"The capacity checks did not run - {', '.join(skipped)} missing - "
+            "so neither over- nor undersubscription was tested."
+        )
+    said = []
+    if over:
+        said.append("Oversubscribed: the run asked for more parallelism than the host could serve.")
+    if under:
+        said.append(
+            ("Also undersubscribed" if over else "Undersubscribed")
+            + ": the host could have served more parallelism than the run asked for."
+        )
+    return " ".join(said) or "Capacity matched demand: neither over- nor undersubscribed, and both checks ran."
+
+
 def _fan_in_signals(graph, kinds: dict) -> dict:
     """`UX-681`: the three keys fan-in publishes.
 
@@ -1344,9 +1362,12 @@ class BuildEfficiencyAnalyzer:
         """
         types = {v.get('type') for v in self.violations}
         skipped = list(getattr(self, 'capacity_check_skipped_inputs', []) or [])
+        over = bool(types & {'resource_oversubscription', 'dispatch_oversubscription'})
+        under = 'resource_undersubscription' in types
         return {
-            'oversubscribed': bool(types & {'resource_oversubscription', 'dispatch_oversubscription'}),
-            'undersubscribed': 'resource_undersubscription' in types,
+            'verdict': _capacity_verdict_sentence(over, under, skipped),
+            'oversubscribed': over,
+            'undersubscribed': under,
             'checks_ran': not skipped,
             'skipped_inputs': skipped,
         }

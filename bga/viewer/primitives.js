@@ -56,6 +56,16 @@ export function mib(value) {
   return `${i === 0 ? n : n.toFixed(1)} ${units[i]}`;
 }
 
+/** `UX-1150`: the one word for an absent value, the word an empty collection already reads. */
+export const ABSENT = "none";
+
+/** `UX-1150`: a non-numeric leaf as a reader reads it - a boolean answers yes or no. */
+export function plainValue(value) {
+  if (value === null || value === undefined) return ABSENT;
+  if (typeof value === "boolean") return value ? "yes" : "no";
+  return String(value);
+}
+
 /** How many of the chain's elements are drawn before the fold. */
 // UX-207: how many attribution bars stay unfolded.
 export const OVERVIEW_SHOWN = 4;

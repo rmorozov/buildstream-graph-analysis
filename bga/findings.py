@@ -1231,7 +1231,9 @@ def _capacity_recommendation_finding(result: AnalysisResult) -> list[dict]:
         )
         severity = SEVERITY_INFO
 
-    detail = [
+    # UX-1143: the section's own lead sentence first, so the text report and the page say one thing.
+    detail = [f"    {recommendation['verdict']}"] if recommendation.get('verdict') else []
+    detail += [
         f"    {constraint['name']} allows {constraint['allows']}: {constraint['reason']}"
         for constraint in recommendation['constraints']
     ]
@@ -1292,6 +1294,8 @@ def _capacity_recommendation_finding(result: AnalysisResult) -> list[dict]:
                 'sweep_binding': recommendation.get('sweep_binding'),
             },
         )
+        # UX-1143: the page section drawing this evidence; the card links there rather than repeating it.
+        | {'section': 'capacity_recommendation'}
     ]
 
 

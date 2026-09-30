@@ -55,6 +55,7 @@ from .schema_hints import (
     INTERVAL,
     KEYED_BY,
     KEYED_BY_TASK_UID,
+    LEAD,
     MARKERS,
     PRESETS,
     QUANTITIES,
@@ -3601,7 +3602,15 @@ _ANALYZE_HINTS = {
         "feed, what its memory can hold, and what was "
         "actually set. The smallest is the one that binds, "
         "and it is the only one worth acting on.",
+        LEAD: "verdict",
         "properties": {
+            "verdict": {
+                "type": "string",
+                "description": "The recommendation as one sentence: what to "
+                "set, which constraint binds and why, and what "
+                "the others allow. The rest of this block is its "
+                "evidence.",
+            },
             "builders": {
                 INLINE: "name",
                 QUANTITY: "count",
@@ -3687,6 +3696,7 @@ _ANALYZE_HINTS = {
             "builders_change": {
                 QUANTITY: "count",
                 DIRECTION: "higher_is_better",
+                INLINE: "name",
                 "description": "`recommended_builders` minus `builders`, "
                 "signed - negative means the run asked for "
                 "more than something can serve. Named for "
@@ -3793,7 +3803,14 @@ _ANALYZE_HINTS = {
         "description": "Whether this run's capacities suited its work - "
         "and whether the checks could run at all. A check "
         "that did not run is inert, not passing.",
+        LEAD: "verdict",
         "properties": {
+            "verdict": {
+                "type": "string",
+                "description": "The three booleans below as one sentence: "
+                "whether the capacity matched demand, and whether "
+                "the checks could run at all.",
+            },
             "oversubscribed": {
                 INLINE: "caveat",
                 "description": "Whether the run asked for more parallelism "
@@ -4365,6 +4382,14 @@ _ANALYZE_HINTS = {
                 # Null where no query answers this finding, which is
                 # `UX-321`'s rule: the absence is published, not left
                 # to be inferred from an empty control.
+                # UX-1143: the section drawing this finding's evidence.
+                "section": {
+                    "type": "string",
+                    "description": "The report section that draws this "
+                    "finding's evidence, by key. The page's card links "
+                    "there instead of repeating it; absent where the "
+                    "finding is its evidence's only carrier.",
+                },
                 "trace_query": {
                     "type": ["string", "null"],
                     "description": "The `questions.js` query id that "

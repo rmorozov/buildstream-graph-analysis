@@ -2,8 +2,8 @@
  * UX-337: the vocabulary every renderer speaks, in one module below them.
  *
  * `app.js`'s own first seam was called `format`, and this is that
- * chapter lifted out whole: the 18 `bga:` hint keys this module
- * declares (of the 21 `bga/schemas.py` emits), the readers that pull
+ * chapter lifted out whole: the 19 `bga:` hint keys this module
+ * declares (of the 22 `bga/schemas.py` emits), the readers that pull
  * them off a schema node (`hintsOf`, `childNode`, `quantityFor`), the
  * formatters that turn a number into a printed value under them, and
  * `el` - the one node constructor everything above builds with.
@@ -60,6 +60,9 @@ export const PRESETS = "bga:presets";
 // and `"caveat"`, a sentence whose absence changes what a reader would
 // *do* with the number.
 export const INLINE = "bga:inline";
+
+// UX-1143: the member that is a record section's answer, drawn first as a sentence.
+export const LEAD = "bga:lead";
 
 // `UX-391`: what a map's own keys *are*, where they are not names.
 //
@@ -645,7 +648,7 @@ export function hintsOf(node) {
   for (const name of [QUANTITY, SEVERITY, COLUMNS, DIRECTION, QUESTION,
                       RAIL, READERS_SERVED, PRESETS, SERIES, DISTRIBUTION,
                       RUNBOOK,
-                      INLINE, DECOMPOSITION, INTERVAL, KEYED_BY,
+                      INLINE, LEAD, DECOMPOSITION, INTERVAL, KEYED_BY,
                       EXPLAINED_BY, COMMAND]) {
     if (name in node) hint[name] = node[name];
   }

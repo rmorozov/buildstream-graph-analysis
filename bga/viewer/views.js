@@ -27,7 +27,7 @@ import { plural } from "./tables.js";
 // `UX-337`: the primitives the chapters share. Extracted because the
 // chapters were *not* acyclic without them - see `primitives.js`.
 import {
-  SVG, svg, seconds, mib, bar, OVERVIEW_SHOWN, elementAnchor,
+  SVG, svg, seconds, mib, bar, OVERVIEW_SHOWN, elementAnchor, plainValue,
 } from "./primitives.js";
 
 // UX-699: `eqeqeq` disallows `== null`, so a null-or-undefined check is
@@ -703,7 +703,7 @@ export function renderBlastAnswer(result) {
     const dt = document.createElement("dt");
     dt.textContent = name;
     const dd = document.createElement("dd");
-    dd.textContent = value === null || value === undefined ? "—" : String(value);
+    dd.textContent = plainValue(value);
     dd.setAttribute("data-key", name.toLowerCase().replace(/\W+/g, "_"));
     list.append(dt, dd);
   }

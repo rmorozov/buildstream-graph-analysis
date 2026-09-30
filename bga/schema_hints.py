@@ -89,6 +89,9 @@ VERDICT_MARKERS = {
 INLINE = "bga:inline"
 INLINE_REASONS = ("name", "caveat")
 
+# UX-1143: the member that is a record section's answer, drawn first as a sentence; its booleans read through it.
+LEAD = "bga:lead"
+
 SEVERITY = "bga:severity"  # this array carries findings
 COLUMNS = "bga:columns"  # column order for an array of objects
 DIRECTION = "bga:direction"  # what the sign of a delta means

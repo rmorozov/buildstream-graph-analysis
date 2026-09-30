@@ -12,7 +12,7 @@
  */
 import { commandLine, identify, labelFor } from "./controls.js";
 import {
-  SVG, svg, seconds, bar, OVERVIEW_SHOWN, elementAnchor,
+  SVG, svg, seconds, mib, bar, OVERVIEW_SHOWN, elementAnchor, plainValue,
 } from "./primitives.js";
 import {
   SCALE, GRADE_ANNOTATION, GRADE_EXHIBIT, exhibitAxis, exhibitTwin,
@@ -356,7 +356,7 @@ function factText(row) {
 
 // `UX-1140`: a number through the element card's formatter; anything else verbatim.
 function shownValue(value, kind) {
-  return typeof value === "number" ? quantity(value, kind) : String(value);
+  return typeof value === "number" ? quantity(value, kind) : plainValue(value);
 }
 
 /**

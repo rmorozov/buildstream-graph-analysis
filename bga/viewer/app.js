@@ -55,7 +55,7 @@ import { copy } from "./tables.js";
 import { strip } from "./drawings.js";
 import { decisionInvestigation, investigate, investigateButton, render,
          renderVerdict, traceUrl } from "./sections.js";
-import { renderStructured, TABLE_OPENS_BOUNDED_ABOVE } from "./structured.js";
+import { nameTable, renderStructured, TABLE_OPENS_BOUNDED_ABOVE } from "./structured.js";
 
 // `UX-1037` (§3k): a bespoke element list past the table bound is §1's own.
 const bounded = (key, items) => (items.length > TABLE_OPENS_BOUNDED_ABOVE
@@ -220,6 +220,12 @@ export function wireJumpBox(nav, root, payload, context = {}) {
   box.setAttribute("aria-label", "Jump to a section, element or binary");
   const list = document.createElement("ul");
   list.className = "jump-hits";
+  // `UX-1176`: mounted empty, so "Nothing matches" is announced and names the box.
+  const none = document.createElement("p");
+  none.className = "jump-none muted";
+  none.setAttribute("id", "jump-none");
+  none.setAttribute("role", "status");
+  box.setAttribute("aria-describedby", "jump-none");
 
   const go = (target) => {
     const escaped = CSS?.escape?.(target.key) ?? target.key;
@@ -252,7 +258,7 @@ export function wireJumpBox(nav, root, payload, context = {}) {
   // grouped display, so `ArrowDown` moves through what a reader sees.
   let rows = [];
   let active = -1;
-  const clear = () => { box.value = ""; list.replaceChildren(); rows = []; active = -1; };
+  const clear = () => { box.value = ""; list.replaceChildren(); none.textContent = ""; rows = []; active = -1; };
   const highlight = () => {
     rows.forEach((row, i) => {
       if (i === active) row.node.setAttribute("data-active", "true");
@@ -279,6 +285,7 @@ export function wireJumpBox(nav, root, payload, context = {}) {
   const render = () => {
     const groups = paletteResults(targets, box.value, payload, context);
     list.replaceChildren();
+    none.textContent = "";
     rows = [];
     active = -1;
     for (const [name, entries] of [["ELEMENT", groups.elements],
@@ -328,12 +335,7 @@ export function wireJumpBox(nav, root, payload, context = {}) {
       }
     }
     // `UX-1170`: typed and nothing found is said, not an empty list over the rail.
-    if (!rows.length && box.value.trim()) {
-      const none = document.createElement("li");
-      none.className = "muted";
-      none.textContent = `Nothing matches "${box.value.trim()}".`;
-      list.append(none);
-    }
+    if (!rows.length && box.value.trim()) none.textContent = `Nothing matches "${box.value.trim()}".`;
   };
 
   box.addEventListener("input", render);
@@ -357,10 +359,10 @@ export function wireJumpBox(nav, root, payload, context = {}) {
   // appending it put it below thirty-odd entries, measured at y=1236 on
   // an 18.8-screen report whose first screen ends at 900.
   const title = nav.querySelector?.(".toc-title");
-  if (title && typeof title.after === "function") title.after(box, list);
-  else nav.prepend?.(list) ?? nav.append(box, list);
-  if (!box.parentNode) nav.prepend(box, list);
-  return { targets, box, list, render, rowsOf: () => rows };
+  if (title && typeof title.after === "function") title.after(box, list, none);
+  else nav.prepend?.(list) ?? nav.append(box, list, none);
+  if (!box.parentNode) nav.prepend(box, list, none);
+  return { targets, box, list, none, render, rowsOf: () => rows };
 }
 
 // ------------------------------------------------------------------ boot
@@ -960,6 +962,7 @@ async function boot() {
     renderProvenanceRecords(payload, root, schemas[payload.schema]);
 
     chapters(root, document, payload);
+    for (const table of root.querySelectorAll?.("table") ?? []) nameTable(table);
 
     // UX-199: navigation, last, over whatever was rendered. Nothing
     // above changes; a reader who ignores all of it sees the same

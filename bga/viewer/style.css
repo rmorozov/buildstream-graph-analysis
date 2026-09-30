@@ -586,6 +586,9 @@ button.collapse:hover { color: var(--fg); }
         background: var(--bg); color: var(--fg); }
 .jump-hits { list-style: none; margin: var(--space-1) 0 0; padding: 0;
              display: flex; flex-wrap: wrap; gap: var(--space-1); }
+.jump-none { font-size: var(--font-small); margin: var(--space-1) 0 0; }
+/* UX-1176: an empty live region stays in the tree and takes no room. */
+.badge:empty, .jump-none:empty { position: absolute; margin: 0; }
 
 /* UX-286: the chapters. A rule, a name and the space a heading earns -
    the grouping has to be visible to be navigation, and it must not cost

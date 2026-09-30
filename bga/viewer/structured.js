@@ -740,7 +740,28 @@ export function buildTable(key, rows, hint = {}, node = undefined,
     if (after) after.after(uniform);
     else tools.prepend?.(uniform);
   }
+  // `UX-1176`: named once it is placed, since its section is where the name comes from.
+  globalThis.queueMicrotask?.(() => nameTable(table));
   return { table, tools };
+}
+
+/** `UX-1176`: a table's accessible name - its section's question, then the field and the fold it sits in. */
+export function nameTable(table) {
+  if (table.getAttribute?.("aria-label") || !table.closest) return;
+  const said = (node) => (node?.textContent ?? "").replace(/[\u25b8\u25be]/g, "").trim();
+  // Children walked, not `:scope` selectors, so the shim reads what a browser does.
+  const child = (node, test) => [...(node?.children ?? [])].find(test) ?? null;
+  const tag = (name) => (node) => String(node.tagName).toLowerCase() === name;
+  const section = table.closest("section[data-section]");
+  const head = child(section, (node) => String(node.className).split(" ").includes("section-head")) ?? section;
+  const dd = table.closest("dd");
+  const fold = table.closest("details");
+  const summary = child(fold, tag("summary"));
+  const parts = [said(child(head, (node) => /^h[23]$/i.test(node.tagName))),
+    dd?.previousElementSibling && tag("dt")(dd.previousElementSibling) ? said(dd.previousElementSibling) : "",
+    fold && (!dd || fold.closest("dd") === dd) ? said(child(summary, (node) => node.className === "map-name")) : ""];
+  const name = [...new Set(parts.filter(Boolean))].join(" \u203a ");
+  if (name) table.setAttribute("aria-label", name);
 }
 
 /**
@@ -869,8 +890,8 @@ export function interrogable(table, specs, total, depth = 0) {
   const named = key.split(".").map((part) => title(part, guessQuantity(part))).join(" ");
   // `UX-1163`: at rest `Copy N rows` is the count; the badge says `N of M`.
   const rest = badgeText(total, total);
-  // UX-1169: a live region, so a typist hears the count the filter leaves.
-  const badge = el("span", { class: "badge", role: "status", hidden: true }, rest);
+  // UX-1169: a live region, so a typist hears the count the filter leaves; `UX-1176`: mounted empty at rest.
+  const badge = el("span", { class: "badge", role: "status" });
   // Review (#295), `UX-1028`: `filtered` - the text/threshold
   // population, before `top`'s slice - is what the paging step below
   // measures its position and bounds against, not `total`, which
@@ -882,8 +903,8 @@ export function interrogable(table, specs, total, depth = 0) {
   const few = total <= FEW_ROWS;
   const refresh = () => {
     // `applyFilters` also writes `state.filtered` and `state.kept` - the pre-`top` population.
-    badge.textContent = badgeText(applyFilters(table, state), total, state.filtered);
-    badge.hidden = badge.textContent === rest;
+    const said = badgeText(applyFilters(table, state), total, state.filtered);
+    badge.textContent = said === rest ? "" : said;
     pagerRefresh?.();
     relabel?.();
     // UX-1158: the strip draws, and counts, the rows the filter kept; `UX-1170`: none at two or fewer.
@@ -1011,7 +1032,8 @@ export function interrogable(table, specs, total, depth = 0) {
         if (offset > lastStart) {
           offset = lastStart;
           state.top = { n: size, column: ranking, offset };
-          badge.textContent = badgeText(applyFilters(table, state), total, state.filtered);
+          const said = badgeText(applyFilters(table, state), total, state.filtered);
+          badge.textContent = said === rest ? "" : said;
         }
         const end = Math.min(offset + size, denom);
         position.textContent = denom === 0 ? "no rows match"

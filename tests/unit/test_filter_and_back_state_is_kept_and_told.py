@@ -50,7 +50,9 @@ _FILTER = r"""
   const rows = () => [...table.tBodies[0].rows].filter((tr) => !tr.hidden);
   const read = () => ({
     badge: tools.querySelector(".badge")?.textContent ?? null,
-    hidden: tools.querySelector(".badge")?.hidden ?? null,
+    // `UX-1176`: a badge at rest is mounted and empty, never `hidden`.
+    quiet: tools.querySelector(".badge") ? !tools.querySelector(".badge").textContent : null,
+    rows: Number(table.getAttribute("data-rows")),
     shown: rows().length,
     label: tools.querySelector(".density-label")?.textContent ?? null,
     sentence: tools.querySelector(".density-sentence")?.textContent ?? null,
@@ -126,7 +128,9 @@ _SEARCH = r"""
     out.ask.back = read();
   }
   const jump = document.getElementById("jump");
-  const hits = () => [...document.querySelectorAll(".jump-hits li")].map((li) => li.textContent);
+  // `UX-1176`: the no-match line is the mounted `#jump-none` status, beside the hits.
+  const hits = () => [...document.querySelectorAll(".jump-hits li, #jump-none")].map((n) => n.textContent)
+    .filter(Boolean);
   await type(jump, "zzzq");
   out.jump = hits();
   await type(jump, "");
@@ -306,6 +310,11 @@ def _walks(seen):
     return [((label, width), walk) for label, out in seen.items() for width, walk in out["back"].items()]
 
 
+def _total(before):
+    """`UX-1185`: a bounded badge's `25 of 1,202`; `UX-1176`: an empty badge at rest leaves `data-rows`."""
+    return re.findall(r"[\d,]+", before["badge"])[-1] if before["badge"] else f"{before['rows']:,}"
+
+
 @needs_browser
 class TestAFilterSaysWhatItKept:
     def test_a_no_match_filter_says_so(self, seen):
@@ -315,7 +324,7 @@ class TestAFilterSaysWhatItKept:
             for width in (1440, 390):
                 out = seen[label][width]
                 # `UX-1185`: a whole table's badge is `71 rows`, a bounded one's `25 of 1,202`.
-                total = re.findall(r"[\d,]+", out["before"]["badge"])[-1]
+                total = _total(out["before"])
                 assert out["none"]["badge"] == f"none of {total} match", (label, width, out)
                 # `UX-1170`: a threshold nothing passes says the same.
                 assert out["unmet"]["badge"] == f"none of {total} match", (label, width, out)
@@ -325,7 +334,7 @@ class TestAFilterSaysWhatItKept:
             for width in (1440, 390):
                 out = seen[label][width]
                 # `UX-1185`: a whole table's badge is `71 rows`, a bounded one's `25 of 1,202`.
-                total = re.findall(r"[\d,]+", out["before"]["badge"])[-1]
+                total = _total(out["before"])
                 some = out["some"]
                 assert some, (label, "no prefix of the needle keeps 3 to M-1 rows", out)
                 # `UX-1156`: the label names the column; the badge and the strip's sentence count.
@@ -363,15 +372,15 @@ class TestAFilterSaysWhatItKept:
             assert out["wide"]["badge"] == f"{shown:,} of {matched:,} matched, of {out['total']:,}", (label, out)
 
     def test_a_cleared_filter_hides_the_badge_again(self, seen):
-        """`UX-1163`'s M3b: under `All rows` the badge is hidden, a filter shows it, clearing hides it."""
+        """`UX-1163`'s M3b: under `All rows` the badge is empty, a filter fills it, clearing empties it."""
         unbounded = [
             (label, width) for label in seen if seen[label][1440] for width in (1440, 390) if seen[label][width]["all"]
         ]
         assert ("two_plane", 1440) in unbounded, {k: v[1440] for k, v in seen.items()}
         for label, width in unbounded:
             all_rows = seen[label][width]["all"]
-            hidden = [all_rows[step]["hidden"] for step in ("rest", "some", "cleared")]
-            assert hidden == [True, False, True], (label, width, all_rows)
+            quiet = [all_rows[step]["quiet"] for step in ("rest", "some", "cleared")]
+            assert quiet == [True, False, True], (label, width, all_rows)
 
     def test_an_empty_result_offers_no_copy_and_no_sentence(self, seen):
         assert "uniform-columns" in seen["two_plane"][1440]["before"]["offered"], seen["two_plane"]

@@ -20,7 +20,7 @@
 // The default is `headline.top_actions[0]` now, which is `core.bst`
 // on that one fixture by coincidence rather than by compilation.
 
-import { identify, labelFor, say } from "./controls.js";
+import { identify, labelFor, say, uniqueId } from "./controls.js";
 import { title } from "./format.js";
 
 // `UX-210`: **every query says which plane it is asking.**
@@ -937,6 +937,11 @@ function elementPicker(section, make, options) {
   search.value = chosen ?? "";
   search.setAttribute("value", chosen ?? "");
   labelFor(label, search, "query-element");
+  // `UX-1176`: the note is mounted from the start, so what it says after a keystroke is announced.
+  const noteId = uniqueId("query-element-note");
+  note.setAttribute("id", noteId);
+  note.setAttribute("role", "status");
+  search.setAttribute("aria-describedby", noteId);
   // The matched few, redrawn on every keystroke. `includes`, not a
   // prefix: an element is `layer07/mod123.bst` and the part a reader
   // remembers is rarely the layer.
@@ -966,9 +971,10 @@ function elementPicker(section, make, options) {
     // reader still typing, not a request to substitute nothing.
     if (population.includes(search.value)) applyElement(section, current = search.value);
     // `UX-1170`: a box that matches nothing says so, and what the queries still ask about.
-    note.textContent = hits ? told
+    const says = hits ? told
       : `Nothing in this run's ${population.length} elements matches "${search.value.trim()}"; `
         + `the queries still ask about ${current}.`;
+    if (note.textContent !== says) note.textContent = says;
   };
   search.addEventListener?.("input", applyTyped);
   search.addEventListener?.("change", applyTyped);

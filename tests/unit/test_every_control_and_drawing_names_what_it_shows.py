@@ -201,4 +201,5 @@ class TestEveryControlAndDrawingNamesWhatItShows:
             counts = [
                 n["name"] for n in nodes if n["role"] == "status" and "badge" in n["attrs"].get("class", "").split()
             ]
-            assert bool(counts) == filtered, (label, width, counts)
+            # `UX-1176`: a badge is in the tree at rest too, empty - `test_a_status_is_announced.py` holds that half.
+            assert counts or not filtered, (label, width, counts)

@@ -294,9 +294,10 @@ Three placement rules the field pass earned:
    marker (the `?`, §6e.4 — one per block, not one per value), and
    each description opens *beside its value* — to its
    right where the row has room, below it where it does not. In
-   print and export the marker survives and the description renders
-   inline-on-open state only; hover is never the only door (§4.3's
-   rule, applied to prose).
+   export the marker survives; print drops it with every other control,
+   opens every `details` and wraps a command (`UX-1154`: paper has no
+   click), and an opened description renders inline. Hover is never
+   the only door (§4.3's rule, applied to prose).
 
 ## 3. Tables
 

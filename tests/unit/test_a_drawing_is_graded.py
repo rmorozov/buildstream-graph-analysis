@@ -480,7 +480,8 @@ console.log(JSON.stringify(seen));
         # block prints the twin open.
         blocks = re.findall(r"@media print \{(.*?)\n\}", css, re.S)
         assert any("twin-table" in one and "display: table" in one for one in blocks), "the twin does not print open"
-        assert any("twin-toggle" in one and "display: none" in one for one in blocks), (
+        # UX-1154: one print rule drops every control; the booted guard is test_print_opens_every_fold_and_drops_its_controls.py.
+        assert any("button:not(.fold-more)" in one and "display: none" in one for one in blocks), (
             "the toggle prints as a dead control"
         )
 

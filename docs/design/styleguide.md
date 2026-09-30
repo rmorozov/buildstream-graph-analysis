@@ -2157,7 +2157,7 @@ the census runs at the largest class.
 | chain and element lists | `PATH_HEAD` + `PATH_TAIL` | "+N more" pages `REVEAL_STEP` names at a time (`UX-1029`) | `views.js`, `structured.js`; `element.js` through `app.js`'s `bounded` (`UX-1037`); a finding's `elements` in `sections.js` (`UX-1053`) |
 | findings | 40 cards, the rest as fragment targets | "Show all" hydrates once (§3j) | §3j |
 | a list inside a sentence (finding text, a chapter's answer) | the top few by name, the rest as a count | the section or table the sentence cites | the analyzer's sentences |
-| evidence, culprits, overview | `EVIDENCE_SHOWN`, `CULPRITS_SHOWN`, `OVERVIEW_SHOWN` | not measured here | `sections.js`, `element.js`, `primitives.js` |
+| evidence, overview | `EVIDENCE_SHOWN`, `OVERVIEW_SHOWN` | not measured here | `sections.js`, `primitives.js`; the culprits are table rows (`UX-1188`) |
 | history series | `HISTORY_POINTS_MAX` points | none: the window is the answer | `element.js` |
 | rail | the sections of the chapter the reader is in (§3h) | the next chapter | §3h |
 | Perfetto element picker | `PICKER_SHOWN` hits | the search box | `questions.js` |

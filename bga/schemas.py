@@ -5636,8 +5636,7 @@ _COMPARE_HINTS = {
             "rows": {
                 COLUMNS: [
                     {"key": "element_uid", "title": "Element", "role": "element", "sortable": True},
-                    {"key": "baseline_us", "title": "Before", "quantity": "duration_us", "sortable": True},
-                    {"key": "candidate_us", "title": "After", "quantity": "duration_us", "sortable": True},
+                    # `UX-1188`: the first quantity is the table's opening Top-N - the culprits.
                     {
                         "key": "delta_us",
                         "title": "Change",
@@ -5647,6 +5646,8 @@ _COMPARE_HINTS = {
                         "not zero, where an element is in "
                         "only one of the runs.",
                     },
+                    {"key": "baseline_us", "title": "Before", "quantity": "duration_us", "sortable": True},
+                    {"key": "candidate_us", "title": "After", "quantity": "duration_us", "sortable": True},
                     {"key": "presence", "title": "Presence", "sortable": True},
                     {"key": "verdict_kind", "title": "Verdict", "sortable": True},
                 ],

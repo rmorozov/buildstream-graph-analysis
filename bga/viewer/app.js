@@ -762,7 +762,7 @@ async function boot() {
     // `renderDecision` below.
     const culprits = comparison && contained(
       document, "culprits", "compare.json",
-      () => renderCulprits(comparison));
+      () => renderCulprits(comparison, schemas[comparison.schema]));
     if (culprits) root.append(culprits);
 
     // UX-202: the overview above the sections, and the evidence header

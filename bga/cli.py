@@ -1404,16 +1404,16 @@ def _compare_exit_code(args: argparse.Namespace, comparison) -> int:
             print(
                 "Marginal gate not applied: this change added no elements with "
                 "measured work, so there is nothing to judge the efficiency of. "
-                "(This is not a pass - it is an empty check.)",
+                "(This is not a pass; it is an empty check.)",
                 file=sys.stderr,
             )
         elif marginal['stretch'] > limit:
             on_path = ", ".join(marginal['on_critical_path'])
             print(
                 f"Marginal efficiency gate FAILED: "
-                f"{marginal['added_critical_path_us'] / 1e6:.1f}s of the "
-                f"{marginal['added_work_us'] / 1e6:.1f}s this change added landed on "
-                f"the critical path (stretch {marginal['stretch']:.2f} > {limit:.2f}) - "
+                f"{marginal['added_critical_path_us'] / 1e6:.1f} s of the "
+                f"{marginal['added_work_us'] / 1e6:.1f} s this change added landed on "
+                f"the critical path (stretch {marginal['stretch']:.2f} > {limit:.2f}); "
                 f"on the path: {on_path}. Adding work is allowed; adding it "
                 f"serialized is what this gate exists to catch, and unlike the "
                 f"whole-build efficiency gate it does not weaken as the project grows. "

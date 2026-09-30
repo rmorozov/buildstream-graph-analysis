@@ -25,6 +25,7 @@ from .plural import plural
 # exactly as before. `UX-190`'s rules apply unchanged: adding a hint is
 # an addition, changing what one *means* is a version bump.
 QUANTITY = "bga:quantity"  # how to format the number
+INSTANT = "bga:instant"  # a `duration_us` that is a point in time: epoch microseconds render as a date
 # UX-209: the question a section answers, so the heading, the TOC and
 # the text renderer name it the same way. Silent -> the viewer falls
 # back to `title(key)`.

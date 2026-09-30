@@ -52,6 +52,7 @@ from .schema_hints import (
     EXPLAINED_BY,
     GROWS,
     INLINE,
+    INSTANT,
     INTERVAL,
     KEY_PATH,
     KEYED_BY,
@@ -3296,6 +3297,7 @@ _RUN_INSTANCE_HINT = {
         "started_at_us": {
             INLINE: "name",
             QUANTITY: "duration_us",
+            INSTANT: True,
             "description": "When the capture began, as microseconds "
             "since the epoch. A point in time rather "
             "than a span — the unit is the same and "
@@ -3380,6 +3382,33 @@ _RUN_INSTANCE_HINT = {
     },
 }
 
+
+_BLAST_COUNTS = {
+    "direct_count": {
+        QUANTITY: "count",
+        "description": "Elements that depend on this one directly. The first hop only.",
+    },
+    "blast_count": {
+        QUANTITY: "count",
+        "description": "Everything a change here rebuilds, transitively — the "
+        "number that makes a small element expensive to touch.",
+    },
+    "building_count": {QUANTITY: "count", "description": "Of those, the ones that do real build work."},
+    "assembling_count": {
+        QUANTITY: "count",
+        "description": "Of those, the ones that only gather what is below them — they rebuild, but cost little.",
+    },
+    "element_count": {
+        QUANTITY: "count",
+        "description": "Elements in the project, as the denominator for the reach above.",
+    },
+    "measured_us": {
+        QUANTITY: "duration_us",
+        "description": "Recorded rebuild time below this element. A sum over "
+        "the measured elements only, so it is a lower bound on "
+        "the real cost.",
+    },
+}
 
 _ANALYZE_HINTS = {
     "timestamp_agreement": {
@@ -3485,6 +3514,7 @@ _ANALYZE_HINTS = {
                 "items": {
                     "type": "object",
                     "properties": {
+                        **{k: {QUANTITY: v[QUANTITY]} for k, v in _BLAST_COUNTS.items() if k != "element_count"},
                         "direct_elements": {
                             GROWS: "elements directly sourcing that resource (subset, no cap)",
                             "items": {"type": "string", "description": "element uid"},
@@ -3501,6 +3531,7 @@ _ANALYZE_HINTS = {
                 },
                 "description": "One row per resource more than one element sources.",
             },
+            "element_count": {QUANTITY: "count"},
         },
     },
     "utilization_envelope": {
@@ -3844,7 +3875,10 @@ _ANALYZE_HINTS = {
                 QUANTITY: "duration_us",
                 "description": "The grid in force — without it \"unmeasurable\" names no threshold.",
             },
-            "element_count": {"description": "How many elements, not how many tasks: the reader acts on elements."},
+            "element_count": {
+                QUANTITY: "count",
+                "description": "How many elements, not how many tasks: the reader acts on elements.",
+            },
             "elements": {
                 GROWS: "elements with a below-epsilon span (subset of elements, no cap)",
                 "items": {"type": "string", "description": "element uid"},
@@ -3931,10 +3965,12 @@ _ANALYZE_HINTS = {
             },
             "horizon_start_us": {
                 QUANTITY: "duration_us",
-                "description": "Where this accounting starts, offset from the run's own zero.",
+                INSTANT: True,
+                "description": "Where this accounting starts: the trace's own timestamp, an offset from the run's zero or epoch microseconds.",
             },
             "horizon_end_us": {
                 QUANTITY: "duration_us",
+                INSTANT: True,
                 "description": "Where it ends. Beyond it nothing was scheduled, so nothing is counted.",
             },
             "horizon_us": {
@@ -5848,34 +5884,11 @@ _COMPARE_HINTS = {
 }
 
 _BLAST_HINTS = {
-    "direct_count": {
-        QUANTITY: "count",
-        "description": "Elements that depend on this one directly. The first hop only.",
-    },
-    "blast_count": {
-        QUANTITY: "count",
-        "description": "Everything a change here rebuilds, transitively — the "
-        "number that makes a small element expensive to touch.",
-    },
-    "building_count": {QUANTITY: "count", "description": "Of those, the ones that do real build work."},
-    "assembling_count": {
-        QUANTITY: "count",
-        "description": "Of those, the ones that only gather what is below them — they rebuild, but cost little.",
-    },
-    "element_count": {
-        QUANTITY: "count",
-        "description": "Elements in the project, as the denominator for the reach above.",
-    },
+    **_BLAST_COUNTS,
     "measured_elements": {
         QUANTITY: "count",
         "description": "How many of the affected elements have a recorded "
         "duration. The rest are counted, never estimated.",
-    },
-    "measured_us": {
-        QUANTITY: "duration_us",
-        "description": "Recorded rebuild time below this element. A sum over "
-        "the measured elements only, so it is a lower bound on "
-        "the real cost.",
     },
     # UX-206: the closure as a hierarchy rather than a flat list. The
     # depth is what an indented tree needs, and deriving it in the

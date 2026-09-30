@@ -9,11 +9,11 @@ boot that three stylesheets were refused and four files are missing.
 
 So this is not a fix's test. It is the net for the class: any
 error-severity console message, any `securitypolicyviolation`, and the
-form-control complaints the Issues panel raises, on **three** runs in
+form-control complaints the Issues panel raises, on **four** runs in
 **both** shapes the report is read in - served over the local http
 server, and exported to one file opened from disk. (`UX-438` added the
 third: `macro_micro` with transfer spans injected, because the message
-that item is named for is one neither committed fixture can raise.)
+that item is named for is one neither committed fixture can raise; `UX-1180` the fourth, the two-plane page.)
 A `TypeError` thrown during boot lands here too, which is why
 `UX-335`'s class needs no second instrument.
 
@@ -62,7 +62,7 @@ import pytest
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 
 from browser import NO_BROWSER, Browser, find_chrome
-from pages import snapshot_copy, transfer_run
+from pages import snapshot_copy, transfer_run, two_plane_run
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
@@ -105,7 +105,7 @@ def _boot(run_dir, out_dir, make=snapshot_copy):
 
 @pytest.fixture(scope="module")
 def observed(tmp_path_factory):
-    """`{page name: observation}` for six boots, one browser."""
+    """`{page name: observation}` for eight boots, one browser."""
     if chrome is None or shutil.which("node") is None:  # pragma: no cover
         pytest.skip(NO_BROWSER)
     servers, urls = [], {}
@@ -121,6 +121,8 @@ def observed(tmp_path_factory):
         ("golden", GOLDEN, snapshot_copy),
         ("macro_micro", MACRO, snapshot_copy),
         ("transfer", MACRO, transfer_run),
+        # `UX-1180`: the page with both planes, where the blast rows and `duration_resolution` are drawn.
+        ("two-plane", GOLDEN, lambda _run, into: two_plane_run(into, ("--layers", "8", "--width", "14"))),
     ):
         exported, served, httpd = _boot(run, tmp_path_factory.mktemp(name), make)
         servers.append(httpd)
@@ -212,7 +214,7 @@ class TestTheConsoleStaysClean:
         `BGA_STRICT_HINTS` whenever it had to name-sniff a unit the
         schema never declared, and `tests/cdp.mjs` now sets that flag
         before the document exists - so this is the page's own account
-        of what it had to guess about, on the six boots above.
+        of what it had to guess about, on the eight boots above.
 
         It is a `warning`, not an error, which is why it needs a clause
         of its own: `BAD_LEVELS` deliberately excludes warnings so a

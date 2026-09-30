@@ -644,6 +644,7 @@ LARGE = (
 
 MEDIUM = (
     "tests/unit/test_a_broken_pipe_is_not_an_error.py",  # 1.6s
+    "tests/unit/test_a_value_is_what_it_names.py",  # 11.6s
     # `UX-665`, tiered on landing: one Chromium, three boots (golden,
     # macro_micro, the built shared-resource fixture). 1.77/1.78/1.82s
     # single-process.

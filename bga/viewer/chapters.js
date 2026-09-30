@@ -609,12 +609,13 @@ export function labelFold(box) {
   if (!toggle && !rail) return;
   const held = box.querySelectorAll?.("[data-section]")?.length ?? 0;
   const title = box.getAttribute("aria-label");
-  const count = `${held} section${held === 1 ? "" : "s"}`;
   const open = isOpen(box);
   if (toggle) {
     toggle.setAttribute("aria-expanded", String(open));
-    toggle.textContent = `${glyph(open)} Sections · ${held}`;
-    toggle.setAttribute("aria-label", `${count}: ${title}`);
+    const said = `Sections · ${held}`;
+    toggle.textContent = `${glyph(open)} ${said}`;
+    // UX-1169: the name leads with the visible label (WCAG 2.5.3).
+    toggle.setAttribute("aria-label", `${said}: ${title}`);
     toggle.setAttribute("title", open
       ? `Fold "${title}" back to its answer` : `Open "${title}"`);
   }

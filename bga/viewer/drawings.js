@@ -173,8 +173,7 @@ export function nameDrawing(drawing, sentence, routeNode, name) {
  * count (`UX-360`) never sees it - a table twin's cells would have.
  */
 export function valueRoute(doc, allMarksText) {
-  const node = box(doc, "span", { "data-role": "drawing-values" });
-  node.hidden = true;
+  const node = box(doc, "span", { "data-role": "drawing-values", role: "note" });
   node.setAttribute("aria-label", allMarksText);
   return node;
 }

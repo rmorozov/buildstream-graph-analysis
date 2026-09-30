@@ -482,6 +482,8 @@ export function renderTrend(store, schema = undefined,
         const replacement = exhibitTwin(document, columns, twinRows(all));
         twin.replaceWith?.(replacement);
         twin = replacement;
+        // UX-1169: the new twin is the route, and its toggle keeps its name.
+        nameDrawing(figure, caption.textContent, twin);
         wrapper.setAttribute("data-store-all", String(all.length));
         button.hidden = true;
       });

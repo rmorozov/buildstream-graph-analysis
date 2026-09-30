@@ -315,7 +315,9 @@ if (journeying) {
       const pairs = dom?.node?.attributes ?? [];
       const attrs = {};
       for (let i = 0; i < pairs.length; i += 2) attrs[pairs[i]] = pairs[i + 1];
-      out.push({ role, name: node.name?.value ?? "", attrs });
+      // UX-1169: how many nodes the tree's own `details` relation reaches.
+      const details = node.properties?.find((p) => p.name === "details")?.value?.relatedNodes?.length ?? 0;
+      out.push({ role, name: node.name?.value ?? "", attrs, details });
     }
   }
   if (observing) {

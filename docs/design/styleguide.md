@@ -1534,7 +1534,8 @@ with `aria-details`. The two exhibit drawings in `views.js`, the
 comparison band and the store trend, have no twin named here, so the
 row that lands this rule draws one for each. The guard asserts, per
 `svg[role=img]`, a non-empty name and a route that resolves to a node
-carrying every published mark with its label.
+carrying every published mark with its label - a node the accessibility
+tree exposes, never a `hidden` one (`UX-1169`).
 
 **Rule 11, the mechanism.** A `hidden="until-found"` element that CSS
 also gives `display: none` is not revealed by find
@@ -2050,7 +2051,8 @@ underutilized_intervals From      "497003.7 h" — a monotonic base rendered as 
 
 1. No task id. The register is `git log`'s; a reader has no `UX-`.
 2. No payload key outside the JSON door — a heading is a question,
-   a cell is a value, the key is the toggle's `title`. An enum value
+   a cell is a value, the key is the toggle's `title` and its name the
+   question (`UX-1169`). An enum value
    or gate id reads through one map, `READER_LABELS` in `format.js`,
    as a sentence-case phrase; a rule's constant and source file stay
    in the JSON door (`UX-1141`). A key path is text only where a

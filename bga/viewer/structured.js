@@ -850,7 +850,8 @@ export function interrogable(table, specs, total, depth = 0) {
   const named = key.split(".").map((part) => title(part, guessQuantity(part))).join(" ");
   // `UX-1163`: at rest `Copy N rows` is the count; the badge says `N of M`.
   const rest = badgeText(total, total);
-  const badge = el("span", { class: "badge", hidden: true }, rest);
+  // UX-1169: a live region, so a typist hears the count the filter leaves.
+  const badge = el("span", { class: "badge", role: "status", hidden: true }, rest);
   // Review (#295), `UX-1028`: `filtered` - the text/threshold
   // population, before `top`'s slice - is what the paging step below
   // measures its position and bounds against, not `total`, which

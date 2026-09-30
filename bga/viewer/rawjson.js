@@ -54,9 +54,8 @@ export const HIDE = "Hide JSON";
 // is offered as a copy, never as a second node to search or fold.
 export const JSON_DOOR_CHAR_CAP = 20_000;
 
-// `UX-825`: the payload key, carried on the toggle rather than the
-// heading - `title` and `aria-label` both, since it is what a hover
-// and a screen reader each read for this control.
+// `UX-825`: the payload key, carried on the toggle's `title` rather than
+// the heading; UX-1169: its name is the section's question, not the key.
 const SHOWN_TITLE = (key) => `View as JSON — ${key}`;
 const HIDDEN_TITLE = (key) => `Hide JSON — ${key}`;
 
@@ -92,8 +91,10 @@ export function jsonToggles(root, { document: doc } = {}) {
     // `UX-825` (styleguide §4g.2): the payload key `sectionHead` no
     // longer puts beside the heading rides here instead - the toggle
     // is the one control the key is actually about.
+    const said = (verb) => button.setAttribute("aria-label",
+      `${verb}: ${heading.textContent.replace(/\s+/g, " ").trim()}`);
     button.title = SHOWN_TITLE(key);
-    button.setAttribute("aria-label", SHOWN_TITLE(key));
+    said(SHOW);
 
     let shown = null;
     button.addEventListener("click", () => {
@@ -103,7 +104,7 @@ export function jsonToggles(root, { document: doc } = {}) {
         button.setAttribute("aria-expanded", "false");
         button.textContent = SHOW;
         button.title = SHOWN_TITLE(key);
-        button.setAttribute("aria-label", SHOWN_TITLE(key));
+        said(SHOW);
         return;
       }
       const box = doc.createElement("div");
@@ -143,7 +144,7 @@ export function jsonToggles(root, { document: doc } = {}) {
       button.setAttribute("aria-expanded", "true");
       button.textContent = HIDE;
       button.title = HIDDEN_TITLE(key);
-      button.setAttribute("aria-label", HIDDEN_TITLE(key));
+      said(HIDE);
     });
 
     // `UX-1043` (styleguide §3l): appended last, same as before - the

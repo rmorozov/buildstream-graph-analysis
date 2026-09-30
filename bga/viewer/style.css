@@ -1321,6 +1321,8 @@ button.json-toggle:hover { color: var(--fg); }
 .series-sentence, .density-sentence {
   font-size: var(--font-small); font-variant-numeric: tabular-nums;
 }
+/* UX-1169: in the accessibility tree, so a drawing's `aria-details` reaches it; not on screen. */
+[data-role="drawing-values"] { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
 .density-strip {
   width: var(--draw-annotation-strip-w);
   height: var(--draw-annotation-strip-h); flex: none;

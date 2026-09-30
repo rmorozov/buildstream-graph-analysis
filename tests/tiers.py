@@ -1091,6 +1091,11 @@ MEDIUM = (
     "tests/unit/test_print_opens_every_fold_and_drops_its_controls.py",  #  4.3s
     # `UX-1157`: 4.46 / 4.48s.
     "tests/unit/test_the_compact_page_fits_its_width.py",  #  4.5s
+    # Round 156, tiered on the merged tree: two single-process runs alone each.
+    # `UX-1162`: 6.48 / 6.53s.
+    "tests/unit/test_every_control_and_drawing_names_what_it_shows.py",  #  6.5s
+    # `UX-1161`: 4.16 / 4.29s.
+    "tests/unit/test_print_fits_the_sheet_and_prints_no_dead_apparatus.py",  #  4.2s
     # 8.60 / 8.75s.
     "tests/unit/test_the_rail_and_the_jump_box_write_the_anchor.py",  #  8.7s
     # Round 147, tiered on the merged tree: three single-process runs

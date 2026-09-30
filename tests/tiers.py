@@ -1098,6 +1098,8 @@ MEDIUM = (
     "tests/unit/test_print_fits_the_sheet_and_prints_no_dead_apparatus.py",  #  4.2s
     # 8.60 / 8.75s.
     "tests/unit/test_the_rail_and_the_jump_box_write_the_anchor.py",  #  8.7s
+    # `UX-1168`: 3.93 / 3.87s.
+    "tests/unit/test_the_rail_mark_follows_the_reading_line.py",  #  3.9s
     # Round 147, tiered on the merged tree: three single-process runs
     # alone each (setup+call+teardown).
     # `UX-1083`: 4.17 / 4.08 / 4.23s.

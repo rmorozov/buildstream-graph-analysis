@@ -853,7 +853,15 @@ export function scrollspy(root, nav, { observer } = {}) {
   // counts as on screen while the reader is inside it. The reading
   // line above is what turns "on screen" into "here".
   }, { threshold: 0 });
-  for (const section of targets) watch.observe(section);
+  // A zero-height root on the reading line: a section edge crossing it,
+  // by scroll or by layout, is what moves the mark, and `watch` alone
+  // sees nothing while the set on screen stays the same.
+  const pct = READING_LINE * 100;
+  const line = new Observer(mark, { rootMargin: `-${pct}% 0px -${100 - pct}% 0px` });
+  for (const section of targets) {
+    watch.observe(section);
+    line.observe(section);
+  }
   return watch;
 }
 

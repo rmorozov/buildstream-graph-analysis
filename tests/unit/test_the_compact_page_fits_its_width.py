@@ -1,6 +1,8 @@
-"""UX-1157, UX-1164: at 390 and 1440 nothing overlaps, overflows or breaks a word.
+"""UX-1157, UX-1164, UX-1171: at 390 and 1440 nothing overlaps, overflows or breaks a word.
 
-No axis's tick labels overlap, leave the viewport or say a mark twice; a
+No axis's tick labels overlap, cover the caption after it, leave the
+viewport or say a mark twice; nothing outside a scroll box passes the
+document; a stacked table of tables labels every cell; a
 `dl` holds only `dt`/`dd`, with its door just before it; no table's box
 passes the viewport; the constraints table and a table of tables fit
 their box with no word split; a query scrolls in its own box; a chapter's
@@ -48,7 +50,23 @@ _MEASURE = (
       if ((t.dataset.mark || "").split(" ").some((m) => said.split(m).length > 2)) doubled.push(`${sec(t)}: ${said}`);
     }
   }
-  const unclipped = [...document.querySelectorAll("main pre")].filter(shown)
+  const overCaption = [];
+  for (const axis of document.querySelectorAll("main .draw-axis")) {
+    const next = axis.nextElementSibling;
+    if (!next || !shown(next)) continue;
+    for (const t of [...axis.querySelectorAll(".draw-tick")].filter(shown)) {
+      if (hit(t.getBoundingClientRect(), next.getBoundingClientRect())) overCaption.push(`${sec(axis)}: ${t.textContent}`);
+    }
+  }
+  const pastDocument = [...new Set([...document.querySelectorAll("main *")].filter(shown)
+    .filter((n) => !n.closest("pre, table") && n.getBoundingClientRect().right > vw + 0.5)
+    .map((n) => `${sec(n)} ${n.tagName}.${n.className}`))];
+  const ofTables = [...document.querySelectorAll("main table")].filter((t) => shown(t) && t.querySelector("td table"));
+  const stacked = ofTables.filter((t) => getComputedStyle(t.querySelector("td")).display === "block").length;
+  const unlabelled = ofTables.flatMap((t) => [...t.querySelectorAll(":scope > tbody > tr > td:not([colspan])")]
+    .filter((c) => getComputedStyle(c).display === "block" && !/^"[^"\s]/.test(getComputedStyle(c, "::before").content))
+    .map((c) => `${t.dataset.table}: ${c.dataset.column}`));
+  const unclipped =[...document.querySelectorAll("main pre")].filter(shown)
     .filter((p) => p.scrollWidth > p.clientWidth + 0.5 && getComputedStyle(p).overflowX === "visible")
     .map((p) => `${sec(p)} ${p.scrollWidth}/${p.clientWidth}`);
   const narrowed = [...document.querySelectorAll(".chapter-head > h2")].filter(shown).filter((h) => {
@@ -100,7 +118,7 @@ _MEASURE = (
   const clipped = steps.filter((b) => b.scrollWidth > b.clientWidth + 0.5
       || (keys && shown(keys) && hit(b.getBoundingClientRect(), keys.getBoundingClientRect())))
     .map((b) => `${b.textContent} ${b.scrollWidth}/${b.clientWidth}`);
-  return { overlaps, offScreen, doubled, unclipped, narrowed, steps: steps.length, clipped, strayChildren, doorless, described: described.length,
+  return { overCaption, pastDocument, unlabelled, stacked, overlaps, offScreen, doubled, unclipped, narrowed, steps: steps.length, clipped, strayChildren, doorless, described: described.length,
            evidence: document.querySelectorAll("article.finding dl.evidence").length, pastViewport, scrolling, splitWords,
            axes: document.querySelectorAll("[data-section=floors] .draw-axis").length,
            dls: document.querySelectorAll("dl").length, mustFit: mustFit.map(name),
@@ -139,6 +157,20 @@ class TestTheCompactPageFitsItsWidth:
     def test_no_tick_label_overlaps_another(self, measured):
         label, found = measured
         assert {w: g["overlaps"] for w, g in found.items() if g["overlaps"]} == {}, label
+
+    def test_no_tick_label_covers_its_caption(self, measured):
+        label, found = measured
+        assert {w: g["overCaption"] for w, g in found.items() if g["overCaption"]} == {}, label
+
+    def test_nothing_outside_a_scroll_box_passes_the_document(self, measured):
+        label, found = measured
+        assert {w: g["pastDocument"][:5] for w, g in found.items() if g["pastDocument"]} == {}, label
+
+    def test_a_stacked_table_labels_every_cell(self, measured):
+        label, found = measured
+        if label != "golden":
+            assert found[390]["stacked"] > 0 and found[1440]["stacked"] == 0, (label, found)
+        assert {w: g["unlabelled"][:5] for w, g in found.items() if g["unlabelled"]} == {}, label
 
     def test_no_tick_label_leaves_the_viewport(self, measured):
         label, found = measured

@@ -196,13 +196,14 @@ def tall_fold_landings(browser, tmp_path_factory):
 
 class TestTheEntryPointsLandRatherThanScroll:
     def test_every_way_in_goes_through_the_settle(self):
-        """The rail, the jump box and a pasted `#anchor` are three
-        callers of one helper. A site left on `revealChapter` scrolls
+        """The rail, the jump box, a pasted `#anchor` and `popstate`'s
+        re-landing (`UX-1171`) are four callers of one helper. A site
+        left on `revealChapter` scrolls
         against the estimate and this file cannot see it: the rail is
         the only one it drives."""
         app = (REPO / "bga" / "viewer" / "app.js").read_text()
         assert "revealChapter" not in app
-        assert app.count("revealAndLand") == 3
+        assert app.count("revealAndLand") == 4
 
     def test_the_helper_lands_now_and_again_once_the_rect_settles(self):
         """Both, and the source is where it is asserted: the browser

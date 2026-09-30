@@ -197,6 +197,10 @@ export function foldOnNarrow(nav, doc) {
   title.addEventListener?.("click", () => {
     apply(nav.getAttribute("data-folded") !== "true");
   });
+  // UX-1171: a press that moves the page folds the rail first, so it lands on the section, not under the rail.
+  nav.addEventListener?.("click", (event) => {
+    if (narrow?.matches && event.target?.closest?.("a[href^='#'],[data-toc-chapter],[data-all],[data-step]")) apply(true);
+  }, true);
   // `addEventListener` on a MediaQueryList is the modern spelling and
   // the only one worth carrying; a browser without it keeps whatever
   // the first `apply` decided, which is correct for its width.
@@ -1132,9 +1136,11 @@ async function boot() {
       if (fragment(event)?.length > 1 || chapter) {
         // Chrome's own restore lands after popstate and overrides it.
         window.history.scrollRestoration = "manual";
+        // UX-1171: and where the anchor sat, since a scrollY is stale once the folds' estimates settle.
+        const at = document.getElementById(splitHash(location.hash).anchor);
         window.history.replaceState({ ...window.history.state,
           folds: foldSnapshot(root),
-          scrollY: window.scrollY }, "");
+          scrollY: window.scrollY, at: at?.getBoundingClientRect().top }, "");
         if (chapter) {
           window.history.pushState(null, "", joinHash(`chapter-${chapter}`, splitHash(location.hash).query));
         }
@@ -1149,6 +1155,8 @@ async function boot() {
       if (!Array.isArray(saved?.folds)) return;
       applyFolds(root, saved.folds);
       window.scrollTo?.(0, saved.scrollY ?? 0);
+      const at = document.getElementById(splitHash(location.hash).anchor);
+      if (saved.at !== undefined && at && !at.closest("[hidden]")) revealAndLand(at, undefined, saved.at);
     });
     window.addEventListener?.("hashchange", () => {
       if (window.history?.state?.folds) return; // popstate restored this entry.

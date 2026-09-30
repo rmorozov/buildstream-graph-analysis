@@ -652,7 +652,7 @@ export function buildTable(key, rows, hint = {}, node = undefined,
       const kind = numeric ? (perMember ?? spec.quantity) : null;
       tr.append(el("td",
         { class: numeric ? "num" : null,
-          "data-column": column,
+          "data-column": column, "data-label": spec.title,
           "data-raw": raw === undefined || raw === null ? ""
             : structural ? JSON.stringify(raw) : String(raw) },
         structural

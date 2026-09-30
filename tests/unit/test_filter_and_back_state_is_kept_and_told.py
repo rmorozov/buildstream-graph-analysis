@@ -1,10 +1,11 @@
-"""UX-1158, UX-1165: a filter says when it matched nothing, and Back walks the rail.
+"""UX-1158, UX-1165, UX-1171: a filter says when it matched nothing, and Back walks the rail.
 
 A no-match filter's badge reads `none of M match` and nothing offers a
 copy or a table sentence; the table's strip redraws over the kept rows
 and its sentence counts K of M; three rail chapter presses take three
 Backs to unwind at 1440 and 390, each restoring the open chapters and
-the rail's mark; the hash's state is one opaque token, an untouched
+the rail's mark, and Forward lands where the press did; at 390 a press
+folds the rail; the hash's state is one opaque token, an untouched
 page writes none, a readable hash from before still loads, and a
 chapter's own fold and `All rows` survive a reload.
 UX-1170: a threshold empties the tools as the text box does, a filter to
@@ -169,7 +170,24 @@ window.__j = (() => {
     history.back();
     return moved.then(settled);
   };
-  return { settled, press, back, ids };
+  const forward = () => {
+    const moved = new Promise((done) => window.addEventListener("popstate", done, { once: true }));
+    history.forward();
+    return moved.then(settled);
+  };
+  // The chapter with the most sections: its height estimates move the most.
+  const count = (row) => row.querySelectorAll("a[data-toc]").length;
+  const most = [...document.querySelectorAll("nav.toc li[data-chapter]")]
+    .reduce((a, b) => (count(b) > count(a) ? b : a)).dataset.chapter;
+  const into = () => {
+    document.querySelector(`[data-toc-chapter="${most}"]`).click();
+    return settled();
+  };
+  const link = (at) => {
+    [...document.querySelectorAll(`nav.toc li[data-chapter="${most}"] a[data-toc]`)].at(at).click();
+    return settled();
+  };
+  return { settled, press, back, forward, into, link, ids };
 })();
 null
 """
@@ -184,6 +202,37 @@ _STEPS = [
     _BACK,
     {"read": "__j.ids"},
 ]
+# UX-1171: the walk's own sequence - a chapter, its last section, its first - then Back x3, Forward x3.
+_AHEAD = [
+    {"read": _HELPERS},
+    {"read": "__j.settled()"},
+    {"read": "__j.into()"},
+    {"read": "__j.link(-1)"},
+    {"read": "__j.link(0)"},
+    *[_BACK] * 3,
+    *[{"read": "__j.forward()"}] * 3,
+]
+_AHEAD_NAMES = ["initial", "chapter", "far", "near", "b1", "b2", "b3", "f1", "f2", "f3"]
+# UX-1171: at 390 the rail folds after a chapter press, a section link or either "all" button.
+_RAIL = r"""
+(async () => {
+  const turn = () => new Promise((done) => setTimeout(done, 120));
+  const nav = document.querySelector("nav.toc");
+  const out = { initial: nav.dataset.folded };
+  const presses = [["chapter", "[data-toc-chapter]:not([aria-current])"], ["link", "a[data-toc]"],
+                   ["expand", '[data-all="false"]'], ["collapse", '[data-all="true"]'], ["step", "[data-step]"]];
+  for (const [name, what] of presses) {
+    const title = nav.querySelector(".toc-title");
+    if (nav.dataset.folded === "true") title.click();
+    await turn();
+    const opened = nav.dataset.folded;
+    nav.querySelector(what).click();
+    await turn();
+    out[name] = [opened, nav.dataset.folded];
+  }
+  return out;
+})()
+"""
 _LINK = r"""
 (async () => {
   const turn = () => new Promise((done) => setTimeout(done, 60));
@@ -228,11 +277,14 @@ def seen(uris):
     out = {}
     with Browser(find_chrome()) as browser:
         for label, uri in uris.items():
-            out[label] = {"back": {}}
+            out[label] = {"back": {}, "ahead": {}, "rail": {}}
             for width, height in ((1440, 900), (390, 844)):
                 walked = [v for v in browser.journey(uri, _STEPS, width, height) if v is not None]
                 out[label]["back"][width] = dict(zip(_NAMES, walked, strict=True))
+                ahead = browser.journey(uri, _AHEAD, width, height)[1:]
+                out[label]["ahead"][width] = dict(zip(_AHEAD_NAMES, ahead, strict=True))
                 out[label][width] = browser.measure(uri, _FILTER, width, height)
+                out[label]["rail"][width] = browser.measure(uri, _RAIL, width, height)
             out[label]["search"] = browser.measure(uri, _SEARCH)
             pressed = browser.measure(uri, _LINK)
             last = pressed["all"] or pressed["folded"]
@@ -361,6 +413,40 @@ class TestBackWalksTheRail:
         for label, walk in _walks(seen):
             for back, before in (("back_once", "second"), ("back_twice", "first"), ("back_thrice", "initial")):
                 assert walk[back] == walk[before], (label, back, walk)
+
+    def test_forward_lands_where_the_press_did(self, seen):
+        for label, out in seen.items():
+            for width, walk in out["ahead"].items():
+                assert len({walk[k]["hash"] for k in ("initial", "chapter", "far", "near")}) == 4, (label, width, walk)
+                for moved, pressed in (
+                    ("b1", "far"),
+                    ("b2", "chapter"),
+                    ("b3", "initial"),
+                    ("f1", "chapter"),
+                    ("f2", "far"),
+                    ("f3", "near"),
+                ):
+                    got, want = walk[moved], walk[pressed]
+                    assert (got["hash"], got["open"]) == (want["hash"], want["open"]), (label, width, moved, walk)
+                    assert abs(got["y"] - want["y"]) <= 3, (label, width, moved, got["y"], want["y"])
+
+
+@needs_browser
+class TestTheRailFoldsAfterAPress:
+    def test_a_press_at_390_folds_the_rail(self, seen):
+        for label, out in seen.items():
+            rail = out["rail"][390]
+            assert rail["initial"] == "true", (label, rail)
+            for name in ("chapter", "link", "expand", "collapse", "step"):
+                assert rail[name] == ["false", "true"], (label, name, rail)
+
+    def test_at_1440_the_rail_never_folds(self, seen):
+        for label, out in seen.items():
+            rail = out["rail"][1440]
+            assert set(map(tuple, (v for k, v in rail.items() if k != "initial"))) == {("false", "false")}, (
+                label,
+                rail,
+            )
 
 
 @needs_browser

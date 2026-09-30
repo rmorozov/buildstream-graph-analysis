@@ -805,13 +805,14 @@ export function revealChapter(node) {
 // frames, so a rect that never agrees still lands rather than hanging.
 const LAND_SETTLE_FRAME_CAP = 12;
 
-export function revealAndLand(node, behavior) {
+// `at` (`UX-1171`): the viewport top to land `node` on, in place of its scroll margin.
+export function revealAndLand(node, behavior, at) {
   const box = revealChapter(node);
   const land = () => {
     if (!node?.getBoundingClientRect) return;
     const view = node.ownerDocument?.defaultView ?? globalThis;
-    const margin = parseFloat(
-      view.getComputedStyle?.(node)?.scrollMarginTop) || 0;
+    const margin = at ?? (parseFloat(
+      view.getComputedStyle?.(node)?.scrollMarginTop) || 0);
     const top = (view.scrollY ?? 0) + node.getBoundingClientRect().top - margin;
     view.scrollTo?.(behavior ? { top, behavior } : { top });
   };

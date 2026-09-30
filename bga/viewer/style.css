@@ -459,10 +459,13 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
   /* `UX-1157`: a header wraps between words, and a table of tables stacks its cells. */
   th, td { white-space: normal; font-size: var(--font-small); padding: var(--space-1); }
   table:has(td table) > * > tr, table:has(td table) > * > tr > * { display: block; }
+  /* `UX-1171`: a stacked cell names its column; a step's entrants take its whole row. */
+  table:has(td table) > * > tr > td::before { content: attr(data-label); display: block; color: var(--muted); }
+  .horizon-step > .horizon-entering { grid-column: 1 / -1; }
   /* `UX-1164`: no tick label, part or question is cut. */
   .draw-axis:not([data-layout]) { height: 3.2em; }
   .draw-tick:nth-child(even) { top: 1.6em; }
-  .decomposition .draw-axis, [data-layout] { height: auto; flex-wrap: wrap; }
+  .decomposition .draw-axis, .draw-axis[data-layout] { height: auto; flex-wrap: wrap; }
   .decomposition .draw-tick { position: relative; display: table; top: 0; }
   .chapter-head { flex-wrap: wrap; }
   .chapter-head > h2 { order: 1; flex-basis: 100%; }

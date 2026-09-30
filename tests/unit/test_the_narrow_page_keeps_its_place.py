@@ -90,6 +90,20 @@ _TOP = (
 """
 )
 
+#: The reader scrolls a frame after Expand all, inside the landing's settle.
+_YIELD = r"""
+(async () => {
+  const frame = () => new Promise((done) => requestAnimationFrame(() => done()));
+  const all = [...document.querySelectorAll("button")].find((b) => b.textContent.trim() === "Expand all");
+  all.click();
+  await frame();
+  const to = Math.min(window.scrollY + 1500, document.documentElement.scrollHeight - window.innerHeight);
+  window.scrollTo(0, to);
+  await new Promise((done) => setTimeout(done, 1500));
+  return { to, at: window.scrollY };
+})()
+"""
+
 
 @pytest.fixture(scope="module")
 def uris(tmp_path_factory):
@@ -144,3 +158,10 @@ def test_a_press_on_the_current_chapter_adds_no_entry(browser, uris, label):
     got = browser.measure(uris[label], _TOP, width=1440, height=844)
     assert got["pushed"] <= 1, got
     assert got["again"] == got["pushed"], got
+
+
+@needs_browser
+@pytest.mark.parametrize("width", [390, 1440])
+def test_a_reader_who_scrolls_during_the_landing_is_not_pulled_back(browser, uris, width):
+    got = browser.measure(uris["macro_micro"], _YIELD, width=width, height=844)
+    assert got["to"] > 0 and abs(got["at"] - got["to"]) <= LINE_PX, got

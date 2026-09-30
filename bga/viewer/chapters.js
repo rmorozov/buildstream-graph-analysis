@@ -808,23 +808,38 @@ const LAND_SETTLE_FRAME_CAP = 12;
 // `at` (`UX-1171`): the viewport top to land `node` on, in place of its scroll margin.
 export function revealAndLand(node, behavior, at) {
   const box = revealChapter(node);
+  const view = node?.ownerDocument?.defaultView ?? globalThis;
+  let landed = null;
   const land = () => {
     if (!node?.getBoundingClientRect) return;
-    const view = node.ownerDocument?.defaultView ?? globalThis;
     const margin = at ?? (parseFloat(
       view.getComputedStyle?.(node)?.scrollMarginTop) || 0);
     const top = (view.scrollY ?? 0) + node.getBoundingClientRect().top - margin;
     view.scrollTo?.(behavior ? { top, behavior } : { top });
+    landed = behavior ? null : view.scrollY;
   };
   land();
   const frame = globalThis.requestAnimationFrame;
   if (frame && node?.getBoundingClientRect) {
+    // UX-1178: a reader who wheels, touches, types or scrolls first keeps where they went.
+    let moved = false;
+    const inputs = ["wheel", "touchstart", "keydown"];
+    const yieldTo = () => { moved = true; };
+    for (const type of inputs) view.addEventListener?.(type, yieldTo, { capture: true, passive: true });
+    const release = () => {
+      for (const type of inputs) view.removeEventListener?.(type, yieldTo, { capture: true });
+    };
     let prev = null;
     let seen = 0;
     const settle = () => frame(() => {
       seen += 1;
+      if (moved || (landed !== null && Math.abs((view.scrollY ?? 0) - landed) > 1)) {
+        release();
+        return;
+      }
       const cur = node.getBoundingClientRect().top;
       if ((prev !== null && cur === prev) || seen >= LAND_SETTLE_FRAME_CAP) {
+        release();
         land();
         return;
       }

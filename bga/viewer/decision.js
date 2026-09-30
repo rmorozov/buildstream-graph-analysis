@@ -356,8 +356,11 @@ function renderSaidOnce(common) {
   const box = document.createElement("details");
   box.className = "why-shared";
   const summary = document.createElement("summary");
-  summary.textContent = `What they share \u00b7 ${common.length} `
-    + `finding${common.length === 1 ? "" : "s"}`;
+  // `UX-357` (§3a.1): one level, the findings are its rows.
+  box.setAttribute("data-levels", "1");
+  box.setAttribute("data-rows", String(common.length));
+  summary.textContent = `What they share \u00b7 1 level, ${common.length} `
+    + `row${common.length === 1 ? "" : "s"}`;
   box.append(summary);
   for (const { finding, ranks } of common) {
     const line = document.createElement("p");

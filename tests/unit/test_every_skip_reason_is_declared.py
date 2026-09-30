@@ -118,7 +118,9 @@ import skip_reasons
 #: The UI batch's merged tree reads **two** more, to 78:
 #: `test_the_type_scale_is_four_steps.py:32` (`UX-1033`) and
 #: `test_the_vocabulary_has_the_shape.py:59`, same form again.
-UNRESOLVABLE = 78
+#: `UX-1168` argues **one** more, to 79:
+#: `test_the_rail_mark_follows_the_reading_line.py`, same form again.
+UNRESOLVABLE = 79
 
 
 def test_every_declared_skip_reason_is_known():

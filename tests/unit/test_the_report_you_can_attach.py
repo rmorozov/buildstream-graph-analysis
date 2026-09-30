@@ -1165,8 +1165,9 @@ def _embedded(path):
     report as *page* - which is the half with the budget.
     """
     text = pathlib.Path(path).read_text(encoding="utf-8")
+    # `UX-1174`: bytes, as the file size it is subtracted from.
     return sum(
-        len(found)
+        len(found.encode("utf-8"))
         for found in re.findall(
             r'<script type="application/(?:json|octet-stream)"[^>]*>(.*?)'
             r'</script>',
@@ -1174,6 +1175,13 @@ def _embedded(path):
             re.S,
         )
     )
+
+
+def _page_half(path):
+    """The file's UTF-8 bytes with its data blocks removed - `export()`'s `page_bytes`."""
+    text = pathlib.Path(path).read_text(encoding="utf-8")
+    page = re.sub(r'<script[^>]*type="application/(?:json|octet-stream)"[^>]*>.*?</script>', "", text, flags=re.S)
+    return len(page.encode("utf-8"))
 
 
 @pytest.fixture
@@ -1559,18 +1567,11 @@ class TestTheSizeDiscipline:
         fifth "a round landed", looked at rather than assumed, and the
         number moves to 210,000.
         """
-        html = open(exported[0], encoding="utf-8").read()
         # Every `<script type="application/json">` block and the trace
         # blob are *data*. What is left is the page.
-        page = re.sub(
-            r"<script[^>]*type=\"application/(json|octet-stream)\"[^>]*>"
-            r".*?</script>",
-            "",
-            html,
-            flags=re.S,
-        )
-        assert len(page) < PAGE_BUDGET_B, (
-            f"the exported page is {len(page)} B with its data removed - "
+        page = _page_half(exported[0])
+        assert page < PAGE_BUDGET_B, (
+            f"the exported page is {page} B with its data removed - "
             f"that is a structural change, not a feature. Check "
             f"`test_the_page_is_the_modules_and_nothing_else` and "
             f"`test_no_module_looks_like_a_vendored_library` first."
@@ -1618,13 +1619,7 @@ class TestTheSizeDiscipline:
         out = tmp_path / "big.html"
         view.export(str(run), str(out))
         html = out.read_text(encoding="utf-8")
-        page = re.sub(
-            r"<script[^>]*type=\"application/(json|octet-stream)\"[^>]*>"
-            r".*?</script>",
-            "",
-            html,
-            flags=re.S,
-        )
+        page = _page_half(out)
         schemas = re.search(
             r'<script type="application/json" id="bga-schemas">(.*?)'
             r"</script>",
@@ -1657,7 +1652,7 @@ class TestTheSizeDiscipline:
             if ident == "schemas":
                 continue
             data += len(gzip.decompress(base64.b64decode(block)) if kind == "octet-stream" else block.encode("utf-8"))
-        return len(page), len(schemas), data
+        return page, len(schemas), data
 
     def test_only_one_number_bounds_the_page(self, tmp_path):
         """`UX-367`: the clause the fix above is falsifiable by.
@@ -1964,6 +1959,22 @@ class TestTheSizeDiscipline:
             result = export(str(run), str(path))
             fixed[label] = result["bytes"] - _embedded(path)
         assert len(set(fixed.values())) == 1, f"the page is not run-independent: {fixed}"
+
+    def test_a_non_ascii_datum_leaves_the_page_half_where_it_was(self, exported, tmp_path):
+        """`UX-1174`: a data-only change moves no page reading, and the page is read in bytes."""
+        path, written = exported
+        html = path.read_text(encoding="utf-8")
+        block = '<script type="application/json" id="bga-run">{'
+        assert html.count(block) == 1, "the run block is no longer inline JSON"
+        # `json.dumps` escapes non-ASCII today; a raw datum is what an unescaped exporter writes.
+        raw = tmp_path / "raw.html"
+        raw.write_text(html.replace(block, block + '"datum": "—", '), encoding="utf-8")
+        readings = {
+            name: (_page_half(one), os.path.getsize(one) - _embedded(one))
+            for name, one in (("as exported", path), ("raw —", raw))
+        }
+        assert readings["as exported"] == readings["raw —"], readings
+        assert _page_half(path) == written["page_bytes"], (_page_half(path), written["page_bytes"])
 
     @pytest.mark.parametrize("label,run,bound", COMMITTED_EXPORTS)
     def test_each_committed_run_exports_within_its_stated_bound(self, label, run, bound, tmp_path):

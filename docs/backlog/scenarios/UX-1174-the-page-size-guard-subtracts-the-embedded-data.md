@@ -2,7 +2,7 @@
 
 **Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-156 walk (2026-09-30) | **Serves:** R1 | **Topic:** guards | **Area:** tests | **Shape:** judgement | **Reading:** container
 
-**Guard:** none — open, no guard named yet
+**Guard:** `tests/unit/test_the_report_you_can_attach.py::TestTheSizeDiscipline::test_a_non_ascii_datum_leaves_the_page_half_where_it_was`
 
 ## Motivation
 
@@ -13,6 +13,13 @@ Page: the round-156 walk of the two-plane page (`bga gen-synthetic <d> --store -
 ## Decomposition
 
 Input classes: the two-plane synthetic page, `golden` and `macro_micro`, at 1440 and 390.
+
+## Decision
+
+- **Choice.** Every page-half reading in `TestTheSizeDiscipline` counts UTF-8 bytes: `_embedded` encodes each block, and a new `_page_half` (the file with its data blocks removed, encoded) replaces the backstop's and `_weigh`'s `len(page)`. The exporter's `json.dumps` escapes non-ASCII today, so a raw datum is built by hand into the export; the page's own 14 non-ASCII characters are the live 18 B under-read.
+- **Files.** `tests/unit/test_the_report_you_can_attach.py` only; `test_the_viewer_js_ships_compressed.py` already encodes both halves.
+- **Guard.** `test_a_non_ascii_datum_leaves_the_page_half_where_it_was` in the same file, beside the helper it holds: one raw `—` in a JSON block moves neither reading, and `_page_half` equals `export()`'s `page_bytes`.
+- **Mutation.** `_embedded` back to `len(found)`; `_page_half` back to a character count.
 
 ## Required Fix
 
@@ -28,4 +35,27 @@ A page whose data gains one non-ASCII character reads the same page half. Guard:
 
 ## Outcome
 
-Open.
+**Gap measured** - `gap.py` (scratch): `export()` on `golden`, then the same file with `"datum": "—"` written raw into `bga-run`, at `83f10ca8`:
+
+```text
+golden                   export page_bytes 151,228  backstop 151,210  bytes-_embedded 151,397
+golden + raw — datum     export page_bytes 151,228  backstop 151,210  bytes-_embedded 151,399
+```
+
+The exported data is ASCII (0 non-ASCII characters in golden's or macro_micro's blocks: `json.dumps` escapes), so the live error is the page's own 14 non-ASCII characters - the backstop reads 18 B low; `_embedded`'s character count moves the page +2 B per raw `—` only once an exporter writes one raw. `UX-1166`'s +395 B is not reproduced from this base.
+
+**Close measured** - the same script on this commit:
+
+```text
+golden                   export page_bytes 151,228  backstop 151,228  bytes-_embedded 151,397
+golden + raw — datum     export page_bytes 151,228  backstop 151,228  bytes-_embedded 151,397
+```
+
+`PYTEST_XDIST= python3 -m pytest tests/unit/test_the_report_you_can_attach.py tests/unit/test_the_viewer_js_ships_compressed.py tests/unit/test_the_register_is_terse.py -q`: 1343 passed.
+
+**Mutation table** - each reverted from a copy, then green (12 passed, `-k TestTheSizeDiscipline`):
+
+| mutation | reddened | the run printed |
+|---|---|---|
+| `_embedded` sums `len(found)` again | `test_a_non_ascii_datum_leaves_the_page_half_where_it_was`: `(151229, 151454)` vs `(151229, 151456)` | 1 failed, 11 passed |
+| `_page_half` returns `len(page)` | the same test: `(151211, 151229)` | 1 failed, 11 passed |

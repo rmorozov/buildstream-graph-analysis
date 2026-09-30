@@ -217,15 +217,17 @@ export function wireJumpBox(nav, root, payload, context = {}) {
   // guard can say so without an exception list.
   box.setAttribute("name", "jump");
   box.setAttribute("placeholder", "Jump to…");
-  box.setAttribute("aria-label", "Jump to a section or element");
+  box.setAttribute("aria-label", "Jump to a section, element or binary");
   const list = document.createElement("ul");
   list.className = "jump-hits";
 
   const go = (target) => {
+    const escaped = CSS?.escape?.(target.key) ?? target.key;
     const node = target.kind === "section"
       ? document.getElementById(target.key)
-      : root.querySelector(`[data-element="${CSS?.escape?.(target.key)
-          ?? target.key}"]`);
+      : target.kind === "binary"
+        ? root.querySelector(`[data-binary="${escaped}"]`) ?? document.getElementById(target.section)
+        : root.querySelector(`[data-element="${escaped}"]`);
     if (!node) return;
     // UX-347: a folded chapter is not a wall. Every way in opens it
     // first - here, on a rail link, and on a pasted `#anchor` - so the
@@ -281,6 +283,7 @@ export function wireJumpBox(nav, root, payload, context = {}) {
     active = -1;
     for (const [name, entries] of [["ELEMENT", groups.elements],
                                    ["ACTIONS", groups.actions],
+                                   ["BINARY", groups.binaries],
                                    ["SECTIONS", groups.sections]]) {
       if (!entries.length) continue;
       const heading = document.createElement("li");

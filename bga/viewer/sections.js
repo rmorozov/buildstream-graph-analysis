@@ -517,11 +517,13 @@ function mapSectionLabels(box, key, hint, node) {
     // (`renderPairs`'s own `task-qualifier` span), never folded into
     // one string, or the reader's search target stops being a single
     // field of the composite.
+    const inspect = cell.querySelector?.("a.inspect");
     cell.textContent = shown.element;
     if (shown.qualifier) {
       cell.append(el("span", { class: "task-qualifier muted" },
                      ` ${shown.qualifier}`));
     }
+    if (inspect) cell.append(inspect);
   }
   return box;
 }
@@ -616,7 +618,8 @@ export function renderSection(key, value, hint = {}, node = undefined,
     // test is read off the schema, the same way `mapTable`'s own
     // `record` check already is (`UX-407`).
     const isMap = Boolean(node?.additionalProperties) && !node?.properties;
-    const control = isMap ? classify(value, {
+    // `UX-1186` (D2): a population map is a table at any length.
+    const control = isMap && hint[KEYED_BY] ? CONTROLS.MAP_TABLE : isMap ? classify(value, {
       nestLimit: CELL_NEST_LIMIT,
       inlineFields: OBJECT_INLINE_FIELDS, inlineItems: ARRAY_INLINE_ITEMS,
     }) : null;

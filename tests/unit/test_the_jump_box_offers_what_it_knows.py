@@ -80,7 +80,7 @@ class TestTheResultsAreGrouped:
 
     def test_an_empty_query_offers_nothing(self):
         out = _palette("")
-        assert out == {"elements": [], "actions": [], "sections": []}
+        assert out == {"elements": [], "actions": [], "sections": [], "binaries": []}
 
     def test_a_query_matching_nothing_offers_no_actions(self):
         out = _palette("nothing-like-this")

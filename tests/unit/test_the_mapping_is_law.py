@@ -554,7 +554,9 @@ function draw(key, size, taskUidKeyed) {
     hasFilter: Boolean(filter),
     sortable: heads.map((h) => h.attrs?.["data-sortable"]),
     headers: heads.map(text),
-    firstKeyLabel: text(keyCells[0]),
+    // `UX-1186`: the Inspect link follows the label in its cell.
+    firstKeyLabel: text(keyCells[0]).replace(/\u2315$/, ""),
+    firstKeyElement: keyCells[0]?.parentNode?.attrs?.["data-element"] ?? null,
     firstKeyRaw: keyCells[0]?.attrs?.["data-key"] ?? null,
   };
 }
@@ -643,6 +645,7 @@ console.log(JSON.stringify({
         # row's identity and the reader sees the element it names -
         # `renderPairs`'s own qualifier span, no separator invented.
         assert seen["firstKeyLabel"] == "el-1201.bst BUILD", seen
+        assert seen["firstKeyElement"] == "el-1201.bst", seen
         assert seen["firstKeyRaw"] == "el-1201.bst|BUILD|BUILD|0", seen
 
     def test_a_three_key_object_still_renders_pairs(self, probed):

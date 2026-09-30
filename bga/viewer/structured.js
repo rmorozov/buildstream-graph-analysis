@@ -15,10 +15,11 @@
  */
 import { plainValue, served } from "./primitives.js";
 import { COPY_FORMAT_MIRROR, readCopyFormat } from "./viewstate.js";
-import { BARE_KEY, COMMAND, QUANTITY, COLUMNS, SERIES, DISTRIBUTION, bytes,
+import { BARE_KEY, COMMAND, QUANTITY, COLUMNS, SERIES, DISTRIBUTION, KEYED_BY,
+         KEYED_BY_BINARY, KEYED_BY_TASK_UID, bytes,
          childNode, cssId, dataKeyed, el, elementColumn, guessQuantity, heading,
          hintsOf, itemsAsShown, keyAsShown, quantity, quantityFor, readerLabel,
-         sectionHead, title } from "./format.js";
+         sectionHead, taskUid, title } from "./format.js";
 import { commandLine, identify, say } from "./controls.js";
 // UX-303: §2's two drawings. They import nothing and take their
 // formatter, so the quantity table stays here and the geometry stays
@@ -576,7 +577,13 @@ export function oneRecord(rows, hint, node) {
  */
 export function buildTable(key, rows, hint = {}, node = undefined,
                            depth = 0, options = {}) {
-  const specs = columnSpecs(hint, rows, node);
+  // `UX-1186`: a list's key columns, or a map's `key`.
+  const keyed = [hint[KEYED_BY] ?? []].flat();
+  const specs = columnSpecs(hint, rows, node).map((spec) => {
+    const kind = keyed.includes(spec.key) ? spec.key
+      : spec.key === "key" && keyed.length === 1 ? keyed[0] : null;
+    return kind && !spec.role ? { ...spec, role: kind } : spec;
+  });
   const columns = specs.map((s) => s.key);
   // `UX-526`: how many rows the table *has*. The DOM used to answer
   // that and no longer does - a row past the bound leaves it - so the
@@ -688,14 +695,22 @@ export function buildTable(key, rows, hint = {}, node = undefined,
   // UX-208: a declared element column earns every row a generic
   // Inspect - one affordance, no per-table code, because the *schema*
   // says which values are element uids.
-  const uidColumn = elementColumn(specs);
+  if (keyed.length) table.setAttribute("data-keyed-by", keyed.join(" "));
+  const binaryColumn = specs.find((spec) => spec.role === KEYED_BY_BINARY)?.key;
+  const taskColumn = specs.find((spec) => spec.role === KEYED_BY_TASK_UID)?.key;
+  const uidColumn = elementColumn(specs) ?? taskColumn;
+  for (const tr of binaryColumn ? ownRows(table) : []) {
+    const cell = [...tr.children].find((td) => td.getAttribute("data-column") === binaryColumn);
+    if (cell) tr.setAttribute("data-binary", cell.getAttribute("data-raw") || cell.textContent);
+  }
   if (uidColumn) {
     table.setAttribute("data-element-column", uidColumn);
     for (const tr of ownRows(table)) {
       const cell = [...tr.children].find(
         (td) => td.getAttribute("data-column") === uidColumn);
       if (!cell) continue;
-      const uid = cell.getAttribute("data-raw") || cell.textContent;
+      const raw = cell.getAttribute("data-raw") || cell.textContent;
+      const uid = uidColumn === taskColumn ? taskUid(raw).element : raw;
       tr.setAttribute("data-element", uid);
       cell.append(el("a", { class: "inspect", href: `#${cssId(uid)}`,
                             title: `Find ${uid} elsewhere in this report`,

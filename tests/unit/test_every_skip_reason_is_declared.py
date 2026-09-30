@@ -124,7 +124,9 @@ import skip_reasons
 #: `test_the_page_ids_are_unique.py`, same form again.
 #: `UX-1184` argues **one** more, to 81:
 #: `test_a_column_is_named_for_its_field.py`, same form again.
-UNRESOLVABLE = 81
+#: `UX-1186` argues **one** more, to 82:
+#: `test_a_population_key_is_declared.py`, same form again.
+UNRESOLVABLE = 82
 
 
 def test_every_declared_skip_reason_is_known():

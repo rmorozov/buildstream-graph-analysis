@@ -1113,6 +1113,8 @@ MEDIUM = (
     "tests/unit/test_copy_takes_the_matched_population.py",  #  8.5s
     # `UX-1184`: 6.85 / 7.18s.
     "tests/unit/test_a_column_is_named_for_its_field.py",  #  7.0s
+    # `UX-1186`: 5.21 / 5.08s.
+    "tests/unit/test_a_population_key_is_declared.py",  #  5.2s
     # Round 147, tiered on the merged tree: three single-process runs
     # alone each (setup+call+teardown).
     # `UX-1083`: 4.17 / 4.08 / 4.23s.

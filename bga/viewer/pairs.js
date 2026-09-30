@@ -5,7 +5,7 @@
  * points back.
  */
 import { plainValue, served } from "./primitives.js";
-import { COLUMNS, DIRECTION, QUESTION, PRESETS, INLINE, KEY_PATH, LEAD, attachBlockDoor,
+import { COLUMNS, DIRECTION, QUESTION, PRESETS, INLINE, KEYED_BY, KEYED_BY_ELEMENT, KEY_PATH, LEAD, attachBlockDoor,
          childNode, dataKeyed, describedTerm, el, guessQuantity, heading,
          hintsOf, adviceFor, keyAsShown, pathTrail, quantity, quantityFor, sectionHead,
          title } from "./format.js";
@@ -134,6 +134,7 @@ export function elementSignalTable(elements, node, join = null,
                            quantity: measure };
                 })],
     [QUESTION]: "Which element should I look at?",
+    [KEYED_BY]: KEYED_BY_ELEMENT,
   };
   return { rows, hint, merged: present, joined: joinedIn };
 }

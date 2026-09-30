@@ -55,6 +55,8 @@ from .schema_hints import (
     INTERVAL,
     KEY_PATH,
     KEYED_BY,
+    KEYED_BY_BINARY,
+    KEYED_BY_ELEMENT,
     KEYED_BY_TASK_UID,
     LEAD,
     MARKERS,
@@ -4739,6 +4741,7 @@ _ANALYZE_HINTS = {
     "by_binary": {
         QUESTION: 'What did this build actually run, and how often?',
         RAIL: 'act',
+        KEYED_BY: KEYED_BY_BINARY,
         QUANTITY: "count",
         GROWS: "distinct binaries Plane 2 saw exec (real grower, no "
         "cap in the payload; structured.js's table/map bound "
@@ -4752,6 +4755,7 @@ _ANALYZE_HINTS = {
     "binary_cost": {
         QUESTION: 'Which binaries cost this build its time?',
         RAIL: 'act',
+        KEYED_BY: [KEYED_BY_ELEMENT, KEYED_BY_BINARY],
         GROWS: "elements (one row per element Plane 2 measured, no cap "
         "in the payload; structured.js's table bound applies on "
         "the page)",

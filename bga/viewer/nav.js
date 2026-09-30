@@ -918,6 +918,20 @@ export function jumpTargets(root, payload) {
       }
     }
   }
+  // `UX-1186`: from the payload; the DOM mounts one page.
+  const binaries = new Set();
+  for (const table of root.querySelectorAll?.("table[data-keyed-by]") ?? []) {
+    if (!table.getAttribute("data-keyed-by").split(" ").includes("binary")) continue;
+    const key = table.getAttribute("data-table");
+    const section = table.closest?.("section[data-section]")?.getAttribute("data-section") ?? key;
+    const value = payload?.[key];
+    const names = Array.isArray(value) ? value.map((row) => row?.binary) : Object.keys(value ?? {});
+    for (const name of names) {
+      if (typeof name !== "string" || binaries.has(name)) continue;
+      binaries.add(name);
+      targets.push({ kind: "binary", key: name, text: name, section });
+    }
+  }
   return targets;
 }
 
@@ -977,6 +991,7 @@ export function paletteResults(targets, query, payload, context = {}, limit = 8)
   const elements = hits.filter((hit) => hit.kind === "element")
     .map((hit) => ({ ...hit, facts: paletteFacts(payload, hit.key) }));
   const sections = hits.filter((hit) => hit.kind === "section");
+  const binaries = hits.filter((hit) => hit.kind === "binary");
 
   const actions = [];
   const first = elements[0];
@@ -995,5 +1010,5 @@ export function paletteResults(targets, query, payload, context = {}, limit = 8)
                      element: first.key, blast: true });
     }
   }
-  return { elements, actions, sections };
+  return { elements, actions, sections, binaries };
 }

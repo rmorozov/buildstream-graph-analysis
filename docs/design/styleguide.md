@@ -113,7 +113,8 @@ side is the only control that may render it.
 | scalar array + `bga:command` | **one monospace command line + copy** | `UX-429`; the same measured shape as the row above, and only the schema knows which it is — a joined-by-comma argv does not run |
 | long scalar array | count + folded list | count visible, fold labeled |
 | object map, one key per element | table of key/value rows | Direction 12's rule — never a `<pre>` |
-| small keyed object | definition list | the `pairs` pattern |
+| object map or array + `bga:keyed_by` (elements, tasks, binaries) | **table with a declared, linked key column**, whatever its length | `UX-1186` (D2): every row carries `data-element` with its Inspect link, or `data-binary`; Focus dims its other rows and never folds it; the jump box lists its keys from the payload; on an array the hint names the key columns; never unrolled into a `dl` |
+| small keyed object | definition list | the `pairs` pattern: at most `TABLE_OPENS_BOUNDED_ABOVE` (40) scalar pairs about one subject (`UX-1186`, D2) |
 | ordered numeric series (`bga:series`) | **sparkline + one sentence** | §2; the hint's value names the unit of one step, so the sentence can say it (`UX-303`) |
 | percentile/distribution object (`bga:distribution`) | **density strip + stated n** | §2; the hint's value names the key holding the sample count (`UX-303`) |
 | published total and its parts (`bga:decomposition`) | **decomposition bar + one sentence** | §2d; each part named by its path |
@@ -2177,6 +2178,12 @@ besides the head and tail it keeps. "All" is offered only where the
 whole population is under a ceiling the table states. Text is a
 population: a JSON door or a text reveal draws at most a stated number
 of characters, and past it offers the whole as a copy, not as a node.
+
+**A population is a table** (`UX-1186`, D2). A `dl` holds at most
+`TABLE_OPENS_BOUNDED_ABOVE` scalar pairs about one subject; a map keyed
+by a population declares `bga:keyed_by` and is a table with a linked key
+column whatever its length, so its bound is the table row's above -
+`tests/unit/test_a_population_key_is_declared.py`.
 
 **Checked from the schema.** The page's census finds a violation only
 after it is drawn; the schema can name every sequence before anything

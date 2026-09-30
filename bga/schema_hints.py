@@ -210,6 +210,10 @@ KEYED_BY = "bga:keyed_by"  # what the map's own keys are
 #: published verbatim as the row's identity, and what the reader sees is
 #: the part of it that is a name.
 KEYED_BY_TASK_UID = "task_uid"
+#: `UX-1186`: the other two populations a key names. On a list, `KEYED_BY` names
+#: its key columns; each marks its rows for Inspect, Focus and the jump box.
+KEYED_BY_ELEMENT = "element"
+KEYED_BY_BINARY = "binary"
 
 #: `UX-390`: **the run's own advice about this map's keys lives there.**
 #:

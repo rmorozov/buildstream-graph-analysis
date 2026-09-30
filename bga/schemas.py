@@ -3441,29 +3441,28 @@ _BLAST_COUNTS = {
     },
     "measured_us": {
         QUANTITY: "duration_us",
-        "description": "Recorded rebuild time below this element. A sum over "
-        "the measured elements only, so it is a lower bound on "
-        "the real cost.",
+        "description": "Recorded rebuild time below this element. A sum over the measured elements only, "
+        "so it is a lower bound on the real cost.",
     },
 }
 
-#: `resource_blast`'s rows: the same counts, of a shared resource rather than an element.
+#: `resource_blast`'s rows: `_BLAST_COUNTS`' quantities, said of a shared resource.
 _RESOURCE_COUNTS = {
-    "direct_count": "Elements that source this resource themselves.",
-    "blast_count": "Everything a change to this resource rebuilds: its elements and all they reach.",
-    "building_count": "Of those, the ones that do real build work.",
-    "assembling_count": "Of those, the ones that only gather what is below them.",
-    "measured_us": "Recorded build time across that set, measured elements only, so a lower bound.",
+    k: {QUANTITY: _BLAST_COUNTS[k][QUANTITY], "description": v}
+    for k, v in {
+        "direct_count": "Elements that source this resource themselves.",
+        "blast_count": "Everything a change to this resource rebuilds: its elements and all they reach.",
+        "building_count": "Of those, the ones that do real build work.",
+        "assembling_count": "Of those, the ones that only gather what is below them.",
+        "measured_us": "Recorded build time across that set, measured elements only, so a lower bound.",
+    }.items()
 }
 
 _ANALYZE_HINTS = {
     "timestamp_agreement": {
         QUESTION: 'Do the two planes agree about the clock?',
         RAIL: 'prove',
-        # `UX-343`: this block is entirely durations and counts, and
-        # said so nowhere - nine leaves, no unit. `UX-341` then took the
-        # four `_s` members to microseconds; declaring them first is
-        # what made that a rename rather than a guess.
+        # `UX-343`: every leaf is a duration or a count, declared so.
         "properties": {
             "resolution_us": {
                 QUANTITY: "duration_us",
@@ -3533,37 +3532,27 @@ _ANALYZE_HINTS = {
         QUESTION: 'What does one shared resource rebuild?',
         RAIL: 'investigate',
         "properties": {
-            # UX-833: additive - both empty for a project with no
-            # `bga-source-kinds` declaration.
+            # UX-833: both empty with no `bga-source-kinds` declaration.
             "source_kind_map": {
                 "additionalProperties": {"type": "string"},
-                "description": "`project.conf`'s declared "
-                "`bga-source-kinds`: a custom plugin "
-                "kind onto the known kind whose keying "
-                "it inherits.",
+                "description": "`project.conf`'s declared `bga-source-kinds`: a custom plugin "
+                "kind onto the known kind whose keying it inherits.",
             },
             "unmapped_source_kinds": {
                 GROWS: False,
                 "maxItems": 32,
                 "type": "array",
                 "items": {"type": "string"},
-                "description": "Kinds this run saw with no keying, "
-                "sorted — an unmapped custom plugin, "
-                "named rather than folded silently "
-                "into an unestimated blast.",
+                "description": "Kinds this run saw with no keying, sorted — an unmapped custom plugin, "
+                "named rather than folded silently into an unestimated blast.",
             },
             "rows": {
-                GROWS: "resources shared by two or more elements (real "
-                "grower, no cap in the payload; "
-                "structured.js's table bound applies on the "
-                "page)",
+                GROWS: "resources shared by two or more elements (real grower, no cap in the payload; "
+                "structured.js's table bound applies on the page)",
                 "items": {
                     "type": "object",
                     "properties": {
-                        **{
-                            k: {QUANTITY: _BLAST_COUNTS[k][QUANTITY], "description": v}
-                            for k, v in _RESOURCE_COUNTS.items()
-                        },
+                        **_RESOURCE_COUNTS,
                         "direct_elements": {
                             GROWS: "elements directly sourcing that resource (subset, no cap)",
                             "items": {"type": "string", "description": "element uid"},
@@ -3580,21 +3569,15 @@ _ANALYZE_HINTS = {
                 },
                 "description": "One row per resource more than one element sources.",
             },
-            "element_count": {
-                QUANTITY: "count",
-                "description": "Elements in the project, the denominator for each row's reach.",
-            },
+            "element_count": _BLAST_COUNTS["element_count"],
         },
     },
     "utilization_envelope": {
         QUESTION: 'Were the cores the binding resource?',
         RAIL: 'act',
-        "description": "Cores busy over the build, from the host's own "
-        "`/proc/stat` series, against the smaller "
-        "of what the scheduler was configured to allow and "
-        "what the machine has. `traced processes running` "
-        "cannot answer this: a process blocked on I/O holds "
-        "a slot and no core.",
+        "description": "Cores busy over the build, from the host's own `/proc/stat` series, against the smaller "
+        "of what the scheduler was configured to allow and what the machine has. `traced processes running` "
+        "cannot answer this: a process blocked on I/O holds a slot and no core.",
         "properties": {
             "available": {
                 INLINE: "name",

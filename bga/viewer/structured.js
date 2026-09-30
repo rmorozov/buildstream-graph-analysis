@@ -170,6 +170,8 @@ export function mapTable(key, rows, hint, node, nested, depth = 0, path = key, l
       { key: "value", title: title(key, measure), quantity: measure }] };
   }
   const { table, tools } = buildTable(path, rows, declared, node, depth);
+  // `UX-1163`'s rule: a list left one column says its name in its fold, not a header.
+  if (list && table.children[0]?.children[0]?.children.length < 2) table.children[0].remove();
   const box = el("div", { class: "map-table", "data-bounded": "map" },
                  tools, table);
   return box;

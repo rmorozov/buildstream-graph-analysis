@@ -296,7 +296,8 @@ export function renderWhyRanked(payload, action, options = {}) {
   // to say: no facts, no rule and no history is no block, which is
   // `UX-194`'s dead-control rule applied to an explanation.
   const rows = facts?.rows ?? [];
-  const findings = facts?.findings ?? [];
+  const findings = (facts?.findings ?? []).filter(
+    (finding) => !options.said?.has(finding.id));
   const ownRule = record && options.ranking !== action?.finding_id;
   if (!rows.length && !findings.length && !ownRule && !history) return null;
 
@@ -347,6 +348,28 @@ export function renderWhyRanked(payload, action, options = {}) {
 
   if (history) details.append(history);
   return details;
+}
+
+/** `UX-1146`: the findings several Why folds share, each said once. */
+function renderSaidOnce(common) {
+  // Folded like the Why folds it came out of; the label is its count (§6e.13).
+  const box = document.createElement("details");
+  box.className = "why-shared";
+  const summary = document.createElement("summary");
+  summary.textContent = `What they share \u00b7 ${common.length} `
+    + `finding${common.length === 1 ? "" : "s"}`;
+  box.append(summary);
+  for (const { finding, ranks } of common) {
+    const line = document.createElement("p");
+    line.className = "muted why-finding";
+    line.setAttribute("data-finding", finding.id ?? "");
+    line.setAttribute("data-ranks", ranks.join(" "));
+    const which = ranks.map((rank) => `#${rank}`);
+    line.textContent = `${which.slice(0, -1).join(", ")} and ${which.at(-1)}: `
+      + `${finding.title ?? finding.id ?? ""}`;
+    box.append(line);
+  }
+  return box;
 }
 
 /** One fact, in the unit the source declared it in. */
@@ -752,6 +775,17 @@ export function renderDecision(payload, investigate = null, copy = null,
     const shared = claim && actions.every((a) => a?.finding_id === claim)
       ? (payload?.provenance ?? []).find((e) => e?.claim === claim)
       : null;
+    // `UX-1146`: a finding naming two or more of the actions is said
+    // once, under the list, rather than inside each of their folds.
+    const facts = elementFacts(payload);
+    const namedBy = new Map();
+    for (const [index, action] of actions.entries()) {
+      for (const finding of facts.get(action?.element_uid)?.findings ?? []) {
+        if (!namedBy.has(finding.id)) namedBy.set(finding.id, { finding, ranks: [] });
+        namedBy.get(finding.id).ranks.push(index + 1);
+      }
+    }
+    const common = [...namedBy.values()].filter((entry) => entry.ranks.length > 1);
     const list = document.createElement("ol");
     list.className = "actions";
     for (const [index, action] of actions.entries()) {
@@ -760,9 +794,11 @@ export function renderDecision(payload, investigate = null, copy = null,
       // document draws.
       list.append(actionRow(action, investigate, renderWhyRanked(
         payload, action,
-        { ...options, rank: index + 1, ranking: shared && claim })));
+        { ...options, rank: index + 1, ranking: shared && claim,
+          said: new Set(common.map((entry) => entry.finding.id)) })));
     }
     section.append(list);
+    if (common.length) section.append(renderSaidOnce(common));
     // Below the list it explains, not above it: the reader came for
     // the actions.
     const how = shared ? renderProvenance(shared) : null;
@@ -779,8 +815,12 @@ export function renderDecision(payload, investigate = null, copy = null,
   // the terminal, CI and this panel give the same answer.
   const steps = Array.isArray(payload?.next_steps) ? payload.next_steps : [];
   if (steps.length) {
+    // `UX-1146`: the `next_steps` question, asked here once; the rail
+    // links it as this section's sub-entry (`nav.js`'s `subsections`).
     const head = document.createElement("h3");
-    head.textContent = "Next";
+    head.textContent = "What should I run next?";
+    head.setAttribute("id", "decision-next");
+    head.setAttribute("data-rail-sub", "next_steps");
     section.append(head);
     const list = document.createElement("ol");
     list.className = "next-steps";

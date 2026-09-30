@@ -204,15 +204,15 @@ class TestTheStepFollowsTheDeclaredOrder:
         labels once now, not the section too - so `evidence` moves up
         one step rather than the walk losing a step.
         """
-        assert walked["order"][:7] == [
+        # `UX-1146`: `next_steps` is the decision's rail sub-entry, not a step.
+        assert walked["order"][:6] == [
             "#decision",
             "#evidence",
             "#overview",
             "#findings",
             "#headline",
-            "#next_steps",
             "#blast",
-        ], walked["order"][:7]
+        ], walked["order"][:6]
         assert walked["forward"] == walked["order"][1:7], walked["forward"]
 
     def test_two_presses_move_two_sections(self, walked):
@@ -225,10 +225,9 @@ class TestTheStepFollowsTheDeclaredOrder:
         assert len(set(walked["forward"])) == 6, walked["forward"]
 
     def test_previous_walks_back(self, walked):
-        # `UX-822`: `readers`'s removal shifts six presses forward from
-        # `#next_steps` to `#blast`, so two steps back land one section
-        # later than before.
-        assert walked["back"] == ["#next_steps", "#headline"], walked["back"]
+        # `UX-1146`: with `next_steps` off the walk, two steps back from
+        # the sixth press land on `#blast`, then `#headline`.
+        assert walked["back"] == ["#blast", "#headline"], walked["back"]
 
     def test_next_past_the_end_stops(self, walked):
         """Clamped, not wrapped.

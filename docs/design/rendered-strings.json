@@ -17,7 +17,7 @@
   {
     "exception": null,
     "role": "heading",
-    "text": "Next"
+    "text": "What should I run next?"
   },
   {
     "exception": null,
@@ -43,11 +43,6 @@
     "exception": null,
     "role": "heading",
     "text": "What should I fix first, and what is it worth?"
-  },
-  {
-    "exception": null,
-    "role": "heading",
-    "text": "What should I run next?"
   },
   {
     "exception": null,
@@ -522,6 +517,11 @@
   {
     "exception": null,
     "role": "summary",
+    "text": "What they share \u00b7 # findings"
+  },
+  {
+    "exception": null,
+    "role": "summary",
     "text": "The rule \u00b7 # level, # rows"
   },
   {
@@ -698,11 +698,6 @@
     "exception": null,
     "role": "rail-entry",
     "text": "What should I fix first, and what is it worth?"
-  },
-  {
-    "exception": null,
-    "role": "rail-entry",
-    "text": "What should I run next?"
   },
   {
     "exception": null,

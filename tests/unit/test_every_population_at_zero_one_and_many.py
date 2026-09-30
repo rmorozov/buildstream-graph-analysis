@@ -296,7 +296,7 @@ class TestTheSweepReachesEveryPopulation:
         # A spot check that discovery found the ones three separate
         # filings were about, so a discovery rule that quietly stopped
         # matching reddens here rather than sweeping nothing.
-        for named in ("findings", "next_steps", "critical_path_detail", "latent_heavies", "provenance"):
+        for named in ("findings", "critical_path_detail", "latent_heavies", "provenance"):
             assert named in swept["swept"], swept["swept"]
 
     def test_nothing_published_is_left_out(self, swept):

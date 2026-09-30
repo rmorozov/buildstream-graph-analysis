@@ -99,6 +99,22 @@ function viewEntries(section, doc) {
 export function subsections(section, doc) {
   const views = viewEntries(section, doc);
   if (views) return views;
+  // `UX-1146`: a published section drawn inside this one is its sub-entry.
+  const drawn = [...(section?.querySelectorAll?.("[data-rail-sub][id]") ?? [])];
+  if (drawn.length) {
+    const list = doc.createElement("ul");
+    list.className = "toc-sub";
+    for (const head of drawn) {
+      const item = doc.createElement("li");
+      const link = doc.createElement("a");
+      link.href = `#${head.getAttribute("id")}`;
+      link.setAttribute("data-toc-sub", head.getAttribute("data-rail-sub"));
+      link.textContent = String(head.textContent ?? "").trim();
+      item.append(link);
+      list.append(item);
+    }
+    return list;
+  }
   const folds = [...(section?.querySelectorAll?.("details.map > summary") ?? [])];
   if (folds.length < 2) return null;
   const list = doc.createElement("ul");

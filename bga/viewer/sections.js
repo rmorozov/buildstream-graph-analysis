@@ -25,7 +25,7 @@ import { chapters } from "./chapters.js";
 import { renderProvenance } from "./decision.js";
 import { GRADE_EXHIBIT, decomposition, interval, strip } from "./drawings.js";
 import { resolvePath } from "./element.js";
-import { COLUMNS, DECOMPOSITION, DISTRIBUTION, INLINE, INTERVAL, KEYED_BY, KEYED_BY_TASK_UID, QUANTITY, RUNBOOK, SERIES, SEVERITY, attachBlockDoor, bytes, childNode, cssId, describedTerm, el, guessQuantity, heading, hintsOf, keyAsShown, quantity, quantityFor, sectionHead, title } from "./format.js";
+import { COLUMNS, DECOMPOSITION, DISTRIBUTION, INLINE, INTERVAL, KEYED_BY, KEYED_BY_TASK_UID, QUANTITY, SERIES, SEVERITY, attachBlockDoor, bytes, childNode, cssId, describedTerm, el, guessQuantity, heading, hintsOf, keyAsShown, quantity, quantityFor, sectionHead, title } from "./format.js";
 import { matches } from "./nav.js";
 import { handOff } from "./perfetto.js";
 import { findingAnchor, served } from "./primitives.js";
@@ -66,9 +66,11 @@ export const EVIDENCE_SHOWN = 4;
  * sentence from) is a table in its own right and is left to the
  * section that already draws it.
  */
-export function renderFindingEvidence(evidence, node = undefined) {
+export function renderFindingEvidence(evidence, node = undefined, said = new Set()) {
+  // `UX-1146`: a sentence the card's detail already printed is not evidence twice.
   const scalars = Object.entries(evidence ?? {}).filter(
-    ([, value]) => value === null || typeof value !== "object");
+    ([, value]) => (value === null || typeof value !== "object")
+      && !(typeof value === "string" && said.has(value.trim())));
   if (!scalars.length) return null;
 
   const list = el("dl", { class: "pairs evidence" });
@@ -150,7 +152,8 @@ export function renderFindings(findings, investigate = null, node = undefined) {
               ...finding.elements.flatMap((uid, i) => [
                 i ? ", " : "", elementLink(uid)]))
           : null,
-        renderFindingEvidence(finding.evidence, evidenceNode),
+        renderFindingEvidence(finding.evidence, evidenceNode,
+                              new Set(detail.map((line) => String(line).trim()))),
         // UX-229: the chain behind this finding, from the published
         // record. `views.js` draws it, so the decision panel and every
         // finding show one shape.
@@ -332,6 +335,21 @@ export const DRAWN_ELSEWHERE = {
     + "explaining it in another - which is `UX-288`'s rule at section "
     + "level. Every hint present before the merge is reachable after it, "
     + "on the row it belongs to",
+  // `UX-1146`: the panel's `Next` list is the runbook, and the rail
+  // reaches it as the decision entry's sub-link (`nav.js`'s `subsections`).
+  next_steps: "the decision panel's numbered list under \"What should I "
+    + "run next?\" (`decision.js`), which the rail links as the decision "
+    + "entry's sub-entry - a section whose whole body was a link to it "
+    + "was the same answer twice",
+};
+
+//: `UX-1146`: the same rule one level down - a field a section does not
+//: repeat, and where it is drawn instead. The JSON door keeps it.
+export const FIELDS_DRAWN_ELSEWHERE = {
+  headline: {
+    sentence: "the decision panel's lead sentence (`decision.js`'s "
+      + "`renderDecision`), word for word",
+  },
 };
 
 //: `UX-401`: the fourth destination, and the only silent one allowed.
@@ -478,6 +496,11 @@ export function renderSection(key, value, hint = {}, node = undefined,
                               investigate = null, payload = undefined,
                               root = undefined) {
   if (key in DRAWN_ELSEWHERE) return null;
+  const elsewhere = FIELDS_DRAWN_ELSEWHERE[key];
+  if (elsewhere && value && typeof value === "object" && !Array.isArray(value)) {
+    value = Object.fromEntries(
+      Object.entries(value).filter(([name]) => !(name in elsewhere)));
+  }
   // `UX-536`: **a join with no Plane 2 in it is not a measurement of
   // zero.** The evidence line already says these words on the same
   // condition; the section presenting the zeros said nothing, under a
@@ -521,19 +544,6 @@ export function renderSection(key, value, hint = {}, node = undefined,
       nestLimit: CELL_NEST_LIMIT,
       inlineFields: OBJECT_INLINE_FIELDS, inlineItems: ARRAY_INLINE_ITEMS,
     });
-    // `UX-669` (§1e): a runbook renders **once**, in the decision
-    // panel, where a reader who has just been told what is wrong is
-    // standing. The section is a link to it rather than a second copy:
-    // a table of three commands wrapped over three lines each was
-    // §5a's repeated-text budget spent on a duplicate.
-    if (hintsOf(node)[RUNBOOK] ?? hint[RUNBOOK]) {
-      return el("section", { "data-section": key,
-                             "data-rail": heading(key, hint).rail },
-                sectionHead(key, hint),
-                el("p", {}, el("a", { href: "#decision", class: "runbook-link" },
-                               `${value.length} step${value.length === 1 ? "" : "s"}, `
-                               + "in the decision panel")));
-    }
     if (control === CONTROLS.TABLE
         && value.every((item) => item && typeof item === "object"
                                  && !Array.isArray(item))) {

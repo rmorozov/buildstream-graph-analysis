@@ -291,6 +291,9 @@ export function renderPairs(key, object, hint = {}, node = undefined,
         const record = renderPairs(name, value[0], {}, child);
         // The `dl` alone: its `section` would be a second, stray section inside a `dd`.
         cell = [...record.children].find((n) => String(n.tagName).toUpperCase() === "DL");
+        // Its `?` door with it: a described record's sentences are otherwise unreachable.
+        const door = cell?.previousElementSibling;
+        if (door?.classList?.contains("describe")) cell = [door, cell];
       } else {
         const built = buildTable(name, value, hintsOf(child), child);
         cell = el("div", { class: "map-table", "data-bounded": "map" },

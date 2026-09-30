@@ -93,4 +93,5 @@ leaf's guess and 3-place rounding. Producer prose is not reworded:
 no shared Python helper renders them; the text report is unchanged.
 
 - Merged-tree fix: `quantityAt` reads a table column's unit from the row's `bga:columns`, so provenance paths like `optimization_horizon[0].makespan_after_us` no longer guess (`test_no_number_renders_from_a_guess`).
+
 - Residue fix: `bga/shown.py` (`duration`/`seconds`/`share`, the viewer's rounding) now builds the duration and percent in `findings.py`, `correlate.py`, `provenance.py`, `sources.py`, `report/text.py` prose ("78.35s" -> "78.3 s", "6m" -> "6.0 min", "1.00" -> "100.0%", "process(es)" pluralised, "50000 us" -> "50 ms"); `test_a_title_quantity_reads_as_its_pair` compares a finding title's quantity with the same value in its pairs (mutations: `Confidence: {primary:.2f}` reddens 3, `{path_us / 1e6:.2f}s` 2).

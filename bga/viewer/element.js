@@ -15,7 +15,7 @@
  */
 import { identify, labelFor } from "./controls.js";
 import { plural } from "./tables.js";
-import { READER_LABELS, TERMS, el, title } from "./format.js";
+import { READER_LABELS, TERMS, el, findingLink, title } from "./format.js";
 import {
   SVG, svg, seconds, mib, bar, OVERVIEW_SHOWN, elementAnchor,
 } from "./primitives.js";
@@ -589,12 +589,12 @@ export function renderElementSections(payload, root, options = {}) {
   return sections;
 }
 
+const shown = (row, format) => (typeof row.value === "number" ? format(row.value, row.kind) : String(row.value));
 // An element's rows as one `dl.pairs`; a Plane 2 row carries its `data-path`.
 const pairList = (rows, format) => el("dl", { class: "pairs" }, rows.flatMap((row) => [
   el("dt", {}, row.label),
   el("dd", { "data-field": row.field, "data-raw": String(row.value), "data-path": row.path,
-             class: typeof row.value === "number" ? "num" : "" },
-     typeof row.value === "number" ? format(row.value, row.kind) : String(row.value))]));
+             class: typeof row.value === "number" ? "num" : "" }, shown(row, format))]));
 
 // `bounded(key, items)` (UX-1037): §1's folded list or table past the
 // table bound, else null - injected, so this chapter imports no `structured.js`.
@@ -663,8 +663,15 @@ function elementSection(record, places, investigate, format, bounded = null) {
   // The Plane 2 evidence behind those sentences. Folded, because it is
   // the *why* under an answer already given - and the fold announces
   // its depth (§3a.1), like every other value fold on the page.
-  const evidenceRows = (record.evidence ?? [])
-    .reduce((total, block) => total + block.rows.length, 0);
+  // `UX-1156`: a block whose every pair, as shown, an earlier one shows is a clause on its label.
+  const pairs = (block) => block.rows.map((row) => `${row.label}=${shown(row, format)}`);
+  const blocks = [];
+  for (const block of record.evidence ?? []) {
+    const prior = blocks.find((had) => pairs(block).every((pair) => pairs(had).includes(pair)));
+    if (prior) prior.label += `, ${block.label.toLowerCase()}`;
+    else blocks.push({ ...block });
+  }
+  const evidenceRows = blocks.reduce((total, block) => total + block.rows.length, 0);
   if (evidenceRows) {
     const fold = document.createElement("details");
     fold.className = "join-evidence";
@@ -676,7 +683,7 @@ function elementSection(record, places, investigate, format, bounded = null) {
       `What Plane 2 saw · 1 level, ${evidenceRows} `
       + `row${evidenceRows === 1 ? "" : "s"}`;
     fold.append(summary);
-    for (const block of record.evidence) {
+    for (const block of blocks) {
       const name = document.createElement("p");
       name.className = "muted";
       name.setAttribute("data-evidence", block.key);
@@ -710,13 +717,10 @@ function elementSection(record, places, investigate, format, bounded = null) {
     if (folded) section.append(folded);
   }
 
-  for (const finding of record.findings) {
-    const line = document.createElement("p");
-    line.className = `finding-ref sev-${String(finding.severity ?? "info")
-      .toLowerCase()}`;
-    line.setAttribute("data-finding", finding.id ?? "");
-    line.textContent = finding.title ?? finding.id ?? "";
-    section.append(line);
+  // `UX-1156`: named and linked; the finding's sentence is drawn once, on its own card.
+  if (record.findings.length) {
+    section.append(el("p", { class: "finding-ref muted" }, "Findings: ", record.findings
+      .flatMap((finding, at) => [at ? " · " : null, findingLink(finding)])));
   }
 
   if (places && places.size) {

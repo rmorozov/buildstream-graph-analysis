@@ -252,8 +252,8 @@ export function distributionStrip(table, specs, total, few = false, rows) {
   const drawn = columnStrip(raw, {
     grade: GRADE_ANNOTATION, name,
     format: (n) => quantity(n, spec.quantity),
-    label: few ? null : `${name} across ${
-      rows?.length < total ? `${rows.length} of` : "all"} ${total.toLocaleString("en-US")} rows`,
+    // `UX-1156`: the column's name; the count is the sentence's and the badge's.
+    label: few ? null : name,
     counted: !few,
   });
   drawn.setAttribute("data-column", spec.key);

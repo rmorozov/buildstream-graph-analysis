@@ -700,16 +700,18 @@ export const NEEDS_TRACKEVENT = {
   counter: "the `counter` and `counter_track` tables",
 };
 
-export function requirementLine(question, make) {
+// `UX-1156`: `said` spans one section, so the why is written once and later lines point up.
+export function requirementLine(question, make, said = new Set()) {
   const needs = NEEDS_TRACKEVENT[question?.reads];
   if (!needs) return null;
   const line = make("p", { class: "muted query-needs" });
   line.setAttribute("data-reads", question.reads);
-  line.textContent =
-    `Needs a trackevent trace: this reads ${needs}, which `
+  line.textContent = said.size ? "Needs a trackevent trace, as above."
+    : `Needs a trackevent trace: this reads ${needs}, which `
     + "`bga timeline --format chrome` does not write. Against the "
     + "legacy JSON it returns no rows - which is the format missing "
     + "the structure, not the build lacking it.";
+  said.add(line);
   return line;
 }
 
@@ -835,6 +837,7 @@ export function renderQuestions(make, options = {}) {
   const chosen = elementPicker(section, make, options);
   const worked = byId(WORKED_EXAMPLE);
   if (worked) section.append(workedExample(worked, make, chosen));
+  const said = new Set();
   for (const category of CATEGORIES) {
     // UX-1147: the worked question is already open above; a fold repeating it is a second heading.
     const entries = inCategory(category).filter((q) => !worked || q.id !== worked.id);
@@ -857,7 +860,7 @@ export function renderQuestions(make, options = {}) {
       heading.textContent = question.title;
       const why = make("p", { class: "muted" });
       why.textContent = question.why;
-      const needs = requirementLine(question, make);
+      const needs = requirementLine(question, make, said);
       fold.append(heading, why, ...(needs ? [needs] : []),
                   ...sqlBlock(question, make, chosen));
     }

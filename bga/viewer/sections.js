@@ -123,6 +123,8 @@ export function renderFindings(findings, investigate = null, node = undefined,
   const evidenceNode = childNode(node?.items, "evidence");
   const bound = TABLE_OPENS_BOUNDED_ABOVE;
   let ranked = null;
+  // `UX-1156`: a detail line `attribution` draws as its bucket's advice is said there.
+  const advised = Object.values(payload?.attribution_hints ?? {});
   findings.forEach((finding, index) => {
     const severity = String(finding.severity ?? "info").toLowerCase();
     // UX-1148: an indented finding is a note on the card above, not a rank of its own.
@@ -145,7 +147,8 @@ export function renderFindings(findings, investigate = null, node = undefined,
     article._hydrate = () => {
       // UX-1136: native `append` prints a null child as the text "null"; `el` skips it.
       article.append(...[
-        ...(drawnIn ? [] : detail).map((line) => el("p", { class: "detail muted" }, line)),
+        ...(drawnIn ? [] : detail).filter((line) => !advised.includes(line))
+          .map((line) => el("p", { class: "detail muted" }, line)),
         drawnIn
           ? el("p", { class: "section-link" }, "The evidence: ",
                el("a", { href: `#${drawnIn}`, "data-section-link": drawnIn },
@@ -793,7 +796,10 @@ export const SECTION_ANSWERS = {
 
 /** The answer as the section's first block; the pairs it restates are dropped. */
 function leadWith(section, key, value, payload) {
-  const said = SECTION_ANSWERS[key]?.(value, payload);
+  // `UX-1156`: a member an answer reads is a member it says.
+  const read = new Set();
+  const said = SECTION_ANSWERS[key]?.(value?.constructor === Object ? new Proxy(value, {
+    get: (object, name) => (read.add(name), object[name]) }) : value, payload);
   const own = (node, tag) => [...(node?.children ?? [])].filter(
     (child) => String(child.tagName).toLowerCase() === tag);
   // UX-1147: `headRow` may have wrapped the heading in its `div.section-head`.
@@ -801,13 +807,12 @@ function leadWith(section, key, value, payload) {
     (child) => String(child.className ?? "").split(" ").includes("section-head"))
     ?? [...own(section, "h2"), ...own(section, "h3")][0];
   if (!said || !head) return;
-  const lead = el("p", { class: "section-answer", "data-role": "section-answer" }, said);
+  const dropped = [...read];
+  const lead = el("p", { class: "section-answer", "data-role": "section-answer",
+                         "data-said": dropped.join(" ") }, said);
   section.insertBefore(lead, head.nextSibling ?? null);
-  if (key !== "plane2_coverage") return;
-  // A pair the lead or a sibling count already says; the census guard needs the rest drawn.
-  const dropped = [];
-  if (value.process_count === value.processes) dropped.push("processes");
-  if (Array.isArray(value.cpu_disagreements) && !value.cpu_disagreements.length) {
+  // A pair the lead or a sibling count already says; the census reads `data-said`.
+  if (Array.isArray(value?.cpu_disagreements) && !value.cpu_disagreements.length) {
     dropped.push("cpu_disagreements");
   }
   for (const list of own(section, "dl")) {

@@ -650,11 +650,8 @@ export function renderBlastOffline(payload, copy, make) {
         + "Run `bga blast` against this run with the element you are "
         + "about to change."));
   if (argv) {
-    if (step.reason) {
-      section.append(make("p", { class: "muted", "data-role": "blast-why" },
-                          step.reason));
-    }
-    // `UX-429`: the same control the decision panel and the table use.
+    // `UX-429`: the same control the decision panel and the table use;
+    // `UX-1156`: the step's reason is the decision panel's, said there.
     section.append(...commandLine(step.argv, { make, copy }));
   }
   return section;

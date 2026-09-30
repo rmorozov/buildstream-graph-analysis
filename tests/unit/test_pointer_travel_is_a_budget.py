@@ -66,11 +66,12 @@ DX_ONLY = ("button.copy-rows", "select.top-n")
 #: `UX-1152` re-bases all four (a one-row record drawn as pairs, Why below its row).
 #: Round 154's merged tree re-measured, 3 runs, spread 0.
 #: `UX-1147`'s heading row lowers macro_micro 390 and re-bases both_scale 390 J3/J4 (one hop), 3 runs, spread 0.
+#: `UX-1160` re-bases all four on the laid-out page (no placeholder section), 3 runs, spread 0.
 MEASURED = {
-    ("macro_micro", 1440): {"J1": (4.57, 0), "J2": (18.53, 0), "J3": (14.35, 38521), "J4": (14.76, 11198)},
-    ("macro_micro", 390): {"J1": (2.34, 495), "J2": (17.62, 0), "J3": (22.87, 51499), "J4": (9.9, 17659)},
-    ("both_scale", 1440): {"J1": (4.51, 0), "J2": (19.7, 0), "J3": (10.6, 45277), "J4": (14.64, 11773)},
-    ("both_scale", 390): {"J1": (2.07, 798), "J2": (19.33, 0), "J3": (28.16, 58129), "J4": (10.66, 21745)},
+    ("macro_micro", 1440): {"J1": (4.57, 0), "J2": (18.48, 0), "J3": (5.88, 35988), "J4": (14.76, 10923)},
+    ("macro_micro", 390): {"J1": (2.34, 495), "J2": (14.77, 1566), "J3": (3.51, 59700), "J4": (9.9, 16881)},
+    ("both_scale", 1440): {"J1": (4.51, 0), "J2": (18.31, 1983), "J3": (6.5, 40413), "J4": (14.64, 11275)},
+    ("both_scale", 390): {"J1": (2.07, 798), "J2": (15.13, 2591), "J3": (4.16, 71095), "J4": (10.66, 21509)},
 }
 HEADROOM_BITS = 0.5
 HEADROOM_WHEEL = 1.10
@@ -78,7 +79,11 @@ HEADROOM_WHEEL = 1.10
 #: `restructuring` holds nested tables, so it stays a table (`UX-1152`'s fixer).
 UNOFFERED = {"macro_micro": ["change"], "both_scale": ["compare"]}
 
-_PRELUDE = r"""
+#: `UX-1160`: every section laid out - an unrendered one is 600 px of
+#: `contain-intrinsic-size`, not the geometry a reader scrolls through.
+_PRELUDE = (
+    pages.FULL_LAYOUT_JS
+    + r"""
 const frames = (n) => new Promise((r) => {
   let i = 0;
   const step = () => (++i >= n ? r() : requestAnimationFrame(step));
@@ -93,7 +98,12 @@ const vis = (n) => { const r = n.getBoundingClientRect(); return r.width > 0 && 
 const $ = (s, root = document) => [...root.querySelectorAll(s)].filter(vis);
 let pos = null;
 const steps = [];
+// Open sections still deferred: each is sized by its placeholder until drawn.
+let placeholders = 0;
+const lazy = () => [...document.querySelectorAll("section.chapter > section[data-section]:not([hidden])")]
+  .filter((n) => getComputedStyle(n).contentVisibility === "auto").length;
 async function hop(label, n, click = true) {
+  placeholders = Math.max(placeholders, lazy());
   if (!n || !vis(n)) { steps.push({label, missing: true}); return; }
   let r = n.getBoundingClientRect();
   let wheel = 0;
@@ -113,12 +123,13 @@ async function hop(label, n, click = true) {
   if (click) { n.click(); await settle(); }
 }
 async function journey(fn) {
-  pos = null; steps.length = 0;
+  pos = null; steps.length = 0; placeholders = 0;
   scrollTo(0, 0); await settle();
   await fn();
-  return {steps: [...steps]};
+  return {steps: [...steps], placeholders};
 }
 """
+)
 
 #: J1, J3, then placement with every chapter open, then J4 - one load.
 _DOCUMENT = (
@@ -413,3 +424,16 @@ def test_a_journey_stays_under_its_budget(walked, label, size, name):
         f"{label} at {_page(size)}: {name} needs {wheel}px of wheel, measured "
         f"{base_wheel} x {HEADROOM_WHEEL} (styleguide §3l)"
     )
+
+
+@needs_browser
+@pytest.mark.parametrize("label", LABELS)
+@pytest.mark.parametrize("size", VIEWPORTS, ids=_page)
+def test_no_journey_reads_a_placeholder(walked, label, size):
+    """UX-1160: a hop across an undrawn section reads its 600 px
+    placeholder, not the page - every journey walks the laid-out page."""
+    out = walked[label, size]
+    runs = {name: out[name] for name in ("J1", "J3", "J4")}
+    runs.update({f"J2 {cid}": j for cid, j in out["J2"].items()})
+    lazy = {name: j["placeholders"] for name, j in runs.items() if j["placeholders"]}
+    assert not lazy, f"{label} at {_page(size)}: sections at their intrinsic-size placeholder while walked: {lazy}"

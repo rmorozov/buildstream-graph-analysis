@@ -664,7 +664,12 @@ button.chapter-open:hover, button.chapter-open[aria-expanded="true"] {
     display: block !important;
     content-visibility: visible !important;
   }
-  button.chapter-open { display: none; }
+  /* `UX-1154`: every `details` prints open, no control prints, and a command wraps; `.fold-more` stays, it counts what is not printed. */
+  ::details-content { content-visibility: visible; }
+  button:not(.fold-more), input, select { display: none !important; }
+  code.next-command { white-space: pre-wrap; }
+  /* An exhibit's twin prints open, so its values reach paper (§2b: hover is never the only door). */
+  table.twin-table { display: table !important; }
 }
 
 /* Collapsed sections keep their heading; everything below it goes.
@@ -1430,14 +1435,6 @@ button.twin-toggle { }
 button.twin-toggle:hover { color: var(--fg); }
 table.twin-table { margin-top: var(--space-1); font-size: var(--font-small); }
 table.twin-table td { font-variant-numeric: tabular-nums; }
-
-/* Paper has no toggles: an exhibit's twin prints open, so the values
-   reach the reader of a printed report too (§2b's rule that hover is
-   never the only door, applied to a click). */
-@media print {
-  table.twin-table { display: table !important; }
-  button.twin-toggle { display: none; }
-}
 
 /* `UX-390`: the run's advice for one attribution bucket, under the
    value it is about. Muted and narrow: it is a second sentence on a

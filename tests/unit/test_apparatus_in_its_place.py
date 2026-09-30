@@ -428,17 +428,16 @@ class TestTheDescriptionSurvivesPaperAndTheRoomRule:
         return [(" ".join(sel.split()), body) for sel, body in re.findall(r"([^{}]+)\{([^{}]*)\}", css)]
 
     def test_nothing_hides_a_description_in_print(self):
-        """§2b.3: in print the marker survives and an opened
-        description renders. Paper has no pointer, so a rule that hid
-        either would make hover the only door on the one surface that
-        has none."""
+        """§2b.3: in print an opened description renders. `UX-1154`:
+        the `?` marker is a control and print drops every control, so
+        only the sentence itself is held here."""
         blocks = re.findall(r"@media print \{(.*?)\n\}", CSS, re.S)
         for block in blocks:
             for selector, body in re.findall(r"([^{}]+)\{([^{}]*)\}", block):
                 names = " ".join(selector.split())
-                if ".description" not in names and ".describe" not in names:
+                if ".description" not in names:
                     continue
-                assert "display: none" not in body, f"print hides a description or its marker: {names}"
+                assert "display: none" not in body, f"print hides a description: {names}"
 
     def test_no_description_is_revealed_by_hover_alone(self):
         """The defect being replaced, held as a rule: a sentence whose

@@ -502,7 +502,7 @@ const hint = { "bga:columns": [
   { key: "duration_us", title: "Duration", quantity: "duration_us" } ] };
 const section = app.renderTable("elements", rows, hint);
 const table = section.children.find((c) => c.tagName === "table");
-const shown = tables.applyTopN(table, "duration_us", 10);
+const shown = tables.applyFilters(table, { top: { n: 10, column: "duration_us" } });
 const visible = table.querySelectorAll("tbody tr").filter((tr) => !tr.hidden).length;
 console.log(JSON.stringify({ shown, visible,
   badge: tables.badgeText(shown, rows.length) }));

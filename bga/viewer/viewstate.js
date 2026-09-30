@@ -32,6 +32,7 @@ import { applyFocus, applyMarks, captureFocusAndMarks, clearFocus,
 // this table, all of it" is a link somebody pastes into an issue.
 import { applyTableFocus, captureTableFocus } from "./tablefocus.js";
 import { safeStorage } from "./primitives.js";
+import { applyFolds, foldSnapshot } from "./chapters.js";
 
 // UX-642: two attributes name one thing. The fixed folds set
 // `data-fold`; every fold `structured.js` builds carries its payload
@@ -110,7 +111,8 @@ export function captureView(root) {
       }
     }
     const preset = tools?.querySelector?.("select.top-n");
-    if (preset?.value && preset.value !== preset.opening) params.set(`n.${key}`, preset.value);
+    // UX-1165: `All rows` too, where the table opened bounded.
+    if (preset?.selectedIndex > -1 && preset.value !== (preset.opening ?? "")) params.set(`n.${key}`, preset.value);
     for (const th of table.querySelectorAll?.("th") ?? []) {
       const sorted = th.getAttribute("aria-sort");
       if (sorted) params.set(`s.${key}`, `${th.getAttribute("data-column")}:${sorted}`);
@@ -122,6 +124,14 @@ export function captureView(root) {
     .map(foldKey)
     .filter(Boolean);
   if (open.length) params.set("o", open.join(","));
+
+  // UX-1165: the open chapters, where they are not the first and the anchor's own.
+  const doc = root.ownerDocument ?? root;
+  const home = doc.getElementById?.(splitHash(doc.location?.hash).anchor)?.closest?.("section.chapter");
+  const chapters = [...(root.querySelectorAll?.("section.chapter") ?? [])];
+  const opened = foldSnapshot(root).join();
+  if (opened !== chapters.filter((box) => box === home || !box.querySelector("[data-chapter-open]"))
+    .map((box) => box.getAttribute("data-chapter")).join()) params.set("ch", opened);
 
   captureFocusAndMarks(root, params);
   captureTableFocus(root, params);
@@ -216,7 +226,7 @@ export function applyView(root, query, { dispatch } = {}) {
     // the row cap, so no table on either fixture had one.
     const preset = params.get(`n.${key}`);
     const select = tools?.querySelector?.("select.top-n");
-    if (preset && select) {
+    if (preset !== null && select) {
       select.value = preset;
       fire(select, "change");
       applied.push(`n:${key}`);
@@ -242,6 +252,8 @@ export function applyView(root, query, { dispatch } = {}) {
       }
     }
   }
+
+  if (params.has("ch")) applyFolds(root, params.get("ch").split(","));
 
   const open = new Set((params.get("o") ?? "").split(",").filter(Boolean));
   for (const node of root.querySelectorAll?.(FOLDS) ?? []) {

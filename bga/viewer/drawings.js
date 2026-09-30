@@ -968,13 +968,14 @@ export function interval(marks, {
 }
 
 export function columnStrip(values, { format = String, doc = document,
-                                      label = null, counted = true,
+                                      label = null, counted = true, of,
                                       grade = GRADE_ANNOTATION, name } = {}) {
   // `UX-316`: annotation grade by construction and by argument both -
   // a strip drawn beside a table *is* the §2a annotation case, and the
   // parameter exists so the guard reads one rule rather than two.
   const size = scaleFor(grade);
   const numbers = (values ?? []).filter(numeric).slice().sort((a, b) => a - b);
+  const n = of ? `${numbers.length} of ${of}` : numbers.length;
   const wrap = box(doc, "div", { class: "density density-self",
                                  "data-role": "density",
                                  "data-grade": grade });
@@ -984,7 +985,7 @@ export function columnStrip(values, { format = String, doc = document,
     wrap.append(box(doc, "span", { class: "density-sentence muted",
                                    "data-role": "density-sentence" },
                     // `UX-1152`: uncounted where the table's tools already say how many rows.
-                    (counted ? `${numbers.length} row${numbers.length === 1 ? "" : "s"}`
+                    (counted ? `${n} row${n === 1 ? "" : "s"}`
                              : "Below the sample floor")
                     + " — too few to have a shape."));
     return wrap;
@@ -1002,8 +1003,7 @@ export function columnStrip(values, { format = String, doc = document,
   const drawn = stripSvg(doc, marks, { printed: "rows", size });
   wrap.append(drawn);
   // Actual row values and a count. Nothing derived is spelled out.
-  const sentenceText = `${format(marks.min)} → ${format(marks.max)} across `
-    + `${marks.n} rows.`;
+  const sentenceText = `${format(marks.min)} → ${format(marks.max)} across ${n} rows.`;
   const sentence = box(doc, "span", { class: "density-sentence",
                                       "data-role": "density-sentence" },
                        sentenceText);

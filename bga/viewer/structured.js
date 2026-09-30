@@ -1121,6 +1121,10 @@ export function interrogable(table, specs, total, depth = 0) {
     // `UX-412`: through the shared helper, so this label and the badge
     // beside it agree with the count in one place rather than two.
     const rows = plural(n, "row");
+    // `UX-1165`: nothing shown, nothing to copy or to say of the rows.
+    for (const node of [copyRows, asMarkdown, copyRows.parentNode?.querySelector?.(".uniform-columns")]) {
+      if (node) node.hidden = !n;
+    }
     say(copyRows, `Copy ${rows}`, named);
     copyRows.title = `Copy the ${rows} shown in this table as ${form}, `
       + `with their published values`;

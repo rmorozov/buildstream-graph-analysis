@@ -60,7 +60,7 @@ function unparent(child) {
 
 function adopt(node, item) {
   // A real DOM **moves** an already-parented node rather than copying
-  // it. `applyTopN` reorders a table by re-appending its rows, and a
+  // it. `applyFilters` reorders a table by re-appending its rows, and a
   // shim that copied turned 4,000 rows into 8,000 (`UX-262`).
   unparent(item);
   item._parent = node;

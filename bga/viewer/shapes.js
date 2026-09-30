@@ -255,6 +255,8 @@ export function distributionStrip(table, specs, total, few = false, rows) {
     // `UX-1156`: the column's name; the count is the sentence's and the badge's.
     label: few ? null : name,
     counted: !few,
+    // `UX-1165`: filtered, the sentence counts K of M; the label stays the column.
+    of: rows?.length < total && total,
   });
   drawn.setAttribute("data-column", spec.key);
   drawn.setAttribute("data-interactive", String(served()));

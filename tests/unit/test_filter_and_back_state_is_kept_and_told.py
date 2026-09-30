@@ -1,10 +1,12 @@
-"""UX-1158: a filter says when it matched nothing, and Back walks the rail.
+"""UX-1158, UX-1165: a filter says when it matched nothing, and Back walks the rail.
 
-A no-match filter's badge reads `none of M match`; the table's strip
-redraws over the kept rows and its sentence counts K; three rail
-chapter presses take three Backs to unwind, each restoring the open
-chapters and the rail's mark; the hash's state is one opaque token, an
-untouched page writes none, and a readable hash from before still loads.
+A no-match filter's badge reads `none of M match` and nothing offers a
+copy or a table sentence; the table's strip redraws over the kept rows
+and its sentence counts K of M; three rail chapter presses take three
+Backs to unwind at 1440 and 390, each restoring the open chapters and
+the rail's mark; the hash's state is one opaque token, an untouched
+page writes none, a readable hash from before still loads, and a
+chapter's own fold and `All rows` survive a reload.
 Chromium (`tests/browser.py`) on `golden`, `macro_micro` and the
 two-plane review page.
 """
@@ -29,15 +31,23 @@ needs_browser = pytest.mark.skipif(find_chrome() is None, reason=NO_BROWSER)
 _FILTER = r"""
 (async () => {
   const turn = () => new Promise((done) => setTimeout(done, 60));
-  const box = [...document.querySelectorAll("input.table-filter")].find(
-    (node) => node.closest(".table-tools")?.querySelector(".density-label"));
+  const boxes = [...document.querySelectorAll("input.table-filter")];
+  const holds = (node, what) => node.closest(".table-tools")?.querySelector(what);
+  const box = boxes.find((node) => holds(node, ".density-label") && holds(node, ".uniform-columns"))
+    ?? boxes.find((node) => holds(node, ".density-label"));
   if (!box) return null;
   const tools = box.closest(".table-tools");
   const table = tools.parentNode.querySelector("table[data-table]");
+  // Opened, so what the tools offer is visible to read.
+  const shut = tools.closest('section.chapter[data-open="false"]');
+  shut?.querySelector("[data-chapter-open]").click();
+  await turn();
   const read = () => ({
     badge: tools.querySelector(".badge")?.textContent ?? null,
     label: tools.querySelector(".density-label")?.textContent ?? null,
     sentence: tools.querySelector(".density-sentence")?.textContent ?? null,
+    offered: [...tools.querySelectorAll(".copy-rows, .copy-as, .uniform-columns")]
+      .filter((node) => node.checkVisibility()).map((node) => node.className.split(" ").at(-1)),
     hash: location.hash,
   });
   const type = async (value) => {
@@ -109,6 +119,31 @@ _STEPS = [
     _BACK,
     {"read": "__j.ids"},
 ]
+_LINK = r"""
+(async () => {
+  const turn = () => new Promise((done) => setTimeout(done, 60));
+  const read = () => ({
+    open: [...document.querySelectorAll('section.chapter[data-open="true"]')]
+      .map((box) => box.dataset.chapter).join(","),
+    tops: Object.fromEntries([...document.querySelectorAll("select.top-n")].map((s) => [s.id, s.value])),
+    hash: location.hash,
+  });
+  const before = read();
+  if (location.hash) return { before };
+  [...document.querySelectorAll("[data-chapter-open]")].at(-1).click();
+  await turn();
+  const folded = read();
+  const bounded = [...document.querySelectorAll("select.top-n")].find(
+    (s) => s.opening && [...s.options].some((o) => o.value === ""));
+  if (bounded) {
+    bounded.value = "";
+    bounded.dispatchEvent(new Event("change", { bubbles: true }));
+    await turn();
+  }
+  return { before, folded, all: bounded ? read() : null, id: bounded?.id ?? null };
+})()
+"""
+
 _NAMES = ["initial", "first", "second", "third", "back_once", "back_twice", "back_thrice", "ids"]
 
 
@@ -128,10 +163,16 @@ def seen(uris):
     out = {}
     with Browser(find_chrome()) as browser:
         for label, uri in uris.items():
-            walked = [v for v in browser.journey(uri, _STEPS, 1440, 900) if v is not None]
-            out[label] = {"back": dict(zip(_NAMES, walked, strict=True))}
+            out[label] = {"back": {}}
             for width, height in ((1440, 900), (390, 844)):
+                walked = [v for v in browser.journey(uri, _STEPS, width, height) if v is not None]
+                out[label]["back"][width] = dict(zip(_NAMES, walked, strict=True))
                 out[label][width] = browser.measure(uri, _FILTER, width, height)
+            pressed = browser.measure(uri, _LINK)
+            last = pressed["all"] or pressed["folded"]
+            # UX-1165: a query string, so the reload is a new document.
+            reloaded = browser.measure(f"{uri}?ux1165{last['hash']}", _LINK)
+            out[label]["link"] = {**pressed, "reloaded": reloaded}
             told = out[label][1440]
             if told:
                 # A query string, so this is a new document and not a same-page hash move.
@@ -139,6 +180,11 @@ def seen(uris):
                 back = "const before = read(); return { ...before, value: box.value };"
                 out[label]["old"] = browser.measure(old, _FILTER.replace("const before = read();", back))
     return out
+
+
+def _walks(seen):
+    """Every rail journey, at 1440 and at 390."""
+    return [((label, width), walk) for label, out in seen.items() for width, walk in out["back"].items()]
 
 
 @needs_browser
@@ -162,25 +208,33 @@ class TestAFilterSaysWhatItKept:
                 assert out["before"]["sentence"].endswith(f"across {total} rows."), (label, out)
                 assert shown != total and shown != "none", (label, out)
                 assert out["some"]["label"] == out["before"]["label"], (label, out)
-                assert re.search(rf"(?<![\d,]){shown} rows?\b", out["some"]["sentence"]), (label, out)
+                assert re.search(rf"(?<![\d,]){shown} of {total} rows\b", out["some"]["sentence"]), (label, out)
                 assert out["none"]["label"] is None, (label, out)
                 assert out["cleared"]["label"] == out["before"]["label"], (label, out)
+                assert out["cleared"]["sentence"] == out["before"]["sentence"], (label, out)
+
+    def test_an_empty_result_offers_no_copy_and_no_sentence(self, seen):
+        assert "uniform-columns" in seen["two_plane"][1440]["before"]["offered"], seen["two_plane"]
+        for label in (k for k in seen if seen[k][1440]):
+            for width in (1440, 390):
+                out = seen[label][width]
+                assert {"copy-rows", "copy-as"} <= set(out["before"]["offered"]), (label, width, out)
+                assert out["none"]["offered"] == [], (label, width, out)
+                assert out["cleared"]["offered"] == out["before"]["offered"], (label, width, out)
 
 
 @needs_browser
 class TestBackWalksTheRail:
     def test_each_press_moves_the_rail_and_opens_a_chapter(self, seen):
         """Non-vacuity: three presses, three different states to unwind."""
-        for label, out in seen.items():
-            walk = out["back"]
+        for label, walk in _walks(seen):
             assert len(walk["ids"]) == 3, (label, walk)
             states = [json.dumps(walk[k]) for k in ("initial", "first", "second", "third")]
             assert len(set(states)) == 4, (label, walk)
             assert walk["third"]["rail"] == walk["ids"][2], (label, walk)
 
     def test_three_backs_restore_rail_and_chapters(self, seen):
-        for label, out in seen.items():
-            walk = out["back"]
+        for label, walk in _walks(seen):
             for back, before in (("back_once", "second"), ("back_twice", "first"), ("back_thrice", "initial")):
                 assert walk[back] == walk[before], (label, back, walk)
 
@@ -188,8 +242,7 @@ class TestBackWalksTheRail:
 @needs_browser
 class TestTheHashIsOpaqueOnPurpose:
     def test_an_untouched_page_writes_only_its_anchor(self, seen):
-        for label, out in seen.items():
-            walk = out["back"]
+        for label, walk in _walks(seen):
             assert walk["first"]["hash"] == f"#chapter-{walk['ids'][0]}", (label, walk)
 
     def test_the_state_is_one_token(self, seen):
@@ -204,3 +257,20 @@ class TestTheHashIsOpaqueOnPurpose:
             old, typed = seen[label]["old"], seen[label][1440]
             assert old["value"] == typed["needle"], (label, old)
             assert old["badge"] == typed["some"]["badge"], (label, old)
+
+
+@needs_browser
+class TestEveryViewButtonWritesTheLink:
+    def test_a_chapter_fold_survives_a_reload(self, seen):
+        for label, out in seen.items():
+            link = out["link"]
+            assert link["folded"]["open"] != link["before"]["open"], (label, link)
+            assert link["reloaded"]["before"]["open"] == link["folded"]["open"], (label, link)
+
+    def test_all_rows_survives_a_reload(self, seen):
+        bounded = [label for label in seen if seen[label]["link"]["all"]]
+        assert "two_plane" in bounded and "macro_micro" in bounded, {k: v["link"] for k, v in seen.items()}
+        for label in bounded:
+            link = seen[label]["link"]
+            assert link["folded"]["tops"][link["id"]] != "", (label, link)
+            assert link["reloaded"]["before"]["tops"][link["id"]] == "", (label, link)

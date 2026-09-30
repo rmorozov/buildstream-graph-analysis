@@ -429,7 +429,7 @@ console.log(JSON.stringify({
 @needs_node
 class TestAPresetOffersOnlyWhatItCanFill:
     """UX-673: a `Top 10` on a three-row table is a menu with no effect
-    - `applyTopN` already clamps at render, so this is the *menu*
+    - `applyFilters` already clamps at render, so this is the *menu*
     catching up to what the table already does."""
 
     @staticmethod

@@ -3,6 +3,9 @@
 No two headings share text; no chapter or section heading holds its fold,
 its reader chip or its JSON toggle; no finding title ends in a colon,
 shouts a word, or capitalises one mid-sentence (styleguide §6e.1, §6e.3).
+At 390 px a section heading's controls take their own row: every drawn h3
+spans at least 80% of its section's content width and is no taller than
+its text laid out at that full width.
 """
 
 import pathlib
@@ -47,6 +50,33 @@ _MEASURE = r"""
 """
 
 
+#: A heading's share of its section's content box at 390 px; the fold beside it is the rest.
+_SHARE = 0.8
+
+_SQUEEZE = r"""
+(() => {
+  const out = [];
+  for (const h of document.querySelectorAll("section[data-section] h3")) {
+    if (!h.getClientRects().length) continue;
+    const sec = h.closest("section[data-section]");
+    const cs = getComputedStyle(sec);
+    const content = sec.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+    const probe = document.createElement("div");
+    const hs = getComputedStyle(h);
+    for (const p of ["font", "letterSpacing", "wordSpacing", "lineHeight", "textTransform"]) probe.style[p] = hs[p];
+    Object.assign(probe.style, {position: "absolute", visibility: "hidden", width: `${content}px`, overflowWrap: "normal"});
+    probe.textContent = h.textContent;
+    document.body.append(probe);
+    const needs = probe.getBoundingClientRect().height;
+    probe.remove();
+    const r = h.getBoundingClientRect();
+    out.push({id: sec.id, width: r.width, height: r.height, content, needs});
+  }
+  return out;
+})()
+"""
+
+
 def _run(label, into):
     if label == "two_plane":
         return pages.two_plane_run(into, ("--layers", "8", "--width", "14"))
@@ -58,7 +88,9 @@ def drawn(request, tmp_path_factory):
     into = tmp_path_factory.mktemp(f"u1147-{request.param}")
     uri = pages.export_uri(_run(request.param, into), into)
     with Browser(chrome) as opened:
-        return request.param, opened.measure(uri, _MEASURE)
+        measured = opened.measure(uri, _MEASURE)
+        measured["compact"] = opened.measure(uri, _SQUEEZE, width=390, height=844)
+        return request.param, measured
 
 
 def _shouted(title):
@@ -105,3 +137,16 @@ class TestAHeadingIsItsQuestionAlone:
     def test_no_finding_title_is_title_case(self, drawn):
         label, measured = drawn
         assert {t[:50]: _mid_capitals(t) for t in measured["titles"] if _mid_capitals(t)} == {}, label
+
+    def test_at_390_a_heading_has_its_sections_width(self, drawn):
+        label, measured = drawn
+        heads = measured["compact"]
+        narrow = {h["id"]: f"{h['width']:.0f}/{h['content']:.0f}" for h in heads if h["width"] < _SHARE * h["content"]}
+        assert len(heads) > 10 and narrow == {}, (label, len(heads), narrow)
+
+    def test_at_390_a_heading_is_no_taller_than_its_text(self, drawn):
+        label, measured = drawn
+        tall = {
+            h["id"]: f"{h['height']:.0f}>{h['needs']:.0f}" for h in measured["compact"] if h["height"] > h["needs"] + 1
+        }
+        assert tall == {}, (label, tall)

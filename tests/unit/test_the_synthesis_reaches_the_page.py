@@ -216,7 +216,7 @@ class TestOnThePage:
         that a change to either surface has to move both.
         """
         line = next(row for row in spoken.splitlines() if "Replaying this run" in row)
-        triple = re.findall(r"(\d+\.\d+)s", line)
+        triple = re.findall(r"(\d+\.\d+) s", line)
         assert len(triple) == 3, line
         projected, baseline, saving = triple
         for number in (baseline, projected, saving):

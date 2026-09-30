@@ -25,7 +25,7 @@ import sys
 
 import pytest
 
-from bga import schemas
+from bga import schemas, shown
 
 node = shutil.which("node")
 needs_node = pytest.mark.skipif(node is None, reason="node is not installed")
@@ -100,12 +100,12 @@ class TestTheEvidenceIsInItsDeclaredUnit:
         """Asserted against the payload's own number, not a literal."""
         finding = _finding(report, "wait-category")
         published = finding["evidence"]["category_us"]
-        assert f"category_us {published / 1e6:.1f}s" in finding["copy_text"]
+        assert f"category_us {shown.duration(published)}" in finding["copy_text"]
 
     def test_a_share_reads_as_a_percentage(self, report):
         finding = _finding(report, "wait-category")
         published = finding["evidence"]["share"]
-        assert f"share {published * 100:.0f}%" in finding["copy_text"]
+        assert f"share {shown.share(published)}" in finding["copy_text"]
 
     def test_two_keys_are_never_reduced_to_one_label(self, report):
         """`category` and `category_us` are different numbers. A first

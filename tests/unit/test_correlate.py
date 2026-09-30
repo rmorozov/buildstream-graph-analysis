@@ -408,7 +408,7 @@ def test_the_dominant_binary_reaches_the_join():
     three rounds ago. The command the workflow ends on never said so."""
     steps = _steps(correlate(_real_analysis(), _rich_native()), CMAKE)
 
-    assert any("cc1plus" in step and "81%" in step for step in steps)
+    assert any("cc1plus" in step and "81.3%" in step for step in steps)
 
 
 def test_a_single_process_serialization_point_reaches_the_join():

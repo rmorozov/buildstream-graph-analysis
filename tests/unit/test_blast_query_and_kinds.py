@@ -210,7 +210,7 @@ class TestTheRankingSaysWhichOrderItIsIn:
 
         text = "\n".join(_format_blast_ranking(self._signals(True)))
         assert "by measured rebuild time" in text
-        assert "22.0s of rebuilding below it" in text
+        assert "22.0 s of rebuilding below it" in text
         assert "assembles, does not build" in text
 
     def test_an_unmeasured_run_says_it_fell_back_to_the_count(self):

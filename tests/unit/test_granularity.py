@@ -123,7 +123,7 @@ def test_nothing_firing_says_how_far_from_the_line_the_project_is():
     edges = [_Edge("base.bst", name) for name in ("a.bst", "b.bst", "c.bst", "d.bst")]
     findings = _merge_candidates(edges, cache_logs, None, None)
     assert [f['id'] for f in findings] == ['merge-not-indicated']
-    assert "largest tax share is 17%" in findings[0]['title']
+    assert "largest tax share is 16.7%" in findings[0]['title']
     assert "toll" not in findings[0]['title'], (
         "UX-138/UX-154: one concept, one name - the rendered text says sandbox tax everywhere, including here"
     )

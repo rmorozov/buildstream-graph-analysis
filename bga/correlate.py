@@ -43,6 +43,7 @@ from dataclasses import dataclass, field
 from typing import Optional
 
 from . import schemas
+from . import shown as qty
 from .findings import SEVERITY_HIGH, SEVERITY_INFO, SEVERITY_MEDIUM
 from .floors.capacity import compute_default_capacities
 from .plural import plural as _count
@@ -583,6 +584,16 @@ def _collapse_range(values: list[float], fmt, unit: str = "") -> str:
     return f"{low}{unit}" if low == high else f"{low}-{high}{unit}"
 
 
+def _collapse_durations(values_us: list[float]) -> str:
+    """`2.0-3.0 s` for a spread in one unit, `2.0 s` for agreement."""
+    low, high = qty.duration(min(values_us)), qty.duration(max(values_us))
+    if low == high:
+        return low
+    low_n, low_unit = low.rsplit(" ", 1)
+    high_unit = high.rsplit(" ", 1)[1]
+    return f"{low_n}-{high}" if low_unit == high_unit else f"{low}-{high}"
+
+
 def _name_elements(elements: list[str]) -> str:
     """`lib-a.bst..lib-f.bst, app.bst` rather than seven full names.
 
@@ -736,12 +747,12 @@ def _group_header(elements: list[str], entries: list[dict]) -> str:
         "%",
     )
     savings_us = [e.get('potential_saving_us') or 0 for e in entries]
-    each = _collapse_range([v / 1e6 for v in savings_us], lambda v: f"{v:.1f}", "s")
+    each = _collapse_durations([float(v) for v in savings_us])
     parts = [f"{len(entries)} elements"]
     if shares:
         parts.append(f"{shares} of the critical path each")
     if any(savings_us):
-        parts.append(f"{each} apiece, {sum(savings_us) / 1e6:.1f}s together")
+        parts.append(f"{each} apiece, {qty.duration(sum(savings_us))} together")
     return f"{_name_elements(elements)} ({', '.join(parts)}):"
 
 
@@ -785,10 +796,10 @@ def _recommend(joined: ElementJoin, memory_envelope_available: bool = False) -> 
     def _impact() -> str:
         parts = []
         if share is not None:
-            parts.append(f"holds {share * 100:.0f}% of the critical path")
+            parts.append(f"holds {qty.share(share)} of the critical path")
         if worth is not None and joined.potential_saving_us:
             parts.append(
-                f"fixing it is worth {joined.potential_saving_us / 1e6:.1f}s ({worth * 100:.1f}% of the build)"
+                f"fixing it is worth {qty.duration(joined.potential_saving_us)} ({qty.share(worth)} of the build)"
             )
         return " and ".join(parts) if parts else "on the critical path"
 
@@ -846,9 +857,9 @@ def _recommend(joined: ElementJoin, memory_envelope_available: bool = False) -> 
                 (
                     _EVIDENCE_CPU_CONCENTRATION,
                     'cpu-concentration',
-                    f"{dominant['cpu_share']:.0%} of its measured CPU is one binary, "
-                    f"`{dominant['binary']}` ({dominant['count']} process(es), "
-                    f"{dominant['cpu_us'] / 1e6:.0f} CPU s) - this element is a "
+                    f"{qty.share(dominant['cpu_share'])} of its measured CPU is one binary, "
+                    f"`{dominant['binary']}` ({_count(dominant['count'], 'process', 'processes')}, "
+                    f"{qty.duration(dominant['cpu_us'])} CPU) - this element is a "
                     f"`{dominant['binary']}` problem, so look there before anywhere else",
                 )
             )
@@ -864,7 +875,7 @@ def _recommend(joined: ElementJoin, memory_envelope_available: bool = False) -> 
                     _EVIDENCE_SERIALIZATION,
                     'serialization-point',
                     f"`{serial['binary']}` is a SINGLE process holding "
-                    f"{serial['wall_us'] / US_PER_S:.1f}s of wall time - a serialization point no "
+                    f"{qty.duration(serial['wall_us'])} of wall time - a serialization point no "
                     f"job count can help; it has to get faster or go away",
                 )
             )
@@ -2022,9 +2033,9 @@ def _merge_candidates(dependencies, cache_logs, tasks, run_context) -> list[dict
                     f"{_count(len(over), 'sibling element')} spend at least half their time on "
                     f"sandbox tax rather than on building: {', '.join(over[:4])}. "
                     f"Merging them would delete {_count(len(deleted), 'staging')}, "
-                    f"{sum(deleted) / 1e6:.1f}s of sandbox tax"
+                    f"{qty.duration(sum(deleted))} of sandbox tax"
                     + (
-                        f" and at least a replayed {projection['saving_us'] / 1e6:.1f}s "
+                        f" and at least a replayed {qty.duration(projection['saving_us'])} "
                         f"of build - a floor, because the replay shortens the tasks "
                         f"without collapsing them into one"
                         if projection
@@ -2050,9 +2061,9 @@ def _merge_candidates(dependencies, cache_logs, tasks, run_context) -> list[dict
             'title': (
                 f"No element pays more sandbox tax than it spends building. Across "
                 f"{_count(len(measured), 'measured element')} the largest tax share is "
-                f"{worst['toll_share'] * 100:.0f}% ({worst['element']}, "
-                f"{worst['toll_us'] / 1e6:.1f}s of {worst['total_us'] / 1e6:.1f}s), "
-                f"against the {MERGE_TOLL_AT_LEAST_WORK * 100:.0f}% that would make a "
+                f"{qty.share(worst['toll_share'])} ({worst['element']}, "
+                f"{qty.duration(worst['toll_us'])} of {qty.duration(worst['total_us'])}), "
+                f"against the {qty.share(MERGE_TOLL_AT_LEAST_WORK)} that would make a "
                 f"merge worth its cache cost"
             ),
         }
@@ -2135,7 +2146,7 @@ def _split_candidates(analysis, native_report) -> list[dict]:
                 'work_processes': entry.get('work_process_count'),
                 'invalidation_blast': None,
                 'title': (
-                    f"{element} holds {share * 100:.0f}% of the critical path and runs "
+                    f"{element} holds {qty.share(share)} of the critical path and runs "
                     f"{mean:.2f} concurrent work processes inside one element "
                     f"({entry.get('work_process_count')} of them)"
                 ),
@@ -2484,7 +2495,7 @@ def _cached_shape_sentence(cheap_share, cheap_changes, total_changes, dominant) 
     """
     lead = (
         f"{cheap_changes} of {total_changes} recorded changes "
-        f"({cheap_share:.0%}) rebuilt at or under the graph's own "
+        f"({qty.share(cheap_share)}) rebuilt at or under the graph's own "
         f"median weighted blast"
     )
     if not dominant:
@@ -2494,9 +2505,9 @@ def _cached_shape_sentence(cheap_share, cheap_changes, total_changes, dominant) 
     tallest = ", also the tallest" if top['height_rank'] == 1 == top['weight_rank'] else ""
     return (
         f"{lead}. {top['element']} dominates the expected cost at "
-        f"{top['share_of_expected_cost']:.0%}{tag}{tallest}: "
+        f"{qty.share(top['share_of_expected_cost'])}{tag}{tallest}: "
         f"{_count(top['height'], 'element')} below it, "
-        f"{top['weight_us'] / 1e6:.1f}s of its own weight; {top['advice']}."
+        f"{qty.duration(top['weight_us'])} of its own weight; {top['advice']}."
     )
 
 
@@ -2861,7 +2872,7 @@ def format_correlation(result: dict) -> str:
         line = (
             f"  Memory envelope: {at_observed['builders']} builders of this shape "
             f"peak at ~{at_observed['envelope_bytes'] / GIB:.1f} GB of {host_gb:.1f} GB "
-            f"({at_observed['share_of_host'] * 100:.0f}%)"
+            f"({qty.share(at_observed['share_of_host'])})"
         )
         ceiling = envelope.get("first_builders_that_does_not_fit")
         if ceiling:
@@ -2909,9 +2920,9 @@ def format_correlation(result: dict) -> str:
             lines.append(
                 f"    Replaying this run with those edges removed - same durations, "
                 f"same capacity - finishes in "
-                f"{projection['projected_us'] / 1e6:.1f}s against "
-                f"{projection['replayed_baseline_us'] / 1e6:.1f}s: "
-                f"{projection['saving_us'] / 1e6:.1f}s"
+                f"{qty.duration(projection['projected_us'])} against "
+                f"{qty.duration(projection['replayed_baseline_us'])}: "
+                f"{qty.duration(projection['saving_us'])}"
             )
         elif projection:
             lines.append(
@@ -2935,7 +2946,7 @@ def format_correlation(result: dict) -> str:
         ranking = result.get("ranking") or {}
         if ranking.get("degenerate"):
             tied = ranking.get("tied_saving_us")
-            tied_text = f" ({tied / 1e6:.1f}s)" if tied else ""
+            tied_text = f" ({qty.duration(tied)})" if tied else ""
             lines.append(
                 f"  NOTE: every ranked element carries the same Plane 1 "
                 f"impact{tied_text}, so the order below is alphabetical, not an "

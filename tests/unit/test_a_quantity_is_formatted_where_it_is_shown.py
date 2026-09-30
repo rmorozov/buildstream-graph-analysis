@@ -7,6 +7,7 @@ after boot is held too. `data-raw` keeps the published number.
 """
 
 import pathlib
+import re
 import sys
 
 import pytest
@@ -37,13 +38,46 @@ _MEASURE = r"""
   }
   const values = [...document.querySelectorAll(
     "#decision dl.why-facts > dd, dl.evidence-refs > dd")];
+  const cards = [...document.querySelectorAll("article.finding")].map((a) => ({
+    title: a.querySelector("p.title")?.textContent ?? "",
+    // the value node only: a dd also carries its description
+    pairs: [...a.querySelectorAll("dl.pairs dd")].map(
+      (dd) => dd.firstChild?.textContent ?? ""),
+  }));
   return {
-    raw, glued, values: values.length,
+    raw, glued, cards, values: values.length,
     // A formatted value still carries the published number beside it.
     kept: values.filter((dd) => dd.hasAttribute("data-raw")).length,
   };
 })()
 """
+
+_QUANTITY = re.compile(r"(?<![\w.])(\d+(?:\.\d+)?) ?(ms|s|min|h|%)(?![\w%])")
+
+
+# A share spelled as a bare 0..1 fraction ("Confidence: 1.00").
+_FRACTION = re.compile(r"(?<![\w.])(0\.\d\d|1\.00)(?![\w.%])")
+
+
+def _disagreements(cards):
+    """A title quantity and a pair quantity of one unit and one value, spelled two ways."""
+    found = []
+    for card in cards:
+        pairs = [
+            (m.group(0), float(m.group(1)), m.group(2)) for text in card["pairs"] for m in _QUANTITY.finditer(text)
+        ]
+        for m in _QUANTITY.finditer(card["title"]):
+            spelled, value, unit = m.group(0), float(m.group(1)), m.group(2)
+            for other, seen, seen_unit in pairs:
+                near = abs(value - seen) <= 0.02 * max(abs(seen), 1e-9)
+                if unit == seen_unit and near and spelled != other:
+                    found.append((card["title"][:60], spelled, other))
+        for m in _FRACTION.finditer(card["title"]):
+            for other, seen, unit in pairs:
+                if unit == "%" and abs(float(m.group(1)) * 100 - seen) <= 0.6:
+                    found.append((card["title"][:60], m.group(0), other))
+    return found
+
 
 _SYNTHETIC = ("--layers", "8", "--width", "14")
 
@@ -77,3 +111,16 @@ class TestQuantities:
         label, result = measured
         for width, got in result.items():
             assert got["glued"] == [], (label, width, len(got["glued"]), got["glued"][:5])
+
+    def test_a_title_quantity_reads_as_its_pair(self, measured):
+        label, result = measured
+        for width, got in result.items():
+            assert _disagreements(got["cards"]) == [], (label, width)
+
+
+def test_the_disagreement_check_sees_two_spellings():
+    cards = [{"title": "Path is 78.35 s", "pairs": ["78.3 s"]}]
+    assert _disagreements(cards) == [("Path is 78.35 s", "78.35 s", "78.3 s")]
+    assert _disagreements([{"title": "78.3 s long", "pairs": ["78.3 s"]}]) == []
+    fraction = [{"title": "Confidence: 1.00 (high)", "pairs": ["100.0%"]}]
+    assert _disagreements(fraction) == [("Confidence: 1.00 (high)", "1.00", "100.0%")]

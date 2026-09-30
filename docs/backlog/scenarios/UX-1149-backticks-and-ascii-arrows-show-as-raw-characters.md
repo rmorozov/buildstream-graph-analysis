@@ -78,3 +78,4 @@ with backticks and `->` verbatim against page text; both now compare
 the typeset spelling on both sides (`_typeset`). The " - " dash (96
 nodes) is not changed: the Required Fix names arrows and code only.
 The styleguide is not amended - §4g is also edited by `UX-1141`/`1142`.
+- Merged-tree fix: `test_one_bucket_one_row` compares the advice to the hint with its backticks removed, as the typesetter renders `<code>` (stale guard).

@@ -456,7 +456,13 @@ export function toc(root, { document: doc, controls } = {}) {
       const button = doc.createElement("button");
       button.textContent = text;
       button.setAttribute("data-all", String(shut));
-      button.addEventListener("click", () => controls.all(shut));
+      button.addEventListener("click", () => {
+        controls.all(shut);
+        // UX-1178: the chapter the rail names is the top again once the folds' heights are in.
+        const at = nav.querySelector?.("[data-current][data-chapter]")?.getAttribute("data-chapter");
+        const box = !shut && at ? chapterBox(root, at) : null;
+        if (box) revealAndLand(box);
+      });
       row.append(button);
     }
     nav.append(row);

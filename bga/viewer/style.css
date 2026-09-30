@@ -461,6 +461,9 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
   table:has(td table) > * > tr, table:has(td table) > * > tr > * { display: block; }
   /* `UX-1171`: a stacked cell names its column; a step's entrants take its whole row. */
   table:has(td table) > * > tr > td::before { content: attr(data-label); display: block; color: var(--muted); }
+  table:has(td table) > thead { display: none; }
+  td.num { white-space: nowrap; }
+  main code:not(pre code) { display: inline-block; vertical-align: bottom; }
   .horizon-step > .horizon-entering { grid-column: 1 / -1; }
   /* `UX-1164`: no tick label, part or question is cut. */
   .draw-axis:not([data-layout]) { height: 3.2em; }

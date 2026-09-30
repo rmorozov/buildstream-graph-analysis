@@ -77,6 +77,8 @@ _TWO_PRESSES = (
   // there is no button yet to read a position off.
   const expandSettle = await settleReading(
     () => [height(), document.querySelectorAll("main [data-expand]").length]);
+  // UX-1178: Expand all lands the current chapter; the reader scrolls after it.
+  await new Promise((done) => setTimeout(done, 600));
   const buttons = [...document.querySelectorAll("main [data-expand]")];
   const deep = buttons.find(
     (b) => b.getBoundingClientRect().top > window.innerHeight);

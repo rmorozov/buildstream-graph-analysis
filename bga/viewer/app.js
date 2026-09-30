@@ -1145,7 +1145,9 @@ async function boot() {
           folds: foldSnapshot(root),
           scrollY: window.scrollY, at: at?.getBoundingClientRect().top }, "");
         if (chapter) {
-          window.history.pushState(null, "", joinHash(`chapter-${chapter}`, splitHash(location.hash).query));
+          const next = joinHash(`chapter-${chapter}`, splitHash(location.hash).query);
+          // UX-1178: a press on the entry already current is no new entry.
+          window.history[next === location.hash ? "replaceState" : "pushState"](null, "", next);
         }
       }
     }, true);

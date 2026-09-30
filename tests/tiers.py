@@ -1051,6 +1051,33 @@ MEDIUM = (
     "tests/unit/test_a_finding_card_prints_no_null.py",  #  1.4s
     # `UX-1137`: 1.09s over its four tests, one process.
     "tests/unit/test_a_pair_list_keeps_its_pairs_on_one_row.py",  #  1.1s
+    # Round 154, tiered on the merged tree: two single-process runs alone each.
+    # `UX-1150`: 2.90 / 2.96s.
+    "tests/unit/test_a_boolean_is_a_verdict.py",  #  2.9s
+    # `UX-1147`: 2.52 / 2.71s.
+    "tests/unit/test_a_heading_is_its_question_alone.py",  #  2.6s
+    # `UX-1140`: 4.03 / 3.90s.
+    "tests/unit/test_a_quantity_is_formatted_where_it_is_shown.py",  #  4.0s
+    # `UX-1141`: 3.29 / 3.26s.
+    "tests/unit/test_a_reader_sees_labels_not_keys.py",  #  3.3s
+    # `UX-1148`: 2.52 / 2.51s.
+    "tests/unit/test_findings_are_listed_by_severity.py",  #  2.5s
+    # `UX-1144`: 2.63 / 2.85s.
+    "tests/unit/test_one_concept_has_one_label.py",  #  2.7s
+    # `UX-1149`: 3.83 / 3.82s.
+    "tests/unit/test_reader_text_has_no_backtick_or_ascii_arrow.py",  #  3.8s
+    # `UX-1152`: 3.36 / 3.41s.
+    "tests/unit/test_repeats_are_not_drawn_twice.py",  #  3.4s
+    # `UX-1143`: 3.48 / 3.54s.
+    "tests/unit/test_the_capacity_section_opens_with_its_answer.py",  #  3.5s
+    # `UX-1145`: 2.78 / 2.85s.
+    "tests/unit/test_the_compact_class_stacks_pairs.py",  #  2.8s
+    # `UX-1146`: 3.69 / 3.59s.
+    "tests/unit/test_the_decision_is_said_once.py",  #  3.6s
+    # `UX-1151`: 2.75 / 2.74s.
+    "tests/unit/test_the_plane_2_sections_lead_with_their_answer.py",  #  2.7s
+    # `UX-1153`: 3.74 / 3.88s.
+    "tests/unit/test_the_six_low_defects_stay_fixed.py",  #  3.8s
     # 8.60 / 8.75s.
     "tests/unit/test_the_rail_and_the_jump_box_write_the_anchor.py",  #  8.7s
     # Round 147, tiered on the merged tree: three single-process runs

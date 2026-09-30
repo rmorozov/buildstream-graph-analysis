@@ -339,7 +339,8 @@ class TestThePageRendersFromTheSchema:
                 "section": None,
                 "total_duration_us": 10,
                 "cache_efficiency": {"pull_share": 0.42},
-                "hotspots": [{"element": "slow.bst", "seconds": 61.0}],
+                # Two rows: `UX-1152` draws a one-row record as pairs, which have no columns.
+                "hotspots": [{"element": "slow.bst", "seconds": 61.0}, {"element": "quick.bst", "seconds": 2.0}],
             },
             schema,
         )

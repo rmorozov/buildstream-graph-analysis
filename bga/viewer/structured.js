@@ -552,7 +552,10 @@ export function renderStructured(key, value, hint = {}, node = undefined,
 
 /** `UX-1152` (styleguide §3d): one row with no element column is a record, drawn as pairs - an element row keeps its table's Inspect. */
 export function oneRecord(rows, hint, node) {
-  return rows.length === 1 && !elementColumn(columnSpecs(hint, rows, node));
+  // A row holding a nested table keeps its table, so the nested one keeps its fold and rail.
+  const nested = (v) => Array.isArray(v) && v.some((i) => i && typeof i === "object");
+  return rows.length === 1 && !Object.values(rows[0]).some(nested)
+    && !elementColumn(columnSpecs(hint, rows, node));
 }
 
 /**
@@ -1156,9 +1159,9 @@ export function interrogable(table, specs, total, depth = 0) {
   // number.** Its labels are the smallest and largest *rows* and a
   // count of rows; the p50 and p95 ticks are positions and nothing
   // else. A percentile worth printing enters the payload first.
-  // `UX-1152` (styleguide §3d): at two rows or fewer the rows are the shape, and `Copy N rows` already counts them.
+  // `UX-1152` (styleguide §3d): at two rows or fewer `Copy N rows` is the one count; the strip only states the floor (`UX-226`).
   const few = total <= FEW_ROWS;
-  const shape = few ? null : distributionStrip(table, specs, total, state, refresh);
+  const shape = distributionStrip(table, specs, total, state, refresh, few);
 
   // `UX-318` (§3a.3): **every capped or nested table offers focus.** A
   // table that opened bounded is hiding rows behind a Top-N; a nested

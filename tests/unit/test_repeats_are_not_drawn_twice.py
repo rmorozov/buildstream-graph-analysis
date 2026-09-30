@@ -57,11 +57,16 @@ _MEASURE = r"""
     const tools = table.parentNode.querySelector(":scope > .table-tools");
     if (n > 2 || !tools) continue;
     small += 1;
-    if (tools.querySelector(".badge, [data-column]")) counts.push([table.getAttribute("data-table"), n]);
+    // The count is `Copy N rows` alone; a strip under the floor states it (`UX-226`), unlabelled.
+    const said = (flat(tools.textContent).match(/\d+ rows?\b/g) ?? []).length;
+    if (said > 1 || tools.querySelector(".badge, .density-label, [data-column][data-drawn='true']")) {
+      counts.push([table.getAttribute("data-table"), n]);
+    }
   }
+  // A row holding a nested table stays a table: the nested one keeps its fold and rail entry.
+  const flatRow = "table[data-rows='1']:not([data-element-column]):not(:has(td table))";
   const oneRow = [...document.querySelectorAll(
-    "section[data-section] > table[data-rows='1']:not([data-element-column]), "
-    + "dl.pairs > dd > .map-table > table[data-rows='1']:not([data-element-column])")]
+    `section[data-section] > ${flatRow}, dl.pairs > dd > .map-table > ${flatRow}`)]
     .map((t) => t.getAttribute("data-table"));
   const idLinks = [];
   let links = 0;

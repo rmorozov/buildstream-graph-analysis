@@ -1312,11 +1312,6 @@
   {
     "exception": null,
     "role": "summary",
-    "text": "Elements \u00b7 # level, # rows"
-  },
-  {
-    "exception": null,
-    "role": "summary",
     "text": "Edges \u00b7 # levels, # rows"
   },
   {
@@ -1335,9 +1330,14 @@
     "text": "Derived from this run's shape: the sweep replays observed durations and does not model contention, and cores-busy is an average over the whole run rather than\u2026 moreless"
   },
   {
+    "exception": null,
+    "role": "summary",
+    "text": "Pinned elements \u00b7 # levels, # row"
+  },
+  {
     "exception": "product name",
     "role": "summary",
-    "text": "core.bst runs its own build system at # job - variables: notparallel: True - while the rest of this build runs at # and it is the longest kind of task here\u2026 moreless"
+    "text": "core.bst runs its own build system at # job - `variables: notparallel: True` - while the rest of this build runs at # and it is the longest kind of task here\u2026 moreless"
   },
   {
     "exception": null,
@@ -1522,7 +1522,17 @@
   {
     "exception": null,
     "role": "th",
-    "text": "Elements"
+    "text": "Severity"
+  },
+  {
+    "exception": null,
+    "role": "th",
+    "text": "Unread edges"
+  },
+  {
+    "exception": null,
+    "role": "th",
+    "text": "Replayed without them"
   },
   {
     "exception": null,
@@ -1623,6 +1633,36 @@
     "exception": null,
     "role": "th",
     "text": "Direct dependents"
+  },
+  {
+    "exception": null,
+    "role": "th",
+    "text": "Pinned elements"
+  },
+  {
+    "exception": null,
+    "role": "th",
+    "text": "Builders"
+  },
+  {
+    "exception": null,
+    "role": "th",
+    "text": "Governing cores"
+  },
+  {
+    "exception": null,
+    "role": "th",
+    "text": "Notparallel"
+  },
+  {
+    "exception": null,
+    "role": "th",
+    "text": "Typical max jobs"
+  },
+  {
+    "exception": null,
+    "role": "th",
+    "text": "Hint"
   },
   {
     "exception": null,
@@ -1778,6 +1818,11 @@
     "exception": null,
     "role": "summary",
     "text": "Half of this graph's # elements reach # others or fewer; the top tenth reach # others or more, up to #. Reach is spread across many elements - there\u2026 moreless"
+  },
+  {
+    "exception": null,
+    "role": "summary",
+    "text": "Elements \u00b7 # level, # rows"
   },
   {
     "exception": null,

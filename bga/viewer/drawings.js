@@ -959,7 +959,7 @@ export function interval(marks, {
 }
 
 export function columnStrip(values, { format = String, doc = document,
-                                      label = null,
+                                      label = null, counted = true,
                                       grade = GRADE_ANNOTATION } = {}) {
   // `UX-316`: annotation grade by construction and by argument both -
   // a strip drawn beside a table *is* the §2a annotation case, and the
@@ -974,7 +974,9 @@ export function columnStrip(values, { format = String, doc = document,
     wrap.setAttribute("data-drawn", "false");
     wrap.append(box(doc, "span", { class: "density-sentence muted",
                                    "data-role": "density-sentence" },
-                    `${numbers.length} row${numbers.length === 1 ? "" : "s"}`
+                    // `UX-1152`: uncounted where the table's tools already say how many rows.
+                    (counted ? `${numbers.length} row${numbers.length === 1 ? "" : "s"}`
+                             : "Below the sample floor")
                     + " — too few to have a shape."));
     return wrap;
   }

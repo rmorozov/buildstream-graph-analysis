@@ -10,6 +10,7 @@ spelling.
 
 import json
 import pathlib
+import re
 import sys
 
 import pytest
@@ -26,7 +27,10 @@ NO_PLANE_2 = "this page carries no Plane 2 report"
 ONE_CONCURRENCY = "this page draws fewer than two concurrencies"
 NO_BINARY_COST = "this page has no binary_cost section"
 
-PLANE2 = ("plane2_coverage", "binary_cost", "peak_memory", "element_join_coverage")
+ABSENT_WHEN_NONE = {"duration_resolution"}  # published only when a span rounded to zero
+# Read off the module, so a section given an answer is held to it with no hand list.
+_ANSWERS = (REPO / "bga/viewer/sections.js").read_text().split("export const SECTION_ANSWERS = {")[1]
+PLANE2 = tuple(re.findall(r"^  (\w+)\(", _ANSWERS.split("\n};")[0], re.M))
 
 _MEASURE = (
     pages.FULL_LAYOUT_JS
@@ -41,7 +45,9 @@ _MEASURE = (
   const value = (dt) => {
     const dd = dt.nextElementSibling;
     const num = dd && dd.querySelector(":scope > .num");
-    return num ? num.getAttribute("data-raw") : (dd ? dd.textContent.trim() : "");
+    const text = num ? num.getAttribute("data-raw") : (dd ? dd.textContent.trim() : "");
+    // An empty list draws as "none": the same value as a count of 0.
+    return /^none/.test(text) ? "0" : text;
   };
   const out = { sections: {}, repeats: [], concurrency: {}, spelling: [] };
   for (const id of __PLANE2__) {
@@ -110,7 +116,8 @@ class TestThePlane2SectionsLeadWithTheirAnswer:
     def test_the_two_plane_pages_carry_every_plane_2_section(self, measured):
         if measured["label"] == "golden":
             pytest.skip(NO_PLANE_2)
-        assert sorted(measured["sections"]) == sorted(PLANE2), measured["sections"]
+        want = set(PLANE2) - (ABSENT_WHEN_NONE if measured["label"] == "macro_micro" else set())
+        assert set(measured["sections"]) == want, measured["sections"]
 
     def test_each_plane_2_section_opens_with_a_sentence(self, measured):
         bad = {

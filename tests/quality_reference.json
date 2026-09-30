@@ -1,5 +1,5 @@
 {
-  "paths": ["tools/bga_view.py"],
+  "paths": ["tools/gen_synthetic_scale_run.py"],
   "files": {
     ".claude/hooks/agent_worktree_limits.py": {"duplicate_blocks": 0, "file_lines": 128, "longest_function": 23},
     ".claude/hooks/gate_covers_push.py": {"duplicate_blocks": 1, "file_lines": 168, "longest_function": 28},
@@ -148,7 +148,7 @@
     "tools/dev_touching.py": {"duplicate_blocks": 0, "file_lines": 450, "longest_function": 93},
     "tools/dev_trace_coverage.py": {"duplicate_blocks": 0, "file_lines": 573, "longest_function": 59},
     "tools/dev_track_cost.py": {"duplicate_blocks": 0, "file_lines": 483, "longest_function": 45},
-    "tools/gen_synthetic_scale_run.py": {"duplicate_blocks": 0, "file_lines": 626, "longest_function": 133},
+    "tools/gen_synthetic_scale_run.py": {"duplicate_blocks": 0, "file_lines": 695, "longest_function": 141},
     "tools/hang_witness.py": {"duplicate_blocks": 0, "file_lines": 150, "longest_function": 36},
     "tools/jobserver/__init__.py": {"duplicate_blocks": 0, "file_lines": 85, "longest_function": 5},
     "tools/jobserver/_jsonl.py": {"duplicate_blocks": 3, "file_lines": 26, "longest_function": 20},

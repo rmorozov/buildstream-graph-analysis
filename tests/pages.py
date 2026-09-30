@@ -492,6 +492,14 @@ def has_expected_output(fixture) -> bool:
 #: elements. `two_plane_run` with this shape.
 REVIEW_SHAPE = ("--layers", "8", "--width", "14")
 
+
+#: `UX-1182`: the review's page with `--workload binaries` - 8 elements
+#: at 200-500 distinct fake binaries, the rest at 3-10.
+def heavy_binary_run(into) -> pathlib.Path:
+    """`two_plane_run` of REVIEW_SHAPE, `--workload binaries`. The run."""
+    return two_plane_run(into, ("--workload", "binaries", *REVIEW_SHAPE), name="heavy")
+
+
 #: `UX-1142`: every door a reader can open, opened - each block's `?`
 #: clicked, every `details` open, every folded chapter and section
 #: lifted. Statements, for the head of a guard's own expression.

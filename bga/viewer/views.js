@@ -27,7 +27,7 @@ import { plural } from "./tables.js";
 // `UX-337`: the primitives the chapters share. Extracted because the
 // chapters were *not* acyclic without them - see `primitives.js`.
 import {
-  SVG, svg, seconds, mib, bar, OVERVIEW_SHOWN, elementAnchor, plainValue, headRow,
+  ABSENT, SVG, svg, seconds, mib, bar, OVERVIEW_SHOWN, elementAnchor, plainValue, headRow,
 } from "./primitives.js";
 
 // UX-699: `eqeqeq` disallows `== null`, so a null-or-undefined check is
@@ -441,9 +441,9 @@ export function renderTrend(store, schema = undefined,
   const tailed = rows.some((row) => notNullish(row.bga_tail_us));
   const twinRows = (list) => list.map((row) => [
     row.stamp,
-    notNullish(row.total_duration_us) ? seconds(row.total_duration_us) : "—",
+    notNullish(row.total_duration_us) ? seconds(row.total_duration_us) : ABSENT,
     row.incomplete_reason ? row.incomplete_reason
-      : (row.verdict_kind ?? "—").replace(/_/g, " "),
+      : (row.verdict_kind ?? ABSENT).replace(/_/g, " "),
     ...(tailed ? [tailCell(row)] : []),
   ]);
   const columns = ["Snapshot", "Duration", "Verdict",
@@ -522,9 +522,9 @@ export function renderTrend(store, schema = undefined,
   return wrapper;
 }
 
-/** UX-1078: `5.6 s beside a 34.7 s build`, or a dash before `tail.json`. */
+/** UX-1078: `5.6 s beside a 34.7 s build`, or none before `tail.json`. */
 function tailCell(row) {
-  if (!notNullish(row.bga_tail_us)) return "—";
+  if (!notNullish(row.bga_tail_us)) return ABSENT;
   return notNullish(row.build_wall_us)
     ? `${seconds(row.bga_tail_us)} beside a ${seconds(row.build_wall_us)} build`
     : seconds(row.bga_tail_us);
@@ -643,7 +643,7 @@ export function renderBlastOffline(payload, copy, make) {
   // is stated *inside* the section, not in its name.
   section.append(make("p", { class: "muted" },
     argv
-      ? "The search box asks a server, and an exported report has none - "
+      ? "The search box asks a server, and an exported report has none — "
         + "so here is the same answer as a command, for the element this "
         + "run ranks first:"
       : "The search box asks a server, and an exported report has none. "

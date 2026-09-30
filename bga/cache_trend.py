@@ -306,7 +306,7 @@ def build_trend(rows: list[dict]) -> dict:
             'by_run': {row['run']: _subject_label(row.get('subject')) for row in rows},
             'message': (
                 f"{len(subjects)} different projects or target sets in this series "
-                f"- these are not repeated readings of one thing, so no band over "
+                f"— these are not repeated readings of one thing, so no band over "
                 f"them describes anything. The rows above are each real readings "
                 f"of their own run."
             ),

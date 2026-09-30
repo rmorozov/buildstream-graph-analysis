@@ -658,7 +658,7 @@
   "available": true,
   "configure_cpu_us": 4481317,
   "configure_share": 0.06421489078530489,
-  "note": "Configure-phase CPU is every traced process descending from a build system's configure entry point (./configure, config.status, cmake without --build/--install/-E, meson setup, the autotools generators). Classified by parentage, so a process is configure work because of what started it, not what it is called. Statically-linked processes are invisible to LD_PRELOAD and a process with no traced parent is counted as build work - both make this a floor.",
+  "note": "Configure-phase CPU is every traced process descending from a build system's configure entry point (./configure, config.status, cmake without --build/--install/-E, meson setup, the autotools generators). Classified by parentage, so a process is configure work because of what started it, not what it is called. Statically-linked processes are invisible to LD_PRELOAD and a process with no traced parent is counted as build work \u2014 both make this a floor.",
   "per_element": {
    "app.bst": {
     "build_cpu_us": 3546551,
@@ -756,7 +756,7 @@
  "cpu_time": {
   "available": true,
   "measured_processes": 663,
-  "note": "Real CPU time (getrusage utime+stime) for processes that exited normally. Processes killed by a signal or replaced by exec run no destructor and are counted as unmeasured, never as zero. This is Plane 2 only - it is not wired into Plane 1's utilisation buckets, which remain slot occupancy.",
+  "note": "Real CPU time (getrusage utime+stime) for processes that exited normally. Processes killed by a signal or replaced by exec run no destructor and are counted as unmeasured, never as zero. This is Plane 2 only \u2014 it is not wired into Plane 1's utilisation buckets, which remain slot occupancy.",
   "per_element": {
    "app.bst": {
     "children_cpu_us": 22414691,
@@ -1123,7 +1123,7 @@
  "matched_count": 663,
  "max_concurrency": 20,
  "open_count": 150,
- "open_records_note": "Processes with no observed exit are excluded from the peak, not assumed to run indefinitely. Real cause, confirmed against this tool's own prototype run: a `sh -c '<command>'` wrapper that forks a child for the real command and then exits via `_exit()` once it completes - `_exit()` bypasses the normal exit path, so this hook's destructor never fires for the wrapper itself, even though it exited quickly and normally.",
+ "open_records_note": "Processes with no observed exit are excluded from the peak, not assumed to run indefinitely. Real cause, confirmed against this tool's own prototype run: a `sh -c '<command>'` wrapper that forks a child for the real command and then exits via `_exit()` once it completes \u2014 `_exit()` bypasses the normal exit path, so this hook's destructor never fires for the wrapper itself, even though it exited quickly and normally.",
  "opens_captured": {
   "app.bst": {
    "dropped": 0,
@@ -1736,10 +1736,10 @@
   "sandboxes": 9,
   "spine_traced": 0
  },
- "static_binary_disclaimer": "LD_PRELOAD only affects dynamically-linked executables. Any statically-linked process invoked inside the sandbox (e.g. a musl-based toolchain, busybox, some Rust/Go tooling) ran but produced no trace entry, silently - this tool cannot detect its own absence. Treat the process list below as a lower bound, not an exhaustive trace, unless the toolchain being profiled is known to be entirely dynamically-linked (the common case for a real C/C++ gcc/clang toolchain).",
+ "static_binary_disclaimer": "LD_PRELOAD only affects dynamically-linked executables. Any statically-linked process invoked inside the sandbox (e.g. a musl-based toolchain, busybox, some Rust/Go tooling) ran but produced no trace entry, silently \u2014 this tool cannot detect its own absence. Treat the process list below as a lower bound, not an exhaustive trace, unless the toolchain being profiled is known to be entirely dynamically-linked (the common case for a real C/C++ gcc/clang toolchain).",
  "static_census": {
   "elements_at_risk": [],
-  "note": "Read from the project's own `local` sources before anything runs: an ELF executable with no PT_INTERP never invokes the dynamic linker, so LD_PRELOAD never reaches it. A binary arriving from a remote artifact cache or produced by the build is not visible here, and a staged-but-never-exec'd static binary inflates the risk count rather than the missed-process count - this bounds what Plane 2 can miss, not what it did miss.",
+  "note": "Read from the project's own `local` sources before anything runs: an ELF executable with no PT_INTERP never invokes the dynamic linker, so LD_PRELOAD never reaches it. A binary arriving from a remote artifact cache or produced by the build is not visible here, and a staged-but-never-exec'd static binary inflates the risk count rather than the missed-process count \u2014 this bounds what Plane 2 can miss, not what it did miss.",
   "per_element": {
    "all.bst": {
     "dynamic_executables": 0,
@@ -1832,7 +1832,7 @@
   "cpu_reconciled_processes": 0,
   "exec_chains_collapsed": 9,
   "fork_only_exits": 0,
-  "note": "Process coverage is the union of both mechanisms; opens coverage is the hook's alone, since opened paths need in-process interposition. A `spine-only` process is fully measured except for its opens. CPU time reported for a process seen by both is the spine's per-process figure, never the sum of the two - and it is the later of the two measurements, since the hook's destructor runs before the process is finished while the spine reads /proc at the kernel's exit-stop.",
+  "note": "Process coverage is the union of both mechanisms; opens coverage is the hook's alone, since opened paths need in-process interposition. A `spine-only` process is fully measured except for its opens. CPU time reported for a process seen by both is the spine's per-process figure, never the sum of the two \u2014 and it is the later of the two measurements, since the hook's destructor runs before the process is finished while the spine reads /proc at the kernel's exit-stop.",
   "opens_coverage": 1.0,
   "opens_covered_processes": 813,
   "processes": 813,

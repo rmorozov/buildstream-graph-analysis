@@ -821,7 +821,7 @@ export function renderCulprits(compare) {
   caveat.setAttribute("data-role", "not-banded");
   caveat.textContent = deltas.banded
     ? "Each row is judged against its own noise band."
-    : "These are raw changes, not judged against a noise band - only the "
+    : "These are raw changes, not judged against a noise band — only the "
       + "run as a whole is.";
   section.append(caveat);
   return section;
@@ -844,7 +844,7 @@ function culpritRow(row) {
   // The values are the payload's. Nothing here subtracts anything: a
   // page computing its own delta is a second comparison.
   change.textContent = (row.delta_us === null || row.delta_us === undefined)
-    ? `${row.presence} - no delta to compare`
+    ? `${row.presence} — no delta to compare`
     : `${row.delta_us > 0 ? "+" : ""}${seconds(row.delta_us)}`
       + ` (${seconds(row.baseline_us)} → ${seconds(row.candidate_us)})`;
   item.append(name, document.createTextNode(" "), change);

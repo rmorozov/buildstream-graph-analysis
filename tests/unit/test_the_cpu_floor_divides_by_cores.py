@@ -33,9 +33,9 @@ LB_US = 43_200_000
 GOLDEN_NOTE = (
     "LB/Efficiency Score certify against this run's recorded resource "
     "capacities (builders/fetchers/pushers), not real host CPU cores or any "
-    "declared CPU budget - native build-system parallelism (--max-jobs) is a "
+    "declared CPU budget — native build-system parallelism (--max-jobs) is a "
     "separate, currently unmodeled axis. Capacity checks "
-    "(over/under-subscription, memory) did not run for this run - missing: "
+    "(over/under-subscription, memory) did not run for this run — missing: "
     "the --max-jobs value, a core count (the host or a CPU budget). They "
     "are inert here, not passing; a wrapped log records --max-jobs on its own "
     "first line, or declare the missing value explicitly at extraction time."

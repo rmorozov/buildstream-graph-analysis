@@ -642,14 +642,14 @@ def _grouped_line(finding_id: str, entries: list[dict], text: str) -> Optional[s
     if finding_id == 'already-compute-bound':
         cores = _collapse_range([e.get('cores_busy') for e in entries], lambda v: f"{v:.1f}")
         return (
-            f"already compute-bound at {cores} cores busy - nothing to gain from "
+            f"already compute-bound at {cores} cores busy — nothing to gain from "
             f"their parallelism; shortening them means less work"
         )
 
     if finding_id in ('waiting-not-computing', 'pinned-to-one-job', 'underachieved-requested-jobs'):
         cores = _collapse_range([e.get('cores_busy') for e in entries], lambda v: f"{v:.2f}")
         return (
-            f"running at only {cores} cores busy - waiting, not computing; "
+            f"running at only {cores} cores busy — waiting, not computing; "
             f"look at how they are built before what they build"
         )
 
@@ -663,7 +663,7 @@ def _grouped_line(finding_id: str, entries: list[dict], text: str) -> Optional[s
             "%",
         )
         return (
-            f"`{binaries.pop()}` is {shares} of each one's measured CPU - "
+            f"`{binaries.pop()}` is {shares} of each one's measured CPU — "
             f"they are all the same problem, so look there before anywhere else"
         )
 
@@ -678,7 +678,7 @@ def _grouped_line(finding_id: str, entries: list[dict], text: str) -> Optional[s
         )
         return (
             f"`{binaries.pop()}` is a SINGLE process holding {walls} of wall time "
-            f"in each - a serialization point no job count can help"
+            f"in each — a serialization point no job count can help"
         )
 
     if finding_id == 'declared-not-used':
@@ -687,7 +687,7 @@ def _grouped_line(finding_id: str, entries: list[dict], text: str) -> Optional[s
         spread = _collapse_range([float(c) for c in counts], lambda v: f"{v:.0f}")
         return (
             f"opened no file staged by {spread} declared build dependencies each "
-            f"({total} edges across the {count}) - worth checking whether those "
+            f"({total} edges across the {count}) — worth checking whether those "
             f"edges are needed at build time; this is evidence, not a verdict (a "
             f"runtime-only dependency looks identical here). Per-element lists are "
             f"in --format json"
@@ -805,7 +805,7 @@ def _recommend(joined: ElementJoin, memory_envelope_available: bool = False) -> 
 
     if (matters or cheap_win) and joined.cores_busy is not None:
         if joined.cores_busy < _COMPUTE_BOUND_CORES:
-            detail = f"{_impact()}, but runs at only {joined.cores_busy:.2f} cores busy - it is waiting, not computing"
+            detail = f"{_impact()}, but runs at only {joined.cores_busy:.2f} cores busy — it is waiting, not computing"
             if "pinned_to_one_job" in joined.native_findings:
                 ranked.append(
                     (
@@ -840,7 +840,7 @@ def _recommend(joined: ElementJoin, memory_envelope_available: bool = False) -> 
                 (
                     _EVIDENCE_PARALLELISM,
                     'already-compute-bound',
-                    f"{_impact()} - already compute-bound at "
+                    f"{_impact()} — already compute-bound at "
                     f"{joined.cores_busy:.2f} cores busy, so there is nothing to gain "
                     f"from its parallelism; shortening it means less work",
                 )
@@ -859,7 +859,7 @@ def _recommend(joined: ElementJoin, memory_envelope_available: bool = False) -> 
                     'cpu-concentration',
                     f"{qty.share(dominant['cpu_share'])} of its measured CPU is one binary, "
                     f"`{dominant['binary']}` ({_count(dominant['count'], 'process', 'processes')}, "
-                    f"{qty.duration(dominant['cpu_us'])} CPU) - this element is a "
+                    f"{qty.duration(dominant['cpu_us'])} CPU) — this element is a "
                     f"`{dominant['binary']}` problem, so look there before anywhere else",
                 )
             )
@@ -875,7 +875,7 @@ def _recommend(joined: ElementJoin, memory_envelope_available: bool = False) -> 
                     _EVIDENCE_SERIALIZATION,
                     'serialization-point',
                     f"`{serial['binary']}` is a SINGLE process holding "
-                    f"{qty.duration(serial['wall_us'])} of wall time - a serialization point no "
+                    f"{qty.duration(serial['wall_us'])} of wall time — a serialization point no "
                     f"job count can help; it has to get faster or go away",
                 )
             )
@@ -895,9 +895,9 @@ def _recommend(joined: ElementJoin, memory_envelope_available: bool = False) -> 
                     f"its largest single process peaked at "
                     f"{joined.peak_rss_bytes / MIB:.0f} MB resident"
                     + (
-                        " - see the memory envelope above for what that means for `builders`"
+                        " — see the memory envelope above for what that means for `builders`"
                         if memory_envelope_available
-                        else " - multiply by however many elements build concurrently "
+                        else " — multiply by however many elements build concurrently "
                         "before raising `builders` (the capture recorded no host "
                         "memory, so this cannot do it for you)"
                     ),
@@ -939,7 +939,7 @@ def _recommend(joined: ElementJoin, memory_envelope_available: bool = False) -> 
                 _EVIDENCE_DECLARED_VS_USED,
                 'declared-not-used',
                 f"opened no file staged by {count} declared build {plural} "
-                f"({names}) - worth checking whether the edge is needed at "
+                f"({names}) — worth checking whether the edge is needed at "
                 f"build time, or only at runtime; this is evidence, not a "
                 f"verdict (a runtime-only dependency looks identical here)",
             )
@@ -1050,7 +1050,7 @@ def compute_memory_envelope(
         'note': (
             "The envelope at N builders is the sum of the N largest measured "
             "per-element peak RSS values, as if those elements built at once and "
-            "peaked at the same instant - an upper bound, which is the useful "
+            "peaked at the same instant — an upper bound, which is the useful "
             "direction to be wrong in for a question about raising --builders. No "
             "reserve is subtracted for the OS or page cache, so headroom below "
             "100% is not the same as safe."
@@ -1163,17 +1163,17 @@ def capacity_verdict_sentence(
         if clamped_from:
             why = (
                 f"each building element drew {per:.2f} cores, so the CPU alone could feed {clamped_from}, "
-                f"but builders are capped at the host's {_count(host_cores, 'core')} - that cap, not load, binds"
+                f"but builders are capped at the host's {_count(host_cores, 'core')} — that cap, not load, binds"
             )
         else:
             why = f"each building element drew {per:.2f} cores, so the host's {_count(host_cores, 'core')} feed {recommended}"
     elif binding['name'] == 'graph':
-        why = f"the graph binds - the sweep's knee is at {_count(recommended, 'builder')}"
+        why = f"the graph binds — the sweep's knee is at {_count(recommended, 'builder')}"
     else:
         why = f"{binding['name']} binds at {recommended}"
     others = [c for c in constraints if c is not binding]
     rest = "; " + ", ".join(f"the {c['name']} allows {c['allows']}" for c in others) if others else ""
-    tail = " - a hypothesis to time, not a setting to apply" if recommended > builders else ""
+    tail = " — a hypothesis to time, not a setting to apply" if recommended > builders else ""
     return f"{action}: {why}{rest}{tail}."
 
 
@@ -1290,7 +1290,7 @@ def compute_capacity_recommendation(
             "Derived from this run's shape: the sweep replays observed durations "
             "and does not model contention, and cores-busy is an average "
             "over the whole run rather than over the contended window. One capture "
-            "in, one recommendation out - no configuration was tried."
+            "in, one recommendation out — no configuration was tried."
         ),
     }
 
@@ -1368,7 +1368,7 @@ def compute_builder_pool_recommendation(
     else:
         pool_size = host_cpu_count
         pool_reading = (
-            f"host_cpu_count ({host_cpu_count}) - no calibrated knee supplied "
+            f"host_cpu_count ({host_cpu_count}) — no calibrated knee supplied "
             "via $BGA_CALIBRATED_CORES, so this is uncalibrated"
         )
     memory_bound = None
@@ -1520,7 +1520,7 @@ def compute_max_jobs_advice(
         if len(span) < MIN_HOST_SAMPLES_IN_SPAN:
             row["refusal"] = (
                 f"only {_count(len(span), 'host CPU sample interval')} fall "
-                f"inside this element's BUILD span - "
+                f"inside this element's BUILD span — "
                 f"{MIN_HOST_SAMPLES_IN_SPAN} needed"
             )
             row["recommended_max_jobs"] = None
@@ -1549,7 +1549,7 @@ def compute_max_jobs_advice(
             row["refusal"] = (
                 f"elements building alongside it peaked at "
                 f"{overlap_rss} bytes together, over the "
-                f"{host_memory_bytes}-byte host - no max-jobs value "
+                f"{host_memory_bytes}-byte host — no max-jobs value "
                 f"un-spends memory already measured spent"
             )
             row["recommended_max_jobs"] = None
@@ -1732,7 +1732,7 @@ _PRICE_FLOOR_ASSUMPTION = (
     "isolation is assumed no slower than observed and unable to finish "
     "its measured CPU work faster than that work spread over the "
     "recommended job count at full speed, so the priced cost errs "
-    "optimistic - the real build under these caps is this long or "
+    "optimistic — the real build under these caps is this long or "
     "longer. The benefit of less overcommit for its neighbours is not "
     "modelled."
 )
@@ -1826,13 +1826,13 @@ def price_max_jobs_advice(advice, tasks, run_context, binary_cost) -> dict:
         # recommended < current: needs the element's whole measured CPU
         # work to build the floor.
         if task is None:
-            row['price_refusal'] = f"no BUILD task for {uid} in this run - nothing to stretch"
+            row['price_refusal'] = f"no BUILD task for {uid} in this run — nothing to stretch"
             continue
         cost_entry = binary_cost.get(uid) or {}
         measured_cpu_us = cost_entry.get('measured_cpu_us')
         if not cost_entry.get('available') or measured_cpu_us is None:
             row['price_refusal'] = (
-                f"no Plane 2 binary_cost measurement for {uid} - the price needs the element's whole measured CPU work"
+                f"no Plane 2 binary_cost measurement for {uid} — the price needs the element's whole measured CPU work"
             )
             continue
         # `task` is confirmed above; recomputed rather than reusing
@@ -2036,7 +2036,7 @@ def _merge_candidates(dependencies, cache_logs, tasks, run_context) -> list[dict
                     f"{qty.duration(sum(deleted))} of sandbox tax"
                     + (
                         f" and at least a replayed {qty.duration(projection['saving_us'])} "
-                        f"of build - a floor, because the replay shortens the tasks "
+                        f"of build — a floor, because the replay shortens the tasks "
                         f"without collapsing them into one"
                         if projection
                         else ""
@@ -2501,7 +2501,7 @@ def _cached_shape_sentence(cheap_share, cheap_changes, total_changes, dominant) 
     if not dominant:
         return lead + "."
     top = dominant[0]
-    tag = " (an assembling kind - it adds height for free)" if top['assembling_kind'] else ""
+    tag = " (an assembling kind — it adds height for free)" if top['assembling_kind'] else ""
     tallest = ", also the tallest" if top['height_rank'] == 1 == top['weight_rank'] else ""
     return (
         f"{lead}. {top['element']} dominates the expected cost at "
@@ -2773,7 +2773,7 @@ def correlate(
             "aggregating_dependency_pairs": sum(len(e.aggregating_dependencies) for e in joined),
         },
         "note": (
-            "Joined on element UID - the only contract between the two planes. "
+            "Joined on element UID — the only contract between the two planes. "
             "Elements present in Plane 1 but not Plane 2 either ran no build "
             "commands (a `stack`/`import`) or were not traced; they are listed "
             "rather than assumed to be fine. The two planes' timelines are not "
@@ -2830,7 +2830,7 @@ def format_correlation(result: dict) -> str:
         return "\n".join(lines)
     # UX-66: stated before the rows, because it scopes them.
     if result.get("attribution_partial"):
-        lines.append("PARTIAL ATTRIBUTION - the rows below are correct for the")
+        lines.append("PARTIAL ATTRIBUTION — the rows below are correct for the")
         lines.append("elements they name, and say nothing about the rest:")
         lines.append(f"  {result['attribution_partial']}")
         lines.append("")
@@ -2859,7 +2859,7 @@ def format_correlation(result: dict) -> str:
     if coverage.get("aggregating_dependency_pairs"):
         lines.append(
             f"  {_count(coverage['aggregating_dependency_pairs'], 'further dependency pair')} "
-            f"set aside as aggregating - they stage almost nothing of "
+            f"set aside as aggregating — they stage almost nothing of "
             f"their own, so 'nobody opened it' says nothing about them; "
             f"see --format json for the list"
         )
@@ -2918,15 +2918,15 @@ def format_correlation(result: dict) -> str:
         projection = finding.get("projection")
         if projection and projection.get("saving_us"):
             lines.append(
-                f"    Replaying this run with those edges removed - same durations, "
-                f"same capacity - finishes in "
+                f"    Replaying this run with those edges removed — same durations, "
+                f"same capacity — finishes in "
                 f"{qty.duration(projection['projected_us'])} against "
                 f"{qty.duration(projection['replayed_baseline_us'])}: "
                 f"{qty.duration(projection['saving_us'])}"
             )
         elif projection:
             lines.append(
-                "    Replaying this run with those edges removed changes nothing - the chain is not what binds here"
+                "    Replaying this run with those edges removed changes nothing — the chain is not what binds here"
             )
         lines.append(
             "    Worth checking whether those edges are needed at build time: each "
@@ -2950,7 +2950,7 @@ def format_correlation(result: dict) -> str:
             lines.append(
                 f"  NOTE: every ranked element carries the same Plane 1 "
                 f"impact{tied_text}, so the order below is alphabetical, not an "
-                f"impact ranking - read the rows, not their positions"
+                f"impact ranking — read the rows, not their positions"
             )
         # Capped with an overflow line, the same house pattern UX-33 uses:
         # a real project produces one of these per element, and a list

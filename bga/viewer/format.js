@@ -2,8 +2,8 @@
  * UX-337: the vocabulary every renderer speaks, in one module below them.
  *
  * `app.js`'s own first seam was called `format`, and this is that
- * chapter lifted out whole: the 19 `bga:` hint keys this module
- * declares (of the 22 `bga/schemas.py` emits), the readers that pull
+ * chapter lifted out whole: the 20 `bga:` hint keys this module
+ * declares (of the 23 `bga/schemas.py` emits), the readers that pull
  * them off a schema node (`hintsOf`, `childNode`, `quantityFor`), the
  * formatters that turn a number into a printed value under them, and
  * `el` - the one node constructor everything above builds with.
@@ -20,7 +20,7 @@
  * in exactly that order (`UX-199`, where a cycle shipped a report that
  * threw `ReferenceError` in `boot()` and rendered empty).
  */
-import { elementAnchor, findingAnchor, headRow } from "./primitives.js";
+import { ABSENT, elementAnchor, findingAnchor, headRow } from "./primitives.js";
 
 export const QUANTITY = "bga:quantity";
 
@@ -103,6 +103,9 @@ export const EXPLAINED_BY = "bga:explained_by";
  */
 export const COMMAND = "bga:command";
 
+// `UX-1166`: this string is a key path into this document; it reads as its steps' labels.
+export const KEY_PATH = "bga:key_path";
+
 /**
  * `UX-390`: the run's advice about one key of an explained map.
  *
@@ -171,7 +174,7 @@ const ROLE = "bga:role";
 // ---------------------------------------------------------------- format
 
 export function duration(microseconds) {
-  if (microseconds === null || microseconds === undefined) return "—";
+  if (microseconds === null || microseconds === undefined) return ABSENT;
   const s = microseconds / 1e6;
   if (s < 1) return `${Math.round(microseconds / 1000)} ms`;
   if (s < 90) return `${s.toFixed(1)} s`;
@@ -181,7 +184,7 @@ export function duration(microseconds) {
 }
 
 export function bytes(value) {
-  if (value === null || value === undefined) return "—";
+  if (value === null || value === undefined) return ABSENT;
   const units = ["B", "KiB", "MiB", "GiB", "TiB"];
   let n = value, i = 0;
   while (n >= 1024 && i < units.length - 1) { n /= 1024; i += 1; }
@@ -189,7 +192,7 @@ export function bytes(value) {
 }
 
 export function quantity(value, kind) {
-  if (value === null || value === undefined) return "—";
+  if (value === null || value === undefined) return ABSENT;
   switch (kind) {
     case "duration_us": return duration(value);
     case "bytes": return bytes(value);
@@ -665,7 +668,7 @@ export function hintsOf(node) {
                       RAIL, READERS_SERVED, PRESETS, SERIES, DISTRIBUTION,
                       RUNBOOK,
                       INLINE, LEAD, DECOMPOSITION, INTERVAL, KEYED_BY,
-                      EXPLAINED_BY, COMMAND]) {
+                      EXPLAINED_BY, COMMAND, KEY_PATH]) {
     if (name in node) hint[name] = node[name];
   }
   if (node.description) hint.description = node.description;
@@ -732,6 +735,12 @@ export function pathLabel(schema, path) {
   }
   return key === null ? String(path ?? "")
     : (node?.title ?? title(key, hintsOf(node)[QUANTITY] ?? guessQuantity(key))) + row;
+}
+
+/** `UX-1166`: a key path as each named step's label; the path stays on `data-raw`. */
+export function pathTrail(schema, path) {
+  const steps = String(path).split(".").filter((step) => step && step !== "[]");
+  return steps.map((_, at) => pathLabel(schema, steps.slice(0, at + 1).join("."))).join(" › ");
 }
 
 /**

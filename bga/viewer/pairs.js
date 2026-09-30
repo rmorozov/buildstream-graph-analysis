@@ -5,9 +5,9 @@
  * points back.
  */
 import { plainValue, served } from "./primitives.js";
-import { COLUMNS, DIRECTION, QUESTION, PRESETS, INLINE, LEAD, attachBlockDoor,
+import { COLUMNS, DIRECTION, QUESTION, PRESETS, INLINE, KEY_PATH, LEAD, attachBlockDoor,
          childNode, dataKeyed, describedTerm, el, guessQuantity, heading,
-         hintsOf, adviceFor, keyAsShown, quantity, quantityFor, sectionHead,
+         hintsOf, adviceFor, keyAsShown, pathTrail, quantity, quantityFor, sectionHead,
          title } from "./format.js";
 import { identify, labelFor } from "./controls.js";
 import { applyPreset, boundPairs, sortable } from "./tables.js";
@@ -317,7 +317,7 @@ export function renderPairs(key, object, hint = {}, node = undefined,
       cell = el("span", { class: "num", "data-raw": String(value) },
                 quantity(value, kind));
     } else if (typeof value === "string") {
-      cell = renderText(name, value);
+      cell = renderText(name, value, hintsOf(child)[KEY_PATH] ? pathTrail(root, value) : null);
     } else {
       cell = el("span", { "data-raw": value === null ? "" : String(value) },
                 plainValue(value));

@@ -158,7 +158,7 @@ export function renderProvenance(provenance, options = {}) {
       // what `String(ref.value)` produces for an absent key.
       value.textContent = ref.resolved === false
         ? "unresolved"
-        : (ref.elided ? `${ref.elided} - follow the path`
+        : (ref.elided ? `${ref.elided} — follow the path`
                       : shownValue(ref.value, quantityAt(options.schema, ref.path)));
       list.append(term, value);
     }

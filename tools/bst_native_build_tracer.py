@@ -147,7 +147,7 @@ STATIC_BINARY_DISCLAIMER = (
     "LD_PRELOAD only affects dynamically-linked executables. Any "
     "statically-linked process invoked inside the sandbox (e.g. a "
     "musl-based toolchain, busybox, some Rust/Go tooling) ran but "
-    "produced no trace entry, silently - this tool cannot detect its "
+    "produced no trace entry, silently — this tool cannot detect its "
     "own absence. Treat the process list below as a lower bound, not an "
     "exhaustive trace, unless the toolchain being profiled is known to "
     "be entirely dynamically-linked (the common case for a real C/C++ "
@@ -4745,7 +4745,7 @@ def census_project(project_dir: str, elements: list[str]) -> dict:
             "LD_PRELOAD never reaches it. A binary arriving from a remote artifact "
             "cache or produced by the build is not visible here, and a "
             "staged-but-never-exec'd static binary inflates the risk count rather "
-            "than the missed-process count - this bounds what Plane 2 can miss, not "
+            "than the missed-process count — this bounds what Plane 2 can miss, not "
             "what it did miss."
         ),
     }
@@ -6073,13 +6073,13 @@ class _CpuTime:
                 + (
                     "Where only the ptrace spine reached a process, the figure is "
                     "`/proc/<pid>/stat` read at its exit-stop instead, truncated to "
-                    "whole 10ms ticks - so a short static process reads as zero. "
+                    "whole 10ms ticks — so a short static process reads as zero. "
                     if spine_sourced
                     else ""
                 )
                 + "Processes killed by a signal or replaced by exec run no "
                 "destructor and are counted as unmeasured, never as zero. This is "
-                "Plane 2 only - it is not wired into Plane 1's utilisation buckets, "
+                "Plane 2 only — it is not wired into Plane 1's utilisation buckets, "
                 "which remain slot occupancy."
             )
             if measured_total
@@ -6358,7 +6358,7 @@ class _ConfigurePhase:
                 "Classified by parentage, so a process is configure work because of "
                 "what started it, not what it is called. Statically-linked processes "
                 "are invisible to LD_PRELOAD and a process with no traced parent is "
-                "counted as build work - both make this a floor."
+                "counted as build work — both make this a floor."
             ),
         }
 
@@ -6513,7 +6513,7 @@ class _StreamCoverage:
                 "hook's alone, since opened paths need in-process interposition. A "
                 "`spine-only` process is fully measured except for its opens. CPU time "
                 "reported for a process seen by both is the spine's per-process figure, "
-                "never the sum of the two - and it is the later of the two "
+                "never the sum of the two — and it is the later of the two "
                 "measurements, since the hook's destructor runs before the process is "
                 "finished while the spine reads /proc at the kernel's exit-stop."
             ),
@@ -6652,7 +6652,7 @@ def _summarize_folded(
             "Processes with no observed exit are excluded from the peak, not "
             "assumed to run indefinitely. Real cause, confirmed against this tool's own "
             "prototype run: a `sh -c '<command>'` wrapper that forks a child for the "
-            "real command and then exits via `_exit()` once it completes - `_exit()` "
+            "real command and then exits via `_exit()` once it completes — `_exit()` "
             "bypasses the normal exit path, so this hook's destructor never fires for "
             "the wrapper itself, even though it exited quickly and normally."
         )

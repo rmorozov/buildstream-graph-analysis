@@ -228,6 +228,7 @@ KEYED_BY_TASK_UID = "task_uid"
 #: key named `<something>_hints`.
 COMMAND = "bga:command"  # a scalar array that is one command line
 EXPLAINED_BY = "bga:explained_by"
+KEY_PATH = "bga:key_path"  # UX-1166: a string that is a path into this document
 
 PRESET_DIRECTIONS = ("asc", "desc")
 # The acceptance bound `UX-289` was filed with: a table that needs more

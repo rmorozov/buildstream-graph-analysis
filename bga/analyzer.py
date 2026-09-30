@@ -244,7 +244,7 @@ DISTRIBUTED_QUANTITIES = {
     'in a 1,202-element run and unremarkable in 40,000',
     'element_duration': 'spans orders of magnitude; "is 40s slow *here*?" has no answer without the population',
     'sandbox_tax': 'the useful question is literally "is this element\'s sandbox tax unusual"',
-    'process_count': 'heavy tails - one element with 40,000 processes *is* the finding',
+    'process_count': 'heavy tails — one element with 40,000 processes *is* the finding',
 }
 UNDISTRIBUTED_QUANTITIES = {
     'share_of_critical_path': 'already a percentage of a known whole; a '
@@ -254,7 +254,7 @@ UNDISTRIBUTED_QUANTITIES = {
     'coverage': 'a run-level singleton with no population to be a percentile of',
     'efficiency_score': 'a run-level singleton with no population to be a percentile of',
     'wall_clock': 'one number per run; the store aggregate is where its distribution across runs already lives',
-    'optimization_horizon': 'one number per run, same as wall-clock - and it is\n                             already a projection, so a percentile of it would rank\n                             guesses against each other',
+    'optimization_horizon': 'one number per run, same as wall-clock — and it is\n                             already a projection, so a percentile of it would rank\n                             guesses against each other',
 }
 
 
@@ -360,7 +360,7 @@ def _capacity_verdict_sentence(over: bool, under: bool, skipped: list) -> str:
     """`UX-1150`: the capacity verdict's three booleans as the one sentence they answer."""
     if skipped:
         return (
-            f"The capacity checks did not run - {_inputs_said(skipped)} missing - "
+            f"The capacity checks did not run — {_inputs_said(skipped)} missing — "
             "so neither over- nor undersubscription was tested."
         )
     said = []
@@ -1097,7 +1097,7 @@ class BuildEfficiencyAnalyzer:
         if cpu_budget is not None and host_cpu_count is not None and cpu_budget > host_cpu_count:
             logger.warning(
                 "declared cpu_budget=%d exceeds this environment's detected "
-                "host_cpu_count=%d - the declared budget itself may be "
+                "host_cpu_count=%d — the declared budget itself may be "
                 "unrealistic here (see UX-15)",
                 cpu_budget,
                 host_cpu_count,
@@ -1136,7 +1136,7 @@ class BuildEfficiencyAnalyzer:
                 )
                 if value is None
             ]
-            logger.info("capacity checks not run - missing: %s", ", ".join(missing))
+            logger.info("capacity checks not run — missing: %s", ", ".join(missing))
             # Recorded on the analyzer, not appended to `violations`:
             # nothing about this build is wrong, the tool simply could not
             # check. It surfaces in the capacity-model note (UX-13), which
@@ -1170,7 +1170,7 @@ class BuildEfficiencyAnalyzer:
         if actual_demand > oversubscription_ceiling:
             logger.warning(
                 "builders=%d x native max-jobs=%d%s = %d potential concurrent "
-                "processes vs a governing ceiling of %d cores (%s) - more than "
+                "processes vs a governing ceiling of %d cores (%s) — more than "
                 "%gx the cores, past the ratio UX-09 measured as genuinely "
                 "slower on a real host (BuildStream's own unconfigured default "
                 "here would be %d)",
@@ -1202,7 +1202,7 @@ class BuildEfficiencyAnalyzer:
         elif actual_demand < governing_cores:
             logger.info(
                 "builders=%d x native max-jobs=%d%s = %d potential concurrent "
-                "processes vs a governing ceiling of %d cores (%s) - fewer "
+                "processes vs a governing ceiling of %d cores (%s) — fewer "
                 "than one process per core, may be leaving cores idle",
                 builders,
                 resolved_native_max_jobs,
@@ -1241,7 +1241,7 @@ class BuildEfficiencyAnalyzer:
         # slower than the best config; 4x16 (4 builders) did not.
         if builders > governing_cores:
             logger.warning(
-                "builders=%d exceeds the governing ceiling of %d cores (%s) - "
+                "builders=%d exceeds the governing ceiling of %d cores (%s) — "
                 "BuildStream dispatches that many elements concurrently and each "
                 "runs at least one process, so the host is oversubscribed even at "
                 "--max-jobs 1 (see UX-09/UX-28)",
@@ -1322,7 +1322,7 @@ class BuildEfficiencyAnalyzer:
         if estimated_demand_mb > memory_budget_mb:
             logger.warning(
                 "estimated memory demand: builders=%d x native max-jobs=%d%s x "
-                "~%dMB/job = ~%dMB vs a declared memory budget of %dMB - risk of "
+                "~%dMB/job = ~%dMB vs a declared memory budget of %dMB — risk of "
                 "swap (see UX-21); this is a config-driven estimate, not a "
                 "real per-task memory measurement",
                 builders,
@@ -1437,7 +1437,7 @@ class BuildEfficiencyAnalyzer:
             return (
                 f"This run shows real resource oversubscription (builders="
                 f"{oversub.get('builders')} x native max-jobs={oversub.get('native_max_jobs')} "
-                f"= {oversub.get('actual_demand')} processes vs {ceiling_desc}) - LB/Efficiency "
+                f"= {oversub.get('actual_demand')} processes vs {ceiling_desc}) — LB/Efficiency "
                 f"Score certify against recorded resource capacities, not real host CPU cores "
                 f"(or your declared budget), so Efficiency Score may overstate real efficiency "
                 f"here."
@@ -1445,7 +1445,7 @@ class BuildEfficiencyAnalyzer:
         note = (
             "LB/Efficiency Score certify against this run's recorded resource "
             "capacities (builders/fetchers/pushers), not real host CPU cores or any "
-            "declared CPU budget - " + UNMODELED_AXIS_CLAUSE
+            "declared CPU budget — " + UNMODELED_AXIS_CLAUSE
         )
         # UX-29: a capacity guard that declined to run is indistinguishable,
         # in the report, from one that ran and found nothing - and until
@@ -1456,7 +1456,7 @@ class BuildEfficiencyAnalyzer:
         if getattr(self, 'capacity_check_skipped_inputs', None):
             note += (
                 " Capacity checks (over/under-subscription, memory) did not run for "
-                "this run - missing: "
+                "this run — missing: "
                 + _inputs_said(self.capacity_check_skipped_inputs)
                 + ". They are inert here, not passing; a wrapped log records "
                 "--max-jobs on its own first line, or declare the missing "
@@ -1559,7 +1559,7 @@ class BuildEfficiencyAnalyzer:
             # elapsed-time bug), so it's reported, not silently ignored.
             if wall_clock_us < horizon_us:
                 logger.warning(
-                    "Wall clock (%dus) is less than task horizon (%dus) - "
+                    "Wall clock (%dus) is less than task horizon (%dus) — "
                     "this violates Part 13's containment relationship and "
                     "usually indicates corrupted timestamp reconstruction",
                     wall_clock_us,
@@ -1855,7 +1855,7 @@ class BuildEfficiencyAnalyzer:
             'total_us': total_us,
             'fraction_of_horizon': (total_us / horizon_us) if horizon_us else None,
             'note': (
-                'Not attributable to individual elements - BuildStream logs '
+                'Not attributable to individual elements — BuildStream logs '
                 'these as pipeline-level operations, not per-element tasks.'
             ),
         }
@@ -2095,7 +2095,7 @@ class BuildEfficiencyAnalyzer:
                     "absence": "this analysis has no run context, graph or run directory to read a host series against"
                 }
             return {
-                "absence": "this capture has no host memory series - "
+                "absence": "this capture has no host memory series — "
                 "it was taken before host memory sampling "
                 "was added, or the host exposes no "
                 "/proc/meminfo"

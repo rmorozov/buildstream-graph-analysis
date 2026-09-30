@@ -8,7 +8,7 @@ title and the pair drawn beside it read one string for one value.
 def duration(microseconds) -> str:
     """`471 ms`, `78.3 s`, `1.2 min`, `2.0 h` - the viewer's `duration`."""
     if microseconds is None:
-        return "—"
+        return "none"
     if microseconds < 0:
         return "-" + duration(-microseconds)
     s = microseconds / 1e6
@@ -24,9 +24,9 @@ def duration(microseconds) -> str:
 
 def seconds(value) -> str:
     """`duration` of a value held in seconds."""
-    return "—" if value is None else duration(value * 1e6)
+    return "none" if value is None else duration(value * 1e6)
 
 
 def share(fraction) -> str:
     """`42.4%` for a 0..1 fraction - the viewer's `share`."""
-    return "—" if fraction is None else f"{fraction * 100:.1f}%"
+    return "none" if fraction is None else f"{fraction * 100:.1f}%"

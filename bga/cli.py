@@ -167,7 +167,7 @@ def _add_cpu_floor(result, native_report: dict, context) -> None:
         f" This run also has a CPU floor, beside LB and not folded into "
         f"it: {cpu_floor['lb_cpu_us'] / 1e6:.2f}s, the CPU this capture "
         f"measured over {cpu_floor['lb_cpu_governing_cores']} governing "
-        f"cores ({source}) - {binds} is the "
+        f"cores ({source}) — {binds} is the "
         f"binding one."
     )
 
@@ -605,7 +605,7 @@ def _compiler_offload_projection(result) -> dict:
     return {
         'wall_us_before': path_us,
         'wall_us_after': remaining_us,
-        'assumption': ("zero agent wall per remote compile, clamped to each element's own wall - an upper bound"),
+        'assumption': ("zero agent wall per remote compile, clamped to each element's own wall — an upper bound"),
     }
 
 

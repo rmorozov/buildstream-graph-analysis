@@ -38,7 +38,7 @@ GRAPH_SIGNAL_KEYS = frozenset(
 # the spec document (bga/report/text.py's format_sweep_text and
 # bga/cli.py's JSON sweep output both use this single copy).
 SWEEP_CAPACITY_MODEL_CAVEAT = (
-    "This sweep replays each task's fixed, already-observed duration - it does not "
+    "This sweep replays each task's fixed, already-observed duration — it does not "
     "model real CPU contention as concurrent PROCESS usage rises (see UX-09's real "
     "evidence this can cause an actual slowdown, not just a plateau, past some "
     "capacity). Treat this curve as a shape, not an exact runtime prediction (Part 19)."
@@ -89,31 +89,31 @@ def _attribution_key(category: AttributionCategory) -> str:
 # lacking a hint.
 ATTRIBUTION_CATEGORY_HINTS = {
     AttributionCategory.EXECUTION_ON_CHAIN: (
-        "real work on the critical path - the only way to reduce this is to reduce the work itself"
+        "real work on the critical path — the only way to reduce this is to reduce the work itself"
     ),
     AttributionCategory.DEPENDENCY_WAIT: (
-        "waiting on an upstream element to finish - shorten or parallelize that dependency chain"
+        "waiting on an upstream element to finish — shorten or parallelize that dependency chain"
     ),
     AttributionCategory.RESOURCE_WAIT: (
-        "a resource (PROCESS/DOWNLOAD/UPLOAD) was saturated - try --capacity N with a "
+        "a resource (PROCESS/DOWNLOAD/UPLOAD) was saturated — try --capacity N with a "
         "higher N, or `bga sweep` to find the real knee point"
     ),
     AttributionCategory.SCHEDULER_WAIT: (
-        "capacity was available but nothing was dispatched - try a different --heuristic in `bga replay`"
+        "capacity was available but nothing was dispatched — try a different --heuristic in `bga replay`"
     ),
     AttributionCategory.IDLE: (
-        "nothing was dependency-ready at all - likely a critical-path/graph-shape "
+        "nothing was dependency-ready at all — likely a critical-path/graph-shape "
         "issue, not a capacity one; check Critical Path"
     ),
     AttributionCategory.RETRY_WAIT: (
-        "this element needed a retry - investigate why the first attempt failed/was discarded"
+        "this element needed a retry — investigate why the first attempt failed/was discarded"
     ),
     AttributionCategory.UNTRACKED_HEAD: (
         "real time before the tracked-task window started (BuildStream startup, "
-        "cache query, sandbox staging) - see Pipeline Overhead, not a scheduling issue"
+        "cache query, sandbox staging) — see Pipeline Overhead, not a scheduling issue"
     ),
     AttributionCategory.UNTRACKED_TAIL: (
-        "real time after the last tracked task finished - outside per-task tracking, not a scheduling issue"
+        "real time after the last tracked task finished — outside per-task tracking, not a scheduling issue"
     ),
 }
 
@@ -139,13 +139,13 @@ ATTRIBUTION_CATEGORY_HINTS_BY_KEY = {
 _RESOURCE_WAIT_KEY = _attribution_key(AttributionCategory.RESOURCE_WAIT)
 
 _RESOURCE_WAIT_HINT_OVERSUBSCRIBED = (
-    "a resource (PROCESS/DOWNLOAD/UPLOAD) was saturated - but this run is already "
+    "a resource (PROCESS/DOWNLOAD/UPLOAD) was saturated — but this run is already "
     "oversubscribed (see Violations), so raising capacity will make it worse, not "
     "better: the levers here are less native parallelism per element, fewer "
     "builders, or less work"
 )
 _RESOURCE_WAIT_HINT_UNKNOWN_CAPACITY = (
-    "a resource (PROCESS/DOWNLOAD/UPLOAD) was saturated - whether raising capacity "
+    "a resource (PROCESS/DOWNLOAD/UPLOAD) was saturated — whether raising capacity "
     "would help depends on how loaded this host already is, and this run's capacity "
     "checks could not run (see the Certified Floors note), so this hint is "
     "unconditioned; `bga sweep` shows the shape of the curve either way"

@@ -182,6 +182,7 @@ sets equal in both directions.
 | `bga:explained_by` | the payload key holding this map's **per-key advice for this run** — computed, so not a `description` | the advice on the row of the key it explains, and no second section over the same names, `UX-390` |
 | `bga:readers` | which of `findings.READERS` a section serves, by their `R1`-`R5` ids — silent means no role, which is a map that is incomplete rather than a section that serves nobody (`UX-643`) | the reader picker, which promotes and expands a served section and folds the rest |
 | `bga:command` | that a scalar array is one command line rather than a list of values — the shell it is spelled for | `classify`, which returns §1's command control for it (`UX-429`) |
+| `bga:key_path` | that a string is a key path into this document, `[]` for a list step | `renderPairs`, which prints each named step's label joined by `›` and keeps the path on `data-raw` (`UX-1166`) |
 | `bga:runbook` | that an ordered array of `{reason, command, citation}` is a runbook and not a population — three steps a reader runs, not rows to compare (`UX-669`) | `renderSection`, which draws the link to the decision panel and no table |
 | `bga:always_written` | that a key is **not** `required` and yet written on every document — the third state `UX-629` needed, because entering `required` under a live id breaks documents already written | a consumer asking *may be here* or *is always here*; the emitter guarantee is held by `test_a_required_set_grew_under_an_unchanged_id.py`, not by the page |
 | `bga:grows` | whether a container's population grows with the run, and with what — a string names it, `False` pairs with `maxItems` for one that does not | `test_every_payload_sequence_is_declared.py`'s walk, and a reader asking whether a table's row count is bounded by the schema or only by the page (`UX-1031`) |
@@ -2067,6 +2068,8 @@ underutilized_intervals From      "497003.7 h" — a monotonic base rendered as 
    (§4c).
 7. No `R1`-`R5` — the author's index for a finding's reader, never the
    reader's own word for themselves.
+8. A dash in a sentence is `—`, never a spaced hyphen, and a null
+   reads `none`, never a dash (`UX-1166`).
 
 `UX-824` holds it with one guard over both exports; `UX-825` and
 `UX-826` are the sentences it found. `UX-1034` adds item 7.

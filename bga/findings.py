@@ -302,13 +302,13 @@ def confidence_band(score: float) -> str:
 def efficiency_band(score: float) -> str:
     if score >= _EFFICIENCY_HIGH:
         return (
-            "scheduling is near the certified floor for this graph - further "
+            "scheduling is near the certified floor for this graph — further "
             "gains need the graph or the work itself to change, not the "
             "scheduler (see Dispatch Occupancy and Critical Path)"
         )
     if score >= _EFFICIENCY_MEDIUM:
         return "worth checking certified headroom for real scheduling gains"
-    return "significant scheduling headroom - see certified headroom below"
+    return "significant scheduling headroom — see certified headroom below"
 
 
 def structural_kind_tag(entry: dict) -> str:
@@ -437,7 +437,7 @@ def _cache_findings(result: AnalysisResult) -> list[dict]:
             _finding(
                 'cache-hit-ratio',
                 SEVERITY_INFO,
-                f"Caches off: all {built} element{'' if built == 1 else 's'} built from source, none reused - "
+                f"Caches off: all {built} element{'' if built == 1 else 's'} built from source, none reused — "
                 f"this is the nightly scenario, so a {qty.share(0)} hit ratio is the intent "
                 f"rather than a finding",
                 detail=detail,
@@ -454,7 +454,7 @@ def _cache_findings(result: AnalysisResult) -> list[dict]:
         severity, verdict = (
             SEVERITY_HIGH,
             (
-                "barely incremental - most of the project rebuilt. Look for a "
+                "barely incremental — most of the project rebuilt. Look for a "
                 "volatile cache key near the root before reading any efficiency "
                 "number below: they describe how well this build ran, not how "
                 "much of it should have run at all"
@@ -463,7 +463,7 @@ def _cache_findings(result: AnalysisResult) -> list[dict]:
     elif hit_share < HEALTHY_HIT_RATIO:
         severity, verdict = (
             SEVERITY_MEDIUM,
-            ("under half the project was reused - worth checking what invalidated the rest"),
+            ("under half the project was reused — worth checking what invalidated the rest"),
         )
     else:
         severity, verdict = SEVERITY_INFO, "the cache did most of the work"
@@ -472,7 +472,7 @@ def _cache_findings(result: AnalysisResult) -> list[dict]:
         _finding(
             'cache-hit-ratio',
             severity,
-            f"Cache hit ratio: {qty.share(hit_share)} ({cached} cached, {built} rebuilt) - {verdict}",
+            f"Cache hit ratio: {qty.share(hit_share)} ({cached} cached, {built} rebuilt) — {verdict}",
             detail=detail,
             evidence={
                 'hit_share': hit_share,
@@ -499,7 +499,7 @@ def _cache_findings(result: AnalysisResult) -> list[dict]:
             window_s = (cache.get('transfer_window_us') or 0) / 1e6
             rate_clause = (
                 f", and the host moved {human_bytes(moved['total'])} over the "
-                f"{qty.seconds(window_s)} it was transferring - {human_bytes(rate)}/s, "
+                f"{qty.seconds(window_s)} it was transferring — {human_bytes(rate)}/s, "
                 f"which is the whole host's traffic and so an upper bound on "
                 f"this build's"
             )
@@ -514,7 +514,7 @@ def _cache_findings(result: AnalysisResult) -> list[dict]:
             _finding(
                 'cache-transfer-cost',
                 SEVERITY_MEDIUM,
-                f"{qty.share(share)} of wall-clock was artifact transfer ({parts}) - "
+                f"{qty.share(share)} of wall-clock was artifact transfer ({parts}) — "
                 f"this build spent it moving artifacts rather than making them"
                 f"{rate_clause}",
                 evidence=evidence,
@@ -543,7 +543,7 @@ def _cache_capacity_findings(capacity: dict) -> list[dict]:
                 SEVERITY_MEDIUM,
                 f"The cache quota ({capacity['quota_declared']}) is "
                 f"{human_bytes(over_volume)} larger than the volume under it can "
-                f"give - the cache will be evicted by the disk filling up rather "
+                f"give — the cache will be evicted by the disk filling up rather "
                 f"than by the quota, so the quota is not the ceiling it looks like",
                 evidence={
                     'quota_bytes': capacity.get('quota_bytes'),
@@ -564,7 +564,7 @@ def _cache_capacity_findings(capacity: dict) -> list[dict]:
                 SEVERITY_HIGH,
                 f"The cache holds {human_bytes(capacity['cache_used_bytes'])} of a "
                 f"{capacity['quota_declared']} quota ({qty.share(capacity['used_share'])}, "
-                f"{state}) - past the "
+                f"{state}) — past the "
                 f"{qty.share(capacity['low_watermark_share'])} low watermark, so "
                 f"BuildStream is evicting, and an element that rebuilt here may have "
                 f"had its artifact removed rather than its cache key moved",
@@ -615,7 +615,7 @@ def _artifact_weight_findings(weights: dict) -> list[dict]:
             'artifact-weight',
             SEVERITY_INFO,
             f"The heaviest artifact this run put in the cache is "
-            f"{top['element']} at {human_bytes(top['files_bytes'])} - walked from "
+            f"{top['element']} at {human_bytes(top['files_bytes'])} — walked from "
             f"the CAS, so it is that artifact's own weight rather than a proxy "
             f"for it",
             detail=detail,
@@ -688,14 +688,14 @@ def _run_blocking_findings(result: AnalysisResult) -> list[dict]:
         if failed:
             headline = (
                 f"THIS BUILD FAILED: {plural(build_failed.get('failed_count'), 'element')} "
-                f"ended in FAILURE ({shown}) - every figure below describes a build "
+                f"ended in FAILURE ({shown}) — every figure below describes a build "
                 f"that did not complete, and the elements that failed contributed "
                 f"only the time they ran before failing"
             )
         elif build_failed.get('interrupted'):
             headline = (
                 "THIS BUILD DID NOT FINISH: it was interrupted before it "
-                "completed - every figure below describes a partial build"
+                "completed — every figure below describes a partial build"
             )
         elif suspended:
             from .suspend import describe as _describe_suspension
@@ -704,7 +704,7 @@ def _run_blocking_findings(result: AnalysisResult) -> list[dict]:
             # spans a suspend", and the two together read as a stutter.
             headline = _describe_suspension(suspended)
         else:
-            headline = "THIS BUILD DID NOT FINISH - every figure below describes a build that did not complete"
+            headline = "THIS BUILD DID NOT FINISH — every figure below describes a build that did not complete"
         findings.append(
             _finding(
                 'build-failed',
@@ -732,7 +732,7 @@ def _run_blocking_findings(result: AnalysisResult) -> list[dict]:
                 'failed-task-time',
                 SEVERITY_HIGH,
                 f"failed {plural(failed_count, 'task attempt')} contributed "
-                f"{qty.duration(failed_us)} of EXECUTION_ON_CHAIN - real time the build "
+                f"{qty.duration(failed_us)} of EXECUTION_ON_CHAIN — real time the build "
                 "spent producing nothing. Counted as execution, not as waste, because "
                 "reclassifying it would move the attribution identity (I4)",
                 evidence={'failed_task_us': failed_us, 'failed_task_count': failed_count},
@@ -758,7 +758,7 @@ def _run_context_findings(result: AnalysisResult) -> list[dict]:
                 SEVERITY_INFO,
                 "Incremental run (caches on): BuildStream skipped elements it "
                 f"had already built{detail}. Coverage and the floors below "
-                "describe the work this run actually did, not the whole project - "
+                "describe the work this run actually did, not the whole project — "
                 "compare against another incremental run, not against a "
                 "caches-off nightly",
                 elements=list(cached),
@@ -775,7 +775,7 @@ def _run_context_findings(result: AnalysisResult) -> list[dict]:
     if primary is not None:
         band = confidence_band(primary)
         violations = result.violations or []
-        suffix = f" - see {plural(len(violations), 'violation')} below" if violations else ""
+        suffix = f" — see {plural(len(violations), 'violation')} below" if violations else ""
         findings.append(
             _finding(
                 'confidence',
@@ -806,7 +806,7 @@ def _time_concentration_findings(
     total = result.total_duration_us or 0
     top = heavy[:TIME_CONCENTRATION_SHOWN_MAX]
     share = sum(d['duration_us'] for d in top) / path_us
-    verdict = " - this build is chain-bound, not scheduler-bound" if chain_bound else ""
+    verdict = " — this build is chain-bound, not scheduler-bound" if chain_bound else ""
     detail: list[str] = []
     width = max(len(d['element_uid']) for d in top)
     rows = []
@@ -895,7 +895,7 @@ def _time_concentration_findings(
                     'mesh-graph',
                     SEVERITY_INFO,
                     f"Note: {qty.share(density)} of elements have zero slack, "
-                    f"{off_path} of them off the critical path - this graph is "
+                    f"{off_path} of them off the critical path — this graph is "
                     "a mesh of near-equal chains, so savings on one element are "
                     "often capped by the next chain rather than by its own "
                     "duration",
@@ -908,7 +908,7 @@ def _time_concentration_findings(
                     'chain-graph',
                     SEVERITY_INFO,
                     f"Note: {qty.share(density)} of elements have zero slack, all on "
-                    "the critical path - no second chain of equal length, so a "
+                    "the critical path — no second chain of equal length, so a "
                     "saving on any of them is worth its own duration",
                     evidence={'zero_slack_share': density, 'zero_slack_off_path': 0},
                 )
@@ -982,7 +982,7 @@ def _graph_shape_findings(result: AnalysisResult) -> list[dict]:
             'graph-width',
             SEVERITY_INFO,
             f"The graph is {len(depth)} elements in {stages} dependency "
-            f"stages, and its widest stage holds {widest} - so no more than "
+            f"stages, and its widest stage holds {widest} — so no more than "
             f"{widest} can ever be building at once, whatever the capacity",
             evidence={'element_count': len(depth), 'dependency_stages': stages, 'widest_stage': widest},
         )
@@ -1036,7 +1036,7 @@ def _memory_refuses_more_builders(result: AnalysisResult) -> Optional[str]:
     if not ceiling or not at_observed or ceiling != at_observed['builders'] + 1:
         return None
     return (
-        f"do NOT raise --builders on this host - measured per-element peaks put "
+        f"do NOT raise --builders on this host — measured per-element peaks put "
         f"{ceiling} builders at ~{next(p['envelope_bytes'] for p in envelope['projections'] if p['builders'] == ceiling) / GIB:.1f} GB "
         f"against {envelope['host_memory_bytes'] / GIB:.1f} GB of RAM, so the extra "
         f"builder would swap. Swapping is the worst build slowdown there is and no "
@@ -1144,7 +1144,7 @@ def _max_jobs_advice_detail(advice: Optional[dict]) -> list[str]:
             lines.append(f"      Unpriced: {row['price_refusal']}")
     for row in advice.get('elements') or []:
         if row.get('price_refusal') and not row.get('priced'):
-            lines.append(f"    {row['element']}: unpriced - {row['price_refusal']}")
+            lines.append(f"    {row['element']}: unpriced — {row['price_refusal']}")
     joint = advice.get('priced_jointly')
     if joint:
         lines.append(
@@ -1212,7 +1212,7 @@ def _capacity_recommendation_finding(result: AnalysisResult) -> list[dict]:
         # it, and saying otherwise would be UX-14's caveat with the
         # caveat removed.
         verdict = (
-            f"{binding} binds first, at {recommended}{clamp_note} - nothing "
+            f"{binding} binds first, at {recommended}{clamp_note} — nothing "
             f"measured here rules out {plural(recommended - builders, 'more builder')}, "
             f"which is a hypothesis to time rather than a "
             f"setting to apply"
@@ -1221,13 +1221,13 @@ def _capacity_recommendation_finding(result: AnalysisResult) -> list[dict]:
     elif recommended < builders:
         verdict = (
             f"{binding} binds at {recommended}{clamp_note}, below the "
-            f"{builders} configured - more builders contend rather than "
+            f"{builders} configured — more builders contend rather than "
             f"overlap here"
         )
         severity = SEVERITY_HIGH
     else:
         verdict = (
-            f"{binding} binds at exactly {recommended}{clamp_note} - this "
+            f"{binding} binds at exactly {recommended}{clamp_note} — this "
             f"run is already at the setting its own measurements support"
         )
         severity = SEVERITY_INFO
@@ -1251,7 +1251,7 @@ def _capacity_recommendation_finding(result: AnalysisResult) -> list[dict]:
             "    Free capacity you already have: "
             + ", ".join(pinned[:3])
             + more
-            + " asked its native build for -j1 - a builder slot drawing one core. "
+            + " asked its native build for -j1 — a builder slot drawing one core. "
             "Fix that before raising anything, then re-measure."
         )
     if recommended > builders:
@@ -1399,7 +1399,7 @@ def _remote_execution_findings(result: AnalysisResult) -> list[dict]:
             f"{qty.seconds(_s(unbounded['wall_us_before']))} -> "
             f"{qty.seconds(_s(unbounded['wall_us_after']))}, compiler offload "
             f"{qty.seconds(_s(offload['wall_us_before']))} -> "
-            f"{qty.seconds(_s(offload['wall_us_after']))} - not additive"
+            f"{qty.seconds(_s(offload['wall_us_after']))} — not additive"
         )
     elif unbounded:
         title = (
@@ -1477,7 +1477,7 @@ def _plane2_capacity_hint(result: AnalysisResult, category: str) -> Optional[str
         # Named first: intra-element parallelism is free capacity that
         # `--builders` is not, and it costs nothing to reclaim.
         names = ", ".join(pinned[:3])
-        lead = f"do NOT raise capacity - {measured}. " if plane2.get('saturated') and measured else ""
+        lead = f"do NOT raise capacity — {measured}. " if plane2.get('saturated') and measured else ""
         return (
             f"{lead}{names} asked its native build for -j1 while the rest of this "
             f"build asked for more: remove `notparallel` or raise that element's "
@@ -1486,7 +1486,7 @@ def _plane2_capacity_hint(result: AnalysisResult, category: str) -> Optional[str
         )
     if plane2.get('saturated') and measured:
         return (
-            f"do NOT raise capacity on this host - {measured}, so another builder "
+            f"do NOT raise capacity on this host — {measured}, so another builder "
             f"would contend for CPU rather than add throughput. The wait is real; "
             f"the remedy is less work or better intra-element parallelism, not more "
             f"concurrent elements."
@@ -1516,7 +1516,7 @@ def _opportunity_findings(result: AnalysisResult, chain_bound: bool) -> list[dic
             _finding(
                 'execution-bound',
                 SEVERITY_HIGH,
-                f"Biggest wait category: this build is execution-bound - "
+                f"Biggest wait category: this build is execution-bound — "
                 f"no wait category exceeds {OPPORTUNITY_FLOOR_PCT:.0f}% of "
                 f"wall-clock time, so there is no scheduling gap to close",
                 evidence={'largest_wait_category': top_category, 'largest_wait_share': pct / 100},
@@ -1584,7 +1584,7 @@ def _outlook_findings(result: AnalysisResult) -> list[dict]:
         elif kind == 'overlap':
             relation = (
                 f"less than the {qty.duration(sum_us)} their individual savings add up "
-                f"to - fixing one makes the others worth less"
+                f"to — fixing one makes the others worth less"
             )
         else:
             elements = list(joint['elements'])
@@ -1599,7 +1599,7 @@ def _outlook_findings(result: AnalysisResult) -> list[dict]:
                 'joint-saving',
                 SEVERITY_HIGH,
                 f"Together, the top {len(joint['elements'])} are worth "
-                f"{qty.duration(joint_us)} ({qty.share(joint_us / total)} of the build) - "
+                f"{qty.duration(joint_us)} ({qty.share(joint_us / total)} of the build) — "
                 f"{relation}",
                 elements=list(joint['elements']),
                 evidence={
@@ -1644,7 +1644,7 @@ def _outlook_findings(result: AnalysisResult) -> list[dict]:
                 'latent-heavies',
                 SEVERITY_MEDIUM,
                 f"Waiting off the critical path, worth nothing to fix today: "
-                f"{named}{more} - they bound how far shortening the chain can go",
+                f"{named}{more} — they bound how far shortening the chain can go",
                 elements=[e['element_uid'] for e in shown],
                 evidence={'latent_heavies': latent},
             )
@@ -1653,7 +1653,7 @@ def _outlook_findings(result: AnalysisResult) -> list[dict]:
     if findings:
         findings[-1]['detail'] = list(findings[-1]['detail']) + [
             "    (structural projections over this run's measured durations, where "
-            "\"fixed\" means the element becomes instant - a re-capture is still "
+            "\"fixed\" means the element becomes instant — a re-capture is still "
             "the ground truth)"
         ]
     return findings
@@ -1801,7 +1801,7 @@ def _ranking_findings(result: AnalysisResult, chain_bound: bool) -> list[dict]:
             _finding(
                 'blast-radius-reach',
                 SEVERITY_MEDIUM,
-                f"What a change to these rebuilds: {named} - the cost of "
+                f"What a change to these rebuilds: {named} — the cost of "
                 f"touching them is not their own duration but everything "
                 f"downstream that has to be built again",
                 elements=list(reaching[:BLAST_RADIUS_SHOWN]),
@@ -1818,7 +1818,7 @@ def _ranking_findings(result: AnalysisResult, chain_bound: bool) -> list[dict]:
             _finding(
                 'blast-radius-structural',
                 SEVERITY_INFO,
-                f"Reaching most of the graph by design: {named} - structural "
+                f"Reaching most of the graph by design: {named} — structural "
                 f"elements ({', '.join(sorted({(blast_radius.get(u) or {}).get('element_kind', 'unknown') for u in structural}))}) "
                 f"whose dependents are the graph's shape, not a task",
                 elements=list(structural[:BLAST_RADIUS_SHOWN]),
@@ -1884,7 +1884,7 @@ def _foundation_candidates(blast_radius: dict, distribution: Optional[dict], ord
         _finding(
             'foundation-candidates',
             SEVERITY_INFO,
-            f"Wide reach, not declared foundation - declare or dismiss: {named}",
+            f"Wide reach, not declared foundation — declare or dismiss: {named}",
             elements=list(candidates[:BLAST_RADIUS_SHOWN]),
         )
     ]
@@ -1961,7 +1961,7 @@ def _fan_in_findings(result: AnalysisResult) -> list[dict]:
             _finding(
                 'fan-in-structural',
                 SEVERITY_INFO,
-                f"Pulling in most of the graph by design: {named} - "
+                f"Pulling in most of the graph by design: {named} — "
                 f"structural elements "
                 f"({', '.join(sorted({fan_in[uid].get('element_kind', 'unknown') for uid in structural}))})"
                 f" whose dependencies are the graph's shape, not a task",
@@ -2020,7 +2020,7 @@ def _indistinguishable(shown, blast_radius, distribution):
         return ""
     return (
         f"these {len(counts)} are within {qty.share(spread)} of each other "
-        f"- the order between them is not a difference worth acting on"
+        f"— the order between them is not a difference worth acting on"
     )
 
 
@@ -2103,7 +2103,7 @@ def _floor_findings(result: AnalysisResult) -> list[dict]:
         primary = (result.confidence or {}).get('primary')
         caveat = ""
         if primary is not None and primary < _CONFIDENCE_HIGH:
-            caveat = " - low-confidence data, treat with caution"
+            caveat = " — low-confidence data, treat with caution"
         findings.append(
             _finding(
                 'efficiency-score',
@@ -2399,9 +2399,9 @@ def _graph_shape(result) -> Optional[str]:
     # shape there is "spread across many elements".
     concentrated = biggest >= 10 * max(1, top)
     return f"{half}; {tenth}. " + (
-        "Reach is concentrated in a few elements - most of this graph cannot cause a wide rebuild."
+        "Reach is concentrated in a few elements — most of this graph cannot cause a wide rebuild."
         if concentrated
-        else "Reach is spread across many elements - there is no single choke point to fix."
+        else "Reach is spread across many elements — there is no single choke point to fix."
     )
 
 
@@ -2556,7 +2556,7 @@ def compute_next_steps(result: AnalysisResult, headline: Optional[dict] = None) 
                         else ""
                     )
                     + (f", {qty.share(share)} of it" if share else "")
-                    + " - the build cannot finish sooner than this chain."
+                    + " — the build cannot finish sooner than this chain."
                 ),
                 'argv': ['bga', 'blast', longest['element_uid'], run_dir],
                 'follows_from': 'critical_path_detail',
@@ -2574,7 +2574,7 @@ def compute_next_steps(result: AnalysisResult, headline: Optional[dict] = None) 
                     # Same rule as the gap below: a figure that rounds to
                     # "0.0s" argues against the sentence carrying it.
                     + (f", worth {qty.duration(worth)}" if worth and worth >= 100_000 else "")
-                    + " - this is what changing it rebuilds."
+                    + " — this is what changing it rebuilds."
                 ),
                 'argv': ['bga', 'blast', uid, run_dir],
                 'follows_from': top.get('finding_id') or 'headline.top_actions',
@@ -2611,7 +2611,7 @@ def compute_next_steps(result: AnalysisResult, headline: Optional[dict] = None) 
                         if gap and gap >= 100_000
                         else ""
                     )
-                    + " - the sweep says what more builders would buy."
+                    + " — the sweep says what more builders would buy."
                 ),
                 'argv': ['bga', 'sweep', run_dir],
                 'follows_from': 'headline.diagnosis',
@@ -2657,7 +2657,7 @@ def compute_next_steps(result: AnalysisResult, headline: Optional[dict] = None) 
             steps.append(
                 {
                     'id': 'compare-with-the-run-before',
-                    'reason': (f"Whether it helped, judged against this store's noise - run it in {project}."),
+                    'reason': (f"Whether it helped, judged against this store's noise — run it in {project}."),
                     'argv': ['bga', 'compare', '@prev', '@last'],
                     'follows_from': 'run_instance.run_dir',
                 }
@@ -2672,7 +2672,7 @@ def compute_next_steps(result: AnalysisResult, headline: Optional[dict] = None) 
                         'id': 'compare-with-a-run-that-pairs',
                         'reason': (
                             f"@prev is a {prev_mode} run and @last a {last_mode} "
-                            f"one, which compare refuses - {stamp} is the newest "
+                            f"one, which compare refuses — {stamp} is the newest "
                             f"{last_mode} run and pairs with it. Run it in "
                             f"{project}."
                         ),

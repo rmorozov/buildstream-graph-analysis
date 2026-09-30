@@ -1,5 +1,5 @@
 {
-  "paths": [".claude/hooks", "bga", "tools"],
+  "paths": ["bga/schema_hints.py", "bga/schemas.py"],
   "files": {
     ".claude/hooks/agent_worktree_limits.py": {"duplicate_blocks": 0, "file_lines": 128, "longest_function": 23},
     ".claude/hooks/gate_covers_push.py": {"duplicate_blocks": 1, "file_lines": 168, "longest_function": 28},
@@ -65,8 +65,8 @@
     "bga/report/rate.py": {"duplicate_blocks": 0, "file_lines": 93, "longest_function": 24},
     "bga/report/text.py": {"duplicate_blocks": 0, "file_lines": 1971, "longest_function": 258},
     "bga/run_store.py": {"duplicate_blocks": 1, "file_lines": 833, "longest_function": 78},
-    "bga/schema_hints.py": {"duplicate_blocks": 0, "file_lines": 534, "longest_function": 164},
-    "bga/schemas.py": {"duplicate_blocks": 0, "file_lines": 6943, "longest_function": 62},
+    "bga/schema_hints.py": {"duplicate_blocks": 0, "file_lines": 535, "longest_function": 164},
+    "bga/schemas.py": {"duplicate_blocks": 0, "file_lines": 6944, "longest_function": 62},
     "bga/shown.py": {"duplicate_blocks": 0, "file_lines": 32, "longest_function": 15},
     "bga/sources.py": {"duplicate_blocks": 0, "file_lines": 524, "longest_function": 84},
     "bga/store_aggregate.py": {"duplicate_blocks": 0, "file_lines": 698, "longest_function": 140},

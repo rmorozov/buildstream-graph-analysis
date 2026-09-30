@@ -115,7 +115,7 @@ export const CHAPTERS = [
       return `A change to ${worst.key} rebuilds `
         + `${quantity(worst.value, "count")} elements`
         + (typeof cost === "number" ? ` (${duration(cost)} of work)` : "")
-        + " - the widest here.";
+        + " — the widest here.";
     },
   },
   {

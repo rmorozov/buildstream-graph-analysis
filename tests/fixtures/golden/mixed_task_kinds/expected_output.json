@@ -9,17 +9,17 @@
             "severity": "high",
             "title": "Biggest wait category: 12.5% of wall-clock time is untracked tail (2 ms)",
             "detail": [
-                "    -> real time after the last tracked task finished - outside per-task tracking, not a scheduling issue"
+                "    -> real time after the last tracked task finished \u2014 outside per-task tracking, not a scheduling issue"
             ],
             "elements": [],
             "evidence": {
                 "category": "untracked_tail_us",
                 "category_us": 2000,
                 "share": 0.125,
-                "hint": "real time after the last tracked task finished - outside per-task tracking, not a scheduling issue"
+                "hint": "real time after the last tracked task finished \u2014 outside per-task tracking, not a scheduling issue"
             },
             "reader": "local-optimizer",
-            "copy_text": "BGA finding: Biggest wait category: 12.5% of wall-clock time is untracked tail (2 ms)\n      -> real time after the last tracked task finished - outside per-task tracking, not a scheduling issue\n  category untracked_tail_us\n  category_us 2 ms\n  share 12.5%\n  hint real time after the last tracked task finished - outside per-task tracking, not a scheduling issue\n  Run: golden-fixture-manifest-hash-v1",
+            "copy_text": "BGA finding: Biggest wait category: 12.5% of wall-clock time is untracked tail (2 ms)\n      -> real time after the last tracked task finished \u2014 outside per-task tracking, not a scheduling issue\n  category untracked_tail_us\n  category_us 2 ms\n  share 12.5%\n  hint real time after the last tracked task finished \u2014 outside per-task tracking, not a scheduling issue\n  Run: golden-fixture-manifest-hash-v1",
             "trace_query": "resource-queues",
             "trace_queries": [
                 "resource-queues",
@@ -29,7 +29,7 @@
         {
             "id": "time-concentration",
             "severity": "high",
-            "title": "Where the time is: 3 elements are 100.0% of the 14 ms critical path - this build is chain-bound, not scheduler-bound",
+            "title": "Where the time is: 3 elements are 100.0% of the 14 ms critical path \u2014 this build is chain-bound, not scheduler-bound",
             "detail": [
                 "    base.bst      6 ms ( 42.9% of path)  -> fixing it saves 6 ms (37.5% of the build)",
                 "    lib.bst       5 ms ( 35.7% of path)  -> fixing it saves 5 ms (31.2% of the build)",
@@ -66,13 +66,13 @@
                 ]
             },
             "reader": "local-optimizer",
-            "copy_text": "BGA finding: Where the time is: 3 elements are 100.0% of the 14 ms critical path - this build is chain-bound, not scheduler-bound\n      base.bst      6 ms ( 42.9% of path)  -> fixing it saves 6 ms (37.5% of the build)\n      lib.bst       5 ms ( 35.7% of path)  -> fixing it saves 5 ms (31.2% of the build)\n      app.bst       3 ms ( 21.4% of path)  -> fixing it saves 3 ms (18.8% of the build)\n  path_us 14 ms\n  share_of_path 100.0%\n  chain_bound True\n  Elements: base.bst, lib.bst, app.bst\n  Next: bga blast base.bst <run>\n  Run: golden-fixture-manifest-hash-v1",
+            "copy_text": "BGA finding: Where the time is: 3 elements are 100.0% of the 14 ms critical path \u2014 this build is chain-bound, not scheduler-bound\n      base.bst      6 ms ( 42.9% of path)  -> fixing it saves 6 ms (37.5% of the build)\n      lib.bst       5 ms ( 35.7% of path)  -> fixing it saves 5 ms (31.2% of the build)\n      app.bst       3 ms ( 21.4% of path)  -> fixing it saves 3 ms (18.8% of the build)\n  path_us 14 ms\n  share_of_path 100.0%\n  chain_bound True\n  Elements: base.bst, lib.bst, app.bst\n  Next: bga blast base.bst <run>\n  Run: golden-fixture-manifest-hash-v1",
             "trace_query": "cost-by-executable"
         },
         {
             "id": "chain-graph",
             "severity": "info",
-            "title": "Note: 75.0% of elements have zero slack, all on the critical path - no second chain of equal length, so a saving on any of them is worth its own duration",
+            "title": "Note: 75.0% of elements have zero slack, all on the critical path \u2014 no second chain of equal length, so a saving on any of them is worth its own duration",
             "detail": [],
             "elements": [],
             "evidence": {
@@ -81,13 +81,13 @@
             },
             "indent": "    ",
             "reader": "graph-owner",
-            "copy_text": "BGA finding: Note: 75.0% of elements have zero slack, all on the critical path - no second chain of equal length, so a saving on any of them is worth its own duration\n  zero_slack_share 75.0%\n  zero_slack_off_path 0\n  Run: golden-fixture-manifest-hash-v1",
+            "copy_text": "BGA finding: Note: 75.0% of elements have zero slack, all on the critical path \u2014 no second chain of equal length, so a saving on any of them is worth its own duration\n  zero_slack_share 75.0%\n  zero_slack_off_path 0\n  Run: golden-fixture-manifest-hash-v1",
             "trace_query": "graph-levels"
         },
         {
             "id": "joint-saving",
             "severity": "high",
-            "title": "Together, the top 3 are worth 11 ms (68.8% of the build) - exactly the sum of their individual savings, so they are separate pieces of work that do not overlap",
+            "title": "Together, the top 3 are worth 11 ms (68.8% of the build) \u2014 exactly the sum of their individual savings, so they are separate pieces of work that do not overlap",
             "detail": [],
             "elements": [
                 "base.bst",
@@ -101,7 +101,7 @@
                 "relation": "add"
             },
             "reader": "local-optimizer",
-            "copy_text": "BGA finding: Together, the top 3 are worth 11 ms (68.8% of the build) - exactly the sum of their individual savings, so they are separate pieces of work that do not overlap\n  joint_saving_us 11 ms\n  sum_of_individual_us 11 ms\n  savings_add True\n  relation add\n  Elements: base.bst, lib.bst, extra.bst\n  Run: golden-fixture-manifest-hash-v1",
+            "copy_text": "BGA finding: Together, the top 3 are worth 11 ms (68.8% of the build) \u2014 exactly the sum of their individual savings, so they are separate pieces of work that do not overlap\n  joint_saving_us 11 ms\n  sum_of_individual_us 11 ms\n  savings_add True\n  relation add\n  Elements: base.bst, lib.bst, extra.bst\n  Run: golden-fixture-manifest-hash-v1",
             "trace_query": "waited-on-flow"
         },
         {
@@ -150,7 +150,7 @@
         {
             "id": "blast-radius-reach",
             "severity": "medium",
-            "title": "What a change to these rebuilds: base.bst (2 downstream), lib.bst (1 downstream) - the cost of touching them is not their own duration but everything downstream that has to be built again",
+            "title": "What a change to these rebuilds: base.bst (2 downstream), lib.bst (1 downstream) \u2014 the cost of touching them is not their own duration but everything downstream that has to be built again",
             "detail": [],
             "elements": [
                 "base.bst",
@@ -158,15 +158,15 @@
             ],
             "evidence": {},
             "reader": "recipe-author",
-            "copy_text": "BGA finding: What a change to these rebuilds: base.bst (2 downstream), lib.bst (1 downstream) - the cost of touching them is not their own duration but everything downstream that has to be built again\n  Elements: base.bst, lib.bst\n  Run: golden-fixture-manifest-hash-v1",
+            "copy_text": "BGA finding: What a change to these rebuilds: base.bst (2 downstream), lib.bst (1 downstream) \u2014 the cost of touching them is not their own duration but everything downstream that has to be built again\n  Elements: base.bst, lib.bst\n  Run: golden-fixture-manifest-hash-v1",
             "trace_query": "dependency-wait"
         },
         {
             "id": "latent-heavies",
             "severity": "medium",
-            "title": "Waiting off the critical path, worth nothing to fix today: extra.bst (4 ms) - they bound how far shortening the chain can go",
+            "title": "Waiting off the critical path, worth nothing to fix today: extra.bst (4 ms) \u2014 they bound how far shortening the chain can go",
             "detail": [
-                "    (structural projections over this run's measured durations, where \"fixed\" means the element becomes instant - a re-capture is still the ground truth)"
+                "    (structural projections over this run's measured durations, where \"fixed\" means the element becomes instant \u2014 a re-capture is still the ground truth)"
             ],
             "elements": [
                 "extra.bst"
@@ -180,7 +180,7 @@
                 ]
             },
             "reader": "recipe-author",
-            "copy_text": "BGA finding: Waiting off the critical path, worth nothing to fix today: extra.bst (4 ms) - they bound how far shortening the chain can go\n      (structural projections over this run's measured durations, where \"fixed\" means the element becomes instant - a re-capture is still the ground truth)\n  Elements: extra.bst\n  Run: golden-fixture-manifest-hash-v1",
+            "copy_text": "BGA finding: Waiting off the critical path, worth nothing to fix today: extra.bst (4 ms) \u2014 they bound how far shortening the chain can go\n      (structural projections over this run's measured durations, where \"fixed\" means the element becomes instant \u2014 a re-capture is still the ground truth)\n  Elements: extra.bst\n  Run: golden-fixture-manifest-hash-v1",
             "trace_query": "element-commands",
             "trace_queries": [
                 "element-commands",
@@ -207,7 +207,7 @@
         {
             "id": "graph-width",
             "severity": "info",
-            "title": "The graph is 4 elements in 3 dependency stages, and its widest stage holds 2 - so no more than 2 can ever be building at once, whatever the capacity",
+            "title": "The graph is 4 elements in 3 dependency stages, and its widest stage holds 2 \u2014 so no more than 2 can ever be building at once, whatever the capacity",
             "detail": [],
             "elements": [],
             "evidence": {
@@ -216,7 +216,7 @@
                 "widest_stage": 2
             },
             "reader": "graph-owner",
-            "copy_text": "BGA finding: The graph is 4 elements in 3 dependency stages, and its widest stage holds 2 - so no more than 2 can ever be building at once, whatever the capacity\n  element_count 4\n  dependency_stages 3\n  widest_stage 2\n  Run: golden-fixture-manifest-hash-v1",
+            "copy_text": "BGA finding: The graph is 4 elements in 3 dependency stages, and its widest stage holds 2 \u2014 so no more than 2 can ever be building at once, whatever the capacity\n  element_count 4\n  dependency_stages 3\n  widest_stage 2\n  Run: golden-fixture-manifest-hash-v1",
             "trace_query": "graph-levels"
         },
         {
@@ -260,7 +260,7 @@
         {
             "id": "efficiency-score",
             "severity": "info",
-            "title": "Efficiency score: 100.0% (scheduling is near the certified floor for this graph - further gains need the graph or the work itself to change, not the scheduler (see Dispatch Occupancy and Critical Path))",
+            "title": "Efficiency score: 100.0% (scheduling is near the certified floor for this graph \u2014 further gains need the graph or the work itself to change, not the scheduler (see Dispatch Occupancy and Critical Path))",
             "detail": [],
             "elements": [],
             "evidence": {
@@ -268,7 +268,7 @@
                 "low_confidence": false
             },
             "reader": "ci-gatekeeper",
-            "copy_text": "BGA finding: Efficiency score: 100.0% (scheduling is near the certified floor for this graph - further gains need the graph or the work itself to change, not the scheduler (see Dispatch Occupancy and Critical Path))\n  efficiency_score 100.0%\n  low_confidence False\n  Run: golden-fixture-manifest-hash-v1",
+            "copy_text": "BGA finding: Efficiency score: 100.0% (scheduling is near the certified floor for this graph \u2014 further gains need the graph or the work itself to change, not the scheduler (see Dispatch Occupancy and Critical Path))\n  efficiency_score 100.0%\n  low_confidence False\n  Run: golden-fixture-manifest-hash-v1",
             "trace_query": "cpu-versus-wall"
         }
     ],
@@ -351,7 +351,7 @@
     "next_steps": [
         {
             "id": "shorten-what-the-build-waits-for",
-            "reason": "base.bst is the longest thing on the critical path, 42.9% of it - the build cannot finish sooner than this chain.",
+            "reason": "base.bst is the longest thing on the critical path, 42.9% of it \u2014 the build cannot finish sooner than this chain.",
             "argv": [
                 "bga",
                 "blast",
@@ -362,7 +362,7 @@
         },
         {
             "id": "blast-the-top-element",
-            "reason": "base.bst is the first thing to fix - this is what changing it rebuilds.",
+            "reason": "base.bst is the first thing to fix \u2014 this is what changing it rebuilds.",
             "argv": [
                 "bga",
                 "blast",
@@ -385,10 +385,10 @@
         "cold_confidence": null,
         "cold_duration_sources": {},
         "cold_critical_path_duration_sources": {},
-        "capacity_model_note": "LB/Efficiency Score certify against this run's recorded resource capacities (builders/fetchers/pushers), not real host CPU cores or any declared CPU budget - native build-system parallelism (--max-jobs) is a separate, currently unmodeled axis. Capacity checks (over/under-subscription, memory) did not run for this run - missing: the --max-jobs value, a core count (the host or a CPU budget). They are inert here, not passing; a wrapped log records --max-jobs on its own first line, or declare the missing value explicitly at extraction time."
+        "capacity_model_note": "LB/Efficiency Score certify against this run's recorded resource capacities (builders/fetchers/pushers), not real host CPU cores or any declared CPU budget \u2014 native build-system parallelism (--max-jobs) is a separate, currently unmodeled axis. Capacity checks (over/under-subscription, memory) did not run for this run \u2014 missing: the --max-jobs value, a core count (the host or a CPU budget). They are inert here, not passing; a wrapped log records --max-jobs on its own first line, or declare the missing value explicitly at extraction time."
     },
     "capacity_verdict": {
-        "verdict": "The capacity checks did not run - the --max-jobs value, a core count (the host or a CPU budget) missing - so neither over- nor undersubscription was tested.",
+        "verdict": "The capacity checks did not run \u2014 the --max-jobs value, a core count (the host or a CPU budget) missing \u2014 so neither over- nor undersubscription was tested.",
         "oversubscribed": false,
         "undersubscribed": false,
         "checks_ran": false,
@@ -399,7 +399,7 @@
     },
     "utilization_envelope": {
         "available": false,
-        "absence": "this capture has no host memory series - it was taken before host memory sampling was added, or the host exposes no /proc/meminfo"
+        "absence": "this capture has no host memory series \u2014 it was taken before host memory sampling was added, or the host exposes no /proc/meminfo"
     },
     "plane2_absence": "Plane 2 was not captured for this run, so there is no per-process detail. `bga snapshot -- bst build TARGET` captures both planes.",
     "attribution": {
@@ -413,14 +413,14 @@
         "untracked_tail_us": 2000
     },
     "attribution_hints": {
-        "execution_on_chain_us": "real work on the critical path - the only way to reduce this is to reduce the work itself",
-        "dependency_wait_us": "waiting on an upstream element to finish - shorten or parallelize that dependency chain",
-        "resource_wait_us": "a resource (PROCESS/DOWNLOAD/UPLOAD) was saturated - whether raising capacity would help depends on how loaded this host already is, and this run's capacity checks could not run (see the Certified Floors note), so this hint is unconditioned; `bga sweep` shows the shape of the curve either way",
-        "scheduler_wait_us": "capacity was available but nothing was dispatched - try a different --heuristic in `bga replay`",
-        "idle_us": "nothing was dependency-ready at all - likely a critical-path/graph-shape issue, not a capacity one; check Critical Path",
-        "retry_wait_us": "this element needed a retry - investigate why the first attempt failed/was discarded",
-        "untracked_head_us": "real time before the tracked-task window started (BuildStream startup, cache query, sandbox staging) - see Pipeline Overhead, not a scheduling issue",
-        "untracked_tail_us": "real time after the last tracked task finished - outside per-task tracking, not a scheduling issue"
+        "execution_on_chain_us": "real work on the critical path \u2014 the only way to reduce this is to reduce the work itself",
+        "dependency_wait_us": "waiting on an upstream element to finish \u2014 shorten or parallelize that dependency chain",
+        "resource_wait_us": "a resource (PROCESS/DOWNLOAD/UPLOAD) was saturated \u2014 whether raising capacity would help depends on how loaded this host already is, and this run's capacity checks could not run (see the Certified Floors note), so this hint is unconditioned; `bga sweep` shows the shape of the curve either way",
+        "scheduler_wait_us": "capacity was available but nothing was dispatched \u2014 try a different --heuristic in `bga replay`",
+        "idle_us": "nothing was dependency-ready at all \u2014 likely a critical-path/graph-shape issue, not a capacity one; check Critical Path",
+        "retry_wait_us": "this element needed a retry \u2014 investigate why the first attempt failed/was discarded",
+        "untracked_head_us": "real time before the tracked-task window started (BuildStream startup, cache query, sandbox staging) \u2014 see Pipeline Overhead, not a scheduling issue",
+        "untracked_tail_us": "real time after the last tracked task finished \u2014 outside per-task tracking, not a scheduling issue"
     },
     "occupancy": {
         "average_concurrency": 1.2857142857142858,
@@ -1073,7 +1073,7 @@
                 "threshold": null,
                 "comparison": "present",
                 "observed_path": null,
-                "sentence": "Published when the horizon has more than one step - a single-step horizon is the first fix, which is already named.",
+                "sentence": "Published when the horizon has more than one step \u2014 a single-step horizon is the first fix, which is already named.",
                 "module": "bga/findings.py"
             },
             "trace_query": "time-by-kind",
@@ -1102,7 +1102,7 @@
                 "threshold": null,
                 "comparison": "present",
                 "observed_path": null,
-                "sentence": "Published for every non-structural element something actually depends on. Not a ranking - the who-depends-on-me ordering is a different claim and stays on the scheduler-bound arm - but the answer to the recipe-author's own question, which is true whichever way the build is bound. Elements with no dependents are left out rather than listed at zero: a row reading \"0 downstream\" answers the question with a number meaning nobody.",
+                "sentence": "Published for every non-structural element something actually depends on. Not a ranking \u2014 the who-depends-on-me ordering is a different claim and stays on the scheduler-bound arm \u2014 but the answer to the recipe-author's own question, which is true whichever way the build is bound. Elements with no dependents are left out rather than listed at zero: a row reading \"0 downstream\" answers the question with a number meaning nobody.",
                 "module": "bga/findings.py"
             },
             "trace_query": "dependency-wait",
@@ -1158,7 +1158,7 @@
                 "threshold": null,
                 "comparison": "present",
                 "observed_path": null,
-                "sentence": "Published for every graph with something to rank - an element that pulls in nothing is left out rather than listed at zero, and a structural kind is reported by the claim below rather than ranked here. Unlike its mirror it is not gated on the diagnosis: what an element is built on is true whichever way the build is bound, and the claim is a description of the graph rather than an ordering of work.",
+                "sentence": "Published for every graph with something to rank \u2014 an element that pulls in nothing is left out rather than listed at zero, and a structural kind is reported by the claim below rather than ranked here. Unlike its mirror it is not gated on the diagnosis: what an element is built on is true whichever way the build is bound, and the claim is a description of the graph rather than an ordering of work.",
                 "module": "bga/findings.py"
             },
             "trace_query": "dependency-wait",
@@ -1174,7 +1174,7 @@
                 "threshold": null,
                 "comparison": "present",
                 "observed_path": null,
-                "sentence": "4 elements group into 3 dependency stages by their dependencies alone; the widest holds 2, and nothing in a stage can start before the stage above it finishes. Published whenever there is more than one stage - with one, the widest stage is the whole graph and the shape forbids nothing.",
+                "sentence": "4 elements group into 3 dependency stages by their dependencies alone; the widest holds 2, and nothing in a stage can start before the stage above it finishes. Published whenever there is more than one stage \u2014 with one, the widest stage is the whole graph and the shape forbids nothing.",
                 "module": "bga/findings.py"
             },
             "trace_query": "graph-levels",
@@ -1229,7 +1229,7 @@
                 "threshold": null,
                 "comparison": "present",
                 "observed_path": null,
-                "sentence": "Published whenever `bga sweep`'s own unbounded-capacity row priced the builder cap; the compiler-offload half needs a Plane 2 binary cost too, and is absent without one - both numbers are the finding's own evidence.",
+                "sentence": "Published whenever `bga sweep`'s own unbounded-capacity row priced the builder cap; the compiler-offload half needs a Plane 2 binary cost too, and is absent without one \u2014 both numbers are the finding's own evidence.",
                 "module": "bga/findings.py"
             },
             "trace_query": null,

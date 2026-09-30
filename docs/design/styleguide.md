@@ -763,7 +763,7 @@ in it hidden, and the class is bounded at both ends:
                  elements   landed   opened    words   controls    nodes
 scale               1,202    5,007   26,584    8,259        787    4,732
 xl                  4,002    4,937   27,230    8,275        812    4,960
-budget, to 4,100 elts          7,600   43,500   13,200        900    7,500
+budget, to 4,100 elts          7,600   44,629   13,200      1,020    7,500
 ```
 
 Height does not move at all — a bounded row costs no pixels, which is
@@ -882,6 +882,12 @@ Re-measured on the round's merged tree: macro_micro 37,743 px and
 `UX-1185` (D1) moved the small class's height bound 38,200 -> 38,400:
 a table of 80 rows or fewer opens whole, and `macro_micro`'s 71-row
 `binary_cost` unrolls - measured 38,226 px opened.
+
+Round 158 moved the 4,100 class's height 43,500 -> 44,629, exactly
+D1's unrolls on `xl_both` (+1,129 px, `consolidation_candidates` 40 ->
+75 rows; 43,158 px without them), and its controls 900 -> 1,020: one
+page-wide Markdown box (`UX-1189`), then the measured 1,006 plus 10,
+rounded up - the owner's "consolidate + raise".
 
 `UX-1152`'s card links read section titles, not ids; alone they took
 `macro_micro` to 38,201 px and 13,441 words. Round 154's merged tree,

@@ -101,3 +101,4 @@ Re-based: `test_a_control_acts_on_what_it_names.py` (one box, every copy promise
 `test_a_control_says_what_it_does.py` (no table carries its own box),
 `test_filter_and_back_state_is_kept_and_told.py` (`copy-as` is no longer in a table's tools); styleguide §4c.
 Track B1 net over base `8a531cbb`: xl_both controls 886 -> 895 (+9, under 900), height 42,037 -> 43,074, page +1,167 B.
+Merged round 158 tree: xl_both controls 1,006 (the other tracks' keyed rows, links and presets), so the bound moved 900 -> 1,020 - 1,006 + 10, rounded up to 10 - on the owner's "Consolidate + raise" (Ruslan, 19:26): this row's one page-wide Markdown box is the consolidation, the raise the measured remainder.

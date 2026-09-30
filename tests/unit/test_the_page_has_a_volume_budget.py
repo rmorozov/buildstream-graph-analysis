@@ -384,7 +384,9 @@ BUDGETS = (
     # reads 42,982 px, 12,872 words, 7,209 nodes; Plane 2's cost is flat
     # (12,633 words at 74 elements). Controls and landed do not move
     # (UX-1053). 518/328/291 of headroom.
-    (4_100, 43_500, 13_200, 900, 7_500),
+    # Round 158: px 43,500 -> 44,629, D1's unrolls on xl_both (+1,129 px measured, Ruslan 19:04).
+    # Controls 900 -> 1,020: 1,006 measured +10, rounded up; one Markdown box, then raise (Ruslan 19:26).
+    (4_100, 44_629, 13_200, 1_020, 7_500),
 )
 
 

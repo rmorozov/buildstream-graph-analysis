@@ -61,7 +61,8 @@ _SQUEEZE = r"""
     const sec = h.closest("section[data-section]");
     const cs = getComputedStyle(sec);
     const content = sec.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
-    const probe = document.createElement("div");
+    const probe = h.cloneNode(false);  // a bare copy in the real browser, no shim
+    for (const a of [...probe.attributes]) probe.removeAttribute(a.name);
     const hs = getComputedStyle(h);
     for (const p of ["font", "letterSpacing", "wordSpacing", "lineHeight", "textTransform"]) probe.style[p] = hs[p];
     Object.assign(probe.style, {position: "absolute", visibility: "hidden", width: `${content}px`, overflowWrap: "normal"});

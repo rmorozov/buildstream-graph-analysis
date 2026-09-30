@@ -52,7 +52,7 @@ needs_node = pytest.mark.skipif(node is None, reason="node is not installed")
 
 def _query(hash_text):
     """The `~`-separated view half of a fragment, parsed."""
-    query = str(hash_text).lstrip("#").partition("~")[2]
+    query = pages.view_query(hash_text)
     return urllib.parse.parse_qs(query, keep_blank_values=True)
 
 
@@ -209,7 +209,8 @@ class TestTheWriterListensWhereTheControlsAre:
     def test_an_event_from_outside_the_root_writes_the_view(self, wired):
         """Captured from `root` wherever it was heard - the anchor kept,
         the collapse set appended."""
-        assert wired["wrote"] == "#floors~c=floors", wired
+        assert wired["wrote"].partition("~")[0] == "#floors", wired
+        assert pages.view_query(wired["wrote"]) == "c=floors", wired
 
 
 if __name__ == "__main__":  # pragma: no cover

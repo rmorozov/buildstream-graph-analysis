@@ -420,8 +420,10 @@ class TestANestedTableOpensInFocus:
         writer of the hash and this has to be the hash a reader would
         copy - not a second call to `captureView`."""
         for page, out in served.items():
-            assert f"tf={out['opened']['which']}" in out["captured"], (page, out["captured"])
-            assert "tf=" not in out["afterHash"], f"{page}: going back left the table in the link ({out['afterHash']})"
+            assert f"tf={out['opened']['which']}" in pages.view_query(out["captured"]), (page, out["captured"])
+            assert "tf=" not in pages.view_query(out["afterHash"]), (
+                f"{page}: going back left the table in the link ({out['afterHash']})"
+            )
 
     def test_a_pasted_link_opens_the_table_again(self):
         """The other direction, in one module instance. It cannot be

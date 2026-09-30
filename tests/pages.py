@@ -36,12 +36,22 @@ is why the copy is still made rather than exporting in place.
 rendering.
 """
 
+import base64
 import json
 import os
 import pathlib
 import shutil
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
+
+
+def view_query(fragment) -> str:
+    """`UX-1158`: a fragment's view half, its token decoded; a readable one as it is."""
+    token = str(fragment).lstrip("#").partition("~")[2]
+    if not token or "=" in token:
+        return token
+    return base64.b64decode(token + "=" * (-len(token) % 4)).decode()
+
 
 #: UX-399: one statement that turns the layout optimisation off.
 #:

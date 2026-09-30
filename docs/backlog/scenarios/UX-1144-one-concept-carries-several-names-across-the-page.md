@@ -54,3 +54,5 @@ The close measured: same command, this commit - `5 passed, 2 skipped in 2.73s`; 
 | `TERMS.lb` = `"Lb"` (differs from `LB` in case only) | same test, 3 pages: `the resource floor` | 3 failed, 2 passed, 2 skipped |
 
 Merged-tree fix: Shape set to mechanical (what `dev_close_task.py --shape` derives); guard named in styleguide §6e; skip reason declared in tests/conftest.py.
+
+Residue fix (round 154): "Peak concurrency" (`#occupancy`) and "Peak tasks at once" (`#utilisation`) were one concept with two titles; `peak_concurrency` and `max_observed_concurrency` join `TERMS`/§6e.2.1 as "Peak tasks at once", and the guard now also reds on any visible non-code text node that is a table-rejected spelling (6 failed with the title removed). Not changed: `T∞`, `LB`, `T_C` stay the decided names on rail, floors and finding title (already one label each).

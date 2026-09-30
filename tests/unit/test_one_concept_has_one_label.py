@@ -41,9 +41,25 @@ _COLLECT = r"""
   for (const tick of document.querySelectorAll('.draw-tick[data-mark]'))
     pairs.push([tick.getAttribute('data-mark'),
                 tick.textContent.replace(/\s+[-\d.,]+\s*\S*$/, '')]);
-  return pairs.map(([k, v]) => [k, v.trim()]);
+  const texts = [];
+  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+    const parent = n.parentElement;
+    if (parent && !parent.closest('script, style, code, [data-raw-json]')) texts.push(n.textContent.trim());
+  }
+  return { pairs: pairs.map(([k, v]) => [k, v.trim()]), texts };
 })()
 """
+
+
+REJECTED = set()
+#: Rejected for one concept, a chapter or a plain phrase elsewhere.
+GENERIC = {"critical path", "primary"}
+
+
+def _folded(label):
+    """Sentence case moves the first letter only, so "Lb" is not "LB"."""
+    return label[:1].lower() + label[1:]
 
 
 def _concepts(guide):
@@ -54,15 +70,11 @@ def _concepts(guide):
     for row in rows:
         cells = [c.strip() for c in row.strip("|").split("|")]
         out[cells[0]] = (re.findall(r"`([^`]+)`", cells[1]), cells[2])
+        REJECTED.update(_folded(w.strip()) for w in cells[3].split(",") if w.strip() not in ("", "—"))
     return out
 
 
 CONCEPTS = _concepts(_STYLEGUIDE)
-
-
-def _folded(label):
-    """Sentence case moves the first letter only, so "Lb" is not "LB"."""
-    return label[:1].lower() + label[1:]
 
 
 def _matches(field, key):
@@ -94,25 +106,34 @@ def collected(request, tmp_path_factory):
     two = request.param == "two_plane"
     uri = _two_plane(tmp) if two else pages.export_uri(pages.FIXTURES[request.param], tmp)
     with Browser(chrome) as opened:
-        pairs = opened.measure(uri, _COLLECT)
-    return request.param, _labels(pairs)
+        out = opened.measure(uri, _COLLECT)
+    return request.param, _labels(out["pairs"]), out["texts"]
 
 
 def test_the_table_names_every_concept():
-    assert len(CONCEPTS) == 8, sorted(CONCEPTS)
+    assert len(CONCEPTS) == 9, sorted(CONCEPTS)
     assert all(keys and word for keys, word in CONCEPTS.values())
 
 
 @needs_browser
 def test_each_concept_carries_its_one_word(collected):
-    label, found = collected
+    label, found, _texts = collected
     wrong = {concept: sorted(labels) for concept, labels in found.items() if labels != {_folded(CONCEPTS[concept][1])}}
     assert not wrong, f"{label}: a concept read under another name: {wrong}"
 
 
 @needs_browser
 def test_the_two_plane_page_shows_every_concept(collected):
-    label, found = collected
+    label, found, _texts = collected
     if label != "two_plane":
         pytest.skip(NOT_TWO_PLANE)
     assert set(found) == set(CONCEPTS), sorted(set(CONCEPTS) - set(found))
+
+
+@needs_browser
+def test_no_text_node_is_a_rejected_spelling(collected):
+    """A label with no data key (a rail row, a finding's words) still says the one word."""
+    label, _found, texts = collected
+    banned = REJECTED - {_folded(w) for _k, w in CONCEPTS.values()} - GENERIC
+    said = sorted({t for t in texts if _folded(t) in banned})
+    assert not said, f"{label}: a rejected spelling is on the page: {said}"

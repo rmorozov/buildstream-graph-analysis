@@ -3934,6 +3934,7 @@ _ANALYZE_HINTS = {
             },
             "peak_concurrency": {
                 QUANTITY: "count",
+                "title": "Peak tasks at once",
                 "description": "The most tasks that ran at once - a high -water mark, reached perhaps only once.",
             },
             "horizon_start_us": {

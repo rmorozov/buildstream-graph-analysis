@@ -275,6 +275,7 @@ export const TERMS = {
   scheduling_gap_us: "Scheduling gap",
   plane2_processes: "Plane 2 processes", cpu_coverage: "Plane 2 coverage",
   primary: "Confidence",
+  peak_concurrency: "Peak tasks at once", max_observed_concurrency: "Peak tasks at once",
 };
 
 /**

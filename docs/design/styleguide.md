@@ -1451,6 +1451,7 @@ the gap, 1 name for 2 coverages.
 | the processes Plane 2 saw | `plane2_coverage.processes` | Plane 2 processes | Plane 2 coverage |
 | an element's CPU share Plane 2 attributed | `cpu_coverage` | Plane 2 coverage | — |
 | the headline confidence score | `primary` | Confidence | Primary |
+| the most tasks running at once | `peak_concurrency`, `max_observed_concurrency` | Peak tasks at once | Peak concurrency, Max observed concurrency |
 
 `tests/unit/test_one_concept_has_one_label.py` reads this table,
 collects each concept's labels by data key on the two-plane page,

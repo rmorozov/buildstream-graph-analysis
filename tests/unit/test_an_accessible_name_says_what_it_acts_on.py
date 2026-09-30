@@ -78,7 +78,7 @@ def tree(request, tmp_path_factory):
         return request.param, {w: opened.ax(uri, _TAG, width=w, height=900) for w in widths}
 
 
-def _shared(nodes):
+def _one_name_many_acts(nodes):
     """`{kind: [(name, acts)]}` where one name covers controls acting on different things."""
     acts = collections.defaultdict(lambda: collections.defaultdict(set))
     for node in nodes:
@@ -104,7 +104,7 @@ class TestAnAccessibleNameSaysWhatItActsOn:
     def test_no_two_controls_of_a_kind_share_a_name_unless_they_act_alike(self, tree):
         label, by_width = tree
         for width, nodes in by_width.items():
-            shared = _shared(nodes)
+            shared = _one_name_many_acts(nodes)
             assert shared == {}, (label, width, {k: v[:3] for k, v in shared.items()})
 
     def test_no_control_repeats_a_heading(self, tree):

@@ -80,3 +80,4 @@ nodes) is not changed: the Required Fix names arrows and code only.
 The styleguide is not amended - §4g is also edited by `UX-1141`/`1142`.
 
 - Merged-tree fix: `test_one_bucket_one_row` compares the advice to the hint with its backticks removed, as the typesetter renders `<code>` (stale guard).
+- Residue: `typeset` now reaches a long-text fold inside a `td` (its preview cut no longer splits a backtick span), and the guard reads such cells on macro_micro (`#serialization_point_risks`, `#plane2_coverage`); 4 cells were raw.

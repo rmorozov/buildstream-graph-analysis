@@ -1282,7 +1282,9 @@ export function renderText(name, value, shown = null) {
   if (text.length <= CELL_TEXT_CAP || isExplanation(name)) {
     return el("span", { "data-raw": text }, shown ?? readerLabel(text));
   }
-  const head = text.slice(0, CELL_TEXT_CAP).replace(/\s+\S*$/, "");
+  let head = text.slice(0, CELL_TEXT_CAP).replace(/\s+\S*$/, "");
+  // A cut inside a backtick span would print the raw backtick.
+  if ((head.match(/`/g) ?? []).length % 2) head = head.slice(0, head.lastIndexOf("`")).trimEnd();
   return el("details", { class: "long-text", "data-raw": text },
             // `UX-1152`: the preview hides once open, so the text shows once; a count of chars is no label.
             el("summary", {},

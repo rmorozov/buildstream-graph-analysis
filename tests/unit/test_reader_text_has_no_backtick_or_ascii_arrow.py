@@ -2,7 +2,8 @@
 
 Inline code is `<code>`, an arrow is `→`, and a finding's detail line
 leads with its sentence. Every finding is hydrated first, so text
-inserted after boot is held to the same rule. A table cell is data.
+inserted after boot is held to the same rule. A table cell is data,
+except a long-text fold's preview, which is prose.
 """
 
 import pathlib
@@ -23,12 +24,13 @@ _MEASURE = r"""
 (async () => {
   document.querySelectorAll("article.finding").forEach((a) => a._hydrate?.());
   await new Promise((done) => setTimeout(done, 50));
-  const skip = "code, pre, kbd, samp, script, style, svg, textarea, select, option, td";
+  const skip = "code, pre, kbd, samp, script, style, svg, textarea, select, option";
   const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
   const raw = [];
   for (let node = walker.nextNode(); node; node = walker.nextNode()) {
     const parent = node.parentElement;
     if (!parent || parent.closest(skip)) continue;
+    if (parent.closest("td") && !parent.closest("details.long-text")) continue;
     if (!/`|->/.test(node.data)) continue;
     raw.push(`${parent.tagName.toLowerCase()}@${parent.closest("[id]")?.id}: ${node.data.trim().slice(0, 80)}`);
   }

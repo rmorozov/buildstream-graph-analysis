@@ -119,13 +119,17 @@ export function renderFindings(findings, investigate = null, node = undefined) {
     el("h2", {}, `Findings (${findings.length})`));
   const evidenceNode = childNode(node?.items, "evidence");
   const bound = TABLE_OPENS_BOUNDED_ABOVE;
+  let ranked = null;
   findings.forEach((finding, index) => {
     const severity = String(finding.severity ?? "info").toLowerCase();
+    // UX-1148: an indented finding is a note on the card above, not a rank of its own.
+    const noteOf = finding.indent && ranked ? ranked : null;
+    if (!noteOf) ranked = finding.id ?? "";
     const detail = Array.isArray(finding.detail)
       ? finding.detail : (finding.detail ? [finding.detail] : []);
     const article = el("article",
       { class: "finding", id: findingAnchor(finding.id), "data-severity": severity,
-        "data-finding-id": finding.id ?? "" },
+        "data-finding-id": finding.id ?? "", "data-note-of": noteOf },
       el("p", { class: "title" },
         el("span", { class: "badge" }, title(severity)),
         finding.title ?? finding.id ?? ""));

@@ -1,5 +1,5 @@
 {
-  "paths": ["bga/correlate.py", "bga/report/text.py"],
+  "paths": ["bga/findings.py", "bga/viewer/sections.js", "bga/viewer/style.css"],
   "files": {
     ".claude/hooks/agent_worktree_limits.py": {"duplicate_blocks": 0, "file_lines": 128, "longest_function": 23},
     ".claude/hooks/gate_covers_push.py": {"duplicate_blocks": 1, "file_lines": 168, "longest_function": 28},
@@ -27,7 +27,7 @@
     "bga/diagnostics/analyzer.py": {"duplicate_blocks": 2, "file_lines": 1205, "longest_function": 119},
     "bga/disclosure.py": {"duplicate_blocks": 3, "file_lines": 846, "longest_function": 16},
     "bga/exceptions.py": {"duplicate_blocks": 0, "file_lines": 57, "longest_function": 0},
-    "bga/findings.py": {"duplicate_blocks": 0, "file_lines": 2761, "longest_function": 187},
+    "bga/findings.py": {"duplicate_blocks": 0, "file_lines": 2778, "longest_function": 187},
     "bga/fingerprint.py": {"duplicate_blocks": 0, "file_lines": 137, "longest_function": 29},
     "bga/floors/__init__.py": {"duplicate_blocks": 0, "file_lines": 18, "longest_function": 0},
     "bga/floors/capacity.py": {"duplicate_blocks": 0, "file_lines": 78, "longest_function": 24},

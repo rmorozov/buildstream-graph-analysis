@@ -2110,6 +2110,22 @@ def _floor_findings(result: AnalysisResult) -> list[dict]:
     return findings
 
 
+def _by_severity(findings: list[dict]) -> list[dict]:
+    """`UX-1148`: severity, then the argued order below; an indented note stays under its table."""
+    groups: list[list[dict]] = []
+    for finding in findings:
+        if finding.get('indent') and groups:
+            groups[-1].append(finding)
+        else:
+            groups.append([finding])
+
+    def rank(group):
+        severity = group[0].get('severity')
+        return _LEAD_ORDER.index(severity) if severity in _LEAD_ORDER else len(_LEAD_ORDER)
+
+    return [finding for group in sorted(groups, key=rank) for finding in group]
+
+
 def compute_findings(result: AnalysisResult) -> list[dict]:
     """Every conclusion the report draws, in the order it draws them.
 
@@ -2182,6 +2198,7 @@ def compute_findings(result: AnalysisResult) -> list[dict]:
     # rather than about this run - the reader has met the run's own
     # numbers by the time they reach "and one repo rebuilds all of it".
     findings.extend(_shared_source_findings(result))
+    findings = _by_severity(findings)
     # `UX-372`: and who each is for. Stamped here rather than at the
     # nineteen construction sites, for the reason `FINDING_READERS`
     # gives - and after the whole list exists, so the map is applied to

@@ -386,6 +386,7 @@ a:not(p a) { display: inline-flex; align-items: center; justify-content: center;
 .finding[data-severity="info"], .finding[data-severity="low"] {
   border-left-color: var(--accent);
 }
+.finding[data-note-of] { margin-left: var(--space-4); }
 /* UX-356: the join's own advice, at the grade of a finding because
    that is what it is - a written recommendation with a severity. Tone
    on the rule, never on the words (§4.4). */

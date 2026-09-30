@@ -167,7 +167,7 @@ def test_key_findings_drops_a_degenerate_criticality_list(analyzed_result):
     all scored 1.0 ranks nothing and merely names, a third time,
     elements the block above already named. It is dropped."""
     output = format_text(analyzed_result)
-    key_findings_section = output.split("Certified Headroom")[0]
+    key_findings_section = output.split("Certified Floors:")[0]
     assert "Highest Criticality Elements:" not in key_findings_section
 
 
@@ -183,7 +183,7 @@ def test_key_findings_criticality_list_excludes_zero_probability_elements(analyz
     """
     analyzed_result.signals["criticality_probability"]["a.bst"]["probability"] = 0.4
     output = format_text(analyzed_result)
-    key_findings_section = output.split("Certified Headroom")[0]
+    key_findings_section = output.split("Certified Floors:")[0]
     criticality_section = key_findings_section.split("Highest Criticality Elements:")[1]
     assert "root.bst" in criticality_section
     assert "a.bst" in criticality_section

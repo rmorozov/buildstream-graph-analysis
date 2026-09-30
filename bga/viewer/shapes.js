@@ -229,7 +229,7 @@ export function depthSentence(value) {
  * one. The strip itself renders in both, because the *shape* is the
  * point and the click is a convenience.
  */
-export function distributionStrip(table, specs, total, state, refresh) {
+export function distributionStrip(table, specs, total, state, refresh, few = false) {
   // `UX-350`: **at any length.** The row cap decides whether a table is
   // *paged*, not whether its shape is worth showing - and gating the
   // strip on it meant the report's central table, eleven rows on one
@@ -252,8 +252,9 @@ export function distributionStrip(table, specs, total, state, refresh) {
   const drawn = columnStrip(raw, {
     grade: GRADE_ANNOTATION,
     format: (n) => quantity(n, spec.quantity),
-    label: `${spec.title ?? title(spec.key, spec.quantity)} across all ${
+    label: few ? null : `${spec.title ?? title(spec.key, spec.quantity)} across all ${
       total.toLocaleString("en-US")} rows`,
+    counted: !few,
   });
   drawn.setAttribute("data-column", spec.key);
   drawn.setAttribute("data-interactive", String(served()));

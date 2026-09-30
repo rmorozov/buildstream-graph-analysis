@@ -73,9 +73,9 @@ MEASURED = {
 }
 HEADROOM_BITS = 0.5
 HEADROOM_WHEEL = 1.10
-#: Chapters no section of which offers ?, JSON and fold together. `UX-1152`: `change`
-#: now does - its one-row section is a pair list, which carries a ? door.
-UNOFFERED = {"macro_micro": [], "both_scale": ["compare"]}
+#: Chapters no section of which offers ?, JSON and fold together. `change`'s one-row
+#: `restructuring` holds nested tables, so it stays a table (`UX-1152`'s fixer).
+UNOFFERED = {"macro_micro": ["change"], "both_scale": ["compare"]}
 
 _PRELUDE = r"""
 const frames = (n) => new Promise((r) => {

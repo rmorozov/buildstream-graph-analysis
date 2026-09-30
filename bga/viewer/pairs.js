@@ -287,7 +287,8 @@ export function renderPairs(key, object, hint = {}, node = undefined,
       // three sections still lived inside `<dd>` after the rest moved.
       if (oneRecord(value, hintsOf(child), child)) {
         const record = renderPairs(name, value[0], {}, child);
-        cell = [...record.children].find((n) => n.tagName === "DL") ?? record;
+        // The `dl` alone: its `section` would be a second, stray section inside a `dd`.
+        cell = [...record.children].find((n) => String(n.tagName).toUpperCase() === "DL");
       } else {
         const built = buildTable(name, value, hintsOf(child), child);
         cell = el("div", { class: "map-table", "data-bounded": "map" },

@@ -160,9 +160,8 @@ html { font-family: var(--font-sans); }
     --good-mark: #176b2c; --accent-mark: #2b5797;
     --muted-bg: #f2f2f2;
   }
-  body { background: #fff; }
-  /* The rail is navigation; paper has none. */
-  nav.toc, .jump-hits, #jump { display: none; }
+  /* The rail is navigation; paper has none (the jump box is an `input`, hidden below). */
+  nav.toc, .jump-hits { display: none; }
   details { break-inside: avoid; }
 }
 * { box-sizing: border-box; }
@@ -193,7 +192,7 @@ p, li > p, dd { max-width: 72ch; }
 
    - **standing** (this rule) - a control with a surface, for
      something you press on purpose;
-   - **quiet** (`.control-quiet`) - an inline toggle beside a value it
+   - **quiet** (the grade rule below) - an inline toggle beside a value it
      must not compete with;
    - **door** (`button.describe`) - `UX-317`'s circular `?`.
 
@@ -243,8 +242,7 @@ button[aria-pressed="true"] {
    beside something it annotates - a fold, a chapter, a JSON door - and
    a surface on it would read as the page's next action. */
 button.collapse, button.fold-more, button.json-toggle, button.twin-toggle,
-button.focus-back, button.expand-table, button.chapter-open, button.toc-title,
-.control-quiet {
+button.focus-back, button.expand-table, button.chapter-open, button.toc-title {
   background: transparent; color: var(--muted);
 }
 
@@ -574,8 +572,6 @@ button.collapse:hover { color: var(--fg); }
         background: var(--bg); color: var(--fg); }
 .jump-hits { list-style: none; margin: var(--space-1) 0 0; padding: 0;
              display: flex; flex-wrap: wrap; gap: var(--space-1); }
-.jump-hits button {
-}
 
 /* UX-286: the chapters. A rule, a name and the space a heading earns -
    the grouping has to be visible to be navigation, and it must not cost
@@ -761,9 +757,6 @@ input.table-filter { max-width: 100%; }
 
 /* UX-204: the investigate button and the paste it leaves behind. */
 .investigate { margin: var(--space-2) 0 var(--space-1); }
-/* `UX-436`: standing grade, from the base rule. What was here was the
-   base rule written out by hand, at a different size. */
-.investigate button { }
 .investigate button:hover { border-color: var(--accent); }
 .investigate .handoff { margin-left: var(--space-2); font-size: var(--font-small); }
 .investigate .query { margin: var(--space-2) 0 0; font-size: var(--font-small); }
@@ -803,7 +796,6 @@ h3.category { letter-spacing: .04em;
    pairing costs one line on four tables, not most. */
 .table-tools button.copy-rows { align-self: flex-start; }
 .table-tools select.top-n { margin-left: auto; align-self: flex-start; }
-.copy-rows { }
 th .th-filter { display: block; width: 100%; margin-top: var(--space-1);
                 font: inherit; font-size: var(--font-small); font-weight: normal;
                 padding: 0 var(--space-1); background: var(--bg); color: inherit;
@@ -977,8 +969,6 @@ section[data-section][data-unfocused="true"] > :is(h3, .section-head) { opacity:
   background: var(--muted-bg);
 }
 .element-controls { display: flex; gap: var(--space-1); margin: var(--space-1) 0 var(--space-2); }
-/* `UX-436`: was `0.85em`, which resolved differently per parent. */
-.element-controls button { }
 
 /* UX-225: a mark annotates, it never hides. An element marked done is
    still ranked and still in the horizon - a ranking that quietly drops
@@ -1127,12 +1117,6 @@ button.expand-table[aria-pressed="true"] {
   color: var(--fg); border-color: var(--fg);
 }
 .focus-crumb { margin: 0 0 var(--space-1); }
-button.focus-back, button.expand-table {
-  font: inherit; font-size: var(--font-small); cursor: pointer;
-  background: transparent; color: var(--muted);
-  border: 1px solid var(--line); border-radius: 3px;
-  padding: 0 var(--space-2);
-}
 button.focus-back:hover, button.expand-table:hover { color: var(--fg); }
 /* Behind, not gone. `display: none` rather than a visual dimming: a
    reader in focus is looking at one table, and a half-visible report
@@ -1432,7 +1416,6 @@ button.json-toggle:hover { color: var(--fg); }
    table is the same answer as rows - and it survives the export,
    because a toggle is DOM and needs no server (`UX-195`). */
 .draw-twin { margin: var(--space-1) 0 0; }
-button.twin-toggle { }
 button.twin-toggle:hover { color: var(--fg); }
 table.twin-table { margin-top: var(--space-1); font-size: var(--font-small); }
 table.twin-table td { font-variant-numeric: tabular-nums; }

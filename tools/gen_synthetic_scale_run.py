@@ -367,14 +367,13 @@ def _plane2_records(placement, durations, started, rng):
     return "".join(lines)
 
 
-def _workload_records(placement, durations, started, elements, seed, index):
+def _workload_records(placement, durations, started, elements, rng):
     """`UX-1182`: a make per building element exec'ing fake binaries.
 
     The 8 longest elements run 200-500 distinct binaries, the rest 3-10,
     each 1-3 times; a binary sleeps or burns for its distribution's draw,
-    clamped inside the element's window. Its own RNG, so `cc` is untouched.
+    clamped inside the element's window. `rng` is its own, so `cc` is untouched.
     """
-    rng = random.Random(f"workload:{seed}:{index}")
     names = list(DISTRIBUTIONS)
     pool = [names[i % len(names)] for i in range(WORKLOAD_POOL)]
     building = sorted(e["uid"] for e in elements if e["element_kind"] not in ("import", "stack"))
@@ -501,7 +500,8 @@ def _plant_store(output, args):
         (snapshot / "build.log").write_text(_wrapped_log(placement, durations, started, args.builders))
         with gzip.open(snapshot / "plane2.log.gz", "wt", encoding="utf-8") as out:
             if args.workload == "binaries":
-                out.write(_workload_records(placement, durations, started, elements, args.seed, index))
+                workload_rng = random.Random(f"workload:{args.seed}:{index}")
+                out.write(_workload_records(placement, durations, started, elements, workload_rng))
             else:
                 out.write(_plane2_records(placement, durations, started, rng))
         planted.append(snapshot)

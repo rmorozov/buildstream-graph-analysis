@@ -1327,7 +1327,7 @@
   {
     "exception": "product name",
     "role": "summary",
-    "text": "core.bst runs its own build system at # job - variables: notparallel: True - while the rest of this build runs at # and it is the longest kind of task here\u2026 moreless"
+    "text": "core.bst runs its own build system at # job because its variables set notparallel, while the rest of this build runs at # and it is the longest kind of task\u2026 moreless"
   },
   {
     "exception": null,

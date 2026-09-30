@@ -165,7 +165,7 @@ def _add_cpu_floor(result, native_report: dict, context) -> None:
     source = 'a declared CPU budget' if cpu_floor['lb_cpu_cores_source'] == 'cpu_budget' else "the host's"
     floors['capacity_model_note'] = (floors.get('capacity_model_note') or '') + (
         f" This run also has a CPU floor, beside LB and not folded into "
-        f"it: {cpu_floor['lb_cpu_us'] / 1e6:.2f}s, the CPU this capture "
+        f"it: {cpu_floor['lb_cpu_us'] / 1e6:.2f} s, the CPU this capture "
         f"measured over {cpu_floor['lb_cpu_governing_cores']} governing "
         f"cores ({source}) — {binds} is the "
         f"binding one."

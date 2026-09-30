@@ -621,6 +621,11 @@ function typesetNode(node) {
   if (fragment.textContent !== node.data || parts.length > 1) node.replaceWith(fragment);
 }
 
+/** `UX-1172`: a name is typeset as its text is - the arrow drawn, no backtick. */
+export function spoken(text) {
+  return String(text).replace(/->/g, "\u2192").replace(/`/g, "");
+}
+
 export function typeset(root) {
   if (!root || typeof document.createTreeWalker !== "function") return;
   if (root.nodeType === 3) root = root.parentNode;

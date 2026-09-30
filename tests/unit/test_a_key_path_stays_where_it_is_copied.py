@@ -11,10 +11,19 @@ is that query's own column.
 UX-1166: at 1440 and 390, and on the two-plane review page too, no such
 node holds a spaced hyphen for a dash; no description does either, and
 no viewer or `shown.py` literal draws a dash for a null.
+
+UX-1172: nor does a block's whole text or an accessible name, and
+neither holds a leading "- ", "->", "**", "[]" or a raw YAML key; a
+chain name wraps only at a separator; Markdown copy and the CLI say
+their unit.
 """
 
+import json
+import os
 import pathlib
 import re
+import shutil
+import subprocess
 import sys
 
 import pytest
@@ -112,7 +121,31 @@ _READ = (
     const beside = [...(section?.querySelectorAll('pre') ?? [])].map((p) => p.textContent).join('\\n');
     said.push({ text, itself, section: section?.id ?? null, beside: `${run}\\n${beside}` });
   }
-  return { said };
+  // UX-1172: a block's text whole, since a dash can sit at a node's edge; and every name.
+  const block = (p) => { while (p.parentElement && getComputedStyle(p).display.startsWith('inline')) p = p.parentElement; return p; };
+  const blocks = new Set([...document.querySelectorAll('body *')].filter(
+    (e) => !e.closest(copied) && e.checkVisibility() && [...e.childNodes].some((c) => c.nodeType === 3 && c.data.trim()))
+    .map(block));
+  const whole = [...blocks].map((b) => ({ text: b.innerText.replace(/\\s+/g, ' ').trim(), section: b.closest('section[id]')?.id ?? null }));
+  const names = [...document.querySelectorAll('[aria-label], [title]')].filter((e) => e.checkVisibility())
+    .flatMap((e) => ['aria-label', 'title'].map((a) => e.getAttribute(a)).filter(Boolean));
+  // A wrap inside a chain name, not after its `/`.
+  const inside = [];
+  let wrapped = 0;
+  document.querySelectorAll('.path-name').forEach((name) => {
+    let last = null;
+    let before = '';
+    for (const t of [...name.childNodes].filter((c) => c.nodeType === 3)) {
+      for (let i = 0; i < t.data.length; i += 1) {
+        const r = document.createRange();
+        r.setStart(t, i); r.setEnd(t, i + 1);
+        const top = r.getBoundingClientRect().top;
+        if (last !== null && top > last + 2) { wrapped += 1; if (before !== '/') inside.push(name.textContent); }
+        last = top; before = t.data[i];
+      }
+    }
+  });
+  return { said, whole, names, inside, wrapped };
 })()"""
 )
 
@@ -155,3 +188,70 @@ def test_no_reader_text_spaces_a_hyphen_for_a_dash(read):
     for width, out in by_width.items():
         dashed = [(node["section"], node["text"][:120]) for node in _reader_text(out) if _SPACED.search(node["text"])]
         assert dashed == [], (label, width, dashed)
+
+
+#: A spaced hyphen, a leading bullet, an ASCII arrow, Markdown bold, a list step, a raw YAML key.
+_RESIDUE = re.compile(r"(?<=\S) - |^- |->|\*\*|\[\]|\b[a-z_]+: [a-z_]+: ")
+
+
+@needs_browser
+def test_no_block_or_name_holds_ascii_residue(read):
+    label, by_width = read
+    for width, out in by_width.items():
+        assert len(out["whole"]) > 300 and len(out["names"]) > 50, (label, width, len(out["whole"]), len(out["names"]))
+        found = [(n["section"], n["text"][:120]) for n in out["whole"] if _RESIDUE.search(n["text"])]
+        found += [("name", name[:120]) for name in out["names"] if _RESIDUE.search(name)]
+        assert found == [], (label, width, found)
+
+
+@needs_browser
+def test_a_chain_name_wraps_at_a_separator(read):
+    label, by_width = read
+    assert label != "two_plane" or by_width[390]["wrapped"] > 0, "no chain name wraps: the guard reads nothing"
+    for width, out in by_width.items():
+        assert out["inside"] == [], (label, width, out["inside"])
+
+
+node = shutil.which("node")
+
+
+@pytest.mark.skipif(node is None, reason="node is not installed")
+def test_markdown_copy_names_a_raw_unit():
+    script = """
+const shim = await import(process.env.BGA_DOM_SHIM);
+shim.installDocument();
+const { rowsMarkdown } = await import(process.env.BGA_TABLES);
+const tr = shim.makeNode("tr");
+const td = shim.makeNode("td");
+td.setAttribute("data-column", "duration_us");
+td.setAttribute("data-raw", "279000");
+tr.append(td);
+console.log(JSON.stringify(rowsMarkdown([tr], [{ key: "duration_us", title: "Duration", quantity: "duration_us" }])));
+"""
+    done = subprocess.run(
+        [node, "--input-type=module", "-e", script],
+        capture_output=True,
+        text=True,
+        cwd=REPO,
+        timeout=60,
+        env={
+            **os.environ,
+            "BGA_DOM_SHIM": (REPO / "tests/dom_shim.mjs").as_uri(),
+            "BGA_TABLES": (REPO / "bga/viewer/tables.js").as_uri(),
+        },
+    )
+    assert done.returncode == 0, done.stderr[-2000:]
+    assert json.loads(done.stdout).splitlines()[0] == "| Duration (\u00b5s) |"
+
+
+def test_the_cli_spaces_its_unit(monkeypatch):
+    from types import SimpleNamespace
+
+    from bga import cli
+    from bga.floors import cpu
+
+    floor = {"lb_cpu_us": 1_500_000, "lb_cpu_binds": True, "lb_cpu_cores_source": "host", "lb_cpu_governing_cores": 4}
+    monkeypatch.setattr(cpu, "compute_cpu_floor", lambda *_: dict(floor))
+    result = SimpleNamespace(floors={"lb": 1})
+    cli._add_cpu_floor(result, {}, None)
+    assert "1.50 s," in result.floors["capacity_model_note"], result.floors["capacity_model_note"]

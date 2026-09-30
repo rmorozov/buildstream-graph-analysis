@@ -497,7 +497,7 @@ limit 25;`,
     title: "What did this element wait for, by the graph?",
     why:
       "Plane 1 again, by the graph rather than the clock: the trace " +
-      "draws the dependency edges as **flows**, so this is " +
+      "draws the dependency edges as flows, so this is " +
       "the declared graph rather than whatever happened to finish " +
       "first. The timestamp-proximity version of this question is " +
       "`dependency-wait` above; where they disagree, the gap is a " +

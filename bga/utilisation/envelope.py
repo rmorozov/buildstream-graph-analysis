@@ -180,8 +180,8 @@ def compute(samples: dict, run: dict) -> dict:
     if len(series) < 2:
         return {
             "available": False,
-            "absence": "this capture has fewer than two host CPU samples - "
-            "`cpu_busy_cores` is a rate over a gap, and one reading "
+            "absence": "this capture has fewer than two host CPU samples; "
+            "busy cores are a rate over a gap, and one reading "
             "is not a gap",
         }
     cores = series[-1].get("cores")

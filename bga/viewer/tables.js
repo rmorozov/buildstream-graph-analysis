@@ -533,6 +533,8 @@ export function applyPreset(preset, rows, payload, key = "element") {
 
 // ---------------------------------------------------------------- UX-280
 
+const RAW_UNIT = { duration_us: "\u00b5s", bytes: "B", seconds: "s", kilobytes: "KB", megabytes: "MB", percent: "%" };
+
 /**
  * The shown rows as a GitHub-flavoured Markdown table.
  *
@@ -549,7 +551,9 @@ export function applyPreset(preset, rows, payload, key = "element") {
  */
 export function rowsMarkdown(rows, specs) {
   const columns = specs.map((spec) => spec.key);
-  const titles = specs.map((spec) => spec.title ?? spec.key);
+  // UX-1172: the cells are raw, so the header names their unit.
+  const titles = specs.map((spec) => (spec.title ?? spec.key)
+    + (RAW_UNIT[spec.quantity] ? ` (${RAW_UNIT[spec.quantity]})` : ""));
   const cell = (value) => String(value ?? "")
     .replace(/\|/g, "\\|").replace(/\s*\n\s*/g, " ");
   const lines = [

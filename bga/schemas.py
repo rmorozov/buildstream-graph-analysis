@@ -3899,7 +3899,7 @@ _ANALYZE_HINTS = {
                 QUANTITY: "count",
                 "description": "How many levels down the deepest leaf in this document sits.",
             },
-            "deepest_path": {KEY_PATH: True, "description": "One path that reaches it, with `[]` for a list step."},
+            "deepest_path": {KEY_PATH: True, "description": "One path that reaches it."},
             "deeper_than_three": {
                 QUANTITY: "count",
                 "description": "Leaves more than three levels down — the "

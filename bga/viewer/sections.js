@@ -25,7 +25,7 @@ import { chapters } from "./chapters.js";
 import { renderProvenance } from "./decision.js";
 import { GRADE_EXHIBIT, decomposition, interval, strip } from "./drawings.js";
 import { resolvePath } from "./element.js";
-import { COLUMNS, DECOMPOSITION, DISTRIBUTION, INLINE, INTERVAL, KEYED_BY, KEYED_BY_TASK_UID, QUANTITY, SERIES, SEVERITY, attachBlockDoor, bytes, childNode, cssId, describedTerm, el, guessQuantity, heading, hintsOf, keyAsShown, quantity, quantityFor, readerLabel, sectionHead, title } from "./format.js";
+import { COLUMNS, DECOMPOSITION, DISTRIBUTION, INLINE, INTERVAL, KEYED_BY, KEYED_BY_TASK_UID, QUANTITY, SERIES, SEVERITY, attachBlockDoor, bytes, childNode, cssId, describedTerm, el, guessQuantity, heading, hintsOf, keyAsShown, quantity, quantityFor, readerLabel, sectionHead, spoken, title } from "./format.js";
 import { matches } from "./nav.js";
 import { handOff } from "./perfetto.js";
 import { findingAnchor, plainValue, served } from "./primitives.js";
@@ -185,7 +185,7 @@ export function renderFindings(findings, investigate = null, node = undefined,
           : null,
       ].filter((child) => child !== null && child !== undefined));
       article.querySelector?.(".describe")?.setAttribute("aria-label",
-        `What these mean: ${finding.title}`);
+        `What these mean: ${spoken(finding.title)}`);
       article._hydrate = null;
     };
     if (index < bound) article._hydrate();
@@ -218,7 +218,7 @@ export function investigateButton(finding, investigate) {
                               "data-element": context.element ?? "" });
   // UX-1155: named for what it investigates.
   const button = el("button", { type: "button", "aria-label":
-    `Investigate in Perfetto: ${context.element || finding.title}` }, "Investigate in Perfetto");
+    `Investigate in Perfetto: ${spoken(context.element || finding.title)}` }, "Investigate in Perfetto");
   // `UX-448`: one paste per grain the claim offers, not one button
   // per grain. The handoff opens one trace into one tab whichever
   // question the reader came with, so a second button would send the

@@ -60,3 +60,5 @@ Lead: "Keep 4 builders: each building element drew 0.13 cores, so the CPU alone 
 | `renderPairs` does not draw the lead | `test_the_section_opens_with_a_sentence_naming_the_count` x4 | 4 failed, 10 passed |
 | clamp not told (`clamped_from = None` in the sentence) | `test_the_clamp_is_told_in_the_sentence` | 1 failed |
 | reverted from the copies | - | 14 passed |
+
+Merged-tree fix: styleguide 1a hint count 21 -> 22 for the new `bga:lead` row (`test_the_hint_count_is_the_documented_table`).

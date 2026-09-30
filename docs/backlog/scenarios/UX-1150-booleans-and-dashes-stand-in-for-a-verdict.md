@@ -60,3 +60,5 @@ width  cells  "true"  "false"  "—"  "none"  "yes"  "no"  #capacity_verdict fir
 | a lead no longer answers its booleans (`renderPairs` draws them) | `test_the_capacity_verdict_is_a_sentence` x4 ("drawn again: Checks ran, Oversubscribed, Undersubscribed") | 4 failed, 5 passed |
 | `_build_capacity_verdict` publishes no sentence | `test_the_capacity_verdict_is_a_sentence` x4, `test_each_state_has_its_own_sentence` | 5 failed, 4 passed |
 | reverted from the copies | - | 9 passed |
+
+Merged-tree fix: `test_no_field_is_withheld[golden]` skips `rule.comparison` "present" with no observed path (UX-1141 dropped the only text carrying it; the block reads "No named threshold").

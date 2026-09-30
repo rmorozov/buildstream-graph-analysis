@@ -249,11 +249,11 @@ export function distributionStrip(table, specs, total, state, refresh, few = fal
     .filter((n) => Number.isFinite(n));
   if (!raw.length) return null;
 
+  const name = spec.title ?? title(spec.key, spec.quantity);
   const drawn = columnStrip(raw, {
-    grade: GRADE_ANNOTATION,
+    grade: GRADE_ANNOTATION, name,
     format: (n) => quantity(n, spec.quantity),
-    label: few ? null : `${spec.title ?? title(spec.key, spec.quantity)} across all ${
-      total.toLocaleString("en-US")} rows`,
+    label: few ? null : `${name} across all ${total.toLocaleString("en-US")} rows`,
     counted: !few,
   });
   drawn.setAttribute("data-column", spec.key);

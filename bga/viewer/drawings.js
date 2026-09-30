@@ -142,9 +142,10 @@ let ROUTE_SEQ = 0;
  * table twin where one is drawn, and the sentence span itself where it
  * is not: either already carries every published mark with its label.
  */
-export function nameDrawing(drawing, sentence, routeNode) {
+export function nameDrawing(drawing, sentence, routeNode, name) {
   if (!drawing?.setAttribute) return drawing;
-  if (sentence) drawing.setAttribute("aria-label", sentence);
+  // UX-1155: led by what it shows, where the caller knows; a range alone names nothing.
+  if (sentence) drawing.setAttribute("aria-label", name ? `${name}: ${sentence}` : sentence);
   if (routeNode?.setAttribute) {
     if (!routeNode.getAttribute?.("id")) {
       routeNode.setAttribute("id", `drawing-route-${ROUTE_SEQ++}`);
@@ -960,7 +961,7 @@ export function interval(marks, {
 
 export function columnStrip(values, { format = String, doc = document,
                                       label = null, counted = true,
-                                      grade = GRADE_ANNOTATION } = {}) {
+                                      grade = GRADE_ANNOTATION, name } = {}) {
   // `UX-316`: annotation grade by construction and by argument both -
   // a strip drawn beside a table *is* the §2a annotation case, and the
   // parameter exists so the guard reads one rule rather than two.
@@ -1004,6 +1005,6 @@ export function columnStrip(values, { format = String, doc = document,
   // the "geometry only, no derived number" boundary above, so widening
   // the route to name them would print the derived number this
   // function's whole reason for existing refuses to print.
-  nameDrawing(drawn, sentenceText, sentence);
+  nameDrawing(drawn, sentenceText, sentence, name);
   return wrap;
 }

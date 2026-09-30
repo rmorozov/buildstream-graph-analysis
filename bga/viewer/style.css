@@ -459,6 +459,9 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
   /* `UX-1157`: a header wraps between words, and a table of tables stacks its cells. */
   th, td { white-space: normal; font-size: var(--font-small); padding: var(--space-1); }
   table:has(td table) > * > tr, table:has(td table) > * > tr > * { display: block; }
+  /* Round 155: a part's label names its floor in words (`UX-1159`), so every second one takes a row below. */
+  .decomposition .draw-axis { height: 3.2em; }
+  .decomposition .draw-tick:nth-child(even) { top: 1.6em; }
 }
 details { margin: var(--space-1) 0; }
 /* `UX-1025` (styleguide §6e.13): one disclosure glyph pair, ▸ closed

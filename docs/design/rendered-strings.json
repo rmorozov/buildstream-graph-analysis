@@ -1337,7 +1337,7 @@
   {
     "exception": "product name",
     "role": "summary",
-    "text": "core.bst runs its own build system at # job - `variables: notparallel: True` - while the rest of this build runs at # and it is the longest kind of task here\u2026 moreless"
+    "text": "core.bst runs its own build system at # job - variables: notparallel: True - while the rest of this build runs at # and it is the longest kind of task here\u2026 moreless"
   },
   {
     "exception": null,
@@ -1382,7 +1382,7 @@
   {
     "exception": "acronym",
     "role": "summary",
-    "text": "Read from the project's own `local` sources before anything runs: an ELF executable with no PT_INTERP never invokes the dynamic linker, so LD_PRELOAD never\u2026 moreless"
+    "text": "Read from the project's own local sources before anything runs: an ELF executable with no PT_INTERP never invokes the dynamic linker, so LD_PRELOAD never\u2026 moreless"
   },
   {
     "exception": "acronym",

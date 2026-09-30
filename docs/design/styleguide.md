@@ -152,7 +152,7 @@ per-section "view as JSON" toggle's `data-raw-json`;
 
 ## 1a. The hint vocabulary
 
-Twenty-three hints, and this table is the one place they are all written
+Twenty-four hints, and this table is the one place they are all written
 down (`UX-306`). Each names what a schema *declares* about a value;
 §1 above is what the page does with it — except the last row, which
 declares something about the *contract* and is read by a consumer

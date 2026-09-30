@@ -32,6 +32,7 @@ PROSE = "<prose>"
 LISTED = {
     # the element card's capped list, selected by graph order, shown by name.
     ".elements.fan_in.*.direct",
+    ".elements.fan_in.*.dependents",
     # structural levels (structural/analyzer.py:379), each level by name.
     ".parallelism.levels[].elements",
     # consolidation `elements` and consumers, display order.

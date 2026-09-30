@@ -674,6 +674,18 @@
             "toolchain.bst": {
                 "direct_count": 0,
                 "direct": [],
+                "dependent_count": 9,
+                "dependents": [
+                    "app.bst",
+                    "codegen.bst",
+                    "core.bst",
+                    "lib-a.bst",
+                    "lib-b.bst",
+                    "lib-c.bst",
+                    "lib-d.bst",
+                    "lib-e.bst",
+                    "lib-f.bst"
+                ],
                 "transitive_count": 0,
                 "immediate_dominator": null,
                 "element_kind": "import",
@@ -685,6 +697,16 @@
                 "direct": [
                     "toolchain.bst"
                 ],
+                "dependent_count": 7,
+                "dependents": [
+                    "app.bst",
+                    "lib-a.bst",
+                    "lib-b.bst",
+                    "lib-c.bst",
+                    "lib-d.bst",
+                    "lib-e.bst",
+                    "lib-f.bst"
+                ],
                 "transitive_count": 1,
                 "immediate_dominator": "toolchain.bst",
                 "element_kind": "cmake",
@@ -695,6 +717,15 @@
                 "direct_count": 1,
                 "direct": [
                     "toolchain.bst"
+                ],
+                "dependent_count": 6,
+                "dependents": [
+                    "lib-a.bst",
+                    "lib-b.bst",
+                    "lib-c.bst",
+                    "lib-d.bst",
+                    "lib-e.bst",
+                    "lib-f.bst"
                 ],
                 "transitive_count": 1,
                 "immediate_dominator": "toolchain.bst",
@@ -708,6 +739,11 @@
                     "codegen.bst",
                     "core.bst",
                     "toolchain.bst"
+                ],
+                "dependent_count": 2,
+                "dependents": [
+                    "app.bst",
+                    "lib-b.bst"
                 ],
                 "transitive_count": 3,
                 "immediate_dominator": "toolchain.bst",
@@ -723,6 +759,11 @@
                     "lib-a.bst",
                     "toolchain.bst"
                 ],
+                "dependent_count": 2,
+                "dependents": [
+                    "app.bst",
+                    "lib-c.bst"
+                ],
                 "transitive_count": 4,
                 "immediate_dominator": "toolchain.bst",
                 "element_kind": "cmake",
@@ -736,6 +777,11 @@
                     "core.bst",
                     "lib-b.bst",
                     "toolchain.bst"
+                ],
+                "dependent_count": 2,
+                "dependents": [
+                    "app.bst",
+                    "lib-d.bst"
                 ],
                 "transitive_count": 5,
                 "immediate_dominator": "toolchain.bst",
@@ -751,6 +797,11 @@
                     "lib-c.bst",
                     "toolchain.bst"
                 ],
+                "dependent_count": 2,
+                "dependents": [
+                    "app.bst",
+                    "lib-e.bst"
+                ],
                 "transitive_count": 6,
                 "immediate_dominator": "toolchain.bst",
                 "element_kind": "cmake",
@@ -765,6 +816,11 @@
                     "lib-d.bst",
                     "toolchain.bst"
                 ],
+                "dependent_count": 2,
+                "dependents": [
+                    "app.bst",
+                    "lib-f.bst"
+                ],
                 "transitive_count": 7,
                 "immediate_dominator": "toolchain.bst",
                 "element_kind": "cmake",
@@ -778,6 +834,10 @@
                     "core.bst",
                     "lib-e.bst",
                     "toolchain.bst"
+                ],
+                "dependent_count": 1,
+                "dependents": [
+                    "app.bst"
                 ],
                 "transitive_count": 8,
                 "immediate_dominator": "toolchain.bst",
@@ -797,6 +857,10 @@
                     "lib-f.bst",
                     "toolchain.bst"
                 ],
+                "dependent_count": 1,
+                "dependents": [
+                    "all.bst"
+                ],
                 "transitive_count": 9,
                 "immediate_dominator": "toolchain.bst",
                 "element_kind": "cmake",
@@ -808,6 +872,8 @@
                 "direct": [
                     "app.bst"
                 ],
+                "dependent_count": 0,
+                "dependents": [],
                 "transitive_count": 10,
                 "immediate_dominator": "app.bst",
                 "element_kind": "stack",
@@ -2265,10 +2331,10 @@
         }
     ],
     "document_shape": {
-        "leaves": 1525,
+        "leaves": 1570,
         "deepest_depth": 7,
         "deepest_path": "findings.[].evidence.steps.[].entering.[]",
-        "deeper_than_three": 913,
-        "deeper_than_three_share": 0.598688524590164
+        "deeper_than_three": 958,
+        "deeper_than_three_share": 0.6101910828025477
     }
 }

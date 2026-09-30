@@ -302,7 +302,9 @@ const ELEMENT_MAPS = [
 // is capped-and-sorted names, not a scalar, so it renders through
 // `record.lists` (§3c: no table cell survives forty names).
 const ELEMENT_LIST_MAPS = [
-  ["elements.fan_in", "direct", "Depends on"],
+  ["elements.fan_in", "direct", "Depends on", "direct_count"],
+  // UX-1187: its mirror, and the count past the 40 names.
+  ["elements.fan_in", "dependents", "Blocks", "dependent_count"],
 ];
 
 /**
@@ -391,12 +393,12 @@ export function elementFactsFor(payload, uid) {
     });
   }
   const heldLists = new Set(record.lists.map((l) => l.key));
-  for (const [path, field, label] of ELEMENT_LIST_MAPS) {
+  for (const [path, field, label, count] of ELEMENT_LIST_MAPS) {
     const map = path.split(".").reduce((node, key) => node?.[key], payload);
     const items = map?.[uid]?.[field];
     if (!Array.isArray(items) || !items.length || heldLists.has(field)) continue;
     heldLists.add(field);
-    record.lists.push({ key: field, label, items: items.map(String) });
+    record.lists.push({ key: field, label, items: items.map(String), more: (map[uid][count] ?? 0) - items.length });
   }
   if (known) return record;
   for (const finding of payload?.findings ?? []) {
@@ -722,6 +724,7 @@ function elementSection(record, places, investigate, format, bounded = null) {
     // `UX-1159`: a Plane 2 flag reads as its phrase; a name stays copyable.
     else line.append(...named.items.flatMap((item) => [", ",
       el(READER_LABELS[item] ? "span" : "code", { "data-raw": item }, READER_LABELS[item] ?? item)]).slice(1));
+    if (named.more > 0) line.append(el("span", { "data-more": named.more }, `, +${named.more.toLocaleString("en-US")} more`));
   }
 
   if (record.entering.length) {

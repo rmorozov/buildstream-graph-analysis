@@ -177,6 +177,8 @@ class TestTheReadShareIsOnTheJoinRowAndNotHere:
         assert set(rows["lib-f.bst"]) == {
             "direct_count",
             "direct",
+            "dependent_count",
+            "dependents",
             "transitive_count",
             "immediate_dominator",
             "element_kind",

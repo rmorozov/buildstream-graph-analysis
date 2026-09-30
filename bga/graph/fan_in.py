@@ -54,9 +54,17 @@ def compute_fan_in(graph, kinds: dict, structural_kinds, foundation=frozenset())
     dominators = compute_dominators(graph)
     order = element_order(graph)
     direct: dict = {element.uid: set() for element in graph.elements}
+    # UX-1187: the reverse edge in the same pass - what each element blocks.
+    dependents: dict = {uid: set() for uid in direct}
     for edge in graph.dependencies:
         if edge.successor in direct:
             direct[edge.successor].add(edge.predecessor)
+            if edge.predecessor in dependents:
+                dependents[edge.predecessor].add(edge.successor)
+
+    def capped(names):
+        return sorted(sorted(names, key=lambda u: (order.get(u, len(order)), u))[:DIRECT_NAMES_CAP])
+
     rows = {}
     # graph.json order: `top_fan_in` and the findings break ties on it.
     for uid in direct:
@@ -65,7 +73,9 @@ def compute_fan_in(graph, kinds: dict, structural_kinds, foundation=frozenset())
             # `UX-829`: the names themselves, for the element card -
             # `direct_count` is the population, this is the capped list.
             # Which names by graph order, shown by name (UX-1063).
-            "direct": sorted(sorted(direct[uid], key=lambda u: (order.get(u, len(order)), u))[:DIRECT_NAMES_CAP]),
+            "direct": capped(direct[uid]),
+            "dependent_count": len(dependents[uid]),
+            "dependents": capped(dependents[uid]),
             # `compute_reachability` excludes the element itself, so
             # this is the closure and not the closure plus one - held
             # by a clause on that helper rather than by a subtraction

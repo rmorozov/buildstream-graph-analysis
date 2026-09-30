@@ -2839,32 +2839,33 @@ _SIGNALS_TABLES = {
             "properties": {
                 "direct_count": {
                     QUANTITY: "count",
-                    "description": "Dependencies this element names "
-                    "itself. The same number "
-                    "the bottleneck's high fan-in list "
-                    "ranks the top five of, over every "
-                    "element rather than five.",
+                    "description": "Dependencies this element names itself. The same number the bottleneck's "
+                    "high fan-in list ranks the top five of, over every element rather than five.",
                 },
-                # `UX-829`: named, sorted, capped at 40
-                # (`DIRECT_NAMES_CAP`) - `direct_count`'s population,
-                # not a second count. Drawn on the element card, never
-                # in the elements table (styleguide §3c: forty names
-                # is a cell no row survives).
+                # `UX-829`: capped at `DIRECT_NAMES_CAP`, `direct_count`'s population; card only (§3c).
                 "direct": {
                     GROWS: False,
                     "maxItems": 40,
                     "items": {"type": "string", "description": "element uid"},
-                    "description": "This element's direct dependencies "
-                    "by name, sorted, capped at 40. "
-                    "The direct count is the count "
-                    "whether or not it hit the cap.",
+                    "description": "This element's direct dependencies by name, sorted, capped at 40. "
+                    "The direct count is the count whether or not it hit the cap.",
+                },
+                # UX-1187: the mirror of the two above - what names this one.
+                "dependent_count": {
+                    QUANTITY: "count",
+                    "description": "How many elements name this one as a dependency, its out-degree.",
+                },
+                "dependents": {
+                    GROWS: False,
+                    "maxItems": 40,
+                    "items": {"type": "string", "description": "element uid"},
+                    "description": "Those elements by name, sorted, capped at 40. "
+                    "The dependent count is the count whether or not it hit the cap.",
                 },
                 "transitive_count": {
                     QUANTITY: "count",
-                    "description": "Everything it pulls in through "
-                    "those, the closure and not the "
-                    "edge list. An element is not one "
-                    "of the things it pulls in.",
+                    "description": "Everything it pulls in through those, the closure and not the edge list. "
+                    "An element is not one of the things it pulls in.",
                 },
                 "immediate_dominator": {
                     "description": "The nearest element every path "

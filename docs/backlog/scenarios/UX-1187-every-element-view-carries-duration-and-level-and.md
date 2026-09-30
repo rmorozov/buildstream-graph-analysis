@@ -53,6 +53,14 @@ Two more measurements for it: the lists on every ranked card too measured +2,193
 `test_no_two_fields_carry_the_same_elements.py` (13 two-element coincidences on golden) and
 `test_the_documents_keep_up_with_the_contracts.py` (two undocumented keys), and both need entries.
 
+Round 158, the card half, taken from the held patch. Built without the depth first, and it cannot be:
+the depth is the payload's, not the page's - any per-element field sits at
+`elements.<map>.<uid>.<field>`, four deep by construction; a top-level uid-keyed map is `UX-344`'s
+"the element population is published as `elements`, once"; the page holds no edge list, and the
+reverse of the 40-capped `direct` is the proxy the architect rejected. So the bound went 0.52 -> 0.53
+in its own commit, on the owner's pending card, default taken. The list is on the anchor-built card
+only (`elementFactsFor`); the "Rebuilds N" row is kept, since a ranked card has no Blocks list to absorb it.
+
 ## Out of Scope
 
 The transitive blast (`resource_blast`); the levels table's own layout.
@@ -96,3 +104,30 @@ the card half, built and held back (see the Decision):
 | M7 | tables.js `applyFilters`: `top` ignored (not committed, B's code) | `test_a_level_filter_composes_with_top_n`, 1 failed |
 
 Reverted from the saved copies: 2 passed. The held-back card half ran M2, M4, M5 and M6 red on its own guard clauses.
+
+### The card half, measured (round 158, on `9e9ef410`)
+
+```text
+golden deeper_than_three_share 0.5193 -> 0.5226 (855 -> 861 leaves, 444 -> 450 deep); bound 0.52 -> 0.53
+macro_micro 0.4842 -> 0.4928, bound 0.58 unmoved
+1,202 run: dependent_count > 40 on one element, toolchain.bst (1,200), whose card is ranked;
+  the most-blocking unranked, layer18/mod001.bst, 8 - the card names all 8
+volume, opened 1440x900, before -> after (scratch vol.py, _LOOK):
+  page_bytes 148,380 -> 148,476 (+96 on golden/macro_micro, +96 on xl_both)
+  golden, macro_micro, xl_both: height, words, controls, nodes unmoved (no ranked card changes)
+  xl_both data 1,282,048 -> 1,316,872 B
+$ PYTEST_XDIST= python3 -m pytest tests/unit/test_an_element_view_answers_whole.py -q
+7 passed in 15.93s
+```
+
+| # | mutation (card half) | reddened |
+|---|---|---|
+| M8 | fan_in.py: the reverse add dropped | producer, big card, past-the-cap: 3 failed |
+| M9 | fan_in.py: the 40 cap dropped | `test_the_producer_publishes_what_each_element_blocks`, 1 failed |
+| M10 | element.js: the Blocks row out of `ELEMENT_LIST_MAPS` | big card, past-the-cap: 2 failed |
+| M11 | element.js: the `+N more` span dropped | `test_the_card_counts_the_dependents_past_the_cap`, 1 failed |
+| M12 | element.js: ranked cards built through `elementFactsFor` | golden, macro_micro, big: 3 failed |
+
+Reverted from the saved copies: 7 passed. Re-based for the new keys: `test_no_two_fields_carry_the_same_elements.py`
+(`dependents` beside `direct` as a fan-in measure), `test_what_an_element_pulls_in.py` (the row's key set),
+`test_analysis_commutes_with_anonymization.py` (`dependents` listed by name), `docs/guides/cli.md` (the row, 604 -> 606 keys).

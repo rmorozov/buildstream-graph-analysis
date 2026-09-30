@@ -12,11 +12,6 @@
   {
     "exception": null,
     "role": "heading",
-    "text": "How these were ranked"
-  },
-  {
-    "exception": null,
-    "role": "heading",
     "text": "What should I run next?"
   },
   {
@@ -518,11 +513,6 @@
     "exception": null,
     "role": "summary",
     "text": "What they share \u00b7 # level, # rows"
-  },
-  {
-    "exception": null,
-    "role": "summary",
-    "text": "The rule \u00b7 # level, # rows"
   },
   {
     "exception": null,
@@ -1808,11 +1798,6 @@
     "exception": null,
     "role": "button",
     "text": "Next \u203a"
-  },
-  {
-    "exception": null,
-    "role": "summary",
-    "text": "The rule \u00b7 # level, # row"
   },
   {
     "exception": null,

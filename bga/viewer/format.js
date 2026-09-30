@@ -275,7 +275,6 @@ export const TERMS = {
   scheduling_gap_us: "Scheduling gap",
   plane2_processes: "Plane 2 processes", cpu_coverage: "Plane 2 coverage",
   primary: "Confidence",
-  peak_concurrency: "Peak tasks at once", max_observed_concurrency: "Peak tasks at once",
 };
 
 /**
@@ -314,6 +313,11 @@ export const READER_LABELS = {
   retry_wait_us: "Retries",
   idle_us: "Idle",
   untracked_tail_us: "After the last task",
+  useful: "Useful",
+  untracked: "Untracked",
+  "Resource.PROCESS": "Builders",
+  "Resource.DOWNLOAD": "Fetchers",
+  "Resource.UPLOAD": "Pushers",
 };
 
 /** `UX-1141`: a key whose trimmed title collides with a sibling's. */
@@ -326,8 +330,9 @@ const TERM_LABELS = {
 /** A published value as the reader's phrase; unmapped values pass. */
 export function readerLabel(value) {
   const text = String(value);
-  return Object.prototype.hasOwnProperty.call(READER_LABELS, text)
-    ? READER_LABELS[text] : text;
+  if (Object.hasOwn(READER_LABELS, text)) return READER_LABELS[text];
+  // Kebab-case (`blast-radius-ranking`) is a finding id, not a phrase.
+  return /^[a-z]+(?:-[a-z]+)+$/.test(text) ? text[0].toUpperCase() + text.slice(1).replace(/-/g, " ") : text;
 }
 
 /** A bare `snake_case` or `UPPER_CASE` token - a key, never a phrase. */

@@ -126,7 +126,7 @@ function inlineObject(value, node) {
     const kind = quantityFor(childNode(node, name), name);
     parts.push(el("span", { class: "pair" },
       el("span", { class: "pair-key", "data-key": name },
-        `${title(name, kind, dataKeyed(node, name))} `),
+        `${readerLabel(title(name, kind, dataKeyed(node, name)))} `),
       el("span", { class: typeof member === "number" ? "num" : null,
                    "data-raw": member === null ? "" : String(member) },
          typeof member === "number" ? quantity(member, kind) : plainValue(member))));

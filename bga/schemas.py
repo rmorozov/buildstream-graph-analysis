@@ -1801,7 +1801,7 @@ EVIDENCE_QUANTITIES.update(
             QUANTITY: "count",
             DIRECTION: "higher_is_better",
             INLINE: "name",
-            "description": "`recommended_builders` minus `builders`, signed - "
+            "description": "Recommended builders minus configured builders, signed - "
             "negative means the run asked for more than something "
             "can serve.",
         },
@@ -3638,7 +3638,7 @@ _ANALYZE_HINTS = {
                 "description": "Cores drawn on average across the whole "
                 "run, from Plane 2 - CPU-seconds per "
                 "wall-second, which is the same measurement "
-                "`element_join[].cores_busy` publishes and "
+                "each element's busy-cores figure publishes and "
                 "so carries the same unit. An average, not "
                 "a peak: during the parallel stretch each "
                 "element draws more, so the CPU ceiling "
@@ -3697,11 +3697,11 @@ _ANALYZE_HINTS = {
                 QUANTITY: "count",
                 DIRECTION: "higher_is_better",
                 INLINE: "name",
-                "description": "`recommended_builders` minus `builders`, "
+                "description": "Recommended builders minus configured builders, "
                 "signed - negative means the run asked for "
                 "more than something can serve. Named for "
-                "what it counts, because "
-                "`findings[].evidence.change` is a share and "
+                "what it counts, because a finding's "
+                "change is a share and "
                 "one name may not mean two things.",
             },
             "pinned_elements": {

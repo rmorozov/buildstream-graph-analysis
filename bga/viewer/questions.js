@@ -450,7 +450,7 @@ limit 40;`,
     plane: "Plane 2",
     title: "Which elements are waiting rather than computing?",
     why:
-      "Plane 2's own `debug.cpu_us` against wall time, per element, " +
+      "Plane 2's own CPU time against wall time, per element, " +
       "annotations alone - no containment join, so nothing another " +
       "element did in parallel can be attributed here. A ratio far " +
       "below 1 is a process that waited; far above 1 is one that " +
@@ -474,7 +474,7 @@ limit 25;`,
     plane: "Plane 2",
     title: "Which single process wanted the most memory?",
     why:
-      "Plane 2's `debug.max_rss_kb` is one process's own lifetime " +
+      "Plane 2's peak resident memory is one process's own lifetime " +
       "peak. It is " +
       "read as a maximum and never summed: two processes peaking at " +
       "different moments never held the sum between them, which is " +

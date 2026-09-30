@@ -212,8 +212,12 @@ export function renderProvenance(provenance, options = {}) {
     const note = document.createElement("p");
     note.className = "muted unpublished";
     note.setAttribute("data-unpublished", String(unpublished.length));
-    note.textContent =
-      `Also drawn from, and not published in this document: ${unpublished.join(", ")}`;
+    note.textContent = "Also drawn from, and not published in this document: ";
+    unpublished.forEach((p, i) => {
+      const c = document.createElement("code");
+      c.textContent = p;
+      note.append(i ? ", " : "", c);
+    });
     details.append(note);
   }
   return details;

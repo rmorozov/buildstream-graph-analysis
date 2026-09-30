@@ -98,7 +98,7 @@ def test_every_sortable_header_of_a_long_table_takes_focus(read):
 @needs_browser
 def test_the_opening_ranking_shows_at_rest(read):
     keys = sorted(o["key"] for o in read["big"]["openings"])
-    assert keys == ["binary_cost", "elements", "wall_clock_share_us"], keys
+    assert keys == ["binary_cost", "element_deltas", "elements", "wall_clock_share_us"], keys
     for label, got in read.items():
         for opening in got["openings"]:
             assert opening["sort"] == "descending" and "▼" in opening["glyph"], (label, opening)

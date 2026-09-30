@@ -126,9 +126,9 @@ def walked(browser, big):
 
 
 @needs_browser
-def test_three_tables_page_the_population(walked):
+def test_four_tables_page_the_population(walked):
     keys = sorted(t["key"] for t in walked["tables"])
-    assert keys == ["binary_cost", "elements", "wall_clock_share_us"], keys
+    assert keys == ["binary_cost", "element_deltas", "elements", "wall_clock_share_us"], keys
 
 
 @needs_browser

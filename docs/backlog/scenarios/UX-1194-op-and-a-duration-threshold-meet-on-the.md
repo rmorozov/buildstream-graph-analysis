@@ -128,3 +128,7 @@ Mutation: the title back to "Name" gives `test_the_task_column_is_task_in_its_he
 **Deviation (round 159 walk, N7).** Print gave `th` `overflow-wrap: anywhere`, which lets a header's column shrink to one letter: "Duratio / n" at 390. A header prints `break-word`, so it breaks between words; cells keep `anywhere`.
 Walk page, print at 390, lines per header word: Duration 2 -> 1; Task, Wall-clock, share 1; document scrollWidth 375 before and after.
 Mutation: the th rule back to `anywhere` gives `test_a_task_header_breaks_between_words_in_print_at_390` 1 failed, 12 passed. Page half on macro_micro 156,372 of 160,000 B (+~70 for all six follow-ups).
+Merged tree: `break-word` on every th sent golden, macro_micro and two_plane past the 375 sheet at 390 ("Is leaf", "Observed critical" at x 403-548).
+`break-word` now applies only to a table of at most three columns; wider headers keep `anywhere`. Measured edge: up to five columns
+fits these pages, six reds. Mutations: `nth-child(7)` (six columns) gives the sheet guard 1 failed, 30 passed (golden 390);
+`nth-child(3)` (the task table out) gives `test_a_task_header_breaks_between_words_in_print_at_390` 1 failed, 43 passed.

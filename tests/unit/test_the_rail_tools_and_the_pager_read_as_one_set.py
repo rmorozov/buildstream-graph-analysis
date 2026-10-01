@@ -143,10 +143,16 @@ _HISTORY = r"""
   press("Collapse all");
   await wait(500);
   out.collapse = history.state?.mark ?? "pushed";
+  const collapsed = open();
   await back();
   out.back = [history.state?.mark, open() === expanded];
   await back();
   out.back.push(history.state?.mark, open() === out.folds);
+  // Forward re-applies each entry's folds: Collapse all left them shut.
+  await go(1);
+  out.forward = [open() === expanded];
+  await go(1);
+  out.forward.push(open() === collapsed);
   const box = document.querySelector(".table-tools input.table-filter");
   if (!box) return { ...out, box: null };
   const links = [...document.querySelectorAll(".toc [data-toc]")];
@@ -165,6 +171,29 @@ _HISTORY = r"""
   await back();
   out.box = box.value;
   return out;
+})()
+"""
+
+_NARROW = r"""
+(async () => {
+  const wait = (ms) => new Promise((done) => setTimeout(done, ms));
+  for (let i = 0; i < 4; i += 1) history.pushState(null, "", location.href);
+  const link = [...document.querySelectorAll(".toc [data-toc]")].at(-1);
+  link.click();
+  await wait(800);
+  const anchor = document.getElementById(location.hash.slice(1).split("~")[0]);
+  // The folded rail scrolls away, so a reader opens it from the page top.
+  scrollTo(0, 0);
+  document.querySelector(".toc-title").click();
+  await wait(300);
+  const down = Math.round(anchor.getBoundingClientRect().top);
+  [...document.querySelectorAll(".toc-controls button")].find((b) => b.textContent.trim() === "Expand all").click();
+  await wait(500);
+  await new Promise((done) => {
+    addEventListener("popstate", () => setTimeout(done, 800), { once: true });
+    history.back();
+  });
+  return { down, height: innerHeight, back: Math.round(anchor.getBoundingClientRect().top) };
 })()
 """
 
@@ -246,9 +275,17 @@ def test_expand_and_collapse_push_one_entry_and_back_drops_the_filter(browser, u
     got = browser.measure(uris[label], _HISTORY, width=1440, height=900, fresh_history=True)
     assert got["expand"] == got["collapse"] == "pushed", got
     assert got["back"] == ["expanded", True, "start", True], got
+    assert got["forward"] == [True, True], got
     if label != "golden":  # golden has no table long enough for a filter
         assert got["filtered"] and got["kept"] == ["zzz-no-such-row", True], got
         assert got["box"] == "", got
+
+
+@needs_browser
+def test_back_after_the_narrow_rail_s_expand_all_lands_the_reader_s_anchor(browser, uris):
+    got = browser.measure(uris["big"], _NARROW, width=390, height=844, fresh_history=True)
+    assert got["down"] > 2 * got["height"], got
+    assert 0 <= got["back"] < got["height"], got
 
 
 @needs_browser

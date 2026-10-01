@@ -1149,6 +1149,13 @@ async function boot() {
     };
     const fragment = (event) => event?.target?.closest?.("a[href^=\"#\"]")
       ?.getAttribute?.("href");
+    // UX-1171: the folds and where the anchor sat, since a scrollY is stale once the folds' estimates settle.
+    const keepPlace = (railed) => {
+      const at = document.getElementById(splitHash(location.hash).anchor);
+      // `UX-1203` follow-up: an opened narrow rail sits at the page top, so the reader's place is the anchor.
+      window.history.replaceState({ ...window.history.state, folds: foldSnapshot(root),
+        scrollY: window.scrollY, at: railed ? null : at?.getBoundingClientRect().top }, "");
+    };
     // `UX-1203` follow-up: Chrome fires popstate inside a followed fragment link's click; that is no traversal.
     let following = false;
     // UX-1056: capture phase, so the snapshot precedes nav.js's own reveal.
@@ -1163,18 +1170,19 @@ async function boot() {
       if (fragment(event)?.length > 1 || chapter || all) {
         // Chrome's own restore lands after popstate and overrides it.
         window.history.scrollRestoration = "manual";
-        // UX-1171: and where the anchor sat, since a scrollY is stale once the folds' estimates settle.
-        const at = document.getElementById(splitHash(location.hash).anchor);
-        window.history.replaceState({ ...window.history.state,
-          folds: foldSnapshot(root),
-          scrollY: window.scrollY, at: at?.getBoundingClientRect().top }, "");
+        const rail = all?.closest?.(".toc");
+        keepPlace(rail?.getAttribute("data-folded") === "false"
+          && rail.querySelector(".toc-title")?.disabled === false);
         if (chapter) {
           const next = joinHash(`chapter-${chapter}`, splitHash(location.hash).query);
           // UX-1178: a press on the entry already current is no new entry.
           window.history[next === location.hash ? "replaceState" : "pushState"](null, "", next);
         }
-        // `UX-1203`: Expand all and Collapse all are one step Back.
-        if (all) window.history.pushState(null, "", location.href);
+        // `UX-1203`: Expand all and Collapse all are one step Back, and Forward restores the entry they made.
+        if (all) {
+          window.history.pushState(null, "", location.href);
+          setTimeout(() => keepPlace(false), 0);
+        }
       }
     }, true);
     document.addEventListener?.("click", (event) => {

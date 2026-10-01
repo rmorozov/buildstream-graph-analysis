@@ -128,3 +128,9 @@ The capture handler marks a followed link until the next task; that popstate is 
 Gap: `_HISTORY`'s link after a filter read `kept ["", false]` (macro_micro, big); the walk's steps on big, trusted clicks: rail Next, a rail entry and a row link each kept `layer05`, "25 of 60 matched", in box and hash, after.
 Close: `kept ["zzz-no-such-row", true]`, 3 passed; Back still drops the filter its entry lacks.
 Mutation: the popstate early return removed gives 2 failed (macro_micro, big); popstate `box.value = ""` removed still gives 2 failed.
+
+**Deviation (round 159 walk N3, Forward and the narrow rail).** The entry Expand/Collapse all pushed held no state, so Forward into it left the folds; at 390 the opened rail sits at the page top, so the leaving entry saved scrollY 0 and Back landed 9,215 px above the reader.
+The pushed entry takes its folds and place one task after the press; a press in the opened narrow rail saves the anchor (`at: null`, its scroll margin) as the place.
+Gap at `c31ada8b`: `forward [true, false]` on golden, macro_micro, big; 390 big: anchor 11,328 px down at the press, 10,766 px after Back.
+Close: `forward [true, true]`; 390: anchor at 203 px of 844 after Back; 14 passed, with the volume budget 64 passed, 3 skipped.
+Mutation: the pushed entry's `keepPlace` removed gives 3 failed; `at: null` for the narrow rail removed gives 1 failed.

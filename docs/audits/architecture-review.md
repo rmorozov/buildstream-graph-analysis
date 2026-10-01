@@ -104,6 +104,7 @@ would have caught it; a bound at it would only just have.
 | 30 | 2026-09-29 | 1039 | five bookkeeping lines filed, no task file, nothing fixed - rounds 147-150 (29 closed), and the shape is review 22's: **a guard that reads a sentence against a proxy for what the sentence names.** `docs/README.md:97` says *the other ten* contracts have a command that prints them; 9 do, and `test_a_counted_figure_is_derived.py` holds the word to `contracts.printable()`, which is `schemas.names()` and took `tail/v1` in (`UX-1078`), while the same block's *last seventeen* is held to a list that also has it - 17 + 10 over 26 rows, both guards green. `dev_process_bands.py` multiplies every tokens cell by 1000 and 24 ledger rows of rounds 145-148 carry raw counts: integrator/sonnet reads an 84154k median, mechanical 261k against 193k. Plus three records: `directions.md`'s round-148 row says no verifier ran against `round-148.md:37` and its ledger row (the r142 line, swept by a prose rule no guard reads); `anonymized-bundle.md`'s *13 rows* is 15 (review 29 named it at 14); `CLAUDE.md`'s *81 of 189* cites `--runs` bare, which exits 2, and reads 83 of 227 one round on. Sound: the contract counts, `_consumer_surface()` 584, `analyze/v6` 63 properties, 23 viewer modules, `bga/fingerprint.py` in §6, all 29 closes 🟢 in both markers |
 | 31 | 2026-09-29 | 1079 | three bookkeeping lines filed, no task file, nothing fixed - rounds 151-152 (40 closed) and the shape is a *later row's deviation that no document restates*: `UX-1066` ships the three raw logs' `ts=`/`wall=`/wrapper stamps verbatim while `anonymized-bundle.md:62` still says time is shifted to epoch 0, and the same file's stage 8 (`:233`) lists the row as still to do; and `decompose/SKILL.md:167` keeps `make test-touching` as the per-item loop that `verify` and `implementer.md` now say a worktree hook refuses. Sound: 27 ids, 10 printable, 10 superseded, so *seventeen live*, *last seventeen*, *other ten* (10 commands, `junction-cost/v1` included) and *seven* unprintable all reproduce; `analyze/v6` 63 properties; `_consumer_surface()` 602 as `cli.md` says; `dev_process_bands.py --runs 251` gives 83 runs, 318k and 249k as `CLAUDE.md` says; `--spread` 34-178 of 715; `bga --help` lists `junction-cost`, which refuses one run as `cli.md` says; 1079 closed in both markers |
 | 32 | 2026-09-30 | 1109 | two bookkeeping lines filed, no task file, nothing fixed - rounds 153-155 (30 closed, `UX-1136`..`UX-1160`) and the shape is review 22's one turn on: **guards that landed without a section to be found from.** 11 of the 19 tests the window added cite no § and appear in no §7 row, so the ledger guard, which reads section to test, cannot see them (`UX-1150`'s boolean rule, `UX-1155`'s accessible names, `UX-1157`'s compact width among them); and §6e.2.1 says every word is read off `TERMS` while *Peak tasks at once* is a schema title (`UX-1151`) with no `TERMS` key. Sound: 27 ids, 10 printable, 10 superseded, 11 schemas; `_consumer_surface()` 604 as `cli.md` says; 22 hints in the table and `format.js`'s *of the 22*; 23 viewer modules; the §3e headroom figures (353/87 px and words, 67/696 compact) sum to the guard's 38,200/13,200 and 8,500/11,400; `CLAUDE.md`'s 102 judgement runs at `--runs 232` and 318k/249k; 1109 closed in both markers |
+| 33 | 2026-10-01 | 1142 | one bookkeeping line filed, no task file, nothing fixed - rounds 156-158 (33 closed, `UX-1161`..`UX-1193`) and the shape is review 32's again: **guards that landed without a section to be found from.** 14 of the 23 tests the window added read 0 in `styleguide.md` and cite no §, so the ledger guard, which reads section to test, cannot see them (`UX-1177`'s rail mark, `UX-1179`'s print and find, `UX-1190`'s sortable header among them); review 32's `r155` line is still open and this one is its continuation. Sound: 27 ids, 10 printable, 10 superseded, 11 schemas; `_consumer_surface()` 606 as `cli.md:1150` says; 24 `bga:` hints emitted, 24 table rows in the styleguide, `format.js`'s *21 of the 24*; 23 viewer modules; `PAGE_BUDGET_B` 160,000 in `bga_view.py:782` and `cli.md`; §3e's 38,226 and 43,158 + 1,129 px sit under the guard's 38,400 and 44,629; `CLAUDE.md`'s 115 of 302 and 318k/249k at `--runs 232`; every test and path the diff's added sentences name exists; 1142 closed, 16 open in `dev_close_task.py --counts` |
 
 ### Review 11 — 2026-09-02
 
@@ -1562,6 +1563,39 @@ six named plus §1a were checked. The §6 module map's ~103 per-row
 descriptions were checked for the CI-workflow block only — `UX-780`
 came out of that block, which is a reason to think the rest is worth a
 pass. `UX-689` owns the map's structural half.
+
+## Review 33 — 2026-10-01, at 1142 closed rows
+
+Run by one reader over rounds 156-158 (`closed.md` 1109 to 1142: 33 closes,
+`UX-1161`..`UX-1193`) and the 58 files
+`git diff --stat 3e6feb45..HEAD -- docs/ README.md CLAUDE.md examples/README.md .claude/skills`
+lists, `styleguide.md` (120 lines changed) and the task files carrying most. One
+bookkeeping line filed as `r158` in `bookkeeping.md`, no task file, nothing fixed.
+
+**The shape** is review 32's: rules landed with their guards and without the
+section that would lead a reader to them.
+
+```text
+$ for f in <the 23 test files the window added>; do grep -c $f docs/design/styleguide.md; done
+                                   # 14 read 0, and none of the 14 cites a § in its own file
+```
+
+Filed as one `r158` `coverage` line in `bookkeeping.md`.
+
+### The five checks
+
+| check | result |
+|---|---|
+| code does what it says | `PAGE_BUDGET_B = 160_000` at `tools/bga_view.py:782`; `README.md`'s pasted block moved `-` to an em dash and `bga/report/_shared.py:116` prints the em dash; every `test_*.py` and `bga/`/`tools/`/`docs/` path the added sentences name exists |
+| contracts have a home | `ids()` 27, `printable()` 10, `superseded()` 10, `names()` 11 - unchanged from review 32; `cli.md`'s `elements.fan_in` row names `dependents`, `dependent_count` |
+| figures invalidated | `_consumer_surface()` 606, `cli.md:1150` *606 keys*; 24 `bga:` hints emitted, 24 styleguide rows, `format.js` *21 of the 24*; §3e's 38,226 px and 43,158 + 1,129 px sit under the guard's 38,400 and 44,629, 1,020 controls at the table's 1,020; `CLAUDE.md` *115 of 302*, `dev_process_bands.py --runs 232` gives 115, 318k, 249k; 23 viewer modules |
+| shipped, no document names it | the pager, keyed-by tables, the element view and the compact rail each have a styleguide section; the exception is the guards, above |
+| last-updated claims | `docs/README.md` and `round-register.md` carry 156-158; `directions.md` carries three rows, 156 to 158; 1142 closed, 16 open in `dev_close_task.py --counts` |
+
+### One gap in this sweep
+
+Round 158's *18 of 18 guards red on undo* is a dated record and was not
+re-run; `rendered-strings.json` (317 lines changed) is read by its guard only.
 
 ## Review 32 — 2026-09-30, at 1109 closed rows
 

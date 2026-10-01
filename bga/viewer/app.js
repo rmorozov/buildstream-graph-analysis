@@ -1180,7 +1180,8 @@ async function boot() {
     // UX-1158: a rail chapter press is navigation too, with an entry of its own.
     document.addEventListener?.("click", (event) => {
       const chapter = event.target?.closest?.("[data-toc-chapter]")?.dataset.tocChapter;
-      const all = event.target?.closest?.("[data-all]");
+      // `UX-1222`: Focus is one step Back, as Expand all is.
+      const all = event.target?.closest?.("[data-all],[data-focus-element]");
       if (fragment(event)?.length > 1) {
         following = true;
         setTimeout(() => { following = false; }, 0);

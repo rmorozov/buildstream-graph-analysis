@@ -65,6 +65,7 @@ Full background: docs/backlog/scenarios/UX-0011-native-build-system-profiler-too
 import argparse
 import array
 import atexit
+import bisect
 import contextlib
 import errno
 import gzip
@@ -2765,83 +2766,223 @@ def parse_open_lines(lines, open_element_overrides: Optional[dict[str, str]] = N
     UX-865: `relative`/`dirfd` are carried the same way - running
     per-process totals the hook re-reports in every window.
     """
-    open_element_overrides = open_element_overrides or {}
-    per_element: dict[str, dict] = {}
-    # UX-169: one pass over an iterable, with the block's own `unique`
-    # count as the only state - the index-with-lookahead version needed
-    # the whole trace as a list of lines, which is the copy the analysis
-    # path was trying not to make.
-    entry: Optional[dict] = None
-    remaining = 0
-    for raw in lines:
-        # UX-177 item 5: the `\r` too. `splitlines()`, which the
-        # string-taking wrappers use, drops it; iterating a handle
-        # does not, and a CRLF trace would leave one on every line.
-        line = raw.rstrip("\r\n")
-        match = _OPENS_HEADER_RE.match(line)
+    reader = OpensReader()
+    for _ in reader.divert(lines):
+        pass
+    return reader.finish(open_element_overrides)
+
+
+class OpenedPaths:
+    """One element's opened paths: a sorted `array('I')` of ids into the
+    reader's shared table, read as a set of strings (UX-1220)."""
+
+    __slots__ = ("_ids", "_table")
+
+    def __init__(self, ids: array.array, table: "_PathTable"):
+        self._ids = ids
+        self._table = table
+
+    def __len__(self) -> int:
+        return len(self._ids)
+
+    def __iter__(self):
+        paths = self._table.paths
+        return (paths[i] for i in self._ids)
+
+    def __contains__(self, path) -> bool:
+        index = self._table.ids.get(path)
+        if index is None:
+            return False
+        at = bisect.bisect_left(self._ids, index)
+        return at < len(self._ids) and self._ids[at] == index
+
+    def __and__(self, other) -> set:
+        paths = self._table.paths
+        return {paths[i] for i in self._table.ids_of(other).intersection(self._ids)}
+
+    __rand__ = __and__
+
+    def __eq__(self, other) -> bool:
+        if isinstance(other, OpenedPaths):
+            return set(self) == set(other)
+        if isinstance(other, (set, frozenset)):
+            return set(self) == other
+        return NotImplemented
+
+    def __repr__(self) -> str:
+        return f"OpenedPaths({sorted(self)!r})"
+
+
+class _PathTable:
+    """Every distinct opened path once, numbered in arrival order."""
+
+    def __init__(self):
+        self.ids: dict[str, int] = {}
+        self.paths: list[str] = []
+        self._staged: dict[int, tuple[object, set]] = {}
+
+    def id_of(self, path: str) -> int:
+        index = self.ids.get(path)
+        if index is None:
+            index = self.ids[path] = len(self.paths)
+            self.paths.append(path)
+        return index
+
+    def ids_of(self, other) -> set:
+        """`other`'s paths as ids, cached by identity: one dependency's
+        staged set is intersected with every element that declares it."""
+        cached = self._staged.get(id(other))
+        if cached is None or cached[0] is not other:
+            ids = self.ids
+            cached = (other, {ids[path] for path in other if path in ids})
+            self._staged[id(other)] = cached
+        return cached[1]
+
+
+#: An accumulator's ids are deduplicated once they reach twice the last
+#: deduplicated length, so memory stays O(distinct paths) amortized.
+_OPENS_COMPACT_FLOOR = 1 << 12
+
+
+class OpensReader:
+    """`parse_open_lines`' state: blocks keyed on `(element, invocation)`
+    and relabelled at `finish` (UX-56), paths as ids (UX-1220).
+
+    A second pass of its own, not a ride on the record pass: holding the
+    paths beside the record list raised the peak (1,344 vs 1,149 MB).
+    """
+
+    def __init__(self):
+        self.table = _PathTable()
+        self._keys: dict[tuple[str, Optional[str]], dict] = {}
+        self._entry: dict = {}
+
+    def divert(self, lines):
+        """Yield the START/END lines of `lines`, reading every other one.
+
+        A block's paths are taken whole with `islice` and checked with
+        string operations in C; only a block that is cut short, or holds
+        a carriage return or a non-path line, is walked line by line."""
+        lines = iter(lines)
+        pending: list[str] = []  # a cut-short block's tail, read again in order
+        while True:
+            if pending:
+                raw = pending.pop(0)
+            else:
+                raw = next(lines, None)
+                if raw is None:
+                    return
+            if raw.startswith(("START ", "END ")):
+                yield raw
+                continue
+            remaining = self._header(raw)
+            if not remaining:
+                continue
+            block = pending[:remaining]
+            del pending[:remaining]
+            block += itertools.islice(lines, remaining - len(block))
+            text = "".join(block)
+            if (
+                text[:1] == "/"
+                and "\r" not in text
+                and text.count("\n/") == len(block) - 1
+                and text.count("\n") >= len(block) - 1
+            ):
+                self._add(text.split("\n", len(block) - 1) if text[-1:] != "\n" else text[:-1].split("\n"))
+                continue
+            # The slow walk: UX-169's per-line rules, unchanged.
+            paths = []
+            for index, line in enumerate(block):
+                if line.startswith(("START ", "END ")) or _OPENS_HEADER_RE.match(line.rstrip("\r\n")):
+                    # Cut short - the process was killed mid-write, or a
+                    # header arrived mid-block; the rest is ordinary input.
+                    pending[:0] = block[index:]
+                    break
+                if line[:1] == "/":
+                    paths.append(line.rstrip("\r\n"))
+            self._add(paths)
+
+    def _add(self, paths: list[str]) -> None:
+        ids = self.table.ids
+        for path in set(paths).difference(ids):
+            ids[path] = len(self.table.paths)
+            self.table.paths.append(path)
+        entry = self._entry
+        entry["ids"].extend(map(ids.__getitem__, paths))
+        if len(entry["ids"]) >= entry["compact_at"]:
+            self._compact(entry)
+
+    @staticmethod
+    def _compact(entry: dict) -> None:
+        entry["ids"] = block = array.array("I", sorted(set(entry["ids"])))
+        entry["compact_at"] = max(2 * len(block), _OPENS_COMPACT_FLOOR)
+
+    def _header(self, raw: str) -> int:
+        """Open a block for an `OPENS` header and return its path count;
+        any other line is skipped and returns 0."""
+        # UX-177 item 5: the `\r` too - iterating a handle keeps it.
+        match = _OPENS_HEADER_RE.match(raw.rstrip("\r\n"))
         if match is None:
-            if remaining <= 0:
-                continue
-            if line.startswith(("START ", "END ")):
-                # The block was short - the process was killed mid-write.
-                # Keep what it managed to say and stop counting.
-                remaining = 0
-                continue
-            remaining -= 1
-            if line.startswith("/"):
-                # UX-1076: interned - the same sysroot headers repeat
-                # across every element, and interning collapses the
-                # duplicate `str` objects a fresh line would otherwise
-                # allocate.
-                line = sys.intern(line)
-                entry["paths"].add(line)
-            continue
+            return 0
         pid, element, invocation, unique, dropped, _part, relative, dirfd = match.groups()
-        # UX-56: when the element name collapsed, the sandbox id is
-        # what lets the correlation relabel this block too - without
-        # it declared-vs-used stays keyed on a name that is not an
-        # element, which is exactly how it came back empty on the
-        # real freedesktop-sdk capture.
-        if invocation and invocation != 'none':
-            element = open_element_overrides.get(invocation, element)
-        entry = per_element.setdefault(
-            element,
-            {
-                "paths": set(),
-                "dropped": 0,
-                "processes": 0,
-                "dropped_by_pid": {},
+        entry = self._keys.get((element, invocation))
+        if entry is None:
+            entry = self._keys[(element, invocation)] = {
+                "ids": array.array("I"),
+                "compact_at": _OPENS_COMPACT_FLOOR,
                 "windows": 0,
-                "relative": 0,
-                "dirfd": 0,
+                "dropped_by_pid": {},
                 "relative_by_pid": {},
                 "dirfd_by_pid": {},
-            },
-        )
-        # UX-57: one process may now write several windows, so counting
-        # blocks would overstate the process count. `dropped` is a
-        # running total the process re-reports each time, so the last
-        # window's value is the total rather than their sum.
+            }
+        self._entry = entry
+        # UX-57: one process may write several windows, so counting
+        # blocks would overstate the process count.
         entry["windows"] += 1
         # `dropped`/`relative`/`dirfd` are each a running per-process
-        # total the process re-reports in every window it writes, so the
-        # largest value seen for a pid is that pid's total; the element's
-        # total is their sum across pids. Summing every block instead
-        # would multiply one process's count by how many windows it
-        # happened to flush.
-        for count_key, pid_key, raw in (
-            ("dropped", "dropped_by_pid", dropped),
-            ("relative", "relative_by_pid", relative),
-            ("dirfd", "dirfd_by_pid", dirfd),
-        ):
+        # total the process re-reports in every window, so the largest
+        # value seen for a pid is that pid's total.
+        for pid_key, value in (("dropped_by_pid", dropped), ("relative_by_pid", relative), ("dirfd_by_pid", dirfd)):
             by_pid = entry[pid_key]
-            by_pid[pid] = max(by_pid.get(pid, 0), int(raw or 0))
-            entry[count_key] = sum(by_pid.values())
-        entry["processes"] = len(entry["dropped_by_pid"])
-        # A header arriving mid-block ends the previous one, which the
-        # loop above gets for free by testing the header first.
-        remaining = int(unique)
-    return per_element
+            by_pid[pid] = max(by_pid.get(pid, 0), int(value or 0))
+        return int(unique)
+
+    def finish(self, open_element_overrides: Optional[dict[str, str]] = None) -> dict[str, dict]:
+        open_element_overrides = open_element_overrides or {}
+        merged: dict[str, dict] = {}
+        for (element, invocation), part in self._keys.items():
+            # UX-56: when the element name collapsed, the sandbox id is
+            # what lets the correlation relabel this block too.
+            if invocation and invocation != "none":
+                element = open_element_overrides.get(invocation, element)
+            entry = merged.get(element)
+            if entry is None:
+                merged[element] = entry = {"ids": part["ids"], "windows": 0}
+                for pid_key in ("dropped_by_pid", "relative_by_pid", "dirfd_by_pid"):
+                    entry[pid_key] = {}
+            else:
+                entry["ids"] = entry["ids"] + part["ids"]
+            entry["windows"] += part["windows"]
+            for pid_key in ("dropped_by_pid", "relative_by_pid", "dirfd_by_pid"):
+                by_pid = entry[pid_key]
+                for pid, value in part[pid_key].items():
+                    by_pid[pid] = max(by_pid.get(pid, 0), value)
+        self._keys.clear()
+        per_element: dict[str, dict] = {}
+        for element, entry in merged.items():
+            ids = array.array("I", sorted(set(entry["ids"])))
+            per_element[element] = {
+                "paths": OpenedPaths(ids, self.table),
+                "dropped": sum(entry["dropped_by_pid"].values()),
+                "processes": len(entry["dropped_by_pid"]),
+                "dropped_by_pid": entry["dropped_by_pid"],
+                "windows": entry["windows"],
+                "relative": sum(entry["relative_by_pid"].values()),
+                "dirfd": sum(entry["dirfd_by_pid"].values()),
+                "relative_by_pid": entry["relative_by_pid"],
+                "dirfd_by_pid": entry["dirfd_by_pid"],
+            }
+        return per_element
 
 
 def parse_trace_log(text: str) -> list[dict]:
@@ -2879,6 +3020,129 @@ def parse_trace_lines(lines, total_lines: Optional[int] = None) -> list[dict]:
     return list(stream_trace_events(lines, total_lines))
 
 
+def _parse_event_head(line: str):
+    """One START/END line's fields, or None for a malformed one."""
+    event, rest = line.split(" ", 1)
+    fields: dict[str, str] = {}
+    remaining = rest
+    for key in ("pid", "ppid", "ts"):
+        marker = f"{key}="
+        idx = remaining.find(marker)
+        if idx != 0:
+            fields = {}
+            break
+        remaining = remaining[len(marker) :]
+        next_space = remaining.find(" ")
+        if next_space == -1:
+            fields = {}
+            break
+        fields[key] = remaining[:next_space]
+        remaining = remaining[next_space + 1 :]
+    if not fields:
+        return None
+    element = "unknown"
+    if remaining.startswith("element="):
+        remaining = remaining[len("element=") :]
+        next_space = remaining.find(" ")
+        if next_space == -1:
+            return None  # element= present but no cmd= after it - malformed, skip
+        element = remaining[:next_space]
+        remaining = remaining[next_space + 1 :]
+    # UX-56: optional sandbox id, emitted by a hook built after that
+    # task. Absent in every earlier capture, so it is parsed only if
+    # present and never fabricated - a trace without it simply cannot
+    # be corrected when its element names collapsed.
+    invocation = None
+    if remaining.startswith("inv="):
+        next_space = remaining.find(" ")
+        if next_space != -1:
+            raw = remaining[len("inv=") : next_space]
+            invocation = None if raw == "none" else raw
+            remaining = remaining[next_space + 1 :]
+    # UX-45: optional real CPU-time fields, emitted on END lines only
+    # by a hook built after that task. Parsed as "zero or more known
+    # key=value pairs before cmd=", so a trace captured with the
+    # previous hook still parses and simply reports CPU time as
+    # unavailable rather than as zero - an unmeasured CPU time and a
+    # genuinely-zero one are different claims.
+    rusage: dict[str, float] = {}
+    # UX-106: `src=` and `exit=` are written by the ptrace spine and
+    # absent from every hook-written record. Parsed here rather than
+    # tolerated as unknown, because this loop *stops* at the first
+    # key it does not know - so an unhandled field would not be
+    # ignored, it would swallow `cmd=` and leave every spine record
+    # with an empty command line.
+    source = "hook"
+    exit_status = None
+    while not remaining.startswith("cmd="):
+        next_space = remaining.find(" ")
+        if next_space == -1:
+            break
+        token, candidate = remaining[:next_space], remaining[next_space + 1 :]
+        key, _, value = token.partition("=")
+        if key == "src":
+            source = value
+            remaining = candidate
+            continue
+        if key == "exit":
+            exit_status = value
+            remaining = candidate
+            continue
+        if key not in _RUSAGE_KEYS and key not in _RUSAGE_INT_KEYS:
+            break
+        try:
+            rusage[key] = int(value) if key in _RUSAGE_INT_KEYS else float(value)
+        except ValueError:
+            break
+        remaining = candidate
+
+    cmd = remaining[4:] if remaining.startswith("cmd=") else ""
+    return event, fields, element, invocation, rusage, source, exit_status, cmd
+
+
+def _parse_event_head_fast(line: str):
+    """`_parse_event_head` for the canonical shape - `pid ppid ts
+    [element] [inv] known-keys cmd=` - in one split; None hands the line
+    to the general parser, which then decides (UX-1220)."""
+    head, sep, cmd = line.partition(" cmd=")
+    if not sep:
+        return None
+    tokens = head.split(" ")
+    if len(tokens) < 4:
+        return None
+    event, pid, ppid, ts = tokens[0], tokens[1], tokens[2], tokens[3]
+    if not (pid.startswith("pid=") and ppid.startswith("ppid=") and ts.startswith("ts=")):
+        return None
+    fields = {"pid": pid[4:], "ppid": ppid[5:], "ts": ts[3:]}
+    at = 4
+    element = "unknown"
+    if at < len(tokens) and tokens[at].startswith("element="):
+        element = tokens[at][8:]
+        at += 1
+    invocation = None
+    if at < len(tokens) and tokens[at].startswith("inv="):
+        raw = tokens[at][4:]
+        invocation = None if raw == "none" else raw
+        at += 1
+    rusage: dict[str, float] = {}
+    source = "hook"
+    exit_status = None
+    for token in tokens[at:]:
+        key, _, value = token.partition("=")
+        if key == "src":
+            source = value
+        elif key == "exit":
+            exit_status = value
+        elif key in _RUSAGE_INT_KEYS or key in _RUSAGE_KEYS:
+            try:
+                rusage[key] = int(value) if key in _RUSAGE_INT_KEYS else float(value)
+            except ValueError:
+                return None
+        else:
+            return None
+    return event, fields, element, invocation, rusage, source, exit_status, cmd
+
+
 def stream_trace_events(lines, total_lines: Optional[int] = None):
     """Each trace event as it is parsed, holding none of them.
 
@@ -2898,84 +3162,22 @@ def stream_trace_events(lines, total_lines: Optional[int] = None):
     for index, line in enumerate(lines):
         if not index % 5000:
             tick.step(index)
+        if line[:1] == "/":
+            continue  # an opened path: most of a large log's lines
         line = line.rstrip("\r\n")
         if not line or not (line.startswith("START ") or line.startswith("END ")):
             continue
-        event, rest = line.split(" ", 1)
-        fields: dict[str, str] = {}
-        remaining = rest
-        for key in ("pid", "ppid", "ts"):
-            marker = f"{key}="
-            idx = remaining.find(marker)
-            if idx != 0:
-                fields = {}
-                break
-            remaining = remaining[len(marker) :]
-            next_space = remaining.find(" ")
-            if next_space == -1:
-                fields = {}
-                break
-            fields[key] = remaining[:next_space]
-            remaining = remaining[next_space + 1 :]
-        if not fields:
+        head = _parse_event_head_fast(line) or _parse_event_head(line)
+        if head is None:
             continue
-        element = "unknown"
-        if remaining.startswith("element="):
-            remaining = remaining[len("element=") :]
-            next_space = remaining.find(" ")
-            if next_space == -1:
-                continue  # element= present but no cmd= after it - malformed, skip
-            element = remaining[:next_space]
-            remaining = remaining[next_space + 1 :]
-        # UX-56: optional sandbox id, emitted by a hook built after that
-        # task. Absent in every earlier capture, so it is parsed only if
-        # present and never fabricated - a trace without it simply cannot
-        # be corrected when its element names collapsed.
-        invocation = None
-        if remaining.startswith("inv="):
-            next_space = remaining.find(" ")
-            if next_space != -1:
-                raw = remaining[len("inv=") : next_space]
-                invocation = None if raw == "none" else raw
-                remaining = remaining[next_space + 1 :]
-        # UX-45: optional real CPU-time fields, emitted on END lines only
-        # by a hook built after that task. Parsed as "zero or more known
-        # key=value pairs before cmd=", so a trace captured with the
-        # previous hook still parses and simply reports CPU time as
-        # unavailable rather than as zero - an unmeasured CPU time and a
-        # genuinely-zero one are different claims.
-        rusage: dict[str, float] = {}
-        # UX-106: `src=` and `exit=` are written by the ptrace spine and
-        # absent from every hook-written record. Parsed here rather than
-        # tolerated as unknown, because this loop *stops* at the first
-        # key it does not know - so an unhandled field would not be
-        # ignored, it would swallow `cmd=` and leave every spine record
-        # with an empty command line.
-        source = "hook"
-        exit_status = None
-        while not remaining.startswith("cmd="):
-            next_space = remaining.find(" ")
-            if next_space == -1:
-                break
-            token, candidate = remaining[:next_space], remaining[next_space + 1 :]
-            key, _, value = token.partition("=")
-            if key == "src":
-                source = value
-                remaining = candidate
-                continue
-            if key == "exit":
-                exit_status = value
-                remaining = candidate
-                continue
-            if key not in _RUSAGE_KEYS and key not in _RUSAGE_INT_KEYS:
-                break
-            try:
-                rusage[key] = int(value) if key in _RUSAGE_INT_KEYS else float(value)
-            except ValueError:
-                break
-            remaining = candidate
-
-        cmd = remaining[4:] if remaining.startswith("cmd=") else ""
+        event, fields, element, invocation, rusage, source, exit_status, cmd = head
+        # UX-1220: a record lives until the sort; its repeated strings are shared.
+        element = sys.intern(element)
+        if invocation is not None:
+            invocation = sys.intern(invocation)
+        source = sys.intern(source)
+        if exit_status is not None:
+            exit_status = sys.intern(exit_status)
         try:
             record = {
                 "event": event,
@@ -3386,7 +3588,7 @@ COVERAGE_SPINE_ONLY = "spine-only"
 COVERAGE_HOOK_ONLY = "hook-only"
 
 
-def merge_record_streams(records: list[dict]) -> list[dict]:
+def merge_record_streams(records: list[dict], consume: bool = False) -> list[dict]:
     """UX-107: two record streams, one process list.
 
     With `UX-106`'s spine running, a *dynamically*-linked process is
@@ -3414,7 +3616,11 @@ def merge_record_streams(records: list[dict]) -> list[dict]:
     Every entry carries `coverage`. A capture with no spine records at
     all comes back untouched with `hook-only` on every entry, which is
     what makes every pre-spine capture parse exactly as before.
+
+    `consume` (UX-1220): the entries are the input's own dicts, joined
+    in place, rather than a second copy of every record at the peak.
     """
+    copy = (lambda record: record) if consume else dict
     spine_records = [r for r in records if r.get("src") == "spine"]
     if not spine_records:
         for record in records:
@@ -3446,7 +3652,7 @@ def merge_record_streams(records: list[dict]) -> list[dict]:
             distance = abs(candidate["start_ts"] - record["start_ts"])
             if distance <= MERGE_START_TOLERANCE_S and (best is None or distance < best):
                 partner, best = candidate, distance
-        entry = dict(record)
+        entry = copy(record)
         if partner is None:
             entry["coverage"] = COVERAGE_SPINE_ONLY
             if "cpu_us" in entry:
@@ -3491,7 +3697,7 @@ def merge_record_streams(records: list[dict]) -> list[dict]:
     for record in records:
         if record.get("src") == "spine" or id(record) in matched_hooks:
             continue
-        entry = dict(record)
+        entry = copy(record)
         entry["coverage"] = COVERAGE_HOOK_ONLY
         merged.append(entry)
     return sorted(merged, key=lambda r: r["start_ts"])
@@ -6856,7 +7062,9 @@ def load_and_summarize(
         # start, which is the order every downstream reader has always
         # seen; that list is the remaining floor, and it is O(processes)
         # rather than O(events).
-        records = merge_record_streams(sorted(stream_records(events, unmatched), key=lambda record: record["start_ts"]))
+        records = merge_record_streams(
+            sorted(stream_records(events, unmatched), key=lambda record: record["start_ts"]), consume=True
+        )
     fork_only_exits = unmatched["fork_only"]
     unmatched_ends = unmatched["unmatched"]
 
@@ -6916,15 +7124,6 @@ def load_and_summarize(
     # UX-46: only attempted when a project directory is available, since
     # it needs `bst artifact list-contents` and the project's own
     # declared dependency edges.
-    # UX-168: a second streaming pass rather than keeping the whole trace
-    # in memory for this one. `OPENS` blocks are a small fraction of a
-    # trace, so re-reading costs IO and saves the copy.
-    # UX-169: and the handle goes in, not `handle.read()`. The comment
-    # above said "streaming" while the call built exactly the whole-file
-    # string it was written to avoid.
-    # UX-1079: through `_open_maybe_gzipped` too - a plain `open` on the
-    # `plane2.log.gz` every snapshot stores read deflate bytes and found
-    # no OPENS lines, silently.
     with _open_maybe_gzipped(raw_log_path) as handle:
         opens_by_element = parse_open_lines(handle, open_element_overrides=(correlation or {}).get('resolved'))
     # UX-107: the elements this analysis must speak about are not only the

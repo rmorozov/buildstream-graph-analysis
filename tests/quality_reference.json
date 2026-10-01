@@ -1,5 +1,5 @@
 {
-  "paths": ["tools/bga_gen_project.py", "tools/gen_synthetic_scale_run.py"],
+  "paths": ["bga/graph/fan_in.py"],
   "files": {
     ".claude/hooks/agent_worktree_limits.py": {"duplicate_blocks": 0, "file_lines": 128, "longest_function": 23},
     ".claude/hooks/gate_covers_push.py": {"duplicate_blocks": 1, "file_lines": 168, "longest_function": 28},
@@ -37,7 +37,7 @@
     "bga/floors/serialization.py": {"duplicate_blocks": 0, "file_lines": 28, "longest_function": 15},
     "bga/graph/__init__.py": {"duplicate_blocks": 0, "file_lines": 33, "longest_function": 0},
     "bga/graph/edg.py": {"duplicate_blocks": 2, "file_lines": 1100, "longest_function": 106},
-    "bga/graph/fan_in.py": {"duplicate_blocks": 0, "file_lines": 116, "longest_function": 41},
+    "bga/graph/fan_in.py": {"duplicate_blocks": 0, "file_lines": 120, "longest_function": 45},
     "bga/help_format.py": {"duplicate_blocks": 0, "file_lines": 33, "longest_function": 2},
     "bga/hostinfo.py": {"duplicate_blocks": 1, "file_lines": 278, "longest_function": 34},
     "bga/ingest/__init__.py": {"duplicate_blocks": 1, "file_lines": 54, "longest_function": 0},

@@ -43,7 +43,7 @@ def test_a_level_filter_composes_with_top_n(big, tmp_path):
 
 
 def test_the_producer_publishes_what_each_element_blocks():
-    """`dependents` is `dependent_count`'s population, capped at 40 as `direct` is."""
+    """`dependents` is `dependent_count`'s population, capped at 40 as the card shows `direct`."""
     from bga.graph.fan_in import DIRECT_NAMES_CAP, compute_fan_in
     from bga.ingest.models import DependencyEdge, Element, Graph
 
@@ -96,13 +96,13 @@ def _anchor(uid):
 
 def _line(row, field, count):
     """What a card's `data-list=<field>` line must read for one `fan_in` row."""
-    names = row[field]
+    names = row[field][:40]
     more = row[count] - len(names)
     return names and {
         "names": names,
         "links": [f"#{_anchor(n)}" for n in names],
-        # `UX-1214`: Blocks' rest is a link of its own, after the list's comma.
-        "more": (f"+{more:,} more" if field == "dependents" else f", +{more:,} more") if more > 0 else None,
+        # `UX-1214`: the rest is a link of its own, after the list's comma.
+        "more": f"+{more:,} more" if more > 0 else None,
     }
 
 

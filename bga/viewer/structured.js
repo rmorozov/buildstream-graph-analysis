@@ -1001,8 +1001,9 @@ export function interrogable(table, specs, total, depth = 0, undrawn = []) {
         (th) => [th.getAttribute("data-column"), th.textContent]));
       const share = new Set(ownHeads(table).filter((th) => th.hasAttribute?.("data-share"))
         .map((th) => th.getAttribute("data-column")));
-      const columns = [...filterable, ...Object.values(STATED.get(table) ?? {}).map((said) => said.spec), ...undrawn];
-      const query = parseQuery(box.value, columns.map((spec) => (share.has(spec?.key) ? { ...spec, share: true } : spec)),
+      // `UX-1214`: an undrawn column is read, never named in the sentence below.
+      const columns = [...filterable, ...Object.values(STATED.get(table) ?? {}).map((said) => said.spec)];
+      const query = parseQuery(box.value, [...columns, ...undrawn].map((spec) => (share.has(spec?.key) ? { ...spec, share: true } : spec)),
                                labels);
       Object.assign(state, { text: query.text, exact: query.exact, thresholds: query.thresholds });
       const bad = query.unread.length > 0;

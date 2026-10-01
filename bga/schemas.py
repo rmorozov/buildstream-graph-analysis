@@ -2842,13 +2842,12 @@ _SIGNALS_TABLES = {
                     "description": "Dependencies this element names itself. The same number the bottleneck's "
                     "high fan-in list ranks the top five of, over every element rather than five.",
                 },
-                # `UX-829`: capped at `DIRECT_NAMES_CAP`, `direct_count`'s population; card only (§3c).
+                # `UX-829`, `UX-1214`: `direct_count`'s whole population; the card shows 40 (§3c).
                 "direct": {
-                    GROWS: False,
-                    "maxItems": 40,
+                    GROWS: "elements",
                     "items": {"type": "string", "description": "element uid"},
-                    "description": "This element's direct dependencies by name, sorted, capped at 40. "
-                    "The direct count is the count whether or not it hit the cap.",
+                    "description": "Every direct dependency of this element by name: the 40 earliest in graph "
+                    "order first, sorted, then the rest, sorted. The card shows the first 40.",
                 },
                 # UX-1187: the mirror of the two above - what names this one.
                 "dependent_count": {

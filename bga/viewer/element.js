@@ -322,7 +322,8 @@ function listsFor(payload, uid, lists) {
   const out = [...lists], held = new Set(lists.map((l) => l.key));
   for (const [path, field, label, count] of ELEMENT_LIST_MAPS) {
     const map = path.split(".").reduce((node, key) => node?.[key], payload);
-    const items = map?.[uid]?.[field];
+    // `UX-1214`: `direct` is whole; a card names 40.
+    const items = map?.[uid]?.[field]?.slice?.(0, 40);
     if (!Array.isArray(items) || !items.length || held.has(field)) continue;
     held.add(field);
     out.push({ key: field, label, items: items.map(String), more: (map[uid][count] ?? 0) - items.length });
@@ -739,20 +740,16 @@ function elementSection(record, places, investigate, format, bounded = null) {
       ? el("a", { href: `#${elementAnchor(item)}`, "data-raw": item }, item)
       : el(READER_LABELS[item] ? "span" : "code", { "data-raw": item }, READER_LABELS[item] ?? item)]).slice(1));
     if (!(named.more > 0)) continue;
-    const more = `+${named.more.toLocaleString("en-US")} more`;
-    // `UX-1214`: what it blocks past the cap is the element table filtered to what depends on it, every one of them.
-    const query = `depends_on:${uid}`;
-    const rest = named.key !== "dependents" ? el("span", { "data-more": named.more }, `, ${more}`)
-      : el("a", { href: joinHash("elements", new URLSearchParams({ "f.elements": query }).toString()), "data-more": named.more }, more);
-    if (named.key === "dependents") {
-      rest.addEventListener?.("click", () => {
-        const view = document.querySelector?.('select.preset-view[data-table="elements"]');
-        if (view?.selectedIndex) { view.selectedIndex = 0; view.dispatchEvent(new Event("change")); }
-        filterSection(document, "elements", query);
-      });
-      line.append(", ");
-    }
-    line.append(rest);
+    // `UX-1214`: the rest, each one, is the element table filtered.
+    const query = `${named.key === "direct" ? "blocks" : "depends_on"}:${uid}`;
+    const rest = el("a", { href: joinHash("elements", new URLSearchParams({ "f.elements": query }).toString()),
+      "data-more": named.more }, `+${named.more.toLocaleString("en-US")} more`);
+    rest.addEventListener?.("click", () => {
+      const view = document.querySelector?.('select.preset-view[data-table="elements"]');
+      if (view?.selectedIndex) { view.selectedIndex = 0; view.dispatchEvent(new Event("change")); }
+      filterSection(document, "elements", query);
+    });
+    line.append(", ", rest);
   }
 
   if (record.entering.length) {

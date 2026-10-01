@@ -1169,4 +1169,6 @@ MEDIUM = (
     "tests/unit/test_the_synthetic_workload_runs_hundreds_of_binaries.py",  #  4.2s
     # `UX-1215`, `UX-1217`: two fixtures, eight Chromium drives; alone in one process: 4.06 / 4.42 / 4.33s.
     "tests/unit/test_a_browser_drive_starts_clean.py",  #  4.3s
+    # UX-1214 follow-up: three exports, five Chromium reads, pytest wall 5.45 / 4.94 / 4.51s.
+    "tests/unit/test_a_card_s_more_reaches_every_dependency_both_ways.py",  #  4.9s
 )

@@ -2,7 +2,7 @@
 
 **Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-159 walk and verification (2026-10-01) | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical | **Reading:** container
 
-**Guard:** `tests/unit/test_an_element_view_answers_whole.py` (`test_a_card_s_more_blocks_reach_every_element_it_counts`)
+**Guard:** `tests/unit/test_an_element_view_answers_whole.py` (`test_a_card_s_more_blocks_reach_every_element_it_counts`); the follow-up's `tests/unit/test_a_card_s_more_reaches_every_dependency_both_ways.py`
 
 ## Motivation
 
@@ -51,6 +51,16 @@ Question:  the link reaches every dependent only while no dependent's own list h
 
 Budget (`measureA.py`): `p[data-list] > span[data-more]` at rest - macro_micro 0, walk 1, xl_both 1 (toolchain, "+3,960 more"). So controls +0 macro_micro (866/868 kept), +1 xl_both (1,161/1,192); words, nodes, height unmoved (a span becomes an a). Code half +164 B link + 404 B list clause.
 
+Follow-up, on the owner's call (Ruslan, 2026-10-01 12:31: "frankly speaking i like publish all option but maybe
+there compromise like maybe we already all have all this data like in blast radius table and we can point user there
+to traverse full list of dependencies as well as full list of dependents?"). The page held only counts and the
+40-capped lists, so the route publishes the cheaper direction whole: `fan_in[uid].direct` loses its cap (the 40
+earliest in graph order first, as before, then the rest, sorted; `GROWS: "elements"`; the card slices 40), not a new
+field, which would repeat up to 40 names per element. The page inverts it into each row's undrawn `blocks` list, so
+`depends_on:<uid>` (what <uid> blocks) and its mirror `blocks:<uid>` (what <uid> depends on) are exact, and both
+cards' "+N more" link there. The not-applied sentence names drawn and stated columns only. The transitive clause
+(`downstream:<uid>`, a closure over `blocks`) is dropped: its matcher alone measured +236 B page half.
+
 ## Outcome
 
 The gap measured, at `7d0c5ddd` (UX-1206 landed), the 1,202-element two-plane page (`pages.two_plane_run
@@ -89,3 +99,45 @@ the four modules: 511 passed, 5 skipped, `test_the_page_has_a_volume_budget.py` 
 
 Re-based: `test_an_element_view_answers_whole.py`'s `_line` and the past-the-cap clause read "+N more" for
 dependents (the link's text; the ", " is the list's separator now), ", +N more" still for direct.
+
+Follow-up gap, at `ffa8bcb1`, the guard's `wide_run` (layer01 elements name 51 each), Chromium 1440x900:
+
+```text
+published: layer00/mod049.bst dependent_count 50 | layer01/mod000.bst direct_count 51 len(direct) 40
+depends_on:layer00/mod049.bst    matched 0; 'nosuch:x' sentence names Depends on/Blocks: True
+blocks:layer01/mod000.bst        matched -1 (no such column)
+layer00/mod049.bst dependents: {'text': '+10 more', 'view': 'All elements', 'matched': 0}
+layer01/mod000.bst direct: {'text': ', +11 more', 'href': None, 'view': 'Leaves', 'matched': -1}
+```
+
+The close, same page and probe:
+
+```text
+published: layer00/mod049.bst dependent_count 50 | layer01/mod000.bst direct_count 51 len(direct) 51
+depends_on:layer00/mod049.bst    matched 50; 'nosuch:x' sentence names Depends on/Blocks: False
+blocks:layer01/mod000.bst        matched 51; 'nosuch:x' sentence names Depends on/Blocks: False
+layer00/mod049.bst dependents: {'text': '+10 more', 'view': 'All elements', 'matched': 50}
+layer01/mod000.bst direct: {'text': '+11 more', 'view': 'All elements', 'matched': 51}
+```
+
+Cost, `view.export` page/data bytes ffa8bcb1 -> this: page half 157,667 -> 157,739 B (+72) on golden and
+macro_micro, 157,669 -> 157,741 B on the 1,202 two-plane page and xl_both; data half +9 B golden, +9 macro_micro,
++89 the 1,202 page (20 names past 40, on one element), +717 xl_both (160). At rest unmoved: no card's Depends on passes
+40 at rest on any page; macro_micro 38,965 px / 13,068 words / 866 controls / 6,858 nodes. 57 test files naming
+the touched modules, the volume and data-half guards among them: 1059 passed, 3 skipped.
+
+| mutation | reddened | run printed |
+|---|---|---|
+| `direct` capped at 40 again (`fan_in.py`) | `[wide]` | 1 failed, 2 passed |
+| no inversion, `blocks: []` (`pairs.js`) | `[golden]`, `[macro_micro]`, `[wide]` | 3 failed |
+| Depends on's rest filters `depends_on:` (`element.js`) | `[wide]` | 1 failed, 2 passed |
+| the sentence lists undrawn columns (`structured.js`) | `[wide]` | 1 failed, 2 passed |
+| the card shows the whole list (`element.js`) | `[wide]` | 1 failed, 2 passed |
+| reverted | | 3 passed |
+
+Deviation (follow-up, owner's call): Ruslan, 2026-10-01 12:31 - "i like publish all option but maybe there
+compromise ... point user there to traverse full list of dependencies as well as full list of dependents". Route:
+`fan_in[*].direct` published uncapped (`GROWS: "elements"`, the card slices 40), dependents derived in the page by
+inverting it; `depends_on:<uid>` and the new `blocks:<uid>` are exact, and both "+N more" link to them. The
+transitive `downstream:<uid>` clause was dropped: its matcher alone measured +236 B page half against a budget the
+round's other rows hold. Re-based: `test_what_an_element_pulls_in.py`'s cap class, `_line` in the UX-1200 guard.

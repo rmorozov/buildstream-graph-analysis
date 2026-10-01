@@ -136,11 +136,13 @@ export function elementSignalTable(elements, node, join = null,
     [QUESTION]: "Which element should I look at?",
     [KEYED_BY]: KEYED_BY_ELEMENT,
   };
-  // `UX-1214`: each row's published direct dependencies, undrawn, so `depends_on:<uid>` lists what <uid> blocks.
+  // `UX-1214`: undrawn, so `depends_on:<uid>` lists what <uid> blocks and `blocks:<uid>` what it depends on.
   const direct = elements.fan_in;
   if (direct && typeof direct === "object") {
-    for (const row of rows) row.depends_on = direct[row.element]?.direct ?? [];
-    hint[COLUMNS].push({ key: "depends_on", title: "Depends on", drawn: false });
+    const blocks = {};
+    for (const [uid, fan] of Object.entries(direct)) for (const name of fan?.direct ?? []) (blocks[name] ??= []).push(uid);
+    for (const row of rows) Object.assign(row, { depends_on: direct[row.element]?.direct ?? [], blocks: blocks[row.element] ?? [] });
+    hint[COLUMNS].push({ key: "depends_on", title: "Depends on", drawn: false }, { key: "blocks", title: "Blocks", drawn: false });
   }
   return { rows, hint, merged: present, joined: joinedIn };
 }

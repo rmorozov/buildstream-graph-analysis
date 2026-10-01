@@ -65,7 +65,7 @@ _TASK_HORIZON_KEYS = (
 #: Headroom measured against this file's own shapes: 38 elements ->
 #: 73,518 B; 202 elements -> 218,344 B (`--durations`, see Outcome).
 DATA_BUDGETS = (
-    (60, 130_000),
+    (60, 132_000),
     (250, 280_000),
 )
 

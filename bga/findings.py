@@ -381,7 +381,10 @@ def _finding(
     detail: Optional[list[str]] = None,
     elements: Optional[list[str]] = None,
     evidence: Optional[dict] = None,
+    *,
+    step: dict,
 ) -> dict:
+    # `step` has no default: a finding without one is a TypeError, not a silent gap (UX-1256).
     return {
         'id': id,
         'severity': severity,
@@ -389,7 +392,24 @@ def _finding(
         'detail': detail or [],
         'elements': elements or [],
         'evidence': evidence or {},
+        'step': step,
     }
+
+
+def _step(text: str, command: Optional[list[str]] = None) -> dict:
+    """What to do about a finding, and the command line where one exists."""
+    return {'text': text, 'command': ' '.join(command)} if command else {'text': text}
+
+
+def _none(why: str) -> dict:
+    """A finding with no step says why it has none."""
+    return {'why_none': why}
+
+
+def _run_command(result, *argv: str) -> Optional[list[str]]:
+    """`bga <argv> <run>`, naming the run as `compute_next_steps` does; None without a run path."""
+    run_dir = ((getattr(result, 'run_instance', None) or {}).get('run_dir') or '').strip()
+    return ['bga', *argv, run_token(run_dir)] if run_dir else None
 
 
 def _cache_findings(result: AnalysisResult) -> list[dict]:
@@ -452,6 +472,7 @@ def _cache_findings(result: AnalysisResult) -> list[dict]:
                     'cached_elements': cached,
                     'run_mode': 'full',
                 },
+                step=_none("a caches-off run reuses nothing by design"),
             )
         ]
 
@@ -485,6 +506,15 @@ def _cache_findings(result: AnalysisResult) -> list[dict]:
                 'cached_elements': cached,
                 'target_closure_hit_share': closure.get('hit_share'),
             },
+            step=(
+                _none("the cache did most of the work")
+                if severity == SEVERITY_INFO
+                else _step(
+                    "Find what moved the cache key near the root: most of this build should not have run."
+                    if severity == SEVERITY_HIGH
+                    else "Check what invalidated the elements that rebuilt."
+                )
+            ),
         )
     )
 
@@ -523,6 +553,9 @@ def _cache_findings(result: AnalysisResult) -> list[dict]:
                 f"this build spent it moving artifacts rather than making them"
                 f"{rate_clause}",
                 evidence=evidence,
+                step=_step(
+                    "Check the link to the artifact cache and the objects each pull moves: this time went to transfer."
+                ),
             )
         )
     findings.extend(capacity_findings)
@@ -555,6 +588,7 @@ def _cache_capacity_findings(capacity: dict) -> list[dict]:
                     'volume_total_bytes': capacity.get('volume_total_bytes'),
                     'quota_over_volume_bytes': over_volume,
                 },
+                step=_step("Lower the cache quota to what the volume holds, or grow the volume."),
             )
         )
     if capacity.get('at_low_watermark'):
@@ -580,6 +614,7 @@ def _cache_capacity_findings(capacity: dict) -> list[dict]:
                     'headroom_bytes': capacity.get('headroom_bytes'),
                     'low_watermark_share': capacity.get('low_watermark_share'),
                 },
+                step=_step("Raise the cache quota or free the volume: BuildStream is evicting artifacts."),
             )
         )
     return findings
@@ -634,6 +669,7 @@ def _artifact_weight_findings(weights: dict) -> list[dict]:
                 'shared_bytes': shared,
                 'heaviest': heaviest,
             },
+            step=_none("a weight to size the cache by, not a defect"),
         )
     ]
 
@@ -721,6 +757,7 @@ def _run_blocking_findings(result: AnalysisResult) -> list[dict]:
                     'interrupted': bool(build_failed.get('interrupted')),
                     'suspended': suspended,
                 },
+                step=_step("Capture a build that runs to completion: no figure here describes a finished build."),
             )
         )
 
@@ -741,6 +778,7 @@ def _run_blocking_findings(result: AnalysisResult) -> list[dict]:
                 "spent producing nothing. Counted as execution, not as waste, because "
                 "reclassifying it would move the attribution identity (I4)",
                 evidence={'failed_task_us': failed_us, 'failed_task_count': failed_count},
+                step=_step("Find why the attempts failed: their time is on the chain and produced nothing."),
             )
         )
 
@@ -768,6 +806,7 @@ def _run_context_findings(result: AnalysisResult) -> list[dict]:
                 "caches-off nightly",
                 elements=list(cached),
                 evidence={'run_mode': 'incremental', 'critical_path_cached': len(cached)},
+                step=_step("Compare it against another incremental run, not against a caches-off nightly."),
             )
         )
 
@@ -787,6 +826,15 @@ def _run_context_findings(result: AnalysisResult) -> list[dict]:
                 SEVERITY_INFO if band == 'high' else SEVERITY_MEDIUM,
                 f"Confidence: {qty.share(primary)} ({band}){suffix}",
                 evidence={'primary': primary, 'band': band, 'violation_count': len(violations)},
+                step=(
+                    _none("high confidence: nothing to correct")
+                    if band == 'high'
+                    else _step(
+                        "Read the violations before trusting the figures."
+                        if violations
+                        else "Treat the figures as approximate."
+                    )
+                ),
             )
         )
     return findings
@@ -858,6 +906,7 @@ def _time_concentration_findings(
             detail=detail,
             elements=[d['element_uid'] for d in top],
             evidence={'path_us': path_us, 'share_of_path': share, 'chain_bound': chain_bound, 'rows': rows},
+            step=_step("Make these elements faster, or take them off the chain: the critical path is made of them."),
         )
     ]
 
@@ -905,6 +954,7 @@ def _time_concentration_findings(
                     "often capped by the next chain rather than by its own "
                     "duration",
                     evidence={'zero_slack_share': density, 'zero_slack_off_path': off_path},
+                    step=_none("how far a saving reaches, not a defect"),
                 )
             )
         else:
@@ -916,6 +966,7 @@ def _time_concentration_findings(
                     "the critical path — no second chain of equal length, so a "
                     "saving on any of them is worth its own duration",
                     evidence={'zero_slack_share': density, 'zero_slack_off_path': 0},
+                    step=_none("how far a saving reaches, not a defect"),
                 )
             )
         # Rendered inside the table it qualifies, where it has always been.
@@ -990,6 +1041,7 @@ def _graph_shape_findings(result: AnalysisResult) -> list[dict]:
             f"stages, and its widest stage holds {widest:,} — so no more than "
             f"{widest:,} can ever be building at once, whatever the capacity",
             evidence={'element_count': len(depth), 'dependency_stages': stages, 'widest_stage': widest},
+            step=_none("a ceiling the dependency graph sets; only its dependencies move it"),
         )
     ]
 
@@ -1080,6 +1132,9 @@ def _shared_source_findings(result: AnalysisResult) -> list[dict]:
                 'measured_us': top.get('measured_us'),
             },
             elements=top.get('direct_elements') or [],
+            step=_step(
+                "Narrow which elements take this source, or key it per element, so a change stops rebuilding the rest."
+            ),
         )
     ]
 
@@ -1120,6 +1175,15 @@ def _memory_finding(result: AnalysisResult) -> list[dict]:
                 'first_builders_that_does_not_fit': ceiling,
                 'elements_measured': envelope['elements_measured'],
             },
+            step=(
+                _none("memory does not bind at this setting")
+                if severity == SEVERITY_INFO
+                else _step(
+                    f"Lower --builders below {at_observed['builders']}: the measured peaks do not fit in RAM."
+                    if severity == SEVERITY_HIGH
+                    else f"Keep --builders at {at_observed['builders']}: one more would swap."
+                )
+            ),
         )
     ]
 
@@ -1299,6 +1363,18 @@ def _capacity_recommendation_finding(result: AnalysisResult) -> list[dict]:
                 'sweep_memory_builders': recommendation.get('sweep_memory_builders'),
                 'sweep_binding': recommendation.get('sweep_binding'),
             },
+            step=(
+                _step(f"Remove `notparallel` from {pinned[0]} or raise its job count before raising anything.")
+                if pinned
+                else _step(
+                    f"Time a build at --builders {recommended} against this one before keeping it.",
+                    _run_command(result, 'sweep'),
+                )
+                if recommended > builders
+                else _step(f"Lower --builders to {recommended}.")
+                if recommended < builders
+                else _none("this run is at the setting its measurements support")
+            ),
         )
         # UX-1143: the page section drawing this evidence; the card links there rather than repeating it.
         | {'section': 'capacity_recommendation'}
@@ -1341,6 +1417,7 @@ def _swap_observed_finding(result: AnalysisResult) -> list[dict]:
                 'swap_start_offset_us': start,
                 'swap_end_offset_us': end,
             },
+            step=_step("Lower --builders or the per-element job count until the concurrent set fits in RAM."),
         )
     ]
 
@@ -1450,6 +1527,7 @@ def _remote_execution_findings(result: AnalysisResult) -> list[dict]:
             title,
             detail=detail,
             evidence=evidence,
+            step=_none("a projection of two purchases, not a defect in this run"),
         )
     ]
 
@@ -1525,6 +1603,9 @@ def _opportunity_findings(result: AnalysisResult, chain_bound: bool) -> list[dic
                 f"no wait category exceeds {OPPORTUNITY_FLOOR_PCT:.0f}% of "
                 f"wall-clock time, so there is no scheduling gap to close",
                 evidence={'largest_wait_category': top_category, 'largest_wait_share': pct / 100},
+                step=_step(
+                    "Make the elements on the critical path faster, or take them off it: the scheduler has no room left."
+                ),
             )
         ] + concentration
     if top_duration_us <= 0:
@@ -1560,8 +1641,12 @@ def _opportunity_findings(result: AnalysisResult, chain_bound: bool) -> list[dic
             # 23.1s and claimed nothing. Naming the population is the whole
             # fix: the measurement was never wrong, the scope was.
             f"Biggest wait category: {pct:.1f}% of wall-clock time is {label} ({qty.duration(top_duration_us)})",
-            detail=[f"    -> {hint}"] if hint else None,
-            evidence={'category': top_category, 'category_us': top_duration_us, 'share': pct / 100, 'hint': hint},
+            evidence={'category': top_category, 'category_us': top_duration_us, 'share': pct / 100},
+            step=(
+                _step(hint, _run_command(result, 'sweep') if top_category == 'resource_wait_us' else None)
+                if hint
+                else _none(f"no remedy is recorded for {label}")
+            ),
         )
     ]
 
@@ -1613,6 +1698,10 @@ def _outlook_findings(result: AnalysisResult) -> list[dict]:
                     'savings_add': joint.get('savings_add'),
                     'relation': kind,
                 },
+                step=_step(
+                    f"Start with {joint['elements'][0]}, then the rest.",
+                    _run_command(result, 'blast', joint['elements'][0]),
+                ),
             )
         )
 
@@ -1636,6 +1725,9 @@ def _outlook_findings(result: AnalysisResult) -> list[dict]:
                 detail=detail,
                 elements=[step['element_uid'] for step in shown],
                 evidence={'steps': shown},
+                step=_step(
+                    f"Start with {shown[0]['element_uid']}.", _run_command(result, 'blast', shown[0]['element_uid'])
+                ),
             )
         )
 
@@ -1652,6 +1744,7 @@ def _outlook_findings(result: AnalysisResult) -> list[dict]:
                 f"{named}{more} — they bound how far shortening the chain can go",
                 elements=[e['element_uid'] for e in shown],
                 evidence={'latent_heavies': latent},
+                step=_step("Leave them until the chain is shorter: they bound how far that can go."),
             )
         )
 
@@ -1788,6 +1881,7 @@ def _ranking_findings(result: AnalysisResult, chain_bound: bool) -> list[dict]:
                 # population published twice - `UX-288`'s rule - and the
                 # deepest shape in the document for the sake of it.
                 evidence=({'blast_radius_distribution': distribution} if distribution else {}),
+                step=_step(f"Shorten {shown[0]} first.", _run_command(result, 'blast', shown[0])),
             )
         )
 
@@ -1807,6 +1901,10 @@ def _ranking_findings(result: AnalysisResult, chain_bound: bool) -> list[dict]:
                 f"touching them is not their own duration but everything "
                 f"downstream that has to be built again",
                 elements=list(reaching[:BLAST_RADIUS_SHOWN]),
+                step=_step(
+                    f"See what a change to {reaching[0]} rebuilds before touching it.",
+                    _run_command(result, 'blast', reaching[0]),
+                ),
             )
         )
 
@@ -1821,6 +1919,7 @@ def _ranking_findings(result: AnalysisResult, chain_bound: bool) -> list[dict]:
                 f"elements ({', '.join(sorted({(blast_radius.get(u) or {}).get('element_kind', 'unknown') for u in structural}))}) "
                 f"whose dependents are the graph's shape, not a task",
                 elements=list(structural[:BLAST_RADIUS_SHOWN]),
+                step=_none("structural elements: their reach is the graph's shape"),
             )
         )
 
@@ -1837,6 +1936,7 @@ def _ranking_findings(result: AnalysisResult, chain_bound: bool) -> list[dict]:
                 SEVERITY_INFO,
                 f"Declared foundation, excluded from the ranking: {named}",
                 elements=list(foundation[:BLAST_RADIUS_SHOWN]),
+                step=_none("declared foundation, excluded by the project's own declaration"),
             )
         )
 
@@ -1880,6 +1980,7 @@ def _foundation_candidates(blast_radius: dict, distribution: Optional[dict], ord
             SEVERITY_INFO,
             f"Wide reach, not declared foundation — declare or dismiss: {named}",
             elements=list(candidates[:BLAST_RADIUS_SHOWN]),
+            step=_step("Declare each as foundation, or dismiss it."),
         )
     ]
 
@@ -1926,6 +2027,7 @@ def _fan_in_findings(result: AnalysisResult) -> list[dict]:
                 detail=detail,
                 elements=list(shown),
                 evidence=({'fan_in_distribution': distribution} if distribution else {}),
+                step=_none("a ranking of what each element pulls in, not a defect"),
             )
         )
 
@@ -1960,6 +2062,7 @@ def _fan_in_findings(result: AnalysisResult) -> list[dict]:
                 f"({', '.join(sorted({fan_in[uid].get('element_kind', 'unknown') for uid in structural}))})"
                 f" whose dependencies are the graph's shape, not a task",
                 elements=list(structural[:BLAST_RADIUS_SHOWN]),
+                step=_none("structural elements: their dependencies are the graph's shape"),
             )
         )
 
@@ -1976,6 +2079,7 @@ def _fan_in_findings(result: AnalysisResult) -> list[dict]:
                 SEVERITY_INFO,
                 f"Declared foundation, excluded from the ranking: {named}",
                 elements=list(foundation[:BLAST_RADIUS_SHOWN]),
+                step=_none("declared foundation, excluded by the project's own declaration"),
             )
         )
     return findings
@@ -2068,6 +2172,7 @@ def _criticality_findings(result: AnalysisResult) -> list[dict]:
             detail=detail,
             elements=[uid for uid, _d in nonzero],
             evidence={'criticality_probability': dict(nonzero)},
+            step=_none("a probability ranking, not a defect"),
         )
     ]
 
@@ -2086,6 +2191,7 @@ def _floor_findings(result: AnalysisResult) -> list[dict]:
                 f"Certified headroom: up to {qty.duration(headroom)} available "
                 f"(T∞={qty.duration(t_inf)}, LB={qty.duration(lb_val)})",
                 evidence={'certified_headroom_us': headroom, 't_infinity_us': t_inf, 'lb_us': lb_val},
+                step=_step("Run the sweep to see which capacity reaches the floor.", _run_command(result, 'sweep')),
             )
         )
     # UX-02: never presented alone without the "not work-minimality"
@@ -2104,6 +2210,7 @@ def _floor_findings(result: AnalysisResult) -> list[dict]:
                 SEVERITY_INFO,
                 f"Efficiency score: {qty.share(efficiency_score)} ({band}){caveat}",
                 evidence={'efficiency_score': efficiency_score, 'low_confidence': bool(caveat)},
+                step=_none("a summary score, not a defect"),
             )
         )
     return findings
@@ -2697,7 +2804,13 @@ def render_findings(findings: list[dict]) -> list[str]:
     """
     lines: list[str] = []
     for finding in findings:
-        lines.append(f"{finding.get('indent', '  ')}{finding['title']}")
+        indent = finding.get('indent', '  ')
+        lines.append(f"{indent}{finding['title']}")
+        step = finding.get('step') or {}
+        if step.get('text'):
+            lines.append(f"{indent}  -> {step['text']}")
+            if step.get('command'):
+                lines.append(f"{indent}     {step['command']}")
         lines.extend(finding.get('detail') or [])
     return lines
 

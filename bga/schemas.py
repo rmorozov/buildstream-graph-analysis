@@ -4416,6 +4416,20 @@ _ANALYZE_HINTS = {
                 # published path, so a projection would have to drop
                 # numbers or invent paths for them.
                 "evidence": {"type": ["object", "null"], "properties": EVIDENCE_QUANTITIES},
+                # UX-1256: what to do about it, from the hint or next step that already said so.
+                "step": {
+                    "type": "object",
+                    "description": "What to do about this finding: a sentence, "
+                    "and the `bga` command line that runs it where one does — or "
+                    "why the finding has none.",
+                    "properties": {
+                        "text": {"type": "string"},
+                        "command": {"type": "string"},
+                        "why_none": {"type": "string"},
+                    },
+                    "oneOf": [{"required": ["text"]}, {"required": ["why_none"]}],
+                    "additionalProperties": False,
+                },
                 "copy_text": {
                     "description": "This finding as plain text: its "
                     "title, its evidence in declared "

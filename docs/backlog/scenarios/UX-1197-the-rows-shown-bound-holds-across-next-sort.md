@@ -127,3 +127,7 @@ Re-based guards: `test_a_filter_is_a_property_of_a_table.py` (`UX-1028`'s "pagin
 "paging keeps the bound"; Next is rows 11-20; the window is read off the badge), `test_all_rows_means_all_rows.py` and
 this guard's `UX-1185` cases (`.page-position` retired, the badge carries the window),
 `test_the_report_has_two_panes.py` (the one badge line now passes `view()`).
+
+**Deviation (round 159 walk, N6).** Each tool named its table by key: the task table read "Duration, sort: Wall-clock share", a column of its own; a task-keyed top-level table is named "Tasks".
+Walk page (20x60, 1440): "Duration, sort: Wall-clock share", "next rows: Wall-clock share" -> "Duration, sort: Tasks", "next rows: Tasks".
+Mutation: the "Tasks" name off gives `test_no_two_pager_or_sort_buttons_share_a_name` 1 failed, 9 passed.

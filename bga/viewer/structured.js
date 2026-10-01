@@ -920,7 +920,8 @@ export function interrogable(table, specs, total, depth = 0) {
   // `UX-1162`: each tool's accessible name ends with its table's.
   // `UX-1177`: a phrase - "levels.1.elements" reads "Level 1 elements"; a published name keeps its case.
   const parts = key.split(".");
-  const named = parts.map((part, i) => {
+  // `UX-1197`: the task table's tools are named for its tasks, not for the share it also holds.
+  const named = parts.length === 1 && specs.some((spec) => spec?.role === KEYED_BY_TASK_UID) ? "Tasks" : parts.map((part, i) => {
     const said = title(part, guessQuantity(part));
     const word = i && said !== part ? said.toLowerCase() : said;
     return /^\d+$/.test(parts[i + 1] ?? "") ? word.replace(/s$/, "") : word;

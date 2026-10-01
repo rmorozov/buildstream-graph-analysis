@@ -1,6 +1,6 @@
 # UX-1251: the floors drawing's labels overprint each other when the chain segment is narrow
 
-**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-162 view UI review on a 2,402-element two-plane page (2026-10-01), finding L1 | **Serves:** R1, R3 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** judgement | **Reading:** container
+**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-162 view UI review on a 2,402-element two-plane page (2026-10-01), finding L1 | **Serves:** R1, R3 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical | **Reading:** container
 
 **Guard:** none — open, no guard named yet
 
@@ -13,6 +13,19 @@ At 1440 the chain segment is 9.8% of the bar; "chain floor T∞ 4.6 min" and "Sc
 ## Decomposition
 
 Input classes: the 2,402-element two-plane page, `golden` and `macro_micro`, at 1440 and 390.
+
+## Decision
+
+Architect, round 163 (2026-10-01):
+
+```text
+Route:     in a decomposition axis every label sits on its own line under its segment's start (.decomposition .draw-axis a block stack, keeps --at's shift, takes the segment's tone): labels cannot intersect at any width.
+Rejected:  measure-and-bump at runtime (layout JS, print, flaky); a share threshold (width-dependent).
+Files:     bga/viewer/style.css, bga/viewer/drawings.js, tests/unit/test_a_segment_label_never_overprints_its_neighbour.py
+Guard:     decomposition() in Chromium with 2%, 9.8%, 88% parts at 1440 and 390 plus golden/macro_micro floors: no two .draw-tick boxes intersect.
+Mutation:  restore position:absolute; left:at% on .decomposition .draw-tick.
+Class:     product
+```
 
 ## Required Fix
 

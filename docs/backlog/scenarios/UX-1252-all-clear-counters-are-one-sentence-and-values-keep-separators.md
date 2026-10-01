@@ -1,6 +1,6 @@
 # UX-1252: zero counters take a row each, counts lose their separators, and an absence names the wrong series
 
-**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-162 view UI review on a 2,402-element two-plane page (2026-10-01), finding L2 | **Serves:** R1, R5 | **Topic:** viewer | **Area:** bga, bga/viewer | **Shape:** judgement | **Reading:** container
+**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-162 view UI review on a 2,402-element two-plane page (2026-10-01), finding L2 | **Serves:** R1, R5 | **Topic:** viewer | **Area:** bga, bga/viewer | **Shape:** mechanical | **Reading:** container
 
 **Guard:** none — open, no guard named yet
 
@@ -17,6 +17,20 @@ Page: `bga gen-synthetic <d> --store --seed 1 --layers 40 --width 60 --workload 
 ## Decomposition
 
 Input classes: the 2,402-element two-plane page, `golden` and `macro_micro`, at 1440 and 390.
+
+## Decision
+
+Architect, round 163 (2026-10-01):
+
+```text
+Route:     (a) renderPairs folds a run of >=2 0/none/no/empty values in one dl into "None: A, B, C."; JSON keeps every field. (b) rail "· save trace" nowrap. (c) findings.py:1763,1914,1952,1971 use {n:,}. (d) analyzer.py:2098's absence names the host CPU series. (e) cli.py:168 uses qty.duration. (f) styleguide §6e.12 extended.
+Rejected:  per-section sentences (drift); viewer patches of Python prose (a second formatter).
+Files:     bga/viewer/pairs.js, bga/viewer/style.css, bga/findings.py, bga/analyzer.py, bga/cli.py, docs/design/styleguide.md, tests/unit/test_an_all_clear_run_is_one_sentence.py, tests/unit/test_a_quantity_is_formatted_where_it_is_shown.py
+Guard:     no dl.pairs with two consecutive 0/none rows; no rail line holding only "·"; cores absence names CPU; no bare 4+ digit count and no \d+\.\d\d s in prose.
+Mutation:  fold off; drop :, at findings.py:1952; restore :.2f} s; restore "memory".
+Class:     product
+Split:     A viewer (a,b,f) parallel; B Python (c,d,e) after 1245/1246/1248/1249. Fold applies page-wide (reversible default).
+```
 
 ## Required Fix
 

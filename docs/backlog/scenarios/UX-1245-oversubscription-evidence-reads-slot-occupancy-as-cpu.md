@@ -1,6 +1,6 @@
 # UX-1245: utilisation calls full builder slots "High CPU use", and its peak concurrency is always 1
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-162 view UI review on a 2,402-element two-plane page (2026-10-01), finding H2 | **Serves:** R5 | **Topic:** analysis | **Area:** bga | **Shape:** judgement | **Reading:** container
+**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-162 view UI review on a 2,402-element two-plane page (2026-10-01), finding H2 | **Serves:** R5 | **Topic:** analysis | **Area:** bga | **Shape:** mechanical | **Reading:** container
 
 **Guard:** none — open, no guard named yet
 
@@ -18,6 +18,20 @@ Both are instruments reading a proxy (fixing guide §5):
 ## Decomposition
 
 Input classes: the 2,402-element two-plane page, `golden` and `macro_micro`, at 1440 and 390.
+
+## Decision
+
+Architect, round 163 (2026-10-01):
+
+```text
+Route:     slot-time >= 95% becomes new evidence HIGH_SLOT_OCCUPANCY and alone no longer sets potential_oversubscription; _attach_plane2_capacity (cli.py:175) re-runs a pure oversubscription_evidence(slot_share, cores_busy, effective_cpus) and writes HIGH_CPU_UTILIZATION only when cores_busy >= 0.95 x effective CPUs. Peak concurrency becomes a start/end sweep over task intervals; analyzer.py:2164 `concurrent_tasks` deleted.
+Rejected:  renaming the enum value (breaks consumers; adding is additive); passing Plane 2 into the analyzer (attached after analyze()); removing the peak field.
+Files:     bga/utilisation/__init__.py; bga/analyzer.py (~2155-2175); bga/cli.py; bga/schemas.py (~5231); bga/viewer/format.js ("Builder slots full"); tests/unit/test_utilisation.py.
+Guard:     test_utilisation.py: overlap gives peak 2; full slots + cores_busy 0.86/4 gives potential_oversubscription False, HIGH_SLOT_OCCUPANCY; 3.9/4 gives HIGH_CPU_UTILIZATION.
+Mutation:  one-item list again (overlap reds); slot-share sets oversubscription (0.86 reds).
+Class:     product
+Split:     Track B, then UX-1246.
+```
 
 ## Required Fix
 

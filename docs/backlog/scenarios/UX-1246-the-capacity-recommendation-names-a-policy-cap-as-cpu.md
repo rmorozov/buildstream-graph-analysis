@@ -1,6 +1,6 @@
 # UX-1246: the capacity recommendation names the host-core cap "CPU" while CPU does not bind
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-162 view UI review on a 2,402-element two-plane page (2026-10-01), finding M1 | **Serves:** R5 | **Topic:** viewer | **Area:** bga, bga/viewer | **Shape:** judgement | **Reading:** container
+**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-162 view UI review on a 2,402-element two-plane page (2026-10-01), finding M1 | **Serves:** R5 | **Topic:** viewer | **Area:** bga, bga/viewer | **Shape:** mechanical | **Reading:** container
 
 **Guard:** none — open, no guard named yet
 
@@ -13,6 +13,20 @@ Page: `bga gen-synthetic <d> --store --seed 1 --layers 40 --width 60 --workload 
 ## Decomposition
 
 Input classes: the 2,402-element two-plane page, `golden` and `macro_micro`, at 1440 and 390.
+
+## Decision
+
+Architect, round 163 (2026-10-01):
+
+```text
+Route:     compute_capacity_recommendation (correlate.py ~1245-1262): a clamped CPU row is named `host_cores`, keeps clamped_from and CPU arithmetic in reason; capacity_verdict_sentence (:1165) and the finding (findings.py:1192-1240) say "the host's 4 cores cap it; the CPU alone could feed 18". Unclamped CPU still reads CPU. "Host cores" into §6e.2.
+Rejected:  a separate cap row (two rows, one number); changing UX-861.
+Files:     bga/correlate.py; bga/findings.py (capacity finding); bga/viewer/format.js; docs/design/styleguide.md §6e.2; tests/unit/test_capacity_recommendation.py.
+Guard:     test_capacity_recommendation.py: cores_busy 0.86, host 4 -> binding host_cores, no "CPU binds"; 3.9 binds CPU; macro_micro clamped row reads host_cores.
+Mutation:  put 'CPU' back on the clamped row.
+Class:     product
+Split:     Track B after 1245.
+```
 
 ## Required Fix
 

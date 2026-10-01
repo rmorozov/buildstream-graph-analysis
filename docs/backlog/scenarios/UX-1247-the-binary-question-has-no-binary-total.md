@@ -1,6 +1,6 @@
 # UX-1247: "Which binaries cost this build its time?" has no per-binary total to answer with
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-162 view UI review on a 2,402-element two-plane page (2026-10-01), finding M2 | **Serves:** R1, R2, R5 | **Topic:** analysis | **Area:** bga, bga/viewer | **Shape:** judgement | **Reading:** container
+**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-162 view UI review on a 2,402-element two-plane page (2026-10-01), finding M2 | **Serves:** R1, R2, R5 | **Topic:** analysis | **Area:** bga, bga/viewer | **Shape:** mechanical | **Reading:** container
 
 **Guard:** none — open, no guard named yet
 
@@ -13,6 +13,21 @@ Page: `bga gen-synthetic <d> --store --seed 1 --layers 40 --width 60 --workload 
 ## Decomposition
 
 Input classes: the 2,402-element two-plane page, `golden` and `macro_micro`, at 1440 and 390.
+
+## Decision
+
+Architect, round 163 (2026-10-01):
+
+```text
+Route:     bga/plane2.py gains `binary_totals(native_report)`: sums `binary_cost` per binary into `{binary, cpu_us, wall_us, calls, elements}` rows ranked by CPU, calls from the capture's `by_binary`; report/json.py publishes them AS `by_binary` (breaking: analyze/v7); the pair table stays the drill-down.
+Rejected:  a second `binary_totals` key (one population published twice, UX-288); totals written by the tracer (stored plane2.json lacks them, UX-996); grouping in the viewer (a second analyzer, Direction 7).
+Files:     bga/plane2.py, bga/report/json.py:534, bga/schemas.py:402,:4810 (v7 + architecture.md:395 row), bga/disclosure.py:448, bga/viewer/sections.js:788 (answer sentence reads by_binary[0]), tests reading `by_binary` as a map (~25 files).
+Guard:     tests/unit/test_the_binary_question_has_a_binary_total.py — macro_micro and a constructed report where make has most calls but cc most CPU: row 0 is the CPU leader, cpu_us = sum of its pair rows, answer sentence names it.
+Mutation:  rank by calls; restore the sum in sections.js.
+Class:     product
+Split:     one track. Old reports with only top-N by_cpu leave cpu_us absent, not partial.
+Question:  none; v7 bump is the reversible default.
+```
 
 ## Required Fix
 

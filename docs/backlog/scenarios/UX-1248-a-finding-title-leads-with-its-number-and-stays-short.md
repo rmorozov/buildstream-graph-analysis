@@ -1,6 +1,6 @@
 # UX-1248: finding titles run to 276 characters and bury the number they lead with
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-162 view UI review on a 2,402-element two-plane page (2026-10-01), finding M3 | **Serves:** R1, R8 | **Topic:** viewer | **Area:** bga, bga/viewer | **Shape:** judgement | **Reading:** container
+**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-162 view UI review on a 2,402-element two-plane page (2026-10-01), finding M3 | **Serves:** R1, R8 | **Topic:** viewer | **Area:** bga, bga/viewer | **Shape:** mechanical | **Reading:** container
 
 **Guard:** none — open, no guard named yet
 
@@ -13,6 +13,20 @@ The 14 finding titles measure 29 to 276 characters; seven are over 150, i.e. two
 ## Decomposition
 
 Input classes: the 2,402-element two-plane page, `golden` and `macro_micro`, at 1440 and 390.
+
+## Decision
+
+Architect, round 163 (2026-10-01):
+
+```text
+Route:     styleguide §4g "A finding title": ≤100 chars, measured number first, because-clause and URL to detail, cross-reference names the section by its heading and sets `section`. ~14 titles rewritten.
+Rejected:  assert in _finding (data-dependent, crashes real runs); truncation (loses the claim).
+Files:     docs/design/styleguide.md (+ Rules at a glance row), docs/contributing/rules.md, bga/findings.py title f-strings (_shared_source_findings :1052, efficiency).
+Guard:     tests/unit/test_a_finding_title_leads_with_its_number.py — golden, macro_micro, gen-synthetic seed 1 (Large): len ≤100, no ://, a title with a digit opens with a number, a capitalised multi-word span is a schema heading.
+Mutation:  restore the shared-source title.
+Class:     product
+Split:     after 1256 in the same worktree; leave capacity-recommendation title to 1246.
+```
 
 ## Required Fix
 

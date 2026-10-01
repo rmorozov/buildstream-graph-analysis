@@ -1,6 +1,6 @@
 # UX-1257: "What changed since last time?" has an empty lead, and the first screen never says the delta
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-162 view UI review on a 2,402-element two-plane page (2026-10-01), brainstorm B5, filed at Ruslan's request | **Serves:** R4, R7, R8 | **Topic:** viewer | **Area:** bga, bga/viewer | **Shape:** judgement | **Reading:** container
+**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-162 view UI review on a 2,402-element two-plane page (2026-10-01), brainstorm B5, filed at Ruslan's request | **Serves:** R4, R7, R8 | **Topic:** viewer | **Area:** bga, bga/viewer | **Shape:** mechanical | **Reading:** container
 
 **Guard:** none — open, no guard named yet
 
@@ -13,6 +13,19 @@ Every chapter has a one-line lead except `#chapter-compare`, whose lead is empty
 ## Decomposition
 
 Input classes: the 2,402-element two-plane page, `golden` and `macro_micro`, at 1440 and 390.
+
+## Decision
+
+Architect, round 163 (2026-10-01):
+
+```text
+Route:     compare.py publishes the wall delta % (additive in compare/v2); one exported compareLead(comparison) in chapters.js builds "−0.1% (2.4 s faster) than @prev, inside the noise band" from verdict_kind; app.js passes compare.json to chapters(); decision.js draws the same sentence; one snapshot: one absence sentence in the panel, chapter absent.
+Rejected:  viewer dividing delta by baseline (Direction 7); two sentence builders.
+Files:     bga/compare.py, bga/schemas.py, bga/viewer/chapters.js, bga/viewer/app.js, bga/viewer/decision.js, tests/unit/test_the_compare_chapter_leads_with_the_delta.py
+Guard:     two_plane_run(runs=2): compare lead == decision sentence, carries % and verdict; runs=1 one absence sentence.
+Mutation:  compare answer returns null; remove the decision call.
+Class:     product
+```
 
 ## Required Fix
 

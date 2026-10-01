@@ -1,6 +1,6 @@
 # UX-1254: the capacity operator assembles a sizing answer from five sections
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-162 view UI review on a 2,402-element two-plane page (2026-10-01), brainstorm B2, filed at Ruslan's request | **Serves:** R5 | **Topic:** viewer | **Area:** bga, bga/viewer | **Shape:** judgement | **Reading:** container
+**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-162 view UI review on a 2,402-element two-plane page (2026-10-01), brainstorm B2, filed at Ruslan's request | **Serves:** R5 | **Topic:** viewer | **Area:** bga, bga/viewer | **Shape:** mechanical | **Reading:** container
 
 **Guard:** none — open, no guard named yet
 
@@ -13,6 +13,20 @@ Sizing an agent (cores, memory, builders) reads `#occupancy` (builders 3.99x of 
 ## Decomposition
 
 Input classes: the 2,402-element two-plane page, `golden` and `macro_micro`, at 1440 and 390.
+
+## Decision
+
+Architect, round 163 (2026-10-01):
+
+```text
+Route:     compute_agent_sizing(result) beside the recommendation publishes agent_sizing (builders recommended + graph ceiling; cores busy average + peak where host_cpu exists; memory per-element peak RSS x builders; caveat; one source section id per field); a new first section in the machine chapter draws it; Plane 1-only reads one absence sentence.
+Rejected:  computing in viewer JS; a findings entry.
+Files:     bga/correlate.py; bga/cli.py; bga/schemas.py; bga/viewer/chapters.js; bga/viewer/sections.js; tests/unit/test_an_agent_sizing_card_reads_its_sources.py.
+Guard:     macro_micro agent_sizing values equal capacity_recommendation, plane2_capacity.cores_busy, memory_envelope, one link each; Plane 1-only gives the absence sentence.
+Mutation:  memory from memory_envelope total instead of per-element peak.
+Class:     product (page headroom ~9 KiB)
+Split:     Track C, after B merges (reads host_cores name).
+```
 
 ## Required Fix
 

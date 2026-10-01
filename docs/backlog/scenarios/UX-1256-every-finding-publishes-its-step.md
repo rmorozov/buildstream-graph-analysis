@@ -1,6 +1,6 @@
 # UX-1256: findings publish facts, and the steps live only in attribution hints and next steps
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-162 view UI review on a 2,402-element two-plane page (2026-10-01), brainstorm B4, filed at Ruslan's request | **Serves:** R1, R8 | **Topic:** analysis | **Area:** bga | **Shape:** judgement | **Reading:** container
+**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-162 view UI review on a 2,402-element two-plane page (2026-10-01), brainstorm B4, filed at Ruslan's request | **Serves:** R1, R8 | **Topic:** analysis | **Area:** bga | **Shape:** mechanical | **Reading:** container
 
 **Guard:** none — open, no guard named yet
 
@@ -13,6 +13,20 @@ A finding publishes `id, severity, title, detail, elements, evidence, reader, co
 ## Decomposition
 
 Input classes: the 2,402-element two-plane page, `golden` and `macro_micro`, at 1440 and 390.
+
+## Decision
+
+Architect, round 163 (2026-10-01):
+
+```text
+Route:     `_finding()` takes `step` as required keyword, no default: `{text, command?}` or `{why_none}` — omission is a TypeError. Steps from resolve_attribution_hint / _plane2_capacity_hint and next steps; render_findings prints it under the title; schema declares findings[].step.
+Rejected:  defaulted step=None plus a guard (mechanism before guard); copying next_steps wholesale.
+Files:     bga/findings.py (_finding :377, 43 calls, _opportunity_findings :1502, render_findings :2680), bga/schemas.py findings item (:4419). Retire wait-category's evidence.hint and "-> hint" detail line.
+Guard:     tests/unit/test_every_finding_publishes_its_step.py — golden, macro_micro: every Medium+ finding has step.text, wait-category's step equals the resolved hint, schema declares step.
+Mutation:  step={'why_none':...} on wait-category.
+Class:     product
+Split:     one track, first; backbone for 1248, 1249, 1255.
+```
 
 ## Required Fix
 

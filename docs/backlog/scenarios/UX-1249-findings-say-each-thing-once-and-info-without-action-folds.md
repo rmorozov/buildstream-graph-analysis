@@ -1,6 +1,6 @@
 # UX-1249: findings name the same elements twice and ten Info findings carry no step
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-162 view UI review on a 2,402-element two-plane page (2026-10-01), finding M4 | **Serves:** R1, R8 | **Topic:** viewer | **Area:** bga, bga/viewer | **Shape:** judgement | **Reading:** container
+**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-162 view UI review on a 2,402-element two-plane page (2026-10-01), finding M4 | **Serves:** R1, R8 | **Topic:** viewer | **Area:** bga, bga/viewer | **Shape:** mechanical | **Reading:** container
 
 **Guard:** none — open, no guard named yet
 
@@ -17,6 +17,20 @@ The High finding ("92.6% resource wait") is first, but no finding says what to d
 ## Decomposition
 
 Input classes: the 2,402-element two-plane page, `golden` and `macro_micro`, at 1440 and 390.
+
+## Decision
+
+Architect, round 163 (2026-10-01):
+
+```text
+Route:     analysis drops a finding whose element set equals an earlier one's; viewer renderFindings draws ranked items as links (drop comma row), draws step, folds Info-without-step under "Also noted · N" after the actionable ones.
+Rejected:  dedup in the viewer (second analyzer); hiding Info (§1b).
+Files:     bga/findings.py (_ranking_findings :1667, _foundation_candidates :1852), bga/viewer/sections.js (renderFindings :119), bga/viewer/style.css.
+Guard:     tests/unit/test_findings_say_each_thing_once.py (browser) — macro_micro + synthetic: no element set in two findings, no uid twice in one, every at-rest finding has a step or priority above Info.
+Mutation:  unfold Also noted at rest.
+Class:     product
+Split:     after 1256 and 1248; walker runs.
+```
 
 ## Required Fix
 

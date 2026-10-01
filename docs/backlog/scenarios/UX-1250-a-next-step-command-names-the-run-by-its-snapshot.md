@@ -1,6 +1,6 @@
 # UX-1250: next-step commands carry a 100-character absolute run path
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-162 view UI review on a 2,402-element two-plane page (2026-10-01), finding M5 | **Serves:** R1 | **Topic:** viewer | **Area:** bga, bga/viewer | **Shape:** judgement | **Reading:** container
+**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-162 view UI review on a 2,402-element two-plane page (2026-10-01), finding M5 | **Serves:** R1 | **Topic:** viewer | **Area:** bga, bga/viewer | **Shape:** mechanical | **Reading:** container
 
 **Guard:** none — open, no guard named yet
 
@@ -13,6 +13,20 @@ Page: `bga gen-synthetic <d> --store --seed 1 --layers 40 --width 60 --workload 
 ## Decomposition
 
 Input classes: the 2,402-element two-plane page, `golden` and `macro_micro`, at 1440 and 390.
+
+## Decision
+
+Architect, round 163 (2026-10-01):
+
+```text
+Route:     one helper in bga/findings.py turns a store run_dir into `@<stamp>`; every argv in compute_next_steps goes through it; measure-again drops --project (bga_snapshot defaults to project_root()). A run outside a store keeps its path.
+Rejected:  @last (changes meaning with the next snapshot; needs a filesystem read in a pure function); --project "when not the cwd" (an exported page cannot know the reader's cwd).
+Files:     bga/findings.py, tests/unit/test_a_next_step_names_the_run_by_its_snapshot.py, tests/unit/test_the_printed_sentences_are_contracts.py (retire the parsed.project clause)
+Guard:     a two-run store page: every argv <= 60 chars, no /.bga/runs/; blast, sweep, correlate via main() from the project dir resolve to the same run_dir.
+Mutation:  argv back to the raw run_dir.
+Class:     product
+Split:     one track; lands before 1244/1256 steps use it.
+```
 
 ## Required Fix
 

@@ -1,6 +1,6 @@
 # UX-1255: 39,854 Plane 2 processes produce no finding
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-162 view UI review on a 2,402-element two-plane page (2026-10-01), brainstorm B3, filed at Ruslan's request | **Serves:** R1, R2, R5 | **Topic:** analysis | **Area:** bga | **Shape:** judgement | **Reading:** container
+**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-162 view UI review on a 2,402-element two-plane page (2026-10-01), brainstorm B3, filed at Ruslan's request | **Serves:** R1, R2, R5 | **Topic:** analysis | **Area:** bga | **Shape:** mechanical | **Reading:** container
 
 **Guard:** none — open, no guard named yet
 
@@ -13,6 +13,20 @@ The 14 findings are all Plane 1 or graph findings (`wait-category` ... `efficien
 ## Decomposition
 
 Input classes: the 2,402-element two-plane page, `golden` and `macro_micro`, at 1440 and 390.
+
+## Decision
+
+Architect, round 163 (2026-10-01):
+
+```text
+Route:     new `_plane2_findings(result)` on result.plane2_report: costliest binary from 1247's binary_totals; elements whose cores busy is below a named fraction of requested jobs (per_element_parallelism); configure's share above a named line. Each carries section, step, FINDING_READERS entry.
+Rejected:  new Plane 2 measurement (out of scope); reading viewer sentences.
+Files:     bga/findings.py (new fn, compute_findings :2128, FINDING_READERS :87); reads bga/plane2.py from 1247.
+Guard:     tests/unit/test_plane_two_reaches_the_findings.py — macro_micro: binary finding cpu_us == by_binary[0].cpu_us; Plane 1-only golden emits none.
+Mutation:  function returns [].
+Class:     product
+Split:     after 1247 and 1256.
+```
 
 ## Required Fix
 

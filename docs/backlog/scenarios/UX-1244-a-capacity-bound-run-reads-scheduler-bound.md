@@ -1,6 +1,6 @@
 # UX-1244: a run whose resource floor is its wall reads "scheduler-bound" and is sent to the blast ranking
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-162 view UI review on a 2,402-element two-plane page (2026-10-01), finding H1 | **Serves:** R1, R5, R8 | **Topic:** analysis | **Area:** bga, bga/viewer | **Shape:** judgement | **Reading:** container
+**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-162 view UI review on a 2,402-element two-plane page (2026-10-01), finding H1 | **Serves:** R1, R5, R8 | **Topic:** analysis | **Area:** bga, bga/viewer | **Shape:** mechanical | **Reading:** container
 
 **Guard:** none — open, no guard named yet
 
@@ -23,6 +23,20 @@ The build is bound by its 4 builder slots while the cores idle at 21%. The reade
 ## Decomposition
 
 Input classes: the 2,402-element two-plane page, `golden` and `macro_micro`, at 1440 and 390.
+
+## Decision
+
+Architect, round 163 (2026-10-01):
+
+```text
+Route:     diagnose() keeps the chain check first; below CHAIN_BOUND_RATIO a third arm `capacity_bound` when floors.lb / wall >= CAPACITY_BOUND_SHARE (0.95) and lb > t_infinity_observed. Sentence names builders and the step; _top_actions puts the capacity-recommendation finding (else the `bga sweep` next step) before the blast ranking. Step comes from the hint source / finding step, not evidence.hint (retired by UX-1256).
+Rejected:  task horizon as denominator (ticket and #floors read the wall); Plane 2 cores_busy as the decider (Plane 1-only runs lose the arm); dropping `lb > t∞` (with_timeline lb/wall 0.936 with lb = t∞ is chain-bound).
+Files:     bga/findings.py (constant, DIAGNOSES, DIAGNOSIS_SENTENCES, diagnose, _top_actions); bga/provenance.py (_diagnosis_rule); bga/viewer/format.js (READER_LABELS capacity_bound); tests/unit/test_the_diagnosis_follows_the_shape.py.
+Guard:     test_the_diagnosis_follows_the_shape.py: constructed result with the page's numbers (t∞ 9.8% of horizon, lb 47.0 of 47.2 min) reads capacity_bound, names builders, first action a builders step; golden and macro_micro stay chain_bound.
+Mutation:  delete the capacity arm.
+Class:     product
+Split:     Track A after UX-1253 (reads its constant).
+```
 
 ## Required Fix
 

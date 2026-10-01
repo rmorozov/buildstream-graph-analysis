@@ -1,8 +1,8 @@
 """UX-1192 (styleguide §6e.9): every drawn mark carries its value as a
 `<title>`, and a strip whose max exceeds 10x its p90 scales the rest to a
-break and names the outlier at its edge. UX-1204: the band, the store
-trend and an element's history title every mark, through the node
-harness (no built page draws them); at 390 the uid box holds its
+break and names the outlier at its edge. UX-1204/UX-1216: the band, the
+store trend and an element's history title every mark, on a served
+4-run page (an export holds no store); at 390 the uid box holds its
 placeholder and every opened SQL paste fits its `.investigate`.
 
 Measured before the fix on the 1,202-element two-plane page: 16 svgs,
@@ -12,11 +12,8 @@ Measured before the fix on the 1,202-element two-plane page: 16 svgs,
 import base64
 import gzip
 import json
-import os
 import pathlib
 import re
-import shutil
-import subprocess
 import sys
 
 import pytest
@@ -29,8 +26,6 @@ from tests.browser import NO_BROWSER, Browser, find_chrome
 
 chrome = find_chrome()
 needs_browser = pytest.mark.skipif(chrome is None, reason=NO_BROWSER)
-node = shutil.which("node")
-needs_node = pytest.mark.skipif(node is None, reason="node is not installed")
 
 #: The 1,202-element two-plane page the review measured.
 SCALE_SHAPE = ("--layers", "20", "--width", "60")
@@ -162,76 +157,32 @@ def test_the_uid_box_and_an_opened_sql_paste_fit_390(reads):
     assert over == [], (len(narrow["pastes"]), over[:3])
 
 
-_HARNESS = r"""
-globalThis._installDocument ??= (await import(process.env.BGA_DOM_SHIM)).installDocument;
-_installDocument();
-globalThis.document.createElementNS = (ns, tag) => globalThis.document.createElement(tag);
-const all = (n, pred, out = []) => {
-  if (pred(n)) out.push(n);
-  for (const c of n.children ?? []) all(c, pred, out);
-  return out;
-};
-const text = (n) => !n ? "" : ((n.children ?? []).length
-  ? (n._text ?? "") + n.children.map(text).join("") : (n._text ?? ""));
-const mod = await import("./tests/viewer.mjs");
-const shapes = new Set(["circle", "rect", "line", "polygon", "path"]);
-const read = (block) => {
-  const svg = all(block, (n) => n.attrs?.role === "img")[0];
-  const marks = (svg.children ?? []).filter((n) => shapes.has(String(n.tagName).toLowerCase()));
-  return { marks: marks.length, bare: marks.filter((m) => !(m.children ?? []).some(
-    (c) => String(c.tagName).toLowerCase() === "title" && text(c).trim())).map((m) => m.attrs.class) };
-};
-"""
-
-_BAND = {
-    "baseline_band": {
-        "band_low_us": 100,
-        "band_high_us": 200,
-        "observed_low_us": 80,
-        "observed_high_us": 260,
-        "runs": [90, 150, 250],
-    },
-    "candidate": {"total_duration_us": 230},
-}
-_STORE = {
-    "schema": "store/v1",
-    "count": 3,
-    "snapshots": [
-        {
-            "stamp": s,
-            "bytes": 1,
-            "incomplete_reason": None,
-            "total_duration_us": d,
-            "verdict_kind": v,
-            "elements": [{"element_uid": "elt", "duration_us": d, "on_critical_path": True}],
-        }
-        for s, d, v in (("a", 1_000_000, None), ("b", 5_000_000, "regressed"), ("c", 2_000_000, None))
-    ],
-}
-_AGGREGATE = {"blended": {"mixes": 1, "duration_us": {"samples": 3, "median": 2_000_000, "p95": 5_000_000}}}
+#: `UX-1216`: the three store drawings. They need a server behind a store (an export holds none), and
+#: an element's history needs the per-element slice a snapshot writes.
+_STORE_MARKS = r"""
+(async () => {
+  await new Promise((done) => setTimeout(done, 800));
+  const drawn = (selector) => [...document.querySelectorAll(selector)].map((svg) => {
+    const marks = [...svg.querySelectorAll(":scope > :is(circle, rect, line, polygon, path)")]
+      .filter((m) => !m.matches(GROUND));
+    return { marks: marks.length,
+             bare: marks.filter((m) => !m.querySelector(":scope > title")?.textContent.trim()).length };
+  });
+  return { trend: drawn("svg.trend"), band: drawn("svg.band"),
+           history: drawn("[data-role=element-history][data-history=present] svg") };
+})()
+""".replace("GROUND", repr(GROUND))
 
 
-@needs_node
-def test_the_band_the_trend_and_the_history_title_every_mark():
-    source = (
-        _HARNESS
-        + f"""
-console.log(JSON.stringify({{
-  band: read(mod.renderBand({json.dumps(_BAND)})),
-  trend: read(mod.renderTrend({json.dumps(_STORE)}, undefined, {json.dumps(_AGGREGATE)})),
-  history: read(mod.renderElementHistory({json.dumps(_STORE)}, "elt", null)),
-}}));
-"""
-    )
-    result = subprocess.run(
-        [node, "--input-type=module", "-e", source],
-        capture_output=True,
-        text=True,
-        cwd=REPO,
-        timeout=90,
-        env=dict(os.environ, BGA_DOM_SHIM=str(REPO / "tests" / "dom_shim.mjs")),
-    )
-    assert result.returncode == 0, result.stderr[-3000:]
-    out = json.loads(result.stdout)
-    assert out["band"]["marks"] == 6 and out["trend"]["marks"] == 5 and out["history"]["marks"] == 3, out
-    assert {k: v["bare"] for k, v in out.items() if v["bare"]} == {}, out
+@pytest.fixture(scope="module")
+def store_marks(tmp_path_factory):
+    with pages.served_store_page(tmp_path_factory.mktemp("u1216")) as url, Browser(chrome) as opened:
+        return opened.measure(url, _STORE_MARKS)
+
+
+@needs_browser
+def test_the_band_the_trend_and_the_history_title_every_mark_on_a_served_page(store_marks):
+    for name, found in store_marks.items():
+        assert found, f"{name}: not drawn on the served 4-run page"
+        assert all(d["marks"] > 0 for d in found), f"{name}: a drawing with no marks: {found}"
+        assert all(d["bare"] == 0 for d in found), f"{name}: marks without their <title>: {found}"

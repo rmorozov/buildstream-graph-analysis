@@ -688,7 +688,10 @@ button.chapter-open:hover, button.chapter-open[aria-expanded="true"] {
   /* `UX-1154`/`UX-1161`: paper has no click - every fold prints open with no marker, no control or its label prints, code wraps, every description prints; a fold count stays, it says what is not printed. */
   ::details-content { content-visibility: visible; }
   summary::before { content: none !important; }
-  button:not(.fold-more), input, select, label { display: none !important; }
+  button:not(.fold-more):not(.th-sort), input, select, label { display: none !important; }
+  /* A sortable header's label is its button's text: the box goes, the text prints plain, no glyph. */
+  button.th-sort { display: contents !important; }
+  button.th-sort::after { content: none !important; }
   pre, code { white-space: pre-wrap !important; }
   body, td, th { overflow-wrap: anywhere; }
   .description { display: block !important; }

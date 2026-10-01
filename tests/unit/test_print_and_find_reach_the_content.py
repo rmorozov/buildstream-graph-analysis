@@ -11,6 +11,7 @@ filter placeholder names Jump.
 UX-1196: there the critical path's head-and-tail fold prints all 22 rows
 and no stub at 794 and 390, copies 22 rows and no stub, and its card's
 link lands a folded row in view; `macro_micro`'s 10-row listing sorts.
+UX-1203: in print every `th` on golden and `macro_micro` has its label.
 """
 
 import json
@@ -33,7 +34,13 @@ _PRINT = r"""
   const folds = [...document.querySelectorAll("details.long-text")];
   // `UX-1196`: a head-and-tail stub is no held-back count - its rows print.
   const more = [...document.querySelectorAll("button.fold-more")].filter((b) => !b.hidden && !b.closest("tr.fold-row"));
+  // A header's text as paper renders it: text under a `display: none` node is not printed.
+  const heads = [...document.querySelectorAll("table th")];
+  const printed = (th) => [...th.querySelectorAll("*")].filter((n) => getComputedStyle(n).display === "none")
+    .reduce((text, n) => text.replace(n.textContent, ""), th.textContent).trim();
   return {
+    heads: heads.length, sorts: heads.filter((th) => th.querySelector("button.th-sort")).length,
+    blank: heads.filter((th) => !printed(th)).map((th) => th.closest("table").getAttribute("data-table") ?? th.outerHTML.slice(0, 80)),
     folds: folds.length,
     twice: folds.filter((d) => [...d.querySelectorAll(".long-text-head, .full-text")].filter(shown).length !== 1).length,
     more: more.map((b) => ({ shown: shown(b), border: getComputedStyle(b).borderTopWidth,
@@ -212,6 +219,12 @@ class TestPrintAndFindReachTheContent:
             assert button["shown"] and button["border"] == "0px", button
             assert button["background"] in ("rgba(0, 0, 0, 0)", "transparent"), button
             assert "not printed" in button["said"], button
+
+    def test_every_table_header_prints_its_label(self, seen):
+        assert seen["macro_micro"]["print"]["sorts"] >= 1, seen["macro_micro"]["print"]
+        for label in ("golden", "macro_micro"):
+            got = seen[label]["print"]
+            assert got["heads"] >= 1 and got["blank"] == [], (label, got["heads"], got["blank"])
 
     def test_twins_and_pastes_are_findable(self, seen):
         for label in ("golden", "macro_micro", "two_plane"):

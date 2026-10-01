@@ -105,3 +105,11 @@ opened golden / macro_micro           height 19,278 / 38,389, words 7,742 / 13,0
 A `white-space: nowrap` on the tools survived its mutation (13 passed: `flex-wrap` alone keeps each on one line) and was cut.
 
 **Deviation.** The guard is a new file, not `test_the_narrow_page_keeps_its_place.py`; its tier is LARGE (37 s measured), not MEDIUM. Re-based: `test_a_sortable_header_is_a_button.py` reads the glyph off `button.th-sort::after`; `test_every_element_is_one_object.py` finds the elided note in the last section. The sort glyph no longer prints (print hides every button but `.fold-more`).
+
+**Deviation (integration, UX-1190's follow-up).** Print hid `button.th-sort`, so a sortable header printed blank; it prints `display: contents`, its text plain, no glyph.
+
+```text
+print, 794 px, th with no printed text   golden 7 of 49 -> 0; macro_micro 31 of 134 -> 0
+mutation: the hiding restored            test_every_table_header_prints_its_label 1 failed
+mutation: the button shown as a box      test_no_control_prints 6 failed (7 controls on golden)
+```

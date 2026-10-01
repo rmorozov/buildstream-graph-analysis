@@ -58,3 +58,12 @@ Guard: 3 passed (3.9 s); with the compare, schema, chapters, said-once and attac
 | drop the decision panel's `section.append(... compare-lead ...)` | both browser tests | 2 failed, 1 passed |
 | `_delta_share` returns `None` | the lead test, `test_compare_publishes_the_delta_as_a_share_of_the_baseline` | 2 failed, 1 passed |
 | reverted | | 3 passed |
+
+Verifier fix: `test_the_sign_and_the_verdict_word_are_the_comparisons` runs `compareLead` under node on a constructed
+slower-regressed and faster-inside-band comparison; `cli.md` names `total_duration_delta_share` (surface 609 keys).
+
+| mutation | reddened | run printed |
+|---|---|---|
+| `delta < 0` -> `delta > 0` in `compareLead` | both constructed cases | 2 failed, 3 passed |
+| `regressed` reads `...: improved` | `[slower-regressed]` | 1 failed, 4 passed |
+| reverted | | 5 passed |

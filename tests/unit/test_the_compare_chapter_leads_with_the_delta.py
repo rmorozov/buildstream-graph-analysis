@@ -5,8 +5,11 @@
 decision panel. A single snapshot has no chapter and one absence sentence.
 """
 
+import json
 import pathlib
 import re
+import shutil
+import subprocess
 import sys
 
 import pytest
@@ -59,6 +62,35 @@ def test_the_lead_is_the_delta_and_the_panel_says_it_too(tmp_path_factory):
 def test_one_snapshot_reads_one_absence_sentence(tmp_path_factory):
     page = _page(tmp_path_factory, 1)
     assert page == {"chapter": False, "lead": [], "panel": [ABSENT], "absent": 1}, page
+
+
+_CONSTRUCTED = (
+    (
+        {"total_duration_delta_share": 0.05, "deltas": {"total_duration_us": 3e6}, "verdict_kind": "regressed"},
+        "+5.0% (3.0 s slower) than the run before, outside the noise band: regressed.",
+    ),
+    (
+        {
+            "total_duration_delta_share": -0.001,
+            "deltas": {"total_duration_us": -2.4e6},
+            "verdict_kind": "no_significant_change",
+        },
+        "-0.1% (2.4 s faster) than the run before, inside the noise band.",
+    ),
+)
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="node is not installed")
+@pytest.mark.parametrize("comparison,sentence", _CONSTRUCTED, ids=["slower-regressed", "faster-inside"])
+def test_the_sign_and_the_verdict_word_are_the_comparisons(comparison, sentence):
+    source = (
+        f"import {{ compareLead }} from {json.dumps((REPO / 'bga/viewer/chapters.js').as_uri())};"
+        f"console.log(compareLead({json.dumps(comparison)}));"
+    )
+    said = subprocess.run(
+        [shutil.which("node"), "--input-type=module", "-e", source], capture_output=True, text=True, check=True
+    )
+    assert said.stdout.strip() == sentence
 
 
 def test_compare_publishes_the_delta_as_a_share_of_the_baseline():

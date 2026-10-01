@@ -1099,7 +1099,10 @@ bga compare --schema | jq '."bga:always_written"'
 made it required under an unmoved id, taking the required set from 14
 to 15, and every `compare/v2` document written before it stopped
 validating; it is permitted-and-always-written now, so those documents
-validate again and the id did not have to move.
+validate again and the id did not have to move. The newest,
+`total_duration_delta_share` (`UX-1257`), is the wall-clock delta as a
+share of the baseline's — negative is faster, `null` with no baseline
+total — and is what `bga view`'s compare chapter leads with.
 
 ### Which keys the prose names, and which it does not (`UX-628`)
 
@@ -1148,7 +1151,7 @@ the blocks a reader meets first, and `certified_headroom`, the number
 Key Findings leads with, had never been in the population at all. It was
 302 such keys when that was filed and 305 when it landed. One level and
 no further: `blast_radius_distribution.deciles` is in the population and
-its own nine buckets are not. The surface is **607 keys** today, and
+its own nine buckets are not. The surface is **609 keys** today, and
 that figure is derived from the walk rather than typed here.
 
 So the statement of coverage, which is now a statement and not a

@@ -24,6 +24,9 @@ const UNITS = {
            gb: 1024 ** 3, g: 1024 ** 3 },
   share: { "%": 0.01 },
 };
+// `UX-1206`: a number, a space and one unit is one value - `> 60 s` is `> 60s`.
+const UNIT_WORDS = [...new Set(Object.values(UNITS).flatMap(Object.keys))].sort((a, b) => b.length - a.length).join("|");
+const CLAUSE = new RegExp(`(^|\\s)(?:([a-z_][\\w-]*):\\s*(\\S+)|(?:([a-z_][\\w-]*)\\s*)?(>=|<=|>|<|=)\\s*(-?[\\d.]+\\s+(?:${UNIT_WORDS})(?=\\s|$)|\\S*))`, "gi");
 
 /**
  * `"> 5s"` -> `{op: ">", value: 5000000}` for a `duration_us` column.
@@ -94,7 +97,7 @@ export function parseQuery(text, specs = [], labels = {}) {
     .join("[\\s_-]+")).join("|") || "(?!)"})(?=\\s*[:<>=])`, "gi"), (whole, lead, name) => lead + slug(name));
   let rest = "";
   let from = 0;
-  for (const found of said.matchAll(/(^|\s)(?:([a-z_][\w-]*):\s*(\S+)|(?:([a-z_][\w-]*)\s*)?(>=|<=|>|<|=)\s*(\S*))/gi)) {
+  for (const found of said.matchAll(CLAUSE)) {
     const [whole, lead, key, value, name, op, bound] = found;
     const clause = whole.slice(lead.length);
     const before = said.slice(from, found.index);

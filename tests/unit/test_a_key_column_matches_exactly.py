@@ -82,6 +82,7 @@ def _heavy_queries():
         ["binary_cost", "binary:constant-29*"],
         ["binary_cost", "cpu > 1s"],
         ["binary_cost", "cpu > 5q"],
+        ["binary_cost", "cpu > 1 s"],
         ["wall_clock_share_us", "> 1s"],
     ]
 
@@ -107,6 +108,16 @@ _WALK_QUERIES = [
     ["elements", "is a leaf:yes"],
     ["elements", "is leaf:yes"],
     ["elements", "layer1 leaf:yes"],
+    # `UX-1206`: a number, a space and its unit are one value.
+    ["elements", "> 60s"],
+    ["elements", "> 60 s"],
+    ["elements", "> 5 ms"],
+    ["elements", "> 5ms"],
+    ["wall_clock_share_us", "> 2 s"],
+    ["wall_clock_share_us", "> 2s"],
+    ["wall_clock_share_us", "> 0.05 min"],
+    ["wall_clock_share_us", "> 3s"],
+    ["wall_clock_share_us", "share > 5 s extra"],
 ]
 
 #: `UX-1206`: the Leaves view's column, by its whole name and by one word of it.
@@ -145,7 +156,10 @@ def seen(tmp_path_factory):
                 walk.as_uri(), _LEAVES + _QUERY.replace("QUERIES", json.dumps(_LEAF_QUERIES)), 1440, 900
             ),
             "older": browser.measure(
-                older.as_uri(), _QUERY.replace("QUERIES", '[["wall_clock_share_us", "> 2s"]]'), 1440, 900
+                older.as_uri(),
+                _QUERY.replace("QUERIES", '[["wall_clock_share_us", "> 2s"], ["wall_clock_share_us", "> 1 min"]]'),
+                1440,
+                900,
             ),
             "heavy": browser.measure(uris["heavy"], _QUERY.replace("QUERIES", json.dumps(_heavy_queries())), 1440, 900),
             "macro": browser.measure(
@@ -294,3 +308,27 @@ def test_a_bare_threshold_on_a_share_says_it_is_a_share(seen):
     got = seen["older"]["wall_clock_share_us > 2s"]
     assert got["invalid"] == "true" and "is a share, not a duration" in (got["unread"] or ""), got
     assert "wall-clock share > 2s" in got["unread"] and "matched" not in got["badge"], got
+
+
+@needs_browser
+def test_a_spaced_unit_is_one_value(seen):
+    walk, heavy = seen["walk"], seen["heavy"]
+    for table, spaced, tight in [
+        ("elements", "> 60 s", "> 60s"),
+        ("elements", "> 5 ms", "> 5ms"),
+        ("wall_clock_share_us", "> 2 s", "> 2s"),
+    ]:
+        a, b = walk[f"{table} {spaced}"], walk[f"{table} {tight}"]
+        assert a["matched"] == b["matched"] and a["badge"] == b["badge"] and a["unread"] == b["unread"], (a, b)
+    assert walk["wall_clock_share_us > 0.05 min"]["matched"] == walk["wall_clock_share_us > 3s"]["matched"] > 0
+    assert walk["elements > 60 s"]["matched"] < 1200, walk["elements > 60 s"]
+    assert walk["wall_clock_share_us share > 5 s extra"]["unread"] is None
+    cpu = heavy["binary_cost cpu > 1 s"]
+    assert cpu["matched"] == heavy["binary_cost cpu > 1s"]["matched"] and cpu["unread"] is None, cpu
+
+
+@needs_browser
+def test_a_spaced_unit_no_column_reads_is_quoted_whole(seen):
+    got = seen["older"]["wall_clock_share_us > 1 min"]
+    assert got["invalid"] == "true" and "\u201c> 1 min\u201d" in (got["unread"] or ""), got
+    assert "matched" not in got["badge"], got

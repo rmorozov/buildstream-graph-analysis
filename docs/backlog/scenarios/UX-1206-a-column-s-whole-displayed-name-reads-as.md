@@ -2,7 +2,7 @@
 
 **Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-159 walk and verification (2026-10-01) | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical | **Reading:** container
 
-**Guard:** `tests/unit/test_a_key_column_matches_exactly.py` (`test_a_column_s_whole_displayed_name_reads_as_that_column`, `test_a_clause_not_applied_filters_nothing`, `test_a_bare_threshold_on_a_share_says_it_is_a_share`, `test_a_clause_s_stray_name_words_are_said_back`)
+**Guard:** `tests/unit/test_a_key_column_matches_exactly.py` (`test_a_column_s_whole_displayed_name_reads_as_that_column`, `test_a_clause_not_applied_filters_nothing`, `test_a_bare_threshold_on_a_share_says_it_is_a_share`, `test_a_clause_s_stray_name_words_are_said_back`, `test_a_spaced_unit_is_one_value`, `test_a_spaced_unit_no_column_reads_is_quoted_whole`)
 
 ## Motivation
 
@@ -89,3 +89,21 @@ Follow-up: `is a leaf:yes` read `leaf:yes` and left `is a` as row text - none of
 the clause's column's own name (a word no other column owns) before it are said back with it: `25 of 1,202` and "no
 column here is called “is a leaf”"; `layer1 leaf:yes` still 79. `test_a_clause_s_stray_name_words_are_said_back`:
 the said-back branch off, or any word taken as the column's, reds it (1 failed each). Page half +164 B.
+Follow-up (walk findings P1, N7), same page, `test_a_key_column_matches_exactly.py`, badge / matched / sentence.
+Gap (clause pattern's bound `\S*`, mutation run): `> 1 min` on the share-only payload said "“> 1” is not applied ...
+as in “wall-clock share > 1”", the stray `min` a text filter. Close:
+
+```text
+elements "> 5 ms" = "> 5ms"     25 of 1,200 matched | wall-clock "> 2 s" = "> 2s"   25 of 1,000 matched
+"> 0.05 min" = "> 3s"           25 of 851 matched   | binary_cost "cpu > 1 s" = "cpu > 1s"  25 of 39 matched
+older payload "> 1 min"         "“> 1 min” is not applied: Wall-clock share is a share, not a duration ..."
+```
+
+| mutation (`bga/viewer/tables.js`) | reddened | run printed |
+|---|---|---|
+| bound is `\S*` again (no spaced unit) | `test_a_spaced_unit_is_one_value`, `test_a_spaced_unit_no_column_reads_is_quoted_whole` | 2 failed, 15 passed |
+| reverted | | 17 passed |
+
+Deviation: P1 ("> 60 s" returns 1,200 rows) is pre-existing, found by the round-160 walk on the round-159 export;
+N7 (the share-only note quotes "> 1") is this round's, from UX-1206's `min` unit. The 1,202 walk page holds no
+element over 60 s, so "> 60 s" reads none, equal to "> 60s".

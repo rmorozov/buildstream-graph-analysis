@@ -951,7 +951,9 @@ export function jumpTargets(root, payload, rail = null, uids = []) {
   }
   // `UX-1186`: from the payload; the DOM mounts one page.
   const binaries = new Set();
-  for (const table of root.querySelectorAll?.("table[data-keyed-by]") ?? []) {
+  // `UX-1225`: a binary's place is the table keyed by it alone, ahead of a pair table that also holds it.
+  const alone = (table) => table.getAttribute("data-keyed-by") === "binary";
+  for (const table of [...root.querySelectorAll?.("table[data-keyed-by]") ?? []].sort((a, b) => alone(b) - alone(a))) {
     if (!table.getAttribute("data-keyed-by").split(" ").includes("binary")) continue;
     const key = table.getAttribute("data-table");
     const section = table.closest?.("section[data-section]")?.getAttribute("data-section") ?? key;

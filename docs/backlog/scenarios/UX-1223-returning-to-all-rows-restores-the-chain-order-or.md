@@ -2,7 +2,7 @@
 
 **Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-160 walk and verification (2026-10-01) | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical | **Reading:** container
 
-**Guard:** none — open, no guard named yet
+**Guard:** `tests/unit/test_all_rows_after_top_10_keeps_the_chain_order.py`
 
 ## Motivation
 
@@ -43,4 +43,24 @@ Question:  none. Default: the head-and-tail fold that "does not return" is left 
 
 ## Outcome
 
-Open.
+The gap measured, at `e60195184`, the 1,202-element two-plane page (`pages.two_plane_run --layers 20 --width 60`),
+Chromium 1440x900, the critical path table at rest, Top 10, All rows, then Duration pressed
+(`scratchpad/<worktree>/r1223.js`): badge, aria-sort, rows, first uids.
+
+```text
+rest     ''                                  []                         22  toolchain.bst, layer00/mod023.bst, ...
+top      '10 of 22'                          [duration_us:descending]   10  layer16/mod006.bst, layer19/mod040.bst, ...
+all      ''                                  [duration_us:descending]   22  layer16/mod006.bst, layer19/mod040.bst, ...
+pressed  '22 rows, sorted by Duration, ascending'                       22  toolchain.bst, all.bst, ...
+```
+
+The close measured, same probe: `all` reads `''`, `[]`, 22 rows equal to rest's chain order; `top` reads
+"10 of 22, sorted by Duration, descending" (the critical path opens unbounded, so its rank is no resting sort);
+`pressed` "22 rows, sorted by Duration, descending". The guard at 1440 and 390: 1 passed (8.0 s). Golden's page
+half 159,261 -> 159,345 B (+84). The 48 files naming `structured`, `tables.js` or Top 10: 775 passed, 8 skipped.
+
+| mutation | reddened | run printed |
+|---|---|---|
+| delete the All rows branch's `showSort(null)` and `reorder` | the `all` order assertion (ranked uids, `sorted: ['duration_us']`) | 1 failed |
+| `view()` compares against `rank` again, not `opening?.top.column` | the `pressed` assertion (badge `''`) | 1 failed |
+| reverted | | 1 passed |

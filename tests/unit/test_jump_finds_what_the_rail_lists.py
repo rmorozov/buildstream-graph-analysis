@@ -88,7 +88,7 @@ _LAND = r"""
   await turn(1200);
   const at = KIND === "element"
     ? document.getElementById(`element-${key.replace(/[^\w-]+/g, "-")}`)
-    : document.querySelector(`[data-binary="${key}"]`);
+    : document.querySelector(`${location.hash.split("~")[0]} [data-binary="${key}"]`);
   const section = parseFloat(getComputedStyle(at?.closest("section[data-section]") ?? document.body).scrollMarginTop);
   const tools = at?.tagName === "TR" ? at.closest("table")?.parentNode?.querySelector(":scope > .table-tools") : null;
   const stuck = tools && getComputedStyle(tools).position === "sticky" ? tools.getBoundingClientRect().bottom : 0;
@@ -157,6 +157,6 @@ class TestJumpFindsWhatTheRailLists:
         for target in landed:
             assert target["key"] and target["tag"], landed
             assert abs(target["top"] - target["margin"]) <= 8, str(target)
-        # A row's margin is its table's stuck tools, not the section's: a row under them is covered.
-        assert all(t["margin"] > t["section"] for t in landed if t["tag"] == "TR"), landed
+        # `UX-1225`: a binary lands on its own table filtered to it, so its tools sit above the row, not over it.
+        assert all(t["hash"] == "#by_binary" for t in landed if t["tag"] == "TR"), landed
         assert any(t["tag"] == "TR" for t in landed), landed

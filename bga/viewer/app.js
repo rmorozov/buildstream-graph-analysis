@@ -239,9 +239,9 @@ export function wireJumpBox(nav, root, payload, context = {}) {
       return;
     }
     const escaped = CSS?.escape?.(target.key) ?? target.key;
-    const row = () => root.querySelector(`[data-binary="${escaped}"]`);
-    // `UX-1177`: a row past the bound is filtered in, so the jump lands on it.
-    if (target.kind === "binary" && !row()) filterSection(document, target.section, `binary:${target.key}`);
+    const row = () => document.getElementById(target.section)?.querySelector(`[data-binary="${escaped}"]`);
+    // `UX-1177`, `UX-1225`: a binary's own table is filtered to it, mounted or not, so the jump lands on it.
+    if (target.kind === "binary") filterSection(document, target.section, `binary:${target.key}`);
     const node = target.kind === "section"
       ? document.getElementById(target.key)
       : row() ?? document.getElementById(target.section);
@@ -358,7 +358,7 @@ export function wireJumpBox(nav, root, payload, context = {}) {
       if (!rows.length) return;
       event.preventDefault?.();
       const step = event.key === "ArrowDown" ? 1 : -1;
-      active = (active + step + rows.length + (active < 0 ? 1 : 0)) % rows.length;
+      active = active < 0 ? (step > 0 ? 0 : rows.length - 1) : (active + step + rows.length) % rows.length;
       highlight();
       return;
     }

@@ -254,7 +254,7 @@ function showOnly(body, order, shown) {
 }
 
 /** Record a new order for the table, leaving the held rows held. */
-function reorder(body, order) {
+export function reorder(body, order) {
   const out = HELD.get(body)?.out ?? new Set();
   for (const tr of order) if (!out.has(tr)) body.append?.(tr);
   HELD.set(body, { order, out });

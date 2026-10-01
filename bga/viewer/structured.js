@@ -36,7 +36,7 @@ import { enterTableFocus, focusedTable, leaveTableFocus, registerFocusTarget }
   from "./tablefocus.js";
 import { parseQuery, applyFilters, badgeText, rowJson, jsonNames, cellText,
          copy, presetColumns, openingBound, plural, sortable, ownRows,
-         ownBody, showAlso, columnCells, rowsMarkdown, showSort, ownHeads, STATED, ALL_ROWS_CEILING }
+         ownBody, showAlso, columnCells, rowsMarkdown, showSort, ownHeads, STATED, ALL_ROWS_CEILING, reorder }
   from "./tables.js";
 import { PATH_HEAD, PATH_TAIL } from "./views.js";
 
@@ -949,8 +949,10 @@ export function interrogable(table, specs, total, depth = 0, undrawn = []) {
   let resting = null;
   const few = total <= FEW_ROWS;
   // `UX-1197`: the window and a sort other than the opening rank are said in the one live region.
+  // `UX-1223`: the rank is the resting sort only on a table that opened ranked.
   const view = () => {
-    const sort = state.sort && (state.sort.column !== rank || state.sort.direction !== "descending") ? state.sort : null;
+    const sort = state.sort && (state.sort.column !== opening?.top.column || state.sort.direction !== "descending")
+      ? state.sort : null;
     const head = sort && ownHeads(table).find((th) => th.getAttribute("data-column") === sort.column);
     return { offset: state.top?.offset ?? 0, sorted: sort ? `${head?.textContent.trim() || sort.column}, ${sort.direction}` : "",
              narrowed: narrowed() };
@@ -959,6 +961,9 @@ export function interrogable(table, specs, total, depth = 0, undrawn = []) {
     // `applyFilters` also writes `state.filtered` and `state.kept` - the pre-`top` population.
     const said = badgeText(applyFilters(table, state), total, state.filtered, view());
     badge.textContent = said === rest ? "" : said;
+    // `UX-1224`: paper drops the box; the badge prints its filter.
+    const typed = box?.value.trim();
+    if (typed) badge.setAttribute("data-filter", typed); else badge.removeAttribute("data-filter");
     pagerRefresh?.();
     relabel?.();
     // UX-1158: the strip draws, and counts, the rows the filter kept; `UX-1170`: none at two or fewer.
@@ -1050,6 +1055,9 @@ export function interrogable(table, specs, total, depth = 0, undrawn = []) {
   // `UX-1028`: the step past the "All rows" ceiling - built once, set
   // here, appended into `tools` below.
   let pager = null;
+  // `UX-1223`: the listing order, and the sort a bound imposed rather than the reader pressed.
+  const listed = [...ownRows(table)];
+  let imposed = null;
   if ((presets.length && total > 11) || opening) {
     const preset = el("select", { class: "top-n", "aria-label": `Rows shown: ${named}` });
     identify(preset, `top-${key}`);
@@ -1155,7 +1163,12 @@ export function interrogable(table, specs, total, depth = 0, undrawn = []) {
       state.top = preset.value ? { n: Number(n), column: column || null }
         : preset.selectedIndex === -1 ? (opening?.top ?? null) : null;
       // `UX-1197`: a bound keeps the table's sort; with none yet it ranks by the first quantity, shown on its header.
-      if (state.top?.column && !state.sort) showSort(table, state.sort = { column: state.top.column, direction: "descending" });
+      if (state.top?.column && !state.sort) showSort(table, imposed = state.sort = { column: state.top.column, direction: "descending" });
+      // `UX-1223`: All rows drops a sort only a bound imposed, and the rows go back to their listing order.
+      if (!state.top && imposed && state.sort === imposed) {
+        showSort(table, imposed = state.sort = null);
+        reorder(ownBody(table), [...listed]);
+      }
       offset = 0;
       paging = false;
       refresh();

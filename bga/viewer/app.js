@@ -1199,6 +1199,8 @@ async function boot() {
       // `UX-1203`: the entry's view, and no filter it lacks.
       const query = splitHash(location.hash).query;
       const kept = new URLSearchParams(query ?? "");
+      // `UX-1198`: and no focus it lacks, handing the driven boxes back first.
+      if (focusedElement(root) && !kept.get("focus")) clearFocus(root);
       for (const table of root.querySelectorAll?.("table[data-table]") ?? []) {
         const box = table.parentNode?.querySelector?.(".table-tools input.table-filter");
         if (box?.value && !kept.has(`f.${table.getAttribute("data-table")}`)) {

@@ -366,3 +366,61 @@ class TestFocusShowsTheFocusedRow:
             pressed = got["pressed"]
             assert pressed["cleared"]["tables"] == pressed["rest"]["tables"], label
             assert pressed["restored"], f"{label}: focus then clear left #report changed"
+
+
+# `UX-1198` follow-up: a followed link keeps the focus and the filters it drove; Back to an entry without it drops both.
+_ACROSS = r"""
+(async () => {
+  const wait = (ms) => new Promise((done) => setTimeout(done, ms));
+  const back = () => new Promise((done) => {
+    addEventListener("popstate", () => setTimeout(done, 800), { once: true });
+    history.back();
+  });
+  const box = () => document.querySelector('table[data-table="elements"]')
+    ?.parentNode.querySelector(".table-tools input.table-filter");
+  const read = () => ({ bars: document.querySelectorAll("[data-role=focus-bar]").length, box: box()?.value ?? null,
+    focus: new URLSearchParams(atob(location.hash.split("~")[1] ?? "")).get("focus") });
+  history.pushState(null, "", location.href);
+  const links = [...document.querySelectorAll(".toc [data-toc]")];
+  links[0].click();
+  await wait(500);
+  const rest = read();
+  const jump = document.getElementById("jump");
+  jump.value = __UID__;
+  jump.dispatchEvent(new Event("input", { bubbles: true }));
+  await wait(150);
+  document.querySelector('.jump-hits button[data-action="focus"]').click();
+  await wait(300);
+  const focused = read();
+  links[1].click();
+  await wait(500);
+  const linked = read();
+  await back();
+  await back();
+  return { rest, focused, linked, back: read() };
+})()
+"""
+
+
+@pytest.fixture(scope="module")
+def across(heavy, walk):
+    with Browser(find_chrome()) as browser:
+        return {
+            label: browser.measure(
+                page.as_uri(),
+                _ACROSS.replace("__UID__", json.dumps(_past_the_first_page(page))),
+                1440,
+                900,
+                fresh_history=True,
+            )
+            for label, page in {"heavy": heavy[1], "walk": walk}.items()
+        }
+
+
+@needs_browser
+def test_focus_and_its_filters_agree_across_a_link_and_back(across):
+    for label, got in across.items():
+        uid = got["focused"]["focus"]
+        assert uid and got["focused"]["bars"] == 1 and got["focused"]["box"] == f"element:{uid}", (label, got)
+        assert got["linked"] == got["focused"], (label, got)
+        assert got["back"] == {**got["rest"], "focus": None}, (label, got)

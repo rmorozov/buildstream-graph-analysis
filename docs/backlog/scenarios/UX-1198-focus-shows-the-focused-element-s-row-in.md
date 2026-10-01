@@ -84,3 +84,9 @@ Mutation table (`-k TestFocusShowsTheFocusedRow`, each reverted from a copy):
 | M5 the box born without `aria-invalid` | unfocus (restored) | 1 failed, 4 passed |
 | M6 an emptied box redraws its strip | unfocus (restored) | 1 failed, 4 passed |
 | M7 unfocus drops the pager offset | unfocus (walk, offset 25) | 1 failed, 4 passed |
+
+**Deviation (round 159 walk N2, focus across a link and Back).** Focus pushes no entry, and popstate (UX-1203) cleared the filters focus drove but kept the focus, so the bar stood over unfiltered tables and the next write put `focus=` on the older entry.
+A traversal to an entry without `focus` clears it first, handing each driven box back; a followed link keeps both (UX-1203's N1 follow-up).
+Guard `test_focus_and_its_filters_agree_across_a_link_and_back` (heavy, walk): Focus, a rail link, Back twice. Gap at `c31ada8b`: linked box `""` beside bar 1; back `bars 1, focus layer03/mod005.bst`.
+Close: linked equals focused; back equals the rest, `bars 0, box "", focus None`; 16 passed. The walk's trusted-click steps on the 1,202 page: a Blocks link keeps "1 of 1,202"; the second Back reads bar none, "25 of 1,202".
+Mutation: the `clearFocus` line removed gives 1 failed; the N1 early return removed gives it 1 failed too.

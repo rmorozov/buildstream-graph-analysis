@@ -184,7 +184,7 @@ const BARE = %s;
     if (/\b\d{4,}\b rows/.test(node.data)) rows.push(node.data.trim().slice(0, 80));
     if (!node.parentElement?.closest("script, code, pre") && BARE.test(node.data)) bare.push(node.data.trim().slice(0, 80));
   }
-  const out = { cards: cards.length, demand: /Is a leaf(yes|no)/.test(document.getElementById("element-layer10-mod010-bst")?.textContent ?? ""), bools, rows, bare, badges: null };
+  const out = { cards: cards.length, demand: /Is leaf(yes|no)/.test(document.getElementById("element-layer10-mod010-bst")?.textContent ?? ""), bools, rows, bare, badges: null };
   const table = document.querySelector('table[data-table="elements"]');
   const tools = table?.parentNode.querySelector(".table-tools");
   const select = tools?.querySelector("select.top-n");

@@ -201,6 +201,24 @@ _MAP_NAMES = r"""
 """
 
 
+#: `UX-1207` follow-up: a field's title on an element's card and over its column.
+_CARD_TITLES = r"""
+(async () => {
+  for (const b of document.querySelectorAll("section.chapter")) b.setAttribute("data-open", "true");
+  location.hash = "#element-layer10-mod010-bst";
+  await new Promise((done) => setTimeout(done, 200));
+  const card = document.getElementById("element-layer10-mod010-bst");
+  const out = {};
+  for (const key of ["is_leaf", "observed_critical"]) {
+    const th = [...document.querySelectorAll(`th[data-column="${key}"]`)].find((n) => !card?.contains(n));
+    out[key] = [card?.querySelector(`dd[data-field="${key}"]`)?.previousElementSibling?.textContent.trim() ?? null,
+                th ? (th.querySelector("button.th-sort") ?? th).textContent.trim() : null];
+  }
+  return out;
+})()
+"""
+
+
 @pytest.fixture(scope="module")
 def maps(tmp_path_factory):
     into = tmp_path_factory.mktemp("map-names")
@@ -213,7 +231,9 @@ def maps(tmp_path_factory):
         {label: pages.export_page(fixture, into / label, f"{label}.html") for label, fixture in pages.FIXTURES.items()}
     )
     with Browser(chrome) as browser:
-        return {label: browser.measure(page.as_uri(), _MAP_NAMES, 1440, 900) for label, page in built.items()}
+        seen = {label: browser.measure(page.as_uri(), _MAP_NAMES, 1440, 900) for label, page in built.items()}
+        seen["card"] = browser.measure(built["walk"].as_uri(), _CARD_TITLES, 1440, 900)
+        return seen
 
 
 @needs_browser
@@ -230,6 +250,12 @@ def test_every_map_names_its_columns_once_in_header_cells_and_copy(maps, label):
     if label in ("walk", "heavy"):
         by_binary = next(t for t in tables if t["table"] == "by_binary")
         assert by_binary["heads"][0] == "Binary", by_binary
+
+
+@needs_browser
+def test_a_field_reads_one_title_in_its_card_and_its_column(maps):
+    # `UX-1207` follow-up: the card read "Is a leaf" where the column reads "Is leaf".
+    assert maps["card"] and all(card == column is not None for card, column in maps["card"].values()), maps["card"]
 
 
 @needs_browser

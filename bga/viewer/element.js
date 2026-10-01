@@ -288,7 +288,7 @@ const ELEMENT_MAPS = [
   ["elements.blast_radius", "weighted_duration_us", "Blast radius", "duration_us"],
   ["elements.blast_radius", "risk_score", "Risk score", "count"],
   ["elements.blast_radius", "element_kind", "Kind", null],
-  ["elements.blast_radius", "is_leaf", "Is a leaf", null],
+  ["elements.blast_radius", "is_leaf", "Is leaf", null],
   ["elements.criticality_probability", "probability", "On the path", "share"],
   ["elements.criticality_probability", "observed_critical", "Observed critical", null],
   ["elements.duration_variability", "coefficient_of_variation",

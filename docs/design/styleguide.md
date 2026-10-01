@@ -620,7 +620,11 @@ the placeholder `> 10`.
   (`wall-clock share > 2s`); a name no column has takes the words
   before it, so nothing of a clause said back as not applied filters;
   a bare threshold on a table whose one quantity is a share says so
-  (`UX-1206`). `test_a_key_column_matches_exactly.py`.
+  (`UX-1206`); words of a column's name before one word of it
+  (`is a leaf:yes`) are said back too, and a field reads one title on
+  its card and over its column (`Is leaf`).
+  `test_a_key_column_matches_exactly.py`,
+  `test_op_and_duration_meet_on_durations.py`.
 - **A table's tools say its count once** (`UX-1163`): `Copy N rows` at
   rest, the badge only as `N of M`, the one-value sentence as "Every
   row:", and a short table left one column draws no header. At two rows

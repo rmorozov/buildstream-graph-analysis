@@ -106,15 +106,23 @@ export function parseQuery(text, specs = [], labels = {}) {
       rest += " ";
       continue;
     }
+    const spec = key ?? name ? names.get(slug(key ?? name)) : primary;
+    // `UX-1206` follow-up: words of the column's own name before one word of it ("is a leaf") name no column.
+    const own = (key ?? name ? [spec.key, spec.role, spec.title, labels[spec.key]].map(slug).filter(Boolean) : [])
+      .join("_").split("_").filter((word) => word && (names.get(word) ?? spec) === spec);
+    const run = own.length ? before.match(new RegExp(`(?:^|\\s)((?:${own.join("|")})\\b.*)$`, "i")) : null;
+    if (run) {
+      unread.push({ clause: `${run[1].trim()} ${clause}`, column: `${run[1].trim()} ${key ?? name}` });
+      rest += `${before.slice(0, run.index)} `;
+      continue;
+    }
     rest += before + lead;
     if (key) {
-      const spec = names.get(slug(key));
       const part = spec.role !== "task_uid" ? null : slug(key) === "op" ? 1 : slug(key) === "element" ? 0 : null;
       const prefix = value.endsWith("*");
       exact.push({ column: spec.key, part, prefix, value: (prefix ? value.slice(0, -1) : value).toLowerCase() });
       continue;
     }
-    const spec = name ? names.get(slug(name)) : primary;
     const parsed = spec?.quantity ? parseThreshold(`${op} ${bound}`, spec.quantity) : null;
     if (parsed) thresholds[spec.key] = parsed;
     else unread.push({ clause, column: null, share: name || primary ? null : specs.find((s) => s?.share)?.key ?? null });

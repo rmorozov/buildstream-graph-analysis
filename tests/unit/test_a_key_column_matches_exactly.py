@@ -103,6 +103,10 @@ _WALK_QUERIES = [
     ["wall_clock_share_us", "share > 2s"],
     ["elements", "element durations > 0.05min"],
     ["elements", "blast radius > 10min"],
+    # `UX-1206` follow-up: words of a column's name before one word of it, and text before a key clause.
+    ["elements", "is a leaf:yes"],
+    ["elements", "is leaf:yes"],
+    ["elements", "layer1 leaf:yes"],
 ]
 
 #: `UX-1206`: the Leaves view's column, by its whole name and by one word of it.
@@ -271,6 +275,18 @@ def test_a_clause_not_applied_filters_nothing(seen):
     got = seen["walk"]["elements blast radius > 10min"]
     assert got["badge"] == "25 of 1,202" and len(got["binaries"]) == 25, got
     assert "“blast radius”" in (got["unread"] or ""), got
+
+
+@needs_browser
+def test_a_clause_s_stray_name_words_are_said_back(seen):
+    """`is a leaf:yes` matched nothing and said nothing: `is a` was read as row text."""
+    got = seen["walk"]
+    leaves = sum(bool(row.get("is_leaf")) for row in seen["walk_report"]["elements"]["blast_radius"].values())
+    assert got["elements is leaf:yes"]["matched"] == leaves > 0 and got["elements is leaf:yes"]["unread"] is None, got
+    stray = got["elements is a leaf:yes"]
+    assert stray["badge"] == "25 of 1,202" and "\u201cis a leaf\u201d" in (stray["unread"] or ""), stray
+    mixed = got["elements layer1 leaf:yes"]
+    assert 0 < mixed["matched"] < leaves and mixed["unread"] is None, mixed
 
 
 @needs_browser

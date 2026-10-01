@@ -2,7 +2,7 @@
 
 **Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-159 walk and verification (2026-10-01) | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** judgement | **Reading:** container
 
-**Guard:** `tests/unit/test_op_and_duration_meet_on_durations.py::test_every_map_names_its_columns_once_in_header_cells_and_copy`
+**Guard:** `tests/unit/test_op_and_duration_meet_on_durations.py::test_every_map_names_its_columns_once_in_header_cells_and_copy`, `::test_a_field_reads_one_title_in_its_card_and_its_column`
 
 ## Motivation
 
@@ -48,3 +48,7 @@ For every map table on the four built pages, th text == every td `data-label` of
 Restored: 4 passed.
 
 **Deviation:** `titles` is a tenth `mapTable` argument, not a COLUMNS option (see Decision). No existing guard asserted the old behaviour.
+Follow-up: the element card read "Is a leaf" over the column's "Is leaf"; the card takes the column's title
+(`test_a_field_reads_one_title_in_its_card_and_its_column`, is_leaf and observed_critical; "Is a leaf" back reds
+it, 1 failed). `test_a_value_is_what_it_names.py` re-based to `Is leaf`. Other card labels still differ from their
+column (Rebuilds / Downstream count, Depth / Unweighted depth): left to a row of their own.

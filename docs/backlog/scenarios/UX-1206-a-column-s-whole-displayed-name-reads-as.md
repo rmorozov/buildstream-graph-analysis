@@ -2,7 +2,7 @@
 
 **Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-159 walk and verification (2026-10-01) | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical | **Reading:** container
 
-**Guard:** `tests/unit/test_a_key_column_matches_exactly.py` (`test_a_column_s_whole_displayed_name_reads_as_that_column`, `test_a_clause_not_applied_filters_nothing`, `test_a_bare_threshold_on_a_share_says_it_is_a_share`)
+**Guard:** `tests/unit/test_a_key_column_matches_exactly.py` (`test_a_column_s_whole_displayed_name_reads_as_that_column`, `test_a_clause_not_applied_filters_nothing`, `test_a_bare_threshold_on_a_share_says_it_is_a_share`, `test_a_clause_s_stray_name_words_are_said_back`)
 
 ## Motivation
 
@@ -84,3 +84,8 @@ Volume at rest unmoved (the sentence mounts on typing): `test_the_page_has_a_vol
 | no share branch (`share: null`) | `test_a_bare_threshold_on_a_share_says_it_is_a_share` | 1 failed, 14 passed |
 | no `min` unit | `test_a_column_s_whole_displayed_name_reads_as_that_column` | 1 failed, 14 passed |
 | reverted | | 15 passed |
+
+Follow-up: `is a leaf:yes` read `leaf:yes` and left `is a` as row text - none of 1,202 match, no sentence. Words of
+the clause's column's own name (a word no other column owns) before it are said back with it: `25 of 1,202` and "no
+column here is called “is a leaf”"; `layer1 leaf:yes` still 79. `test_a_clause_s_stray_name_words_are_said_back`:
+the said-back branch off, or any word taken as the column's, reds it (1 failed each). Page half +164 B.

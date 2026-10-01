@@ -2,7 +2,7 @@
 
 **Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-162 view UI review on a 2,402-element two-plane page (2026-10-01), finding L1 | **Serves:** R1, R3 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical | **Reading:** container
 
-**Guard:** none — open, no guard named yet
+**Guard:** `tests/unit/test_a_segment_label_never_overprints_its_neighbour.py`
 
 ## Motivation
 
@@ -38,3 +38,15 @@ Which floors the drawing shows (`UX-1244`).
 ## Acceptance Test
 
 On this page at 1440 and 390, and on a fixture with a 2% segment, no two label boxes intersect. Mutation: pin the label inside its segment, and the guard reds.
+
+## Outcome
+
+**Gap measured:** `decomposition()` at 390 and 1440 with a 9.8% chain part: the chain and gap `.draw-tick` boxes intersect while `.decomposition .draw-tick` is `position: absolute; left: at%` (mutation run below).
+
+**Close measured:** `pytest tests/unit/test_a_segment_label_never_overprints_its_neighbour.py` 6 passed; with `test_the_compact_page_fits_its_width.py`, `test_a_drawing_is_graded.py`, `test_level_decomposition.py` 101 passed. CSS delta about +190 bytes net (3 lines added, 1 removed in `style.css`); `drawings.js` untouched.
+
+| Mutation | Reddened | Count |
+|---|---|---|
+| `.decomposition .draw-tick` back to `position: absolute; left: at%` | `test_constructed_parts_never_intersect[390]`, `[1440]` | 2 failed, 4 passed |
+
+**Deviation:** `drawings.js` not touched (CSS alone stacks the labels; `left: auto !important` beats the CSSOM inline `left`); no segment tone or leader added.

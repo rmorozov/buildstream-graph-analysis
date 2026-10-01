@@ -55,7 +55,7 @@ import { copy } from "./tables.js";
 import { strip } from "./drawings.js";
 import { decisionInvestigation, investigate, investigateButton, render,
          renderVerdict, traceUrl } from "./sections.js";
-import { nameTable, renderStructured, TABLE_OPENS_BOUNDED_ABOVE } from "./structured.js";
+import { filterSection, nameTable, renderStructured, TABLE_OPENS_BOUNDED_ABOVE } from "./structured.js";
 
 // `UX-1037` (§3k): a bespoke element list past the table bound is §1's own.
 const bounded = (key, items) => (items.length > TABLE_OPENS_BOUNDED_ABOVE
@@ -237,15 +237,19 @@ export function wireJumpBox(nav, root, payload, context = {}) {
       return;
     }
     const escaped = CSS?.escape?.(target.key) ?? target.key;
+    const row = () => root.querySelector(`[data-binary="${escaped}"]`);
+    // `UX-1177`: a row past the bound is filtered in, so the jump lands on it.
+    if (target.kind === "binary" && !row()) filterSection(document, target.section, `binary:${target.key}`);
     const node = target.kind === "section"
       ? document.getElementById(target.key)
-      : root.querySelector(`[data-binary="${escaped}"]`) ?? document.getElementById(target.section);
+      : row() ?? document.getElementById(target.section);
     if (!node) return;
     // UX-347: a folded chapter is not a wall. Every way in opens it
     // first - here, on a rail link, and on a pasted `#anchor` - so the
     // fold costs the interaction §3b already budgets and never a
     // section a reader cannot reach.
-    revealAndLand(node, "smooth");
+    // `UX-1177`: no smooth scroll, which the settle re-lands mid-flight, short of a target that moves.
+    revealAndLand(node);
     node.setAttribute("data-jumped", "true");
     setTimeout(() => node.removeAttribute("data-jumped"), 1600);
     // UX-671: the jump box has no `<a href>`, so nothing writes the

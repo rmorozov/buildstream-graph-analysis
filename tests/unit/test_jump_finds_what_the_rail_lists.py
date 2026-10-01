@@ -4,7 +4,9 @@ Chromium on the 114-element two-plane run at 1440: every rail sub-entry
 (a fold or a preset) is a Jump hit under its own text, a rail press on a
 level fold leaves it open, the level folds' summaries read apart, the
 Top-N select's name is a phrase, and a partial uid several elements
-share says how many.
+share says how many. On the heavy-binary page a Jump press lands an
+element's card, a mounted binary row and a row past the bound at the
+target's scroll margin.
 """
 
 import sys
@@ -60,6 +62,50 @@ _WALK = r"""
 })()
 """
 
+# A press from rest, then the target's top against its section's scroll margin (where a rail press
+# lands): an element's card, a mounted binary row, and a binary the bound left unmounted.
+_LAND = r"""
+(async () => {
+  const turn = (ms = 50) => new Promise((done) => setTimeout(done, ms));
+  const jump = document.getElementById("jump");
+  const press = (key) => {
+    jump.value = key;
+    jump.dispatchEvent(new Event("input", { bubbles: true }));
+    [...document.querySelectorAll(".jump-hits button[data-jump]")].find((b) => b.getAttribute("data-jump") === key)
+      ?.click();
+  };
+  const rows = [...document.querySelectorAll('table[data-table="binary_cost"] > tbody > tr[data-binary]')];
+  const names = [];
+  for (let i = 0; !names.length && i < 1000; i += 1) {
+    jump.value = `lognormal-${String(i).padStart(3, "0")}`;
+    jump.dispatchEvent(new Event("input", { bubbles: true }));
+    names.push(...[...document.querySelectorAll(".jump-hits button[data-jump^='lognormal-']")]
+      .map((b) => b.getAttribute("data-jump")).filter((name) => !document.querySelector(`[data-binary="${name}"]`)));
+  }
+  const key = { element: rows[rows.length - 1]?.getAttribute("data-element"),
+                binary: rows[rows.length - 1]?.getAttribute("data-binary"), unmounted: names[0] }[KIND];
+  press(key);
+  await turn(1200);
+  const at = KIND === "element"
+    ? document.getElementById(`element-${key.replace(/[^\w-]+/g, "-")}`)
+    : document.querySelector(`[data-binary="${key}"]`);
+  return { kind: KIND, key, top: Math.round(at?.getBoundingClientRect().top ?? -1),
+           margin: Math.round(parseFloat(getComputedStyle(at?.closest("section[data-section]") ?? document.body).scrollMarginTop)),
+           tag: at?.tagName ?? null, hash: location.hash.split("~")[0] };
+})()
+"""
+
+
+@pytest.fixture(scope="module")
+def landed(tmp_path_factory):
+    into = tmp_path_factory.mktemp("ux1177-heavy")
+    uri = pages.export_uri(pages.heavy_binary_run(into), into / "page")
+    with Browser(find_chrome()) as browser:
+        return [
+            browser.measure(uri, f"const KIND = {kind!r};" + _LAND, 1440, 900)
+            for kind in ("element", "binary", "unmounted")
+        ]
+
 
 @pytest.fixture(scope="module")
 def walked(tmp_path_factory):
@@ -103,3 +149,8 @@ class TestJumpFindsWhatTheRailLists:
         count = int(partial["says"].split(" ")[0].replace(",", ""))
         assert 1 < count < partial["population"], partial
         assert partial["says"].startswith(f"{count} elements match \"{partial['needle']}\""), partial
+
+    def test_a_jump_lands_on_its_target(self, landed):
+        for target in landed:
+            assert target["key"] and target["tag"], landed
+            assert abs(target["top"] - target["margin"]) <= 8, str(target)

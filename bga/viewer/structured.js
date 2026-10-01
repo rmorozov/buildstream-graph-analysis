@@ -875,6 +875,14 @@ function foldTheMiddle(table, total, { head, tail, noun = "rows" }) {
   return row;
 }
 
+/** `UX-1177`: narrow section `id`'s table to `query`, as a reader typing it would. */
+export function filterSection(doc, id, query) {
+  const box = doc.getElementById(id)?.querySelector("input.table-filter");
+  if (!box) return;
+  box.value = query;
+  box.dispatchEvent(new Event("input", { bubbles: true }));
+}
+
 /** One table as its own view: `buildTable`, in a section. */
 export function renderTable(key, rows, hint = {}, node = undefined,
                             options = {}) {

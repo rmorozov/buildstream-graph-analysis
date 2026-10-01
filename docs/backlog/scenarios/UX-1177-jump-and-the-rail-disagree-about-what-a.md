@@ -80,5 +80,11 @@ Ask "mod00"                     the resting note, unchanged
 | M4 select name back to titled parts | the select reads as a phrase | 1 failed, 5 passed |
 | M5 no partial count (`hits > 1e9`) | a partial uid says how many | 1 failed, 5 passed |
 | reverted | — | 6 passed |
+| M6 (round-158 residue) Jump's `revealAndLand(node, "smooth")` back | a jump lands on its target | 1 failed, 6 passed |
+| M7 `revealAndLand` lands once, no re-land after `content-visibility` renders | a jump lands on its target | 1 failed, 6 passed |
+| M8 no filter-in for a binary past the bound | a jump lands on its target | 1 failed, 6 passed |
+| M9 the `[data-binary]` scroll margin deleted | a jump lands on its target (row under the header, top 0) | 1 failed, 6 passed |
 
 Re-based: none. Styleguide: §3d's `UX-1163` item and §6e.13's row gain one sentence each, the row naming both guard files.
+
+**Residue (round 158, walk N9).** Jump landed off target: a smooth scroll, one landing against `content-visibility`'s estimate, and the first `[data-binary]` node whether mounted or not. The guard against `474f4eb3` (`UX-1179`'s card landing in): `1 failed, 6 passed`, `binary_cost`'s last mounted row `constant-340` at top -743 against a 60 px margin on the heavy-binary page. Now the landing is instant and lands again until the node holds its margin (at most 4 times), a binary past the bound is filtered in (`binary:<name>`), and a binary row takes the anchors' scroll margin. The new clause presses an element, a mounted binary and an unmounted one on `pages.heavy_binary_run`, each from rest, and reads the landed top against the section's scroll margin: `7 passed in 10.16s`. On the 1,202-element pages: `layer16/mod006` 60, `layer12/mod058` 59, heavy `lognormal-308` 60, `lognormal-003` (unmounted) 60.

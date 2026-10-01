@@ -804,6 +804,7 @@ export function revealChapter(node) {
 // `UX-800`: the settle below gives up and lands anyway past this many
 // frames, so a rect that never agrees still lands rather than hanging.
 const LAND_SETTLE_FRAME_CAP = 12;
+const LAND_AGAIN_CAP = 4;
 
 // `at` (`UX-1171`): the viewport top to land `node` on, in place of its scroll margin.
 export function revealAndLand(node, behavior, at) {
@@ -813,11 +814,10 @@ export function revealAndLand(node, behavior, at) {
   const view = node?.ownerDocument?.defaultView ?? globalThis;
   let landed = null;
   let landedAt = null;
+  const margin = () => at ?? (parseFloat(view.getComputedStyle?.(node)?.scrollMarginTop) || 0);
   const land = () => {
     if (!node?.getBoundingClientRect) return;
-    const margin = at ?? (parseFloat(
-      view.getComputedStyle?.(node)?.scrollMarginTop) || 0);
-    const top = (view.scrollY ?? 0) + node.getBoundingClientRect().top - margin;
+    const top = (view.scrollY ?? 0) + node.getBoundingClientRect().top - margin();
     view.scrollTo?.(behavior ? { top, behavior } : { top });
     landed = behavior ? null : view.scrollY;
     landedAt = (view.scrollY ?? 0) + node.getBoundingClientRect().top;
@@ -835,6 +835,7 @@ export function revealAndLand(node, behavior, at) {
     };
     let prev = null;
     let seen = 0;
+    let lands = 0;
     const settle = () => frame(() => {
       seen += 1;
       const cur = node.getBoundingClientRect().top;
@@ -845,9 +846,14 @@ export function revealAndLand(node, behavior, at) {
         return;
       }
       if ((prev !== null && cur === prev) || seen >= LAND_SETTLE_FRAME_CAP) {
-        release();
+        // `UX-1177`: a landing renders what `content-visibility` estimated near it, which can move the node again.
+        if (Math.abs(cur - margin()) <= 1 || lands >= LAND_AGAIN_CAP) {
+          release();
+          return;
+        }
         land();
-        return;
+        lands += 1;
+        seen = 0;
       }
       prev = cur;
       settle();

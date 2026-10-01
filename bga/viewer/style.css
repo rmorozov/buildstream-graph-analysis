@@ -337,7 +337,7 @@ body[data-has-toc] > header {
    is no longer 92-134px tall. */
 body[data-has-toc] { --head: 3.25rem; }
 body[data-has-toc] > nav.toc { top: var(--head); max-height: calc(100vh - var(--head)); }
-body[data-has-toc] main > section, body[data-has-toc] [id] { scroll-margin-top: calc(var(--head) + var(--space-2)); }
+body[data-has-toc] main > section, body[data-has-toc] [id], body[data-has-toc] [data-binary] { scroll-margin-top: calc(var(--head) + var(--space-2)); }
 /* UX-1018 (styleguide §6e.1): a chapter (`h2`) outranks its section
    (`h3`), which outranks its block (`h4`) - three levels, not one
    flat `h2` a chapter and its own first section wore alike. */

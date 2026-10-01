@@ -4,7 +4,7 @@ handle each repeated line is a distinct object, so the per-element sets
 held one allocation per occurrence rather than per distinct path.
 
 Measured against a *live* subprocess run rather than a fixed MB number:
-the pre-fix shape is UX-1220's set-of-strings reference with interning
+the pre-fix shape is UX-1240's set-of-strings reference with interning
 off, on this machine, in the same run - the 60% bound is the audit's own
 ratio (261 / 552 MB, `docs/audits/perf-snapshot-view-2026-09-28.md`),
 not a number carried over from a different container.
@@ -22,7 +22,7 @@ _MEASURE = textwrap.dedent("""
     sys.path.insert(0, sys.argv[3])
     sys.path.insert(0, sys.argv[3] + "/tests/unit")
     if sys.argv[2] == "no-intern":
-        # UX-1220: the reader holds ids now; the pre-fix shape is its reference.
+        # UX-1240: the reader holds ids now; the pre-fix shape is its reference.
         from functools import partial
         from test_the_opens_pass_holds_paths_as_ids import reference_parse_open_lines
         parse_open_lines = partial(reference_parse_open_lines, intern=lambda s: s)

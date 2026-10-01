@@ -1,4 +1,4 @@
-# UX-1220: the Plane 2 report holds a large log's opened paths as strings in sets and parses every record twice over
+# UX-1240: the Plane 2 report holds a large log's opened paths as strings in sets and parses every record twice over
 
 **Priority:** High | **Status:** 🟢 Done | **Depends on:** — | **Found by:** Ruslan's report from his own project (2026-10-01): a 650 MB `plane2.log.gz` holds `Analyzing the captured trace...` for about 10 minutes at about 4 GB | **Serves:** R5 | **Topic:** capture | **Area:** tools | **Shape:** bounded
 

@@ -2774,7 +2774,7 @@ def parse_open_lines(lines, open_element_overrides: Optional[dict[str, str]] = N
 
 class OpenedPaths:
     """One element's opened paths: a sorted `array('I')` of ids into the
-    reader's shared table, read as a set of strings (UX-1220)."""
+    reader's shared table, read as a set of strings (UX-1240)."""
 
     __slots__ = ("_ids", "_table")
 
@@ -2846,7 +2846,7 @@ _OPENS_COMPACT_FLOOR = 1 << 12
 
 class OpensReader:
     """`parse_open_lines`' state: blocks keyed on `(element, invocation)`
-    and relabelled at `finish` (UX-56), paths as ids (UX-1220).
+    and relabelled at `finish` (UX-56), paths as ids (UX-1240).
 
     A second pass of its own, not a ride on the record pass: holding the
     paths beside the record list raised the peak (1,344 vs 1,149 MB).
@@ -3103,7 +3103,7 @@ def _parse_event_head(line: str):
 def _parse_event_head_fast(line: str):
     """`_parse_event_head` for the canonical shape - `pid ppid ts
     [element] [inv] known-keys cmd=` - in one split; None hands the line
-    to the general parser, which then decides (UX-1220)."""
+    to the general parser, which then decides (UX-1240)."""
     head, sep, cmd = line.partition(" cmd=")
     if not sep:
         return None
@@ -3171,7 +3171,7 @@ def stream_trace_events(lines, total_lines: Optional[int] = None):
         if head is None:
             continue
         event, fields, element, invocation, rusage, source, exit_status, cmd = head
-        # UX-1220: a record lives until the sort; its repeated strings are shared.
+        # UX-1240: a record lives until the sort; its repeated strings are shared.
         element = sys.intern(element)
         if invocation is not None:
             invocation = sys.intern(invocation)
@@ -3617,7 +3617,7 @@ def merge_record_streams(records: list[dict], consume: bool = False) -> list[dic
     all comes back untouched with `hook-only` on every entry, which is
     what makes every pre-spine capture parse exactly as before.
 
-    `consume` (UX-1220): the entries are the input's own dicts, joined
+    `consume` (UX-1240): the entries are the input's own dicts, joined
     in place, rather than a second copy of every record at the peak.
     """
     copy = (lambda record: record) if consume else dict

@@ -1,9 +1,9 @@
-"""UX-1220: the Plane 2 report holds opened paths as ids and parses a
+"""UX-1240: the Plane 2 report holds opened paths as ids and parses a
 record in one split, and agrees with the readers it replaced.
 
 `REFERENCE` is `parse_open_lines` as UX-1076 left it, set-of-strings,
 so the agreement is checked against the old code and not against a
-re-derivation. The bound is UX-1220's own reading at this scale.
+re-derivation. The bound is UX-1240's own reading at this scale.
 """
 
 import array

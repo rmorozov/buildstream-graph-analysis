@@ -356,7 +356,7 @@ export function wireJumpBox(nav, root, payload, context = {}) {
       if (!rows.length) return;
       event.preventDefault?.();
       const step = event.key === "ArrowDown" ? 1 : -1;
-      active = (active + step + rows.length + (active < 0 ? 1 : 0)) % rows.length;
+      active = active < 0 ? (step > 0 ? 0 : rows.length - 1) : (active + step + rows.length) % rows.length;
       highlight();
       return;
     }

@@ -2,7 +2,7 @@
 
 **Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** verifier A, the round-160 verification (2026-10-01) | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical | **Reading:** container
 
-**Guard:** none — open, no guard named yet
+**Guard:** `tests/unit/test_the_palette_arrows_start_at_the_ends.py`
 
 ## Motivation
 
@@ -41,4 +41,17 @@ Question:  none
 
 ## Outcome
 
-Open.
+The gap measured, at `e60195184`, golden's export in Chromium 1440x900, the jump box typed "bst" (10 rows), one
+key from no active row (the guard's probe): `{'down': {'active': 1, 'rows': 10}, 'up': {'active': 9, 'rows': 10}}`:
+ArrowDown skipped row 0; ArrowUp already reached the last row.
+
+The close measured, same probe: down active 0, up active 9; 1 passed (1.2 s). Golden's page half 159,345 ->
+159,357 B (+12). With the jump, rail-anchor, heading, compression and seam guards: 78 passed.
+
+| mutation | reddened | run printed |
+|---|---|---|
+| restore `+ (active < 0 ? 1 : 0)` | `test_the_palette_arrows_start_at_the_ends` (down active 1) | 1 failed |
+| reverted | | 1 passed |
+
+The ArrowUp assertion does not discriminate under that mutation (the old formula also gave the last row from
+-1); it stays as coverage of the Required Fix's second clause.

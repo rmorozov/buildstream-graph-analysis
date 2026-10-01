@@ -422,7 +422,7 @@ export function title(key, kind = null, published = false) {
   // `UX-1151`: one spelling of the planes and of the acronym on every label.
   return named.replace(/[_-]/g, " ").replace(/^./, (c) => c.toUpperCase())
     .replace(/^Lb /, "LB ")
-    .replace(/\bplane ?([12])\b/gi, "Plane $1").replace(/\bcpu(s?)\b/gi, "CPU$1");
+    .replace(/\bplane ?([12])\b/gi, "Plane $1").replace(/\b(cpu|rss)(?=s?\b)/gi, (w) => w.toUpperCase());
 }
 
 /**

@@ -243,7 +243,7 @@ export function elementFacts(payload) {
           // source declaration rather than written per field, so a new
           // entry in SOURCES is still one line.
           record.rows.push({
-            label, value, kind, field,
+            label: label ?? title(field, kind), value, kind, field,
             path: `${array}[${idKey}=${entry[idKey]}].${field}`,
           });
         }
@@ -280,23 +280,23 @@ export function elementFacts(payload) {
 // way `SOURCES` is - published path, field, label, quantity - so adding
 // one is a line and no new code, and nothing here derives: a value that
 // is not in the document does not appear.
+// UX-1226: a null label is the Elements column's title, one name per field.
 const ELEMENT_MAPS = [
-  ["elements.element_durations", null, "Duration", "duration_us"],
-  ["elements.slack", null, "Slack", "duration_us"],
-  ["elements.downstream_count", null, "Rebuilds", "count"],
-  ["elements.unweighted_depth", null, "Depth", "count"],
-  ["elements.blast_radius", "weighted_duration_us", "Blast radius", "duration_us"],
-  ["elements.blast_radius", "risk_score", "Risk score", "count"],
-  ["elements.blast_radius", "element_kind", "Kind", null],
-  ["elements.blast_radius", "is_leaf", "Is leaf", null],
-  ["elements.criticality_probability", "probability", "On the path", "share"],
-  ["elements.criticality_probability", "observed_critical", "Observed critical", null],
+  ["elements.element_durations", null, null, "duration_us"],
+  ["elements.slack", null, null, "duration_us"],
+  ["elements.downstream_count", null, null, "count"],
+  ["elements.unweighted_depth", null, null, "count"],
+  ["elements.blast_radius", "weighted_duration_us", null, "duration_us"],
+  ["elements.blast_radius", "risk_score", null, "count"],
+  ["elements.blast_radius", "element_kind", null, null],
+  ["elements.blast_radius", "is_leaf", null, null],
+  ["elements.criticality_probability", "probability", null, "share"],
+  ["elements.criticality_probability", "observed_critical", null, null],
   ["elements.duration_variability", "coefficient_of_variation",
    "Duration spread", "ratio"],
   ["elements.duration_variability", "samples", "Runs measured", "count"],
-  ["leaf_analysis.leaves_detail", "deferral_risk", "Deferral risk", null],
-  ["leaf_analysis.leaves_detail", "is_potentially_deferrable",
-   "Could be deferred", null],
+  ["leaf_analysis.leaves_detail", "deferral_risk", null, null],
+  ["leaf_analysis.leaves_detail", "is_potentially_deferrable", null, null],
 ];
 
 // `UX-829`: `ELEMENT_MAPS`'s list-valued cousin - `fan_in[uid].direct`
@@ -382,7 +382,7 @@ export function elementUids(payload) {
  * is the single name in both shapes and is dropped from the join's
  * `SOURCES` line rather than deduplicated here: it is an int where the
  * map's is a record, and the same number `elements.downstream_count`
- * already carries under the label "Rebuilds".
+ * already carries.
  */
 export function elementFactsFor(payload, uid) {
   const known = elementFacts(payload).get(uid);
@@ -401,7 +401,7 @@ export function elementFactsFor(payload, uid) {
     if (held.has(name)) continue;
     held.add(name);
     record.rows.push({
-      label, value, kind, field: name,
+      label: label ?? title(name, kind), value, kind, field: name,
       // The same walk-back grammar `UX-227` established, and a uid
       // contains dots - so the bracket form, which `resolvePath` reads
       // as a key on an object.
@@ -466,25 +466,25 @@ export function ensureElementSection(payload, root, uid, options = {}) {
 const SOURCES = [
   ["headline.top_actions", "element_uid", [
     ["saving_us", "Worth fixing", "duration_us"],
-    ["downstream_count", "Rebuilds", "count"]]],
+    ["downstream_count", null, "count"]]],
   ["critical_path_detail", "element_uid", [
-    ["share_of_path", "Share of path", "share"],
-    ["duration_us", "Duration", "duration_us"],
+    ["share_of_path", null, "share"],
+    ["duration_us", null, "duration_us"],
     ["realizable_saving_us", "Realizable", "duration_us"],
-    ["element_kind", "Kind", null]]],
+    ["element_kind", null, null]]],
   ["optimization_horizon", "element_uid", [
-    ["makespan_after_us", "Makespan after", "duration_us"]]],
+    ["makespan_after_us", null, "duration_us"]]],
   ["latent_heavies", "element_uid", [
-    ["duration_us", "Duration", "duration_us"]]],
+    ["duration_us", null, "duration_us"]]],
   ["element_join", "element", [
-    ["cores_busy", "Cores busy", "ratio"],
-    ["requested_jobs", "Jobs asked for", "count"],
-    ["peak_rss_bytes", "Peak RSS", "bytes"],
+    ["cores_busy", null, "ratio"],
+    ["requested_jobs", null, "count"],
+    ["peak_rss_bytes", null, "bytes"],
     // `UX-382`: `blast_radius` was here and is gone. The join's field
     // is an int where `elements.blast_radius[uid]` is a record - it is
     // that record's own `downstream_count`, denormalised so the join
     // table can sort on it, and `elements.downstream_count` publishes
-    // the same number under the label "Rebuilds" below. Two rows
+    // the same number. Two rows
     // labelled "Blast radius" in one record, one a count and one a
     // duration, is what merging the shapes made visible.
     // `UX-356`: two scalars the projection dropped. `cpu_coverage` is

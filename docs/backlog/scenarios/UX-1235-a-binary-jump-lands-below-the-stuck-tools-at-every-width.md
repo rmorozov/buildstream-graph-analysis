@@ -2,7 +2,7 @@
 
 **Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-161 verification of UX-1225 and UX-1220 (2026-10-01) | **Serves:** R1 | **Topic:** guards | **Area:** tests | **Shape:** mechanical | **Reading:** container
 
-**Guard:** none — open, no guard named yet
+**Guard:** `tests/unit/test_jump_finds_what_the_rail_lists.py::test_a_jump_lands_on_its_target`, `tests/unit/test_the_narrow_rail_jump_box_keeps_the_place_read.py[binary]`
 
 ## Motivation
 
@@ -37,3 +37,18 @@ The jump's route (UX-1225); the element jump (UX-1220).
 ## Acceptance Test
 
 Mutations: a sticky toolbar taller than the section margin reds the landing; `go` pushing without `navigate` for a binary reds the 390 case.
+
+## Outcome
+
+**Gap measured** (heavy-binary page, 1440x900, `_LAND` extended): before, the landing probe read the hash only for a TR; now it returns `stuck` (tools bottom) and `shown` (visible tbody rows). Unmounted/mounted binary landing: `top` 60, `shown` 1, `stuck` <= `top`. 390, rail open, 1,202-element `--workload binaries` page: `pushed` 1, Back y 6000.
+
+**Close measured:** `pytest -k "lands or place_read"` -> 4 passed (63.95s).
+
+| Mutation | Reddened | Printed |
+|---|---|---|
+| `.table-tools` `padding-bottom: 80px` alone | nothing: `revealAndLand` re-reads the tools' height | 1 passed |
+| the above + `clear()` in chapters.js returns 0 | `test_a_jump_lands_on_its_target` (top 60, stuck 90) | 1 failed |
+| `clear()` returns 0 alone | nothing: tools bottom 60 = section margin | 1 passed |
+| `go` navigates for element only (app.js:234) | `[binary]`, `pushed` 0, Back y 0 | 1 failed, 2 passed |
+
+**Deviation:** the Decision's padding mutation alone does not red (the landing is tools-aware); the red needs the landing's `clear()` also removed. The guard discriminates only a toolbar taller than the margin that the landing ignores.

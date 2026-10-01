@@ -268,9 +268,9 @@ class TestTheTwoControlsCompose:
 
     def test_the_badge_never_describes_a_state_the_table_is_not_in(self, composed):
         """One pass, so one place the shown-count comes from."""
-        # `UX-1170`: a preset under the filter's count names both denominators.
+        # `UX-1195`: a preset under the filter's count names the matched population alone.
         shown, matched = composed["afterPreset"], composed["filtered"]
-        told = f"{shown} of {matched} matched, of 1,202" if shown < matched else f"{shown} of 1,202"
+        told = f"{shown} of {matched} matched" if shown < matched else f"{shown} of 1,202"
         assert composed["badgeAfterPreset"] == told, composed
 
     def test_clearing_the_filter_returns_to_the_preset(self, composed):

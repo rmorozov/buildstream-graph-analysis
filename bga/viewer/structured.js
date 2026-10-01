@@ -36,7 +36,7 @@ import { enterTableFocus, focusedTable, leaveTableFocus, registerFocusTarget }
   from "./tablefocus.js";
 import { parseQuery, applyFilters, badgeText, rowJson, cellText,
          copy, presetColumns, openingBound, plural, sortable, ownRows,
-         ownBody, showAlso, columnCells, rowsMarkdown, showSort, ALL_ROWS_CEILING }
+         ownBody, showAlso, columnCells, rowsMarkdown, showSort, ownHeads, STATED, ALL_ROWS_CEILING }
   from "./tables.js";
 import { PATH_HEAD, PATH_TAIL } from "./views.js";
 
@@ -799,6 +799,7 @@ function statedOnce(table, specs, total) {
   const gone = new Set();
   if (total <= SERIES_MIN_POINTS) return { note: null, gone };
   const said = [];
+  const stash = {};
   for (const spec of specs) {
     if (!spec || spec.role === "element" || spec.key === elementColumn(specs)) {
       continue;
@@ -816,6 +817,9 @@ function statedOnce(table, specs, total) {
     if (new Set(raw).size !== 1) continue;
     said.push([spec.title ?? title(spec.key, spec.quantity),
                cells[0].textContent]);
+    // `UX-1195`: the box still reads it - a threshold only where the value is a number.
+    stash[spec.key] = { raw: raw[0], shown: cells[0].textContent, spec: { ...spec, stated: true,
+      quantity: Number.isFinite(Number(raw[0])) && raw[0] !== "" ? spec.quantity : null } };
     gone.add(spec.key);
     for (const cell of cells) cell.remove?.();
     const head = [...table.querySelectorAll("th")].find(
@@ -823,6 +827,7 @@ function statedOnce(table, specs, total) {
     head?.remove?.();
   }
   if (!said.length) return { note: null, gone };
+  STATED.set(table, stash);
   // `UX-1163`: a short table left one column is a list, with no header.
   const head = table.children[0];
   if (total <= TABLE_OPENS_BOUNDED_ABOVE && head.children[0].children.length < 2) head.remove();
@@ -974,14 +979,20 @@ export function interrogable(table, specs, total, depth = 0) {
     box.addEventListener("input", () => {
       const labels = Object.fromEntries([...table.querySelectorAll("th")].map(
         (th) => [th.getAttribute("data-column"), th.textContent]));
-      const query = parseQuery(box.value, filterable, labels);
+      const share = new Set(ownHeads(table).filter((th) => th.hasAttribute?.("data-share"))
+        .map((th) => th.getAttribute("data-column")));
+      const columns = [...filterable, ...Object.values(STATED.get(table) ?? {}).map((said) => said.spec)];
+      const query = parseQuery(box.value, columns.map((spec) => (share.has(spec?.key) ? { ...spec, share: true } : spec)),
+                               labels);
       Object.assign(state, { text: query.text, exact: query.exact, thresholds: query.thresholds });
       const bad = query.unread.length > 0;
       box.classList?.toggle?.("unparsed", bad);
       box.setAttribute("aria-invalid", String(bad));
       unread.hidden = !bad;
-      unread.textContent = bad ? `${query.unread.map((c) => `\u201c${c}\u201d`).join(", ")} `
-        + "is not a threshold this table can read, so it is not applied." : "";
+      const heads = columns.map((spec) => labels[spec?.key] ?? spec?.title).filter(Boolean).join(", ");
+      unread.textContent = query.unread.map(({ clause, column }) => (column
+        ? `\u201c${clause}\u201d: no column here is called \u201c${column}\u201d (${heads}), so it is not applied.`
+        : `\u201c${clause}\u201d is not a threshold this table can read, so it is not applied.`)).join(" ");
       if (bad && !unread.parentNode) box.after?.(unread);
       rewind?.();
       refresh();

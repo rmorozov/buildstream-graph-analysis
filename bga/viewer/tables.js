@@ -65,8 +65,15 @@ function columnNames(specs, labels = {}) {
     }
   }
   for (const [word, spec] of words) if (spec && !names.has(word)) names.set(word, spec);
+  // `UX-1195`: a plural name reads in the singular too - `duration` for Element durations.
+  for (const [name, spec] of [...names]) {
+    if (/\w{3}s$/.test(name) && !names.has(name.slice(0, -1))) names.set(name.slice(0, -1), spec);
+  }
   return names;
 }
+
+// `UX-1195`: a column the page says once above the table - `{column: {raw, shown, spec}}` - still answers the box.
+export const STATED = new WeakMap();
 
 /**
  * `UX-1191`: the one filter box's grammar. `binary:ld` is exact on a key
@@ -76,36 +83,41 @@ function columnNames(specs, labels = {}) {
  */
 export function parseQuery(text, specs = [], labels = {}) {
   const names = columnNames(specs, labels);
-  const primary = specs.find((spec) => spec?.quantity && spec.numeric !== false);
+  // `UX-1194`: a bare threshold never reads a share column, nor one stated above the table.
+  const primary = specs.find((spec) => spec?.quantity && spec.numeric !== false && !spec.share && !spec.stated);
   const exact = [];
   const thresholds = {};
   const unread = [];
-  let rest = String(text ?? "").replace(/(^|\s)([a-z_][\w-]*):(\S+)/gi, (whole, lead, name, value) => {
+  let rest = String(text ?? "").replace(/(^|\s)([a-z_][\w-]*):\s*(\S+)/gi, (whole, lead, name, value) => {
     const spec = names.get(slug(name));
-    if (!spec) return whole;
+    if (!spec) { unread.push({ clause: whole.slice(lead.length), column: name }); return lead; }
     const part = spec.role !== "task_uid" ? null : slug(name) === "op" ? 1 : slug(name) === "element" ? 0 : null;
     const prefix = value.endsWith("*");
     exact.push({ column: spec.key, part, prefix, value: (prefix ? value.slice(0, -1) : value).toLowerCase() });
     return lead;
   });
   rest = rest.replace(/(^|\s)(?:([a-z_][\w-]*)\s*)?(>=|<=|>|<|=)\s*(\S*)/gi, (whole, lead, name, op, value) => {
-    // A word that names no column is a word: it stays a substring, and the threshold is the primary's.
-    const spec = (name && names.get(slug(name))) || primary;
-    const word = name && !names.has(slug(name)) ? `${name} ` : "";
+    // `UX-1195`: a word that names no column is said back and applies nothing - no substring residue.
+    const clause = whole.slice(lead.length);
+    if (name && !names.has(slug(name))) { unread.push({ clause, column: name }); return lead; }
+    const spec = name ? names.get(slug(name)) : primary;
     const parsed = spec?.quantity ? parseThreshold(`${op} ${value}`, spec.quantity) : null;
     if (parsed) thresholds[spec.key] = parsed;
-    else unread.push(whole.slice(lead.length + word.length));
-    return lead + word;
+    else unread.push({ clause, column: null });
+    return lead;
   });
   return { text: rest.replace(/\s+/g, " ").trim(), exact, thresholds, unread };
 }
 
-/** Does a row's key cell equal (or start with) the clause's value? */
-function matchesKey(tr, clause) {
+/** Does a row's key cell - its published value or the word it shows - equal (or start with) the clause's value? */
+function matchesKey(tr, clause, stated = {}) {
   const cell = [...tr.children].find((td) => td.getAttribute("data-column") === clause.column);
-  const raw = String(cell?.getAttribute("data-raw") ?? "");
-  const got = (clause.part === null ? raw : raw.split("|")[clause.part] ?? "").toLowerCase();
-  return clause.prefix ? got.startsWith(clause.value) : got === clause.value;
+  const said = cell ? { raw: cell.getAttribute("data-raw"), shown: cell.textContent } : stated[clause.column];
+  const raw = String(said?.raw ?? "");
+  const got = [clause.part === null ? raw : raw.split("|")[clause.part] ?? ""];
+  if (clause.part === null) got.push(String(said?.shown ?? "").replace("⌕", "").trim());
+  return got.some((value) => (clause.prefix ? value.toLowerCase().startsWith(clause.value)
+    : value.toLowerCase() === clause.value));
 }
 
 /** Does one published number pass a parsed threshold? */
@@ -254,8 +266,11 @@ export function applyFilters(table, options = {}) {
   const body = ownBody(table);
   const rows = everyRow(body);
   const kept = [];
+  const stated = STATED.get(table) ?? {};
+  const statedText = Object.values(stated).map((said) => said.shown).join(" ").toLowerCase();
   for (const tr of rows) {
-    let keep = (!needle || rowText(tr).includes(needle)) && exact.every((clause) => matchesKey(tr, clause));
+    let keep = (!needle || rowText(tr).includes(needle) || statedText.includes(needle))
+      && exact.every((clause) => matchesKey(tr, clause, stated));
     if (keep) {
       // Over the *thresholds*, not over the row's cells: walking the
       // cells means a threshold naming a column this row does not carry
@@ -264,7 +279,7 @@ export function applyFilters(table, options = {}) {
       for (const [column, threshold] of Object.entries(thresholds)) {
         const cell = [...tr.children].find(
           (td) => td.getAttribute("data-column") === column);
-        if (!passes(cell ? cell.getAttribute("data-raw") : null, threshold)) {
+        if (!passes(cell ? cell.getAttribute("data-raw") : stated[column]?.raw ?? null, threshold)) {
           keep = false;
           break;
         }
@@ -384,10 +399,10 @@ export function badgeText(shown, total, matched = total) {
   // The `N of M` form needs no agreement: a denominator is always a
   // population, and `1 of 12` is right as it stands.
   // UX-1158: an emptied table says why beside the box that emptied it.
-  // `UX-1170`: a bound over a filter says both denominators.
+  // `UX-1195`: a bound over a filter states one population, the matched one.
   return shown === total ? plural(total, "row")
     : !shown ? `none of ${n(total)} match`
-      : shown < matched && matched < total ? `${n(shown)} of ${n(matched)} matched, of ${n(total)}`
+      : shown < matched && matched < total ? `${n(shown)} of ${n(matched)} matched`
         : `${n(shown)} of ${n(total)}`;
 }
 

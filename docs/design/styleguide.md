@@ -609,14 +609,20 @@ the placeholder `> 10`.
   threshold (a bare `> 1s` reads the first quantity column), and any
   other word is a substring. A threshold the box cannot read says so
   on the page and filters nothing; a task table whose every row is
-  one op says it once ("Every row: op BUILD."), not per row.
+  one op says it once ("Every row: op BUILD."), not per row. The
+  grammar reads what the page shows (`UX-1195`): a column said once
+  above the table still answers (`binary:cc`, `calls = 1`), a clause
+  matches the published value or the word the cell shows
+  (`is_leaf:yes`), a column answers to its name's singular
+  (`duration > 5s`) and `binary: make` reads as `binary:make`; a word
+  naming no column applies nothing and names the columns there are.
   `test_a_key_column_matches_exactly.py`.
 - **A table's tools say its count once** (`UX-1163`): `Copy N rows` at
   rest, the badge only as `N of M`, the one-value sentence as "Every
   row:", and a short table left one column draws no header. At two rows
   or fewer no self-built strip is drawn: the rows are the values —
   filtered to them too (`UX-1170`). A bound over a filter reads
-  `25 of 112 matched, of 114`; a threshold that empties the table hides
+  `25 of 112 matched`, one population (`UX-1195`); a threshold that empties the table hides
   the copy tools as the text box does. A name that stands alone in the
   rail or the accessibility tree may repeat its cell's label (`UX-1177`).
 

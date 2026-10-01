@@ -48,7 +48,7 @@ _QUERY = r"""
 
 _STATIC = r"""
 (() => {
-  const ctx = document.createElement("canvas").getContext("2d");
+  const ctx = new OffscreenCanvas(10, 10).getContext("2d");
   const task = document.querySelector('section[data-section="wall_clock_share_us"]');
   return {
     inHeads: document.querySelectorAll("th input, th select").length,

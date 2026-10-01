@@ -376,7 +376,7 @@ button, summary, input, select, textarea, a:not(p a) {
 }
 a:not(p a) { display: inline-flex; align-items: center; justify-content: center; }
 /* `UX-1209`: the wrapping label is the checkbox's 24px target (WCAG 2.5.8); the box keeps the line's size. */
-label.copy-as { display: inline-flex; align-items: center; gap: 0.3em; min-height: var(--hit-min); }
+label.copy-as { display: inline-flex; align-items: center; gap: var(--space-1); min-height: var(--hit-min); }
 label.copy-as > input { min-width: 0; min-height: 0; margin: 0; }
 
 .verdict {

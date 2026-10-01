@@ -52,3 +52,5 @@ Close measured: `PYTEST_XDIST= pytest` on the rail-tools, target-size, volume-bu
 | drop `min-height: var(--hit-min)` on `label.copy-as` | both target-size guards + the markdown-box test | 6 failed |
 
 Deviation: the architect's `width/height: 1em` was dropped (no-op, default 13 px). No existing guard re-based; `_SCAN` widened for the label. Label-as-target is the session's default, not Ruslan's answer; styleguide rule 7 now says so.
+
+Follow-up deviation (round 160 merge): `gap: 0.3em` reddened `test_every_spacing_value_is_a_token_or_zero`; now `var(--space-1)` (.25rem), +9 B page half.

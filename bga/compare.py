@@ -353,6 +353,8 @@ class ComparisonResult:
             'baseline': self.baseline_metrics,
             'candidate': self.candidate_metrics,
             'deltas': self.deltas,
+            # `UX-1257`: the wall delta as a share of the baseline, so a reader never divides.
+            'total_duration_delta_share': _delta_share(self.baseline_metrics, self.deltas),
             'baseline_confidence': self.baseline_confidence,
             'candidate_confidence': self.candidate_confidence,
             'attribution_deltas': self.attribution_deltas,
@@ -386,6 +388,11 @@ class ComparisonResult:
         # document back does not recurse.
         document['verdict_provenance'] = verdict_provenance(self, document)
         return document
+
+
+def _delta_share(baseline: dict, deltas: dict) -> Optional[float]:
+    total, delta = (baseline or {}).get('total_duration_us'), (deltas or {}).get('total_duration_us')
+    return delta / total if (total and delta is not None) else None
 
 
 def _numeric_metrics(result: AnalysisResult) -> dict[str, Optional[float]]:

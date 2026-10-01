@@ -866,7 +866,7 @@ async function boot() {
       // `UX-669`: and the report's own schema, so a step's
       // `follows_from` renders as the target section's question rather
       // than its key.
-      { store, schema: schemas[store?.schema],
+      { store, schema: schemas[store?.schema], comparison, refused: Boolean(run.comparison_unavailable),
         reportSchema: schemas[payload.schema] }));
     if (decision) root.append(decision);
     // UX-216: one section per element the report discusses, appended
@@ -978,7 +978,7 @@ async function boot() {
     // a detail block per row.
     renderProvenanceRecords(payload, root, schemas[payload.schema]);
 
-    chapters(root, document, payload);
+    chapters(root, document, payload, comparison);
     for (const table of root.querySelectorAll?.("table") ?? []) nameTable(table);
 
     // UX-199: navigation, last, over whatever was rendered. Nothing

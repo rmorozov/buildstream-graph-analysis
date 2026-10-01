@@ -1212,7 +1212,12 @@ _COMPARE_REQUIRED = {
 # live id stops a document a consumer already wrote from validating.
 # The guarantee is the emitter's, held against the real payload by
 # `tests/unit/test_a_required_set_grew_under_an_unchanged_id.py`.
-_COMPARE_ALWAYS_WRITTEN = ("verdict_provenance", "build_class_comparison", "baseline_band_sources")
+_COMPARE_ALWAYS_WRITTEN = (
+    "verdict_provenance",
+    "build_class_comparison",
+    "baseline_band_sources",
+    "total_duration_delta_share",
+)
 
 # UX-221: `element_diff` has been emitted since UX-79 and declared by
 # nothing, so `UX-190`'s contract never covered it and `bga view` had no
@@ -1248,6 +1253,8 @@ _COMPARE_OPTIONAL = {
     # `_COMPARE_ALWAYS_WRITTEN` rather than required - the same third
     # state the two keys above are in.
     "baseline_band_sources": "array",
+    # `UX-1257`: the wall delta over the baseline's wall-clock; `null` with no baseline total.
+    "total_duration_delta_share": "number",
 }
 
 _BLAST_REQUIRED = {
@@ -5669,6 +5676,11 @@ _CONFIDENCE = {
 
 
 _COMPARE_HINTS = {
+    "total_duration_delta_share": {
+        QUANTITY: "share",
+        DIRECTION: "lower_is_better",
+        "description": "The wall-clock change as a share of the baseline's wall-clock. Negative is faster.",
+    },
     # `UX-610`: the same shape `analyze/v5` publishes a claim's chain
     # in, so a consumer that learned to read one has learned to read
     # this. Its own description, because these paths walk `compare/v2`

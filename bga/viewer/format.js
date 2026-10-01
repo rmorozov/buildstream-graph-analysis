@@ -321,7 +321,7 @@ export const READER_LABELS = {
   wall_clock: "Wall clock",
   detected_host_cpu_count: "Detected host cores",
   declared_cpu_budget: "Declared CPU budget",
-  host_cpu_count: "Host cores",
+  host_cpu_count: "Host cores", host_cores: "Host cores",
   cpu_budget: "Declared CPU budget",
   native_max_jobs: "Native build jobs",
   INSUFFICIENT_EVIDENCE: "Not enough evidence",

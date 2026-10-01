@@ -1,6 +1,6 @@
 # UX-1214: a card's +N more Blocks reach every element it counts
 
-**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-159 walk and verification (2026-10-01) | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical | **Reading:** container
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the round-159 walk and verification (2026-10-01) | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical | **Reading:** container
 
 **Guard:** `tests/unit/test_an_element_view_answers_whole.py` (`test_a_card_s_more_blocks_reach_every_element_it_counts`); the follow-up's `tests/unit/test_a_card_s_more_reaches_every_dependency_both_ways.py`
 

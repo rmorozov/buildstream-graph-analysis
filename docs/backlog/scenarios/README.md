@@ -30,18 +30,20 @@ task file, which is the only place it ever lived twice.
 | UX-1014 | [the "safe cap plus auto" default is measured on more shapes and hosts before it is anyone's default](UX-1014-the-builders-and-auto-default-is-measured-on-more-shapes-and-hosts.md) | capture | High | R4, R5 | 🔴 Not Started |
 | UX-1134 | [`--jobserver auto` with no plan widens a memory-bound giant into the OOM killer](UX-1134-auto-oom-kills-a-memory-bound-giant-with-no-plan.md) | capture | High | R4, R5 | 🔴 Not Started |
 | UX-1040 | [a paired reading decides whether implementers move to opus at low effort](UX-1040-a-paired-reading-decides-the-implementers-model.md) | guards | Medium | every round's implementer spend | 🔴 Not Started |
-| UX-1206 | [a column's whole displayed name reads as that column, and a clause not applied says the column is a share](UX-1206-a-column-s-whole-displayed-name-reads-as.md) | viewer | Medium | R1 | 🔴 Not Started |
-| UX-1207 | [every map table's key column has one name across header, cell label and Copy](UX-1207-every-map-table-s-key-column-has-one.md) | viewer | Low | R1 | 🔴 Not Started |
-| UX-1208 | [at 390 a rail link and Expand all keep the reader's place for Back](UX-1208-at-390-a-rail-link-and-expand-all.md) | viewer | Medium | R1 | 🔴 Not Started |
-| UX-1209 | [the rail's Markdown checkbox matches its 13 px tools](UX-1209-the-rail-s-markdown-checkbox-matches-its-13.md) | viewer | Low | R1 | 🔴 Not Started |
-| UX-1210 | [the critical path's head-and-tail stub never sorts, counts or outlives a bound, and the chain drawing shows no stale More](UX-1210-the-critical-path-s-head-and-tail-stub.md) | viewer | Medium | R1 | 🔴 Not Started |
-| UX-1211 | [Copy follows the order on screen](UX-1211-copy-follows-the-order-on-screen.md) | viewer | Medium | R1 | 🔴 Not Started |
-| UX-1212 | [Focus heads its investigation and names what the document holds](UX-1212-focus-heads-its-investigation-and-names-what-the.md) | viewer | Low | R1 | 🔴 Not Started |
-| UX-1213 | [a value reads the same in a card, a table, a badge and a sentence](UX-1213-a-value-reads-the-same-in-a-card.md) | viewer | Low | R1 | 🔴 Not Started |
-| UX-1214 | [a card's +N more Blocks reach every element it counts](UX-1214-a-card-s-n-more-blocks-reach-every.md) | viewer | Low | R1 | 🔴 Not Started |
-| UX-1215 | [a Back-pushing browser guard runs on a fresh history](UX-1215-a-back-pushing-browser-guard-runs-on-a.md) | guards | Medium | R1 | 🔴 Not Started |
-| UX-1216 | [the store trend, comparison band and element history drawings are on a built test page](UX-1216-the-store-trend-comparison-band-and-element-history.md) | guards | Low | R1 | 🔴 Not Started |
-| UX-1217 | [a browser guard leaves no preference behind in the worker's shared Chrome](UX-1217-a-browser-guard-leaves-no-preference-behind-in.md) | guards | Medium | R1 | 🔴 Not Started |
+| UX-1219 | [Back after Collapse all reopens what it folded](UX-1219-back-after-collapse-all-reopens-what-it-folded.md) | viewer | Medium | R1 | 🔴 Not Started |
+| UX-1220 | [the narrow rail jump box keeps the place read for Back, as its links do](UX-1220-the-narrow-rail-jump-box-keeps-the-place-read-for.md) | viewer | Medium | R1 | 🔴 Not Started |
+| UX-1221 | [Back after a card link restores the card offset](UX-1221-back-after-a-card-link-restores-the-card-offset.md) | viewer | Low | R1 | 🔴 Not Started |
+| UX-1222 | [Focus is one step Back](UX-1222-focus-is-one-step-back.md) | viewer | Low | R1 | 🔴 Not Started |
+| UX-1223 | [returning to All rows restores the chain order, or the badge says sorted](UX-1223-returning-to-all-rows-restores-the-chain-order-or.md) | viewer | Low | R1 | 🔴 Not Started |
+| UX-1224 | [a printed filtered table states its filter](UX-1224-a-printed-filtered-table-states-its-filter.md) | viewer | Low | R1 | 🔴 Not Started |
+| UX-1225 | [a jump to a binary lands on the filtered by_binary list](UX-1225-a-jump-to-a-binary-lands-on-the-filtered-by-binary.md) | viewer | Low | R1 | 🔴 Not Started |
+| UX-1226 | [a card label reads as its column title](UX-1226-a-card-label-reads-as-its-column-title.md) | viewer | Low | R1 | 🔴 Not Started |
+| UX-1227 | [the palette's first ArrowDown lands on its first row](UX-1227-the-palette-s-first-arrowdown-lands-on-its-first.md) | viewer | Low | R1 | 🔴 Not Started |
+| UX-1228 | [a transitive downstream: clause filters the elements an element blocks, through every level](UX-1228-a-transitive-downstream-clause-filters-the-elements.md) | viewer | Low | R1 | 🔴 Not Started |
+| UX-1229 | [focusing the Elements filter box after +N more is measured at 390 for the touch keyboard](UX-1229-focusing-the-elements-filter-box-after-n-more-is.md) | viewer | Low | R1 | 🔴 Not Started |
+| UX-1230 | [the badge's all-N-matched arm and the said-back clause's owned-words rule have a mutation that reddens them](UX-1230-the-badge-s-all-n-matched-arm-and-the-said-back.md) | guards | Low | R1 | 🔴 Not Started |
+| UX-1231 | [the styleguide states two rules: a filtering link moves focus to its filter, an entry naming no View is at the opening View](UX-1231-the-styleguide-states-two-rules-a-filtering-link.md) | docs | Low | R1 | 🔴 Not Started |
+| UX-1232 | [the hang guard's sleeper does not take 49.9 s of wall at 2.05 s of user](UX-1232-the-hang-guard-s-sleeper-does-not-take-49-9-s-of.md) | guards | Medium | R1 | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

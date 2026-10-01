@@ -1,6 +1,6 @@
 # UX-1208: at 390 a rail link and Expand all keep the reader's place for Back
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-159 walk and verification (2026-10-01) | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical | **Reading:** container
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the round-159 walk and verification (2026-10-01) | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical | **Reading:** container
 
 **Guard:** `tests/unit/test_the_narrow_page_keeps_its_place.py` (`test_back_after_a_rail_link_or_expand_all_lands_where_the_reader_read`)
 

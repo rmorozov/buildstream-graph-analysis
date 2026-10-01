@@ -1,6 +1,6 @@
 # UX-1210: the critical path's head-and-tail stub never sorts, counts or outlives a bound, and the chain drawing shows no stale More
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-159 walk and verification (2026-10-01) | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical | **Reading:** container
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the round-159 walk and verification (2026-10-01) | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical | **Reading:** container
 
 **Guard:** `tests/unit/test_print_and_find_reach_the_content.py` (`test_the_stub_never_sorts_bounds_or_counts`, `test_the_chain_draws_no_more_once_every_box_is_drawn`, `test_no_hidden_node_is_drawn`, `test_print_draws_every_chain_box_or_says_how_many_it_leaves_out`)
 

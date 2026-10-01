@@ -1,6 +1,6 @@
 # UX-1216: the store trend, comparison band and element history drawings are on a built test page
 
-**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-159 walk and verification (2026-10-01) | **Serves:** R1 | **Topic:** guards | **Area:** tests | **Shape:** mechanical | **Reading:** container
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the round-159 walk and verification (2026-10-01) | **Serves:** R1 | **Topic:** guards | **Area:** tests | **Shape:** mechanical | **Reading:** container
 
 **Guard:** `tests/unit/test_a_mark_says_its_value.py` (`test_the_band_the_trend_and_the_history_title_every_mark_on_a_served_page`)
 

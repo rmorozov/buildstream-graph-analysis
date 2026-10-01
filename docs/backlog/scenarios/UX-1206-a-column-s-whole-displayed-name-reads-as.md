@@ -1,6 +1,6 @@
 # UX-1206: a column's whole displayed name reads as that column, and a clause not applied says the column is a share
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-159 walk and verification (2026-10-01) | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical | **Reading:** container
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the round-159 walk and verification (2026-10-01) | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical | **Reading:** container
 
 **Guard:** `tests/unit/test_a_key_column_matches_exactly.py` (`test_a_column_s_whole_displayed_name_reads_as_that_column`, `test_a_clause_not_applied_filters_nothing`, `test_a_bare_threshold_on_a_share_says_it_is_a_share`, `test_a_clause_s_stray_name_words_are_said_back`, `test_a_spaced_unit_is_one_value`, `test_a_spaced_unit_no_column_reads_is_quoted_whole`)
 

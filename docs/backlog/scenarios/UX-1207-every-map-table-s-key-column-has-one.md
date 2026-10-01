@@ -1,6 +1,6 @@
 # UX-1207: every map table's key column has one name across header, cell label and Copy
 
-**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-159 walk and verification (2026-10-01) | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** judgement | **Reading:** container
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the round-159 walk and verification (2026-10-01) | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** judgement | **Reading:** container
 
 **Guard:** `tests/unit/test_op_and_duration_meet_on_durations.py::test_every_map_names_its_columns_once_in_header_cells_and_copy` (th, cells, Markdown Copy and default JSON Copy), `::test_a_field_reads_one_title_in_its_card_and_its_column`
 

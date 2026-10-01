@@ -2434,6 +2434,16 @@ def _store_paths(run_dir: str):
     return os.sep.join(parts[:-4]) or '.', True
 
 
+def run_token(run_dir: str) -> str:
+    """`@<stamp>` for a store run, so a step runs from the project and on any machine; else the path."""
+    from . import run_store
+
+    if not _store_paths(run_dir)[1]:
+        return run_dir
+    token = '@' + os.path.normpath(run_dir).split(os.sep)[-2]
+    return token if run_store.is_alias(token) else run_dir
+
+
 def _store_run_modes(project: str) -> list[tuple]:
     """`(stamp, run_mode)` per run in the store, oldest first.
 
@@ -2521,6 +2531,7 @@ def compute_next_steps(result: AnalysisResult, headline: Optional[dict] = None) 
         # spelled approximately is worse than no step.
         return []
     project, in_store = _store_paths(run_dir)
+    run = run_token(run_dir)
     actions = headline.get('top_actions') or []
     top = actions[0] if actions else None
     steps: list[dict] = []
@@ -2552,7 +2563,7 @@ def compute_next_steps(result: AnalysisResult, headline: Optional[dict] = None) 
                     + (f", {qty.share(share)} of it" if share else "")
                     + " — the build cannot finish sooner than this chain."
                 ),
-                'argv': ['bga', 'blast', longest['element_uid'], run_dir],
+                'argv': ['bga', 'blast', longest['element_uid'], run],
                 'follows_from': 'critical_path_detail',
             }
         )
@@ -2570,7 +2581,7 @@ def compute_next_steps(result: AnalysisResult, headline: Optional[dict] = None) 
                     + (f", worth {qty.duration(worth)}" if worth and worth >= 100_000 else "")
                     + " — this is what changing it rebuilds."
                 ),
-                'argv': ['bga', 'blast', uid, run_dir],
+                'argv': ['bga', 'blast', uid, run],
                 'follows_from': top.get('finding_id') or 'headline.top_actions',
             }
         )
@@ -2585,7 +2596,7 @@ def compute_next_steps(result: AnalysisResult, headline: Optional[dict] = None) 
                         f"Plane 2 measured this run, so the join can say "
                         f"whether {uid} is compute-bound or under-parallelized."
                     ),
-                    'argv': ['bga', 'correlate', run_dir],
+                    'argv': ['bga', 'correlate', run],
                     'follows_from': 'plane2_coverage',
                 }
             )
@@ -2607,7 +2618,7 @@ def compute_next_steps(result: AnalysisResult, headline: Optional[dict] = None) 
                     )
                     + " — the sweep says what more builders would buy."
                 ),
-                'argv': ['bga', 'sweep', run_dir],
+                'argv': ['bga', 'sweep', run],
                 'follows_from': 'headline.diagnosis',
             }
         )
@@ -2629,8 +2640,8 @@ def compute_next_steps(result: AnalysisResult, headline: Optional[dict] = None) 
             steps.append(
                 {
                     'id': 'measure-again',
-                    'reason': "Make the change, then capture it the same way.",
-                    'argv': ['bga', 'snapshot', '--project', project, '--', 'bst', 'build', *targets],
+                    'reason': f"Make the change, then capture it the same way — run it in {project}.",
+                    'argv': ['bga', 'snapshot', '--', 'bst', 'build', *targets],
                     'follows_from': 'run_instance.targets',
                 }
             )

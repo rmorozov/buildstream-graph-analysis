@@ -2,7 +2,7 @@
 
 **Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-162 view UI review on a 2,402-element two-plane page (2026-10-01), finding M5 | **Serves:** R1 | **Topic:** viewer | **Area:** bga, bga/viewer | **Shape:** mechanical | **Reading:** container
 
-**Guard:** none — open, no guard named yet
+**Guard:** test_a_next_step_names_the_run_by_its_snapshot.py
 
 ## Motivation
 
@@ -39,3 +39,39 @@ The command shape (§1d).
 ## Acceptance Test
 
 On this page every next-step command is at most 60 characters and none contains `/.bga/runs/`; pasted in the store's project directory each resolves the same run. Mutation: restore the absolute path, and the guard reds.
+
+## Outcome (2026-10-01)
+
+### The gap, measured
+
+`tests/fixtures/macro_micro/run` copied into a store at
+`<scratchpad>/demo/.bga/runs/20260303T091500Z/run`, `bga analyze --format json`,
+each `next_steps[].argv` joined with its length, base `92a48946`:
+
+```text
+153 bga blast core.bst /tmp/claude-0/.../demo/.bga/runs/20260303T091500Z/run
+153 bga blast core.bst /tmp/claude-0/.../demo/.bga/runs/20260303T091500Z/run
+147 bga snapshot --project /tmp/claude-0/.../demo -- bst build all.bst
+23 bga compare @prev @last
+```
+
+### The close, measured
+
+```text
+36 bga blast core.bst @20260303T091500Z
+36 bga blast core.bst @20260303T091500Z
+33 bga snapshot -- bst build all.bst
+23 bga compare @prev @last
+```
+
+`run_token()` in `bga/findings.py` returns `@<stamp>` for a store run
+whose stamp is in the alias grammar, the path otherwise; `measure-again`'s
+reason names the project to run it in, as `compare`'s already did.
+`docs/guides/cli.md`'s quoted block follows (its guard compares it to the tool).
+
+### Mutations verified red and reverted (2)
+
+| # | mutation | reddened |
+|---|---|---|
+| M1 | `run = run_dir` (argv back to the raw path) | argv clause, 1 failed (195 chars) |
+| M2 | `token = '@last'` | resolves-the-same-run clause, 1 failed |

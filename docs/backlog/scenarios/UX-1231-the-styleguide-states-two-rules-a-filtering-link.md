@@ -1,6 +1,6 @@
 # UX-1231: the styleguide states two rules: a filtering link moves focus to its filter, an entry naming no View is at the opening View
 
-**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-160 residue pass, track W3 (2026-10-01) | **Serves:** R1 | **Topic:** docs | **Area:** unassigned | **Shape:** judgement | **Reading:** container
+**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-160 residue pass, track W3 (2026-10-01) | **Serves:** R1 | **Topic:** docs | **Area:** unassigned | **Shape:** mechanical | **Reading:** container
 
 **Guard:** none — open, no guard named yet
 
@@ -23,6 +23,21 @@ The behaviour (`UX-1214`, closed).
 ## Acceptance Test
 
 `test_the_styleguide_names_its_guards.py` passes with both rules stated and each guard named; deleting a rule's guard reds it. Mutation: restore the defect, and the guard reds.
+
+## Decision
+
+Architect, round 161 (2026-10-01):
+
+```text
+Route:     Add both rules to styleguide §3d (prose and index row ~:52) and name test_a_card_s_more_reaches_every_dependency_both_ways.py (N4: focus to the box; N3: Back to the reader's View, Forward to the link's) in §7's §3d row (~:2448); that guard's docstring cites "(styleguide §3d)".
+Rejected:  a new §3m section for history (own §7 and index row for one sentence); prose only (the ledger guard cannot see an uncited guard).
+Files:     docs/design/styleguide.md, tests/unit/test_a_card_s_more_reaches_every_dependency_both_ways.py (docstring line 1 only)
+Guard:     tests/unit/test_the_styleguide_names_its_guards.py: every named guard cites its section, and no guard cites a section the table leaves out.
+Mutation:  Remove the guard's name from §7's §3d row: test_no_guard_cites_a_section_the_table_omits reddens.
+Class:     bookkeeping (1 of 14, under the 40% cap)
+Split:     parallel unless UX-1219..1222 edit styleguide §3d/§7 or that guard file.
+Question:  none. Default: one guard holds both rules; if a history track adds a Forward/opening-View guard, name that file for rule 2.
+```
 
 ## Outcome
 

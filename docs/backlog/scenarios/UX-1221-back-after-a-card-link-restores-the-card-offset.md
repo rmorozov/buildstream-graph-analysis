@@ -1,6 +1,6 @@
 # UX-1221: Back after a card link restores the card offset
 
-**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-160 walk and verification (2026-10-01) | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** judgement | **Reading:** container
+**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-160 walk and verification (2026-10-01) | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical | **Reading:** container
 
 **Guard:** none — open, no guard named yet
 
@@ -25,6 +25,21 @@ A card link's own destination; the "+N more" View and focus (`UX-1214`, closed).
 ## Acceptance Test
 
 After pressing a card link and Back, the card's top offset equals its offset before the press at 1440 and 390; a guard in a new `test_back_after_a_card_link_restores_the_card_offset.py`. Mutation: restore the defect, and the guard reds.
+
+## Decision
+
+Architect, round 161 (2026-10-01):
+
+```text
+Route:     A negative saved `at` is no longer clamped: `margin()` uses `at` as-is when given and floors only at a sticky table header's clearance (`clear() > 0`), so Back lands the card at its saved offset.
+Rejected:  Storing the card's uid and offset as a second landing in the history entry: a second mechanism for a clamp that is one line.
+Files:     bga/viewer/chapters.js, tests/unit/test_back_after_a_card_link_restores_the_card_offset.py
+Guard:     In Chromium at 1440 and 390, a card at top -320 -> card link -> Back gives card top -320±1; same for "+N more" at -516.
+Mutation:  Restore `Math.max(at ?? …, clear())`; the card lands at 0 and the guard goes red.
+Class:     product
+Split:     First in track H.
+Question:  none
+```
 
 ## Outcome
 

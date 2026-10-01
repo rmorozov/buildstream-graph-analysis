@@ -1,6 +1,6 @@
 # UX-1222: Focus is one step Back
 
-**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-160 walk and verification (2026-10-01) | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** judgement | **Reading:** container
+**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-160 walk and verification (2026-10-01) | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical | **Reading:** container
 
 **Guard:** none — open, no guard named yet
 
@@ -25,6 +25,21 @@ Focus across Back and Forward (`UX-1198`, closed).
 ## Acceptance Test
 
 From a card at y 28,222, Focus then Back: Focus cleared and scrollY at the card; a guard in a new `test_focus_is_one_step_back.py`. Mutation: restore the defect, and the guard reds.
+
+## Decision
+
+Architect, round 161 (2026-10-01):
+
+```text
+Route:     Focus becomes navigation: the capture-phase click handler (app.js ~1181) treats `[data-focus-element]` as it treats `[data-all]`: keepPlace(false) on the current entry, pushState, then setTimeout keepPlace(false). Popstate already clears a focus the entry lacks (UX-1198).
+Rejected:  Pushing inside applyFocus (focus.js) or wireViewState: every caller including the URL restore would push (UX-211's one writer stays replace-only).
+Files:     bga/viewer/app.js (capture click handler), tests/unit/test_focus_is_one_step_back.py
+Guard:     From a card at y 28,222 at 1440: Focus, then Back; `data-focus` absent and scrollY 28,222±1. At 390 the same.
+Mutation:  Remove `[data-focus-element]` from the navigation condition; Back reaches y 0, red.
+Class:     product
+Split:     Third in track H.
+Question:  none. Default: unfocusing also pushes (reversible: push only when focusUid is set).
+```
 
 ## Outcome
 

@@ -1,6 +1,6 @@
 # UX-1229: focusing the Elements filter box after +N more is measured at 390 for the touch keyboard
 
-**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-160 residue pass, track W3 (2026-10-01) | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** judgement | **Reading:** container
+**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-160 residue pass, track W3 (2026-10-01) | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical | **Reading:** container
 
 **Guard:** none — open, no guard named yet
 
@@ -23,6 +23,21 @@ Keyboard focus at 1440 (`UX-1214`, closed).
 ## Acceptance Test
 
 The measured visual-viewport height before and after the press is pasted; if the box covers the rows, a guard in a new `test_a_press_at_390_opens_no_keyboard.py` reads the focused element at touch width. Mutation: restore the defect, and the guard reds.
+
+## Decision
+
+Architect, round 161 (2026-10-01):
+
+```text
+Route:     Measurable here: coarse emulation (tests/cdp.mjs:170 Emulation.setTouchEmulationEnabled) at 390x844, visualViewport.height before/after the "+N more" press. Headless draws no keyboard, so it cannot decide. Reversible default: under matchMedia("(pointer: coarse)"), element.js:753 focuses the Elements section heading (tabindex=-1) and leaves the box filled; a fine pointer keeps focus in the box (UX-1214 at 1440).
+Rejected:  conditioning on width (narrow desktop window has a keyboard); inputmode="none" (suppresses the keyboard later); blur() after focus (keyboard flashes on Android).
+Files:     bga/viewer/element.js, tests/unit/test_a_press_at_390_opens_no_keyboard.py
+Guard:     390 coarse: activeElement is the Elements heading, box holds depends_on:<uid>; 390 without coarse: activeElement is the box. Outcome pastes both visualViewport readings.
+Mutation:  Drop the coarse condition: input active at coarse 390, red.
+Class:     product
+Split:     serial with whichever writes element.js. ~+40 B page half.
+Question:  none; a reading on Ruslan's phone settles it.
+```
 
 ## Outcome
 

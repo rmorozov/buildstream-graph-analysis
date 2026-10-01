@@ -1,6 +1,6 @@
 # UX-1227: the palette's first ArrowDown lands on its first row
 
-**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** verifier A, the round-160 verification (2026-10-01) | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** judgement | **Reading:** container
+**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** verifier A, the round-160 verification (2026-10-01) | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical | **Reading:** container
 
 **Guard:** none — open, no guard named yet
 
@@ -23,6 +23,21 @@ The palette's result order.
 ## Acceptance Test
 
 Open the palette, one ArrowDown: row 0 active; one ArrowUp from none: the last row; a guard in a new `test_the_palette_arrows_start_at_the_ends.py`. Mutation: restore the defect, and the guard reds.
+
+## Decision
+
+Architect, round 161 (2026-10-01):
+
+```text
+Route:     app.js:359 becomes `active = active < 0 ? (step > 0 ? 0 : rows.length - 1) : (active + step + rows.length) % rows.length;`.
+Rejected:  starting `active` at 0 on render (a highlighted row before any key press is a new state).
+Files:     bga/viewer/app.js, tests/unit/test_the_palette_arrows_start_at_the_ends.py
+Guard:     golden export's jump box in Chromium (harness of test_jump_finds_what_the_rail_lists.py): ArrowDown once -> row 0; ArrowUp once -> last row.
+Mutation:  Restore `+ (active < 0 ? 1 : 0)`: ArrowDown reads row 1, red.
+Class:     product
+Split:     with UX-1225.
+Question:  none
+```
 
 ## Outcome
 

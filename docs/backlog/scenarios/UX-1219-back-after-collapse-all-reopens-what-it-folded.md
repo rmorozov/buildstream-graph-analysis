@@ -2,7 +2,7 @@
 
 **Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-160 walk and verification (2026-10-01) | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical | **Reading:** container
 
-**Guard:** none — open, no guard named yet
+**Guard:** `tests/unit/test_back_after_collapse_all_reopens_what_it_folded.py`
 
 ## Motivation
 
@@ -44,4 +44,26 @@ Question:  none. Default: storage follows the restored folds (reversible: remove
 
 ## Outcome
 
-Open.
+**The gap measured** (the guard against `e70bb158`'s `app.js`; the 1,202-element page, Chromium, from y 3000):
+
+```text
+no hand fold 1440  {'before': [], 'during': 79, 'after': [all 79], ...}   (probe: back 333)
+no hand fold 390   {'before': [], 'during': 79, 'after': [all 79], ...}   (probe: back 1110)
+floors by hand     passes before the fix: a hand fold writes the view query (`c=`), which applyView restores
+2 failed, 2 passed in 17.62s
+```
+
+**The close measured** (after; `collapsible()` returns `shut()` and `restore(keys)`, `all()` is `restore`):
+
+```text
+the guard                                       4 passed (1440, 390; no hand fold, floors by hand)
+collapse, Back, rail, view-link, focus neighbours  173 passed in 188.99s
+page half (golden, macro_micro)                 159,154 -> 159,254 B (+100) of 160,000
+```
+
+**Mutation table** (from a saved copy of `app.js`, restored after):
+
+| Mutation | Reddened | Count |
+|---|---|---|
+| `sections: controls.shut()` dropped from keepPlace (Decision's) | no hand fold, 1440 and 390: all 79 stay shut | 2 failed, 2 passed |
+| popstate `controls.restore([])` (the rejected re-open-all) | floors by hand, 1440 and 390: floors reopened | 2 failed, 2 passed |

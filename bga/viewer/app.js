@@ -1172,7 +1172,7 @@ async function boot() {
     const keepPlace = (railed) => {
       // `UX-1203` follow-up: with no such place, an opened rail's reader is at the anchor.
       const place = !railed ? here() : read?.[0] === location.hash ? read[1] : { scrollY: window.scrollY, at: null };
-      window.history.replaceState({ ...window.history.state, folds: foldSnapshot(root), ...place }, "");
+      window.history.replaceState({ ...window.history.state, folds: foldSnapshot(root), sections: controls.shut(), ...place }, "");
     };
     // `UX-1203` follow-up: Chrome fires popstate inside a followed fragment link's click; that is no traversal.
     let following = false;
@@ -1241,6 +1241,7 @@ async function boot() {
       applyView(root, query);
       if (!Array.isArray(saved?.folds)) return;
       applyFolds(root, saved.folds);
+      if (saved.sections) controls.restore(saved.sections);
       if (saved.rail) document.querySelector(".toc")?._fold?.(saved.rail === "true");
       window.scrollTo?.(0, saved.scrollY ?? 0);
       const at = document.getElementById(splitHash(location.hash).anchor);

@@ -45,6 +45,7 @@ task file, which is the only place it ever lived twice.
 | UX-1231 | [the styleguide states two rules: a filtering link moves focus to its filter, an entry naming no View is at the opening View](UX-1231-the-styleguide-states-two-rules-a-filtering-link.md) | docs | Low | R1 | 🔴 Not Started |
 | UX-1232 | [the hang guard's sleeper does not take 49.9 s of wall at 2.05 s of user](UX-1232-the-hang-guard-s-sleeper-does-not-take-49-9-s-of.md) | guards | Medium | R1 | 🔴 Not Started |
 | UX-1233 | [the page budget is raised to 165,000 B for round 161's eleven viewer rows](UX-1233-the-page-budget-is-raised-to-165-000-b.md) | guards | Medium | R1 | 🔴 Not Started |
+| UX-1234 | [a column title the card shares reads as the reader's word](UX-1234-a-column-title-a-card-shares-reads-as-the-reader-s-word.md) | viewer | Low | R1 | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

@@ -2,7 +2,7 @@
 
 **Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-160 walk and verification (2026-10-01) | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical | **Reading:** container
 
-**Guard:** none — open, no guard named yet
+**Guard:** `tests/unit/test_focus_is_one_step_back.py`
 
 ## Motivation
 
@@ -43,4 +43,30 @@ Question:  none. Default: unfocusing also pushes (reversible: push only when foc
 
 ## Outcome
 
-Open.
+**The gap measured** (the guard against `c8916d44`'s `app.js`; the 1,202-element page, Chromium; `layer12/mod030.bst`'s card landed by its anchor):
+
+```text
+1440  {'y': 0, 'top': 60.02, 'focused': 'layer12/mod030.bst', 'pushed': 0, ...}
+390   {'y': 0, 'top': 79.75, 'focused': 'layer12/mod030.bst', 'pushed': 0, ...}
+2 failed in 12.93s
+```
+
+**The close measured** (after; the capture handler's `[data-all]` condition is `[data-all],[data-focus-element]`):
+
+```text
+1440  y 28,301 -> Focus -> Back: pushed 1, focus cleared, y 31,045, card top 60.02 -> 60.22
+390   y 32,245 -> Focus -> Back: pushed 1, focus cleared, y 33,130, card top 79.75 -> 80.03
+the guard                                       2 passed in 12.95s
+focus, element view, filter-Back, view-link     123 passed in 77.55s
+page half (golden, macro_micro)                 159,254 -> 159,254 B (+0) of 160,000
+```
+
+The guard asserts the card's viewport top ±1, not scrollY ±1 as the Decision wrote: after Focus and Back
+the document above the card is 2,744 px (1440) and 885 px (390) taller, so the same view reads a different
+scrollY; the entry's `at` (`UX-1171`) is what lands it.
+
+**Mutation table** (from a saved copy of `app.js`, restored after):
+
+| Mutation | Reddened | Count |
+|---|---|---|
+| `[data-focus-element]` removed from the navigation condition | 1440 and 390: pushed 0, y 0 | 2 failed |

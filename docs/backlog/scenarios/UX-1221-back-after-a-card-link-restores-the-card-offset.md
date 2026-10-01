@@ -2,7 +2,7 @@
 
 **Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-160 walk and verification (2026-10-01) | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical | **Reading:** container
 
-**Guard:** none — open, no guard named yet
+**Guard:** `tests/unit/test_back_after_a_card_link_restores_the_card_offset.py`
 
 ## Motivation
 
@@ -43,4 +43,26 @@ Question:  none
 
 ## Outcome
 
-Open.
+**The gap measured** (the guard against `e6019518`'s `chapters.js`; the 1,202-element page, Chromium):
+
+```text
+dependency 1440  {'before': -303.98, 'away': -779.98, 'after': 0.02}
+dependency 390   {'before': -320.25, 'away': -1327.25, 'after': -0.25}
+more 1440        {'before': -516.36, 'away': 11701.75, 'after': -0.25}
+more 390         {'before': -515.75, 'away': 10777.14, 'after': 0.14}
+4 failed in 18.19s
+```
+
+**The close measured** (after; `margin()` is `Math.max(at ?? scroll-margin, clear() || -Infinity)`):
+
+```text
+the guard                                       4 passed in 17.97s
+landing, rail, Back and page-half neighbours    149 passed in 208.45s
+page half (golden, macro_micro)                 159,146 -> 159,154 B (+8) of 160,000
+```
+
+**Mutation table** (from a saved copy of `chapters.js`, restored after):
+
+| Mutation | Reddened | Count |
+|---|---|---|
+| `Math.max(at ?? …, clear())` restored | all four, card at 0 | 4 failed |

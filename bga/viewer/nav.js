@@ -309,19 +309,25 @@ export function collapsible(root, { document: doc, storage,
     toggles.set(key, apply);
   }
 
+  // `UX-1219`: a history entry carries the section folds.
+  const restore = (keys) => {
+    collapsed.clear();
+    for (const [key, apply] of toggles) {
+      apply(keys.includes(key));
+      if (keys.includes(key)) collapsed.add(key);
+    }
+    writeCollapsed(storage, collapsed);
+  };
   return {
     keys: [...toggles.keys()],
+    shut: () => [...collapsed],
+    restore,
     all(shut) {
       // The enclosing layer first when opening, so the sections it
       // holds are on screen by the time they are told to open; and
       // last when shutting, for the same reason in reverse.
       if (!shut) enclosing?.(true);
-      collapsed.clear();
-      for (const [key, apply] of toggles) {
-        apply(shut);
-        if (shut) collapsed.add(key);
-      }
-      writeCollapsed(storage, collapsed);
+      restore(shut ? [...toggles.keys()] : []);
       if (shut) enclosing?.(false);
     },
   };

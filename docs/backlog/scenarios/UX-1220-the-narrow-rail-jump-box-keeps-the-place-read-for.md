@@ -2,7 +2,7 @@
 
 **Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-160 walk and verification (2026-10-01) | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical | **Reading:** container
 
-**Guard:** none — open, no guard named yet
+**Guard:** `tests/unit/test_the_narrow_rail_jump_box_keeps_the_place_read.py`
 
 ## Motivation
 
@@ -44,4 +44,36 @@ Question:  none. Default: section and binary jumps also push one entry (reversib
 
 ## Outcome
 
-Open.
+**The gap measured** (the guard against `440de78b`'s `app.js`; the 1,202-element page, Chromium 390x844; read at 6000, 400 px climb, rail opened, `layer12/mod030` typed):
+
+```text
+jump   {'y': 6000, 'after': 33129, 'back': 0, 'rail': 'false', ...}
+focus  {'y': 6000, 'after': 776, 'back': 0, 'rail': 'false', ...}
+2 failed in 13.91s
+```
+
+**The close measured** (after; the capture handler's body is `navigate(rail, push)`, passed to `wireJumpBox` as `context.navigate`; `go` and the Focus `act` call `navigate(nav, true)`):
+
+```text
+jump   y 6000 -> back 6000, rail folded; Forward: the card in view (top 81)
+focus  y 6000 -> back 6000, rail folded; Forward: 776 == after, focus restored, the focus bar in view
+the guard                                                 2 passed in 13.53s
+history, rail, jump box, focus, page-half, seams neighbours  397 passed in 300.64s
+page half (golden, macro_micro)                           159,254 -> 159,294 B (+40) of 160,000
+app.js                                                    1,423 lines of 1,500 (track H: +8)
+```
+
+Deviations: `navigate` takes the rail node and reads its open state itself, so the press and the box share one
+`railed` test; Forward after the box's Focus asserts the focus bar in view and Forward == the post-Focus scrollY,
+since the box's Focus builds no card (the Decision's "focused card intersects the viewport" has no card to read).
+
+**Mutation table** (from a saved copy of `app.js`, restored after):
+
+| Mutation | Reddened | Count |
+|---|---|---|
+| `go` pushes without `navigate` (Decision's) | jump: back 0 | 1 failed, 1 passed |
+| `act` focus without `navigate` | focus: back 0 | 1 failed, 1 passed |
+| `navigate` keeps `keepPlace(false)` (railed never read) | both: back 0 | 2 failed |
+| no `keepPlace(false)` on the pushed entry | focus: Forward 0 | 1 failed, 1 passed |
+
+The last survives in `jump`: Forward's hashchange relands the card with no saved place.

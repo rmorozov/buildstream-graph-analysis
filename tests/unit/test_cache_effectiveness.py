@@ -155,7 +155,7 @@ def test_a_healthy_cache_is_still_reported():
 def test_a_barely_incremental_build_says_so_loudly():
     finding = _cache_finding(POOR_HIT_RATIO - 0.01)
     assert finding["severity"] == "high"
-    assert "volatile cache key" in finding["title"]
+    assert "volatile cache key" in " ".join(finding["detail"])
 
 
 def test_the_middle_band_is_a_question_not_an_alarm():
@@ -175,8 +175,8 @@ def test_a_caches_off_run_is_not_an_alarm():
     """
     finding = _cache_finding(0.0, run_mode="full")
     assert finding["severity"] == "info"
-    assert "Caches off" in finding["title"]
-    assert "volatile cache key" not in finding["title"]
+    assert "caches off" in finding["title"]
+    assert "volatile cache key" not in finding["title"] + " ".join(finding["detail"])
     assert finding["evidence"]["run_mode"] == "full"
 
 
@@ -186,7 +186,7 @@ def test_the_same_ratio_on_an_incremental_run_is_still_an_alarm():
     exists for."""
     finding = _cache_finding(0.0, run_mode="incremental")
     assert finding["severity"] == "high"
-    assert "volatile cache key" in finding["title"]
+    assert "volatile cache key" in " ".join(finding["detail"])
 
 
 def test_no_ratio_means_no_finding():

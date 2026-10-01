@@ -115,8 +115,10 @@ class TestTheChainBoundRunPublishesTheReach:
         assert "blast-radius-reach" in found, sorted(found)
         finding = found["blast-radius-reach"]
         assert finding["elements"] == ["toolchain.bst"], finding["elements"]
-        assert "toolchain.bst" in finding["title"]
-        assert f"{DEPENDENTS} downstream" in finding["title"], finding["title"]
+        assert "toolchain.bst" in (finding["title"] + " " + " ".join(finding["detail"]))
+        assert f"{DEPENDENTS} downstream" in (finding["title"] + " " + " ".join(finding["detail"])), (
+            finding["title"] + " " + " ".join(finding["detail"])
+        )
 
     def test_the_recipe_author_leads_with_it(self, at_capacity):
         """Not "the payload contains it" - `UX-372`'s rule is that a

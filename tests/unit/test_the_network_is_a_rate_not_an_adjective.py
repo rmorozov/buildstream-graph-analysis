@@ -119,8 +119,8 @@ class TestTheRateIsPublishedWhenBytesAre:
 
     def test_the_finding_names_the_rate_and_its_scope(self):
         finding = _finding(_accounting(bytes_read={'rx_bytes': 100 * MIB, 'tx_bytes': 50 * MIB}))
-        assert '10.0M/s' in finding['title']
-        assert 'upper bound' in finding['title']
+        assert '10.0M/s' in (finding['title'] + " " + " ".join(finding['detail']))
+        assert 'upper bound' in (finding['title'] + " " + " ".join(finding['detail']))
         assert finding['evidence']['transfer_bytes'] == 150 * MIB
 
 
@@ -131,7 +131,7 @@ class TestNoBytesIsNoRate:
         accounting = _accounting()
         assert 'transfer_bytes' not in accounting
         assert 'transfer_rate_bytes_per_s' not in accounting
-        title = _finding(accounting)['title']
+        title = _finding(accounting)['title'] + " " + " ".join(_finding(accounting)['detail'])
         assert title.endswith('rather than making them')
 
     def test_removing_the_byte_key_removes_the_clause(self):
@@ -139,8 +139,8 @@ class TestNoBytesIsNoRate:
         second half rather than gaining a false one."""
         with_bytes = _finding(_accounting(bytes_read={'rx_bytes': MIB, 'tx_bytes': 0}))
         without = _finding(_accounting())
-        assert '/s' in with_bytes['title']
-        assert '/s' not in without['title']
+        assert '/s' in (with_bytes['title'] + " " + " ".join(with_bytes['detail']))
+        assert '/s' not in (without['title'] + " " + " ".join(without['detail']))
 
     def test_a_partial_counter_pair_is_no_reading(self):
         """One direction is not a session's traffic, and half a sum is
@@ -167,7 +167,7 @@ class TestTheCommittedCaptureCarriesIt:
             text=True,
             check=True,
         ).stdout
-        line = [ln for ln in out.splitlines() if "artifact transfer" in ln]
+        line = [ln for ln in out.splitlines() if "moving artifacts" in ln]
         assert line and "/s" in line[0], out
         assert "upper bound" in line[0]
 
@@ -186,7 +186,7 @@ class TestTheCommittedCaptureCarriesIt:
             text=True,
             check=True,
         ).stdout
-        line = [ln for ln in out.splitlines() if "artifact transfer" in ln]
+        line = [ln for ln in out.splitlines() if "moving artifacts" in ln]
         assert line, out
         assert line[0].endswith("rather than making them")
 

@@ -299,8 +299,12 @@ class TestThePreconditionsTheFiledRowsRestOn:
         finding = found["chain-graph"]
 
         assert finding["evidence"] == {"zero_slack_share": 1.0, "zero_slack_off_path": 0}
-        assert "mesh" not in finding["title"], finding["title"]
-        assert "its own duration" in finding["title"], finding["title"]
+        assert "mesh" not in (finding["title"] + " " + " ".join(finding["detail"])), (
+            finding["title"] + " " + " ".join(finding["detail"])
+        )
+        assert "its own duration" in (finding["title"] + " " + " ".join(finding["detail"])), (
+            finding["title"] + " " + " ".join(finding["detail"])
+        )
 
 
 @pytest.fixture(scope="module")
@@ -352,7 +356,7 @@ class TestTheChainAndTheMeshGetDifferentSentences:
         found = _by_id(mesh)
         assert "chain-graph" not in found, sorted(found)
         finding = found["mesh-graph"]
-        assert "mesh of near-equal chains" in finding["title"]
+        assert "mesh of near-equal chains" in (finding["title"] + " " + " ".join(finding["detail"]))
         assert finding["evidence"]["zero_slack_off_path"] == 3, finding
 
     def test_two_equal_paths_are_already_a_mesh(self, two_paths):
@@ -372,8 +376,8 @@ class TestTheChainAndTheMeshGetDifferentSentences:
         assert mesh_finding["evidence"]["zero_slack_share"] == chain_finding["evidence"]["zero_slack_share"] == 1.0
         assert mesh_finding["evidence"]["zero_slack_off_path"] > 0
         assert chain_finding["evidence"]["zero_slack_off_path"] == 0
-        assert "capped by the next chain" in mesh_finding["title"]
-        assert "its own duration" in chain_finding["title"]
+        assert "capped by the next chain" in (mesh_finding["title"] + " " + " ".join(mesh_finding["detail"]))
+        assert "its own duration" in (chain_finding["title"] + " " + " ".join(chain_finding["detail"]))
 
     def test_both_go_to_the_graph_owner(self, mesh, chain):
         """`UX-478` is the row about that reader being absent; this
@@ -423,8 +427,12 @@ class TestTheGraphOwnerHasAFindingThatReadsNoDuration:
 
     def test_it_names_the_ceiling_no_capacity_lifts(self, chain):
         finding = _by_id(chain)["graph-width"]
-        assert "5 dependency stages" in finding["title"], finding["title"]
-        assert "no more than 1" in finding["title"], finding["title"]
+        assert "5 dependency stages" in (finding["title"] + " " + " ".join(finding["detail"])), (
+            finding["title"] + " " + " ".join(finding["detail"])
+        )
+        assert "1 element at most" in (finding["title"] + " " + " ".join(finding["detail"])), (
+            finding["title"] + " " + " ".join(finding["detail"])
+        )
         assert finding["reader"] == "graph-owner", finding
 
     def test_the_flat_set_is_told_nothing(self, flat):

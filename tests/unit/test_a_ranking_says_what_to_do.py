@@ -93,8 +93,8 @@ class TestStructureIsReportedNotRanked:
         )
         shape = next(f for f in found if f["id"] == "blast-radius-structural")
         assert "toolchain.bst" in shape["elements"]
-        assert "1,201" in shape["title"]
-        assert "not a task" in shape["title"]
+        assert "1,201" in (shape["title"] + " " + " ".join(shape["detail"]))
+        assert "not a task" in (shape["title"] + " " + " ".join(shape["detail"]))
         # `UX-344`: the finding names the element and the title carries
         # the number; the per-element records are published once, in
         # `elements.blast_radius`, rather than sliced into the evidence

@@ -137,8 +137,8 @@ class TestTheBlockSaysWhatTheNumberIs:
     def test_the_sentence_says_the_number_is_walked(self, walked):
         finding = _artifact_weight_findings(compute_artifact_weights(_Ctx(walked)))[0]
         assert finding["id"] == "artifact-weight"
-        assert "base.bst" in finding["title"]
-        assert "walked from the CAS" in finding["title"]
+        assert "base.bst" in (finding["title"] + " " + " ".join(finding["detail"]))
+        assert "walked from the CAS" in (finding["title"] + " " + " ".join(finding["detail"]))
 
     def test_the_sentence_says_the_rows_overlap(self, walked):
         """The acceptance test's own clause. A reader who adds the rows

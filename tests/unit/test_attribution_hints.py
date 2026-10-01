@@ -109,12 +109,12 @@ def test_text_report_shows_the_hint_for_the_named_biggest_opportunity(dependency
     key_findings_section = output.split("Certified Floors:")[0]
     # `UX-365` re-scoped this label: it was "Biggest Opportunity",
     # a claim over every finding, and names its own population now.
-    assert "Biggest wait category" in key_findings_section
+    assert "the biggest wait category" in key_findings_section
     assert "dependency wait" in key_findings_section
     assert ATTRIBUTION_CATEGORY_HINTS_BY_KEY["dependency_wait_us"] in key_findings_section
     # The hint line must actually follow the wait-category line,
     # not just appear anywhere in the report by coincidence.
-    opportunity_idx = key_findings_section.index("Biggest wait category")
+    opportunity_idx = key_findings_section.index("the biggest wait category")
     hint_idx = key_findings_section.index(ATTRIBUTION_CATEGORY_HINTS_BY_KEY["dependency_wait_us"])
     assert hint_idx > opportunity_idx
 

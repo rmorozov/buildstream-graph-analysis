@@ -31,7 +31,7 @@ Tab completion — subcommands, flags, and `@last`/`@prev`/stamps wherever a run
 bga analyze tests/fixtures/golden/mixed_task_kinds --diagnostics   # or: make dev-run
 ```
 
-A three-element fixture that runs instantly. The report is **105 lines**;
+A three-element fixture that runs instantly. The report is **110 lines**;
 its two headline sections are below, verbatim, with every cut marked —
 `UX-192` is on file for a block that claimed to be full output and was
 not:
@@ -39,17 +39,17 @@ not:
 ```text
 Key Findings:
   This build is chain-bound, not scheduler-bound: the critical path is 100.0% of the time tasks were running, at or above the 90.0% chain-bound line, so the way to a shorter build is a shorter chain.
-  Biggest wait category: 12.5% of wall-clock time is untracked tail (2 ms)
+  12.5% of wall-clock time is untracked tail (2 ms) — the biggest wait category
     -> real time after the last tracked task finished — outside per-task tracking, not a scheduling issue
-  Where the time is: 3 elements are 100.0% of the 14 ms critical path — this build is chain-bound, not scheduler-bound
+  100.0% of the 14 ms critical path is 3 elements — chain-bound, not scheduler-bound
 
-[... elided: the three ranked elements, the mesh note, the joint saving, the work order and the latent heavies ...]
+[... elided: the step, the three ranked elements, the chain note, the joint saving, the work order, the latent heavies, the fan-in ranking and the graph width ...]
 
-  Confidence: 87.5% (high)
+  87.5% confidence (high)
 
 [... elided: the remote-execution what-if ...]
 
-  Efficiency score: 100.0% (scheduling is near the certified floor for this graph — further gains need the graph or the work itself to change, not the scheduler (see Dispatch Occupancy and Critical Path))
+  100.0% efficiency score — scheduling is near the certified floor
 
 [... elided: Certified Floors, Attribution Breakdown ...]
 

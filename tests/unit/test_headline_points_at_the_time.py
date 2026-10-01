@@ -18,6 +18,8 @@ answers "who depends on me", which matters when the graph constrains, not
 when the chain does.
 """
 
+import re
+
 from bga.ingest.models import AnalysisResult
 from bga.report.text import format_text
 
@@ -108,7 +110,7 @@ def test_the_headline_names_the_heaviest_elements_and_their_share():
 # not in the ranking, and named in the report.
 def _ranked_rows(text):
     lines = text.split("\n")
-    start = next(i for i, line in enumerate(lines) if line.lstrip().startswith("Where the time is"))
+    start = next(i for i, line in enumerate(lines) if re.search(r" critical path is \d+ element", line))
     rows = []
     for line in lines[start + 1 :]:
         if not line.startswith("    "):
@@ -142,7 +144,8 @@ def test_structural_elements_are_excluded_not_merely_tagged():
     # duration. Re-gating `_ranking_findings` on `chain_bound` reddens
     # the assertion below, which is what makes this clause worth
     # running at all.
-    assert "Reaching most of the graph by design: bootstrap/symlinks.bst (124 downstream)" in text
+    assert "reaches most of the graph by design" in text
+    assert "bootstrap/symlinks.bst (124 downstream) —" in text
 
 
 def test_a_chain_bound_build_ranks_by_critical_path_share():
@@ -193,7 +196,7 @@ def test_where_the_time_is_orders_by_duration_not_by_saving():
     favour of `bison.bst` at 4.0%.
     """
     text = _key_findings(_result(**_with_savings(REAL_SAVINGS)))
-    table = text.split("Where the time is")[1]
+    table = re.split(r" critical path is \d+ element", text, maxsplit=1)[1]
 
     assert "94.0% of the" in text
     assert "components/python3.bst" in table
@@ -218,7 +221,7 @@ def test_each_element_is_named_once_in_the_headline():
     """`UX-76`: three rankings over the same names cost the reader their
     first glance. One table, one mention each."""
     text = _key_findings(_result(**_with_savings(REAL_SAVINGS)))
-    table = text.split("Where the time is")[1].split("work them in this order")[0]
+    table = re.split(r" critical path is \d+ element", text, maxsplit=1)[1].split("work them in this order")[0]
 
     for uid in (
         "components/_private/cmake-stage1.bst",

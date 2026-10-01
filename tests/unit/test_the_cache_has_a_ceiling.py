@@ -136,7 +136,7 @@ class TestAbsenceIsNotZero:
 class TestTheFindingFiresOnFactsOnly:
     def test_a_full_cache_names_eviction(self):
         finding = _findings(_capacity())['cache-capacity']
-        assert 'evicting' in finding['title']
+        assert 'evicting' in (finding['title'] + " " + " ".join(finding['detail']))
         assert finding['severity'] == 'high'
         assert finding['evidence']['headroom_bytes'] == 2147483648
 
@@ -168,7 +168,7 @@ class TestTheFindingFiresOnFactsOnly:
             quota_bytes=644245094400, quota_declared="600G", cache_used_bytes=_ABSENT, cache_used_source="not_walked"
         )
         finding = _findings(capacity)['cache-capacity']
-        assert 'larger than the volume' in finding['title']
+        assert 'than the volume can give' in (finding['title'] + " " + " ".join(finding['detail']))
 
 
 class TestTheBlockRidesWithTheAccounting:

@@ -6,6 +6,7 @@ in a 15 px pager; the sort glyph on the header, outside its button; rail
 Next from `latent_heavies` landed on `wall_clock_share_us`; Back kept a
 filter its entry lacked; Expand all pushed nothing; an opened Binaries
 fold sat beside the closed one; the elided-elements line sat atop the report.
+Next after a pressed `latent_heavies` entry also skipped `joint_saving`.
 """
 
 import pathlib
@@ -98,6 +99,22 @@ _STEP = r"""
     seen.push(location.hash.split("~")[0]);
   }
   return { want: links.slice(from + 1, from + 5), seen };
+})()
+"""
+
+#: The rail entry pressed directly, not stepped to: Next goes to the entry after it.
+_CLICKED = r"""
+(async () => {
+  const wait = (ms) => new Promise((done) => setTimeout(done, ms));
+  const links = [...document.querySelectorAll(".toc [data-toc]")].map((a) => a.getAttribute("href"));
+  // Short, as `_STEP` makes it: the mark passes it once the press has landed.
+  for (const n of document.querySelectorAll("#latent_heavies > :not(.section-head)")) n.style.display = "none";
+  document.querySelector('.toc [href="#latent_heavies"]').click();
+  await wait(1000);
+  const mark = document.querySelector(".toc [data-toc][data-current]")?.getAttribute("href") ?? null;
+  document.querySelector('[data-step="next"]').click();
+  await wait(1000);
+  return { want: links[links.indexOf("#latent_heavies") + 1], mark, seen: location.hash.split("~")[0] };
 })()
 """
 
@@ -203,6 +220,16 @@ def test_an_opened_card_fold_sits_under_its_sibling(browser, uris):
 def test_rail_next_visits_every_entry_in_order(browser, uris, width):
     got = browser.measure(uris["big"], _STEP, width=width, height=844)
     assert "#joint_saving" in got["want"], got
+    assert got["seen"] == got["want"], got
+
+
+@needs_browser
+@pytest.mark.parametrize("width", [1440, 390])
+def test_rail_next_after_a_pressed_entry_goes_to_the_entry_after_it(browser, uris, width):
+    got = browser.measure(uris["big"], _CLICKED, width=width, height=844)
+    assert got["want"] == "#joint_saving", got
+    if width == 1440:  # the case: the mark has already passed the pressed entry
+        assert got["mark"] == "#joint_saving", got
     assert got["seen"] == got["want"], got
 
 

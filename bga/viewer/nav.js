@@ -719,6 +719,13 @@ export function stepper(root, nav, { document: doc, window: win } = {}) {
     all[bounded].click?.();
     return all[bounded];
   };
+  // A pressed rail entry is a landing too, so the cursor starts from it, not from the mark.
+  nav.addEventListener?.("click", (event) => {
+    const link = event.target?.closest?.("[data-toc]");
+    if (!link) return;
+    cursor = links().indexOf(link);
+    lastMark = at();
+  });
 
   const bar = owner.createElement("p");
   bar.className = "toc-steps";

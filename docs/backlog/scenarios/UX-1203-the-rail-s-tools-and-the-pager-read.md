@@ -118,3 +118,7 @@ mutation: the button shown as a box      test_no_control_prints 6 failed (7 cont
 `measure(..., fresh_history=True)` resets the tab's history before the load (`Page.resetNavigationHistory`).
 Red then green: 50 navigations, then the guard, gives 3 failed, then 3 passed; the 123 browser files at `-n 4` give 3 failed, then 1797 passed.
 Mutations rerun: Expand/Collapse `pushState` removed gives 3 failed; popstate `box.value = ""` removed gives 2 failed.
+
+**Deviation (round 159 residue).** The cursor fix covered a stepper-landed cursor only: on the 1,202-element page at 1440, pressing the rail entry `latent_heavies` (short) marked `#joint_saving`, and Next went to `#wall_clock_share_us`.
+A press on any `[data-toc]` entry now sets the stepper's cursor: Next goes to `#joint_saving` (1440 and 390).
+`test_rail_next_after_a_pressed_entry_goes_to_the_entry_after_it` holds it; the click listener's cursor assignment removed gives 1 failed, 14 passed.

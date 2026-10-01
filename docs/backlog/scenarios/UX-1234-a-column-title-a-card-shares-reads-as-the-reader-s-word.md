@@ -2,7 +2,7 @@
 
 **Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** UX-1226 | **Found by:** the round-161 verification of UX-1226 (2026-10-01) | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical | **Reading:** container
 
-**Guard:** none — open, no guard named yet
+**Guard:** `tests/unit/test_a_shared_title_is_the_reader_s_word.py` - head and card read "On the path" and "Duration"; `probability` and `durations` still parse as those columns.
 
 ## Motivation
 
@@ -36,3 +36,24 @@ Guard:     test_a_shared_title_is_the_reader_s_word.py: on the 1,202 page, the c
 Mutation:  Restore the old title for the probability column: red.
 Class:     product
 ```
+
+## Outcome
+
+**Gap measured.** Critical path view on the 1,202-element page (`--layers 20 --width 60`):
+head and card for `probability` read "Probability", `element_durations` read "Element durations"
+(`title()` humanises the key; `TERMS` in format.js is the one place column and card both read).
+
+**Close measured.** `TERMS` gains `probability: "On the path"` and `element_durations: "Duration"`.
+Head and card read both words; `probability > 0%`, `on the path > 0%`, `durations > 1s`,
+`duration > 1s` each parse to that column with no unread clause. No alias line in tables.js was
+needed (the key stays a filter word). The Critical path view carries no filter box on this page,
+so the filter half of the guard calls `parseQuery` under node, not the page.
+Golden page half: 159,418 -> 159,454 B (+36 B) of PAGE_BUDGET_B 165,000.
+card-title, names-it-was-given and key-column guards: 42 passed, 1 skipped; compressed-page guard: 4 passed.
+
+| Mutation | Red | Count |
+|---|---|---|
+| drop `probability: "On the path"` | both tests | 2 failed |
+| `element_durations: "Element durations"` | head/card test | 1 failed, 1 passed |
+
+After revert: 2 passed.

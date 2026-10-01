@@ -779,7 +779,7 @@ in it hidden, and the class is bounded at both ends:
                  elements   landed   opened    words   controls    nodes
 scale               1,202    5,007   26,584    8,259        787    4,732
 xl                  4,002    4,937   27,230    8,275        812    4,960
-budget, to 4,100 elts          7,600   46,822   13,200      1,192    7,720
+budget, to 4,100 elts          7,600   46,822   13,200      1,192    7,500
 ```
 
 Height does not move at all — a bounded row costs no pixels, which is
@@ -909,8 +909,8 @@ rounded up - the owner's "consolidate + raise".
 and Depends on lists, open, as links. The bounds they push over moved by
 exactly the measured delta: the small class's height 38,400 -> 39,188 and
 controls 800 -> 868 (`macro_micro` +788, +68); the 4,100 class's height
-44,629 -> 46,822, controls 1,020 -> 1,192 and nodes 7,500 -> 7,720
-(`xl_both` +2,193, +172, +220).
+44,629 -> 46,822 and controls 1,020 -> 1,192 (`xl_both` +2,193, +172);
+its nodes bound stays 7,500 - the merged round reads 7,284.
 
 `UX-1152`'s card links read section titles, not ids; alone they took
 `macro_micro` to 38,201 px and 13,441 words. Round 154's merged tree,

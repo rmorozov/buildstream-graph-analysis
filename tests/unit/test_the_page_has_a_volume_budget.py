@@ -388,9 +388,9 @@ BUDGETS = (
     # (UX-1053). 518/328/291 of headroom.
     # Round 158: px 43,500 -> 44,629, D1's unrolls on xl_both (+1,129 px measured, Ruslan 19:04).
     # Controls 900 -> 1,020: 1,006 measured +10, rounded up; one Markdown box, then raise (Ruslan 19:26).
-    # UX-1200b, Ruslan 05:49: px 44,629 -> 46,822, controls 1,020 -> 1,192, nodes 7,500 -> 7,720 -
-    # xl_both's measured +2,193 px, +172 controls, +220 nodes; headroom unchanged.
-    (4_100, 46_822, 13_200, 1_192, 7_720),
+    # UX-1200b, Ruslan 05:49: px 44,629 -> 46,822, controls 1,020 -> 1,192 - xl_both's measured
+    # +2,193 px, +172 controls; nodes stay 7,500 (the merged round reads 7,284).
+    (4_100, 46_822, 13_200, 1_192, 7_500),
 )
 
 

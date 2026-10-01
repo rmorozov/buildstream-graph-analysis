@@ -116,8 +116,8 @@ xl_both     height 43,548 -> 45,741 (+2,193)  words 12,739 -> 12,936 (+197)  con
 Over: 50 class height (39,096 > 38,400) and controls (856 > 800); 4,100 class height (45,741 > 44,629),
 controls (1,170 > 1,020) and nodes (7,675 > 7,500). Raised by each binding page's delta, headroom unchanged:
 50 class 38,400 -> 39,188 px and 800 -> 868 controls (macro_micro +788, +68); 4,100 class 44,629 -> 46,822
-px, 1,020 -> 1,192 controls, 7,500 -> 7,720 nodes (xl_both +2,193, +172, +220). Page half 152,033 -> 152,109
-B (+76).
+px, 1,020 -> 1,192 controls (xl_both +2,193, +172); nodes 7,500 -> 7,720 (+220), restored below. Page half
+152,033 -> 152,109 B (+76).
 
 | mutation | reddened | run printed |
 |---|---|---|
@@ -129,3 +129,9 @@ B (+76).
 
 Re-based: `test_the_card_lists_what_an_element_blocks`'s ranked `== []` clause (UX-1187's, reversed by the
 owner) and the monkeypatch in `test_the_card_counts_the_dependents_past_the_cap`.
+
+**Deviation (round 159 residue).** On the merged round xl_both reads 7,284 nodes, under the pre-round 7,500, so
+the 7,720 raise was slack: the 4,100 class's nodes bound is 7,500 again (budget test and styleguide §table).
+Height and controls stay raised (45,866 > 44,629, 1,160 > 1,020). Bound 7,283:
+`test_the_whole_page_is_bounded_too[xl_both]` "7284 DOM elements, over the 7283 budget", 3 failed (with the
+styleguide pair); at 7,500, 34 passed, 3 skipped.

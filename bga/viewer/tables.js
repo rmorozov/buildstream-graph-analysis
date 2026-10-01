@@ -126,8 +126,17 @@ export function parseQuery(text, specs = [], labels = {}) {
       exact.push({ column: spec.key, part, prefix, value: (prefix ? value.slice(0, -1) : value).toLowerCase() });
       continue;
     }
-    const parsed = spec?.quantity ? parseThreshold(`${op} ${bound}`, spec.quantity) : null;
-    if (parsed) thresholds[spec.key] = parsed;
+    // `UX-1236`: a name with no quantity of its own (`downstream`) reads the one quantity column carrying that word.
+    const word = name ? slug(name) : null;
+    const carried = word && !spec?.quantity ? specs.filter((s) => s?.quantity && s.numeric !== false && !s.share && !s.stated
+      && [s.key, s.title, labels[s.key]].map(slug).filter(Boolean).some((said) => said.split("_").includes(word))) : [];
+    if (word && !spec?.quantity && carried.length !== 1) {
+      unread.push({ clause, column: name });
+      continue;
+    }
+    const read = carried.length === 1 ? carried[0] : spec;
+    const parsed = read?.quantity ? parseThreshold(`${op} ${bound}`, read.quantity) : null;
+    if (parsed) thresholds[read.key] = parsed;
     else unread.push({ clause, column: null, share: name || primary ? null : specs.find((s) => s?.share)?.key ?? null });
   }
   rest += said.slice(from);

@@ -104,7 +104,7 @@ _YIELD = r"""
 })()
 """
 
-#: `UX-1208`: the reader reads at `y`, climbs to the folded rail, opens it and presses `press`, then Back.
+#: `UX-1208`: the reader reads at `y`, climbs to the folded rail by `climb`, opens it and presses `press`, then Back.
 _RAILED = r"""
 (async () => {
   const wait = (ms) => new Promise((done) => setTimeout(done, ms));
@@ -115,8 +115,9 @@ _RAILED = r"""
   const y = Math.min(9000, document.documentElement.scrollHeight - innerHeight);
   scrollTo(0, y);
   await rest();
-  scrollTo(0, 0);
-  await rest();
+  // A wheel climbs in notches, each a scrollend of its own (UX-1208 follow-up); a jump is one.
+  if (CLIMB === "steps") while (scrollY > 0) { scrollBy(0, -400); await rest(); }
+  else { scrollTo(0, 0); await rest(); }
   document.querySelector(".toc-title").click();
   await wait(300);
   const press = PRESS === "all"
@@ -207,9 +208,11 @@ def test_a_reader_who_scrolls_during_the_landing_is_not_pulled_back(browser, uri
 
 
 @needs_browser
+@pytest.mark.parametrize("climb", ["jump", "steps"])
 @pytest.mark.parametrize("press", ["link", "all"])
 @pytest.mark.parametrize("label", ["big", *sorted(pages.FIXTURES)])
-def test_back_after_a_rail_link_or_expand_all_lands_where_the_reader_read(browser, uris, big, label, press):
-    got = browser.measure({**uris, "big": big}[label], _RAILED.replace("PRESS", f'"{press}"'), width=390, height=844)
+def test_back_after_a_rail_link_or_expand_all_lands_where_the_reader_read(browser, uris, big, label, press, climb):
+    drive = _RAILED.replace("PRESS", f'"{press}"').replace("CLIMB", f'"{climb}"')
+    got = browser.measure({**uris, "big": big}[label], drive, width=390, height=844)
     assert got["y"] > 2 * got["height"], got
     assert abs(got["back"] - got["y"]) <= LINE_PX, got

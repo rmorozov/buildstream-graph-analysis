@@ -43,6 +43,8 @@ Question:  none. Budget: no controls, nodes, words or height; app.js bytes not p
 
 The track took that route with three changes. `railed` is any press inside the opened narrow rail, not only Expand all: a rail link reached `keepPlace(false)` and wrote the anchor's top from the page top (Back 0). The place carries the hash it was read under, and is used only while the hash is unchanged, so a traversal that did not scroll cannot hand one anchor's top to another. With no such place the old path stands (`at: null`, the anchor at its margin), so `test_back_after_the_narrow_rail_s_expand_all_lands_the_reader_s_anchor` keeps its claim. Not closed: a reader who stopped below the rail and then read at the top before opening it gets the lower place; a browser without `scrollend` keeps the old behaviour. Expand all's 24,872 did not reproduce: after the press scrollY read 144 (1,202 page) and 95 (golden, macro_micro).
 
+Follow-up (the verifier's wheel climb): a wheel climbs in notches and each lull is a `scrollend` with the rail still above, so the climb overwrote the place. A stop above the previous stop under the same hash is now a climb and keeps the place; a dwell was rejected because its threshold is a guess between a notch's lull and a reader's pause (the verifier's reader dwelt 600 ms). A reader who scrolled up to reread and then climbed gets the lower place.
+
 ## Outcome
 
 **The gap measured** (guard against `24b64b40`'s `app.js`; 390x844, Chromium; Y = min(9000, the page's last scroll)):
@@ -77,3 +79,6 @@ eslint bga/viewer                                  0 problems
 | `railed` only for Expand all (`all?.closest`) | the three `link` cases | 3 failed, 3 passed |
 
 The hash key on the place is not discriminated by this guard (no traversal without a scroll in its path).
+
+**Deviation (follow-up).** The verifier's wheel climb (`page.mouse.wheel`, 100 px notches) landed Back 300 px, 5,700-8,600 px from the read place. The guard gains `climb="steps"` (400 px `scrollBy` per `scrollend`): on `e7a26758` 6 failed (back 166-497); after, the guard 12 passed (83 with the related files and the page-half budget), and the verifier's script reads delta 0 in 4 of 4.
+Mutations: `climbing = false` 6 failed; the hash clause dropped survives (12 passed: no hash change in the path). Page half 156,875 -> 156,923 B (+48).

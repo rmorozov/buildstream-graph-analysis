@@ -1154,8 +1154,12 @@ async function boot() {
       at: document.getElementById(splitHash(location.hash).anchor)?.getBoundingClientRect().top });
     // `UX-1208`: where the reader last stopped below the narrow rail, which they climb to the top to open.
     let read = null;
+    let end = 0;
     window.addEventListener?.("scrollend", () => {
-      if (document.querySelector(".toc")?.getBoundingClientRect().bottom < 0) read = [location.hash, here()];
+      // A stop above the last one under the same hash is the climb to the rail, which keeps the place read.
+      const climbing = read?.[0] === location.hash && window.scrollY < end;
+      end = window.scrollY;
+      if (!climbing && document.querySelector(".toc")?.getBoundingClientRect().bottom < 0) read = [location.hash, here()];
     });
     const keepPlace = (railed) => {
       // `UX-1203` follow-up: with no such place, an opened rail's reader is at the anchor.

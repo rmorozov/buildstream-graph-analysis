@@ -478,7 +478,6 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
   .draw-axis:not([data-layout]) { height: 3.2em; }
   .draw-tick:nth-child(even) { top: 1.6em; }
   .decomposition .draw-axis, .draw-axis[data-layout] { height: auto; flex-wrap: wrap; }
-  .decomposition .draw-tick { position: relative; display: table; top: 0; }
   .chapter-head { flex-wrap: wrap; }
   .chapter-head > h2 { order: 1; flex-basis: 100%; }
 }
@@ -1433,6 +1432,11 @@ button.json-toggle:hover { color: var(--fg); }
 }
 /* `UX-1153`: a part's label shifts by its own position, so it never leaves the bar. */
 .decomposition .draw-tick { transform: translateX(calc(var(--at, 50) * -1%)); }
+/* `UX-1251`: a decomposition's labels stack one per line under their segment's start, so none can overprint. */
+.decomposition .draw-axis { height: auto; }
+.decomposition .draw-tick { position: relative; display: table; left: auto !important; top: 0; margin-left: calc(var(--at, 0) * 1%);
+  border-left: 3px solid var(--line); padding-left: 0.3em; }
+.decomposition .draw-tick[data-tone="lead"] { border-left-color: var(--accent-mark); }
 /* `UX-1157`: the label names its part; a reader-mark suffix only widened it into its neighbour. */
 .decomposition .draw-tick::after, .draw-tick[data-mark*=" "]::after { content: none; }
 /* `UX-674`: a single middle tick between two edge ticks lays out in

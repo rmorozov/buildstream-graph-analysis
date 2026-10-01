@@ -1782,7 +1782,7 @@
         "reconciliation_error_share": 0.0,
         "potential_oversubscription": false,
         "oversubscription_evidence": "INSUFFICIENT_EVIDENCE",
-        "max_observed_concurrency": 1,
+        "max_observed_concurrency": 2,
         "useful_share": 0.2720395378579325,
         "idle_share": 0.7279604621420676,
         "wasted_share": 0.0

@@ -1212,7 +1212,9 @@ def _capacity_recommendation_finding(result: AnalysisResult) -> list[dict]:
     # than leaving the clamp implicit in the number alone.
     binding_row = next(c for c in recommendation['constraints'] if c['name'] == binding)
     clamped_from = binding_row.get('clamped_from')
-    clamp_note = f" (the host's cores bound it, not the raw {clamped_from})" if clamped_from else ""
+    clamp_note = f"; the CPU alone could feed {clamped_from}" if clamped_from else ""
+    # UX-1246: a host-core cap is named as the cap, never as CPU binding.
+    cap = f"the host's {plural(recommendation['host_cpu_count'], 'core')} cap it" if binding == 'host_cores' else ""
     if recommended > builders:
         # Deliberately weaker than "raise it to N". Measured on a
         # reconstructed macro-fixed `examples/06` where this block said
@@ -1226,7 +1228,7 @@ def _capacity_recommendation_finding(result: AnalysisResult) -> list[dict]:
         # it, and saying otherwise would be UX-14's caveat with the
         # caveat removed.
         verdict = (
-            f"{binding} binds first, at {recommended}{clamp_note} — nothing "
+            f"{cap or f'{binding} binds first,'} at {recommended}{clamp_note} — nothing "
             f"measured here rules out {plural(recommended - builders, 'more builder')}, "
             f"which is a hypothesis to time rather than a "
             f"setting to apply"
@@ -1234,14 +1236,14 @@ def _capacity_recommendation_finding(result: AnalysisResult) -> list[dict]:
         severity = SEVERITY_MEDIUM
     elif recommended < builders:
         verdict = (
-            f"{binding} binds at {recommended}{clamp_note}, below the "
+            f"{cap or f'{binding} binds'} at {recommended}{clamp_note}, below the "
             f"{builders} configured — more builders contend rather than "
             f"overlap here"
         )
         severity = SEVERITY_HIGH
     else:
         verdict = (
-            f"{binding} binds at exactly {recommended}{clamp_note} — this "
+            f"{cap or f'{binding} binds'} at exactly {recommended}{clamp_note} — this "
             f"run is already at the setting its own measurements support"
         )
         severity = SEVERITY_INFO

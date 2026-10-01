@@ -859,7 +859,7 @@
         "reconciliation_error_share": 0.0,
         "potential_oversubscription": false,
         "oversubscription_evidence": "INSUFFICIENT_EVIDENCE",
-        "max_observed_concurrency": 1,
+        "max_observed_concurrency": 2,
         "useful_share": 0.5625,
         "idle_share": 0.4375,
         "wasted_share": 0.0

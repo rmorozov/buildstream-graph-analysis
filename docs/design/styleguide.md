@@ -1506,6 +1506,7 @@ text. A row with no measured drift keeps its one word for completeness.
 | the longest dependency path | critical path | — | most prose already says "critical path" (`element.js`, `questions.js`, 20+ schema descriptions); four `decision.js`/`views.js` labels still say "chain", found but not fixed - renaming them costs 6 words, over §3e's `macro_micro` volume budget by 6 (`test_the_page_has_a_volume_budget.py`), so the guard does not yet enforce this row rather than trading one guard's red for another's |
 | an answer the page ranks | finding | — | this report |
 | the runbook step a reader takes | next step | — | this report |
+| the cap of builders at the host's cores (`UX-861`), as a binding constraint | host cores | — | the 2,402-element two-plane page read "Binding constraint: CPU" while 0.86 of 4 cores were busy (`UX-1246`); "CPU" stays the word for a CPU figure that binds unclamped, so it is not a rejected synonym here |
 | a task's share of the active window | wall-clock share | — | its column read "Duration" beside the element table's own on the 1,202-element page (`UX-1184`): a column named for a quantity is that quantity, titled from its field; "Duration" is an element's or task's own - `test_a_column_is_named_for_its_field.py` |
 
 The guard reads this table's `word`/`rejected synonym` columns and

@@ -2,7 +2,7 @@
 
 **Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-161 verification of UX-1228 (2026-10-01) | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical | **Reading:** container
 
-**Guard:** none — open, no guard named yet
+**Guard:** `tests/unit/test_a_downstream_clause_follows_the_closure.py::test_a_downstream_comparison_reads_the_count_column_bare_or_named`
 
 ## Motivation
 
@@ -37,3 +37,18 @@ The closure clause itself (UX-1228).
 ## Acceptance Test
 
 `downstream > 1000` filters to 1 or names `downstream_count`; `downstream_count > 1000` reads "1 matched". Mutation: break the comparison path, and the guard reds.
+
+## Outcome
+
+**Gap measured** (1,202-element two-plane page, Elements table, 1440): before, `downstream > 1000` read "25 of 1,202" (unread, unfiltered); `downstream_count > 1000` "1 matched", unguarded.
+
+**Close measured:** both forms read `matched` 1, badge "1 matched"; `pytest test_a_downstream_clause_follows_the_closure.py` -> 2 passed. A word with none or several quantity columns is said back unread, `column` = the typed name, the table's heads listed.
+
+| Mutation | Reddened | Printed |
+|---|---|---|
+| fallback deleted (spec read as before) | bare form, `matched` -1 | 1 failed, 1 passed |
+| `passes` returns true | bare form, `matched` 1202 | 1 failed, 1 passed |
+
+**Deviation:** none. Candidates are named through the existing heads list, not a new message.
+
+**Fix round (verifier):** the fallback re-pointed `element > 1` onto Element duration ("25 of 1,200 matched"). It now applies only to an undrawn name (`spec.drawn === false`, no quantity); a drawn column or a word no column carries is said back unread, unfiltered ("25 of 1,202"). Guard `test_a_drawn_name_or_one_no_column_carries_is_not_re_pointed` (`element > 1`, `blocks > 1`). Mutation (drop the `drawn === false` exclusion): `element` form red, badge "25 of 1,200 matched"; 1 failed, 2 passed. Reverted: 3 passed.

@@ -34,7 +34,9 @@ _TYPED = r"""
   read("element:toolchain.bst");
   const count = t.querySelector('tbody tr[data-element="toolchain.bst"] td[data-column="downstream_count"]');
   return { count: Number(count?.getAttribute("data-raw")), downstream: read("downstream:toolchain.bst"),
-           direct: read("depends_on:toolchain.bst"), help: box.title };
+           direct: read("depends_on:toolchain.bst"), help: box.title,
+           bare: read("downstream > 1000"), named: read("downstream_count > 1000"),
+           element: read("element > 1"), none: read("blocks > 1") };
 })()
 """
 
@@ -58,3 +60,20 @@ def test_downstream_matches_the_downstream_count_and_depends_on_the_direct_ones(
     assert "1,201" in seen["downstream"]["badge"], seen
     assert seen["direct"]["matched"] == 1200, seen
     assert "downstream:X" in seen["help"], seen
+
+
+@needs_browser
+def test_a_downstream_comparison_reads_the_count_column_bare_or_named(uri):
+    with Browser(chrome) as browser:
+        seen = browser.measure(uri, _TYPED)
+    for form in ("bare", "named"):
+        assert seen[form]["matched"] == 1, (form, seen)
+        assert seen[form]["badge"] == "1 matched", (form, seen)
+
+
+@needs_browser
+def test_a_drawn_name_or_one_no_column_carries_is_not_re_pointed(uri):
+    with Browser(chrome) as browser:
+        seen = browser.measure(uri, _TYPED)
+    for form in ("element", "none"):
+        assert seen[form]["badge"].startswith("25 of 1,202") and "matched" not in seen[form]["badge"], (form, seen)

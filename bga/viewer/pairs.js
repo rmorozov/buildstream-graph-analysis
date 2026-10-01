@@ -138,13 +138,13 @@ export function elementSignalTable(elements, node, join = null,
   };
   // `UX-1214`: undrawn, so `depends_on:<uid>` lists what <uid> blocks and `blocks:<uid>` what it depends on.
   const direct = elements.fan_in;
-  const help = "depends_on:X lists every element X blocks, blocks:X every one X depends on";
+  const help = "depends_on:X lists every element X blocks, downstream:X through every level, blocks:X every one X depends on";
   if (direct && typeof direct === "object") {
     const blocks = {};
     for (const [uid, fan] of Object.entries(direct)) for (const name of fan?.direct ?? []) (blocks[name] ??= []).push(uid);
-    for (const row of rows) Object.assign(row, { depends_on: direct[row.element]?.direct ?? [], blocks: blocks[row.element] ?? [] });
+    for (const row of rows) Object.assign(row, { depends_on: direct[row.element]?.direct ?? [], blocks: blocks[row.element] ?? [], downstream: null });
     hint[COLUMNS].push({ key: "depends_on", title: "Depends on", drawn: false, help },
-                       { key: "blocks", title: "Blocks", drawn: false });
+                       { key: "blocks", title: "Blocks", drawn: false }, { key: "downstream", drawn: false });
   }
   return { rows, hint, merged: present, joined: joinedIn };
 }

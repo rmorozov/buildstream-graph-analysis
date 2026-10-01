@@ -2,7 +2,7 @@
 
 **Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-160 walk and verification (2026-10-01) and its residue pass | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical | **Reading:** container
 
-**Guard:** none — open, no guard named yet
+**Guard:** `tests/unit/test_a_card_label_is_its_column_title.py`
 
 ## Motivation
 
@@ -43,4 +43,29 @@ Question:  none. Default: fields with no column (Risk score, Runs measured, Defe
 
 ## Outcome
 
-Open.
+**Gap measured.** `big.html` (1,202 elements, `gen-synthetic --seed 1 --store --layers 20 --width 60`), card `layer10/mod010.bst` against the Elements views' headers:
+
+```text
+card label      Elements column
+Duration        Element durations
+Rebuilds        Downstream count
+Depth           Unweighted depth
+Blast radius    Weighted duration     ("Total" is serial_chains' column)
+Kind            Element kind
+On the path     Probability           (Critical path view)
+Could be deferred  Is potentially deferrable   (Leaves view)
+Jobs asked for  Requested jobs        (Plane 2 view, binaries page)
+Peak RSS        Peak rss              (Plane 2 view, binaries page)
+```
+
+**Close measured.** A null label in `ELEMENT_MAPS`/`SOURCES` is `title(field, kind)`, the call `pairs.js:133` titles the column with; `title()` spells `rss` as `RSS` beside `CPU`, so the column reads "Peak RSS" and the card keeps it.
+
+```text
+$ pytest -q -n 2 tests/unit/test_a_card_label_is_its_column_title.py
+3 passed in 17.59s
+golden page half: 159,146 -> 159,050 B (-96)
+```
+
+| mutation | reddened | count |
+|---|---|---|
+| `elements.downstream_count` label back to `"Rebuilds"` | `[big]`, `[bin]`: `('layer08/mod018.bst', 'downstream_count', 'Rebuilds', 'Downstream count')` | 2 failed, 1 passed |

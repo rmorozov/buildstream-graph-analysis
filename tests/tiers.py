@@ -643,6 +643,8 @@ LARGE = (
     # `UX-1178`, round 158's merged tree with its follow-up clause: eighteen
     # Chromium loads at 390/320/1440. Alone in one process: 23.84 / 24.01 / 23.96s.
     "tests/unit/test_the_narrow_page_keeps_its_place.py",  #   24.0s
+    # `UX-1203`: a two-plane run built, then 16 Chromium loads. Alone in one process: 37.09 / 37.69s.
+    "tests/unit/test_the_rail_tools_and_the_pager_read_as_one_set.py",  #   37.4s
 )
 
 MEDIUM = (

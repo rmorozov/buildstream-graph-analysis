@@ -1153,7 +1153,8 @@ async function boot() {
     // UX-1158: a rail chapter press is navigation too, with an entry of its own.
     document.addEventListener?.("click", (event) => {
       const chapter = event.target?.closest?.("[data-toc-chapter]")?.dataset.tocChapter;
-      if (fragment(event)?.length > 1 || chapter) {
+      const all = event.target?.closest?.("[data-all]");
+      if (fragment(event)?.length > 1 || chapter || all) {
         // Chrome's own restore lands after popstate and overrides it.
         window.history.scrollRestoration = "manual";
         // UX-1171: and where the anchor sat, since a scrollY is stale once the folds' estimates settle.
@@ -1166,6 +1167,8 @@ async function boot() {
           // UX-1178: a press on the entry already current is no new entry.
           window.history[next === location.hash ? "replaceState" : "pushState"](null, "", next);
         }
+        // `UX-1203`: Expand all and Collapse all are one step Back.
+        if (all) window.history.pushState(null, "", location.href);
       }
     }, true);
     document.addEventListener?.("click", (event) => {
@@ -1186,6 +1189,17 @@ async function boot() {
     });
     window.addEventListener?.("popstate", (event) => {
       const saved = event.state;
+      // `UX-1203`: the entry's view, and no filter it lacks.
+      const query = splitHash(location.hash).query;
+      const kept = new URLSearchParams(query ?? "");
+      for (const table of root.querySelectorAll?.("table[data-table]") ?? []) {
+        const box = table.parentNode?.querySelector?.(".table-tools input.table-filter");
+        if (box?.value && !kept.has(`f.${table.getAttribute("data-table")}`)) {
+          box.value = "";
+          box.dispatchEvent(new Event("input", { bubbles: true }));
+        }
+      }
+      applyView(root, query);
       if (!Array.isArray(saved?.folds)) return;
       applyFolds(root, saved.folds);
       window.scrollTo?.(0, saved.scrollY ?? 0);

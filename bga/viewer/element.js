@@ -600,7 +600,8 @@ export function renderElementSections(payload, root, options = {}) {
     note.textContent =
       `${all.length - ELEMENTS_SHOWN} more elements are named in the tables `
       + `above and do not have their own section.`;
-    sections.push(note);
+    // `UX-1203`: under the last section, which `chapters()` moves; a loose node stayed atop the report.
+    sections.at(-1).append(note);
   }
   return sections;
 }

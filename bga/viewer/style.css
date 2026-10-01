@@ -413,6 +413,8 @@ a:not(p a) { display: inline-flex; align-items: center; justify-content: center;
 }
 /* A card's two Plane 2 folds share one line while closed. */
 .join-evidence, details[data-fold="binaries"] { display: inline-block; vertical-align: top; margin: 0 var(--space-4) 0 0; }
+/* `UX-1203`: an opened one sits under its sibling. */
+.join-evidence[open], details[data-fold="binaries"][open] { display: block; }
 .join-evidence > p { margin: var(--space-2) 0 var(--space-1); }
 
 .finding .title { font-weight: 600; }
@@ -429,8 +431,9 @@ th, td {
 }
 th { cursor: pointer; user-select: none; white-space: nowrap; }
 th::after { content: ""; }
-th[aria-sort="ascending"]::after { content: " ▲"; }
-th[aria-sort="descending"]::after { content: " ▼"; }
+/* `UX-1203`: the glyph inside the button it names. */
+th[aria-sort="ascending"] > button.th-sort::after { content: " ▲"; }
+th[aria-sort="descending"] > button.th-sort::after { content: " ▼"; }
 td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 
 /* UX-305 (styleguide §4.4): **text wears ink, never status tone.**
@@ -572,7 +575,9 @@ p.empty-population { margin: var(--space-1) 0 0; color: var(--muted); max-width:
 button.toc-chapter-open[aria-current="location"],
 .toc a[data-current] { font-weight: 600; color: var(--fg); }
 .toc a[data-current]::before { content: "\25b8\00a0"; }
-.toc-controls { margin: var(--space-2) 0 0; display: flex; gap: var(--space-2); }
+/* `UX-1203`: the rail's tools at one size, each on one line. */
+.toc-controls { margin: var(--space-2) 0 0; display: flex; flex-wrap: wrap; align-items: center;
+                gap: var(--space-2); font-size: var(--font-small); }
 .toc-controls button { background: transparent; color: var(--muted); }
 /* `UX-436`: it had `border: none`, which is the same "no resting
    appearance" this item is about, one scale down - a control inside a
@@ -809,6 +814,8 @@ h3.category { letter-spacing: .04em;
                    report stops scrolling sideways. */
                 min-width: min(12rem, 100%); max-width: 100%; }
 .table-tools .badge { font-size: var(--font-small); color: var(--muted); }
+/* `UX-1203`: Prev and Next apart, at the tools' size. */
+.table-pager { display: inline-flex; gap: var(--space-1); font-size: var(--font-small); }
 /* UX-1055 (styleguide §3l): `top-n` and `copy-rows` follow a variable
    run of siblings (the badge, the preset, the pager - `structured.js`)
    whose presence and text length depend on the table, so their offset

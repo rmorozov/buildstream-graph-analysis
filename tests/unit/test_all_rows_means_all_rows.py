@@ -249,7 +249,7 @@ class TestAllRowsMeansAllRows:
         the view's size and never moves; the badge names what is shown
         and moves with the limit."""
         view = driven["views"]["All elements"]
-        assert f"all {total} elements" in view["caption"], view["caption"]
+        assert f"all {total:,} elements" in view["caption"], view["caption"]
         assert view["caption"] == view["captionAfter"], (
             "the caption changed when the limit did - it is now claiming a shown-count it does not own"
         )
@@ -257,8 +257,8 @@ class TestAllRowsMeansAllRows:
 
         narrow = driven["views"].get("Leaves")
         if narrow:
-            assert f"of {total} elements" in narrow["caption"], narrow["caption"]
-            assert f"all {total}" not in narrow["caption"], (
+            assert f"of {total:,} elements" in narrow["caption"], narrow["caption"]
+            assert f"all {total:,}" not in narrow["caption"], (
                 f"a view narrower than the run says it holds all of it: {narrow['caption']}"
             )
 

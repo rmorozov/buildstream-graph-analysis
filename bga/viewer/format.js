@@ -180,6 +180,10 @@ const INSTANT = "bga:instant";
 
 // ---------------------------------------------------------------- format
 
+/** `UX-1213`: the one way a count reads - `1,202`, never `1202`. */
+export const tally = (value) => Number.isInteger(value) ? value.toLocaleString("en-US")
+  : String(Math.round(value * 100) / 100);
+
 export function duration(microseconds) {
   if (microseconds === null || microseconds === undefined) return ABSENT;
   // `UX-1201`: a negative that rounds to nothing prints as nothing, never "-0 ms".
@@ -239,9 +243,8 @@ export function quantity(value, kind) {
     // UX-275: a count is usually whole and renders as itself. The
     // first fractional one published - `cores_busy`, an average over
     // the run - arrived as "1.603977885512677" on the page, fifteen
-    // digits of a number measured to two. Whole counts are untouched.
-    case "count": return Number.isInteger(value) ? String(value)
-      : String(Math.round(value * 100) / 100);
+    // digits of a number measured to two.
+    case "count": return tally(value);
     default:
       return typeof value === "number"
         ? String(Math.round(value * 1000) / 1000) : String(value);

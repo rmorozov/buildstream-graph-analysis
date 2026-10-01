@@ -8,7 +8,7 @@ import { plainValue, served } from "./primitives.js";
 import { COLUMNS, DIRECTION, QUESTION, PRESETS, INLINE, KEYED_BY, KEYED_BY_ELEMENT, KEYED_BY_TASK_UID, KEY_PATH, LEAD,
          attachBlockDoor, childNode, dataKeyed, describedTerm, el, guessQuantity, heading,
          hintsOf, adviceFor, keyAsShown, pathTrail, quantity, quantityFor, sectionHead,
-         title } from "./format.js";
+         tally, title } from "./format.js";
 import { identify, labelFor } from "./controls.js";
 import { applyPreset, boundPairs, sortable } from "./tables.js";
 import { TABLE_OPENS_BOUNDED_ABOVE, buildTable, oneRecord, renderStructured,
@@ -221,7 +221,7 @@ export function presetTable(key, rows, presets, hint, node, payload) {
   identify(select, `view-${key}`);
   for (const { preset, view } of usable) {
     select.append(el("option", { value: preset.name, title: preset.question ?? null },
-                     `${preset.name} (${view.total})`));
+                     `${preset.name} (${tally(view.total)})`));
   }
   const body = el("div", { class: "preset-body" });
 
@@ -252,8 +252,8 @@ export function presetTable(key, rows, presets, hint, node, payload) {
          // UX-1173: the view whose question is the section's heading does not say it again.
          preset.question && preset.question !== hint[QUESTION] ? `${preset.question} ` : "",
          view.total >= rows.length
-           ? `all ${rows.length} elements`
-           : `${view.total} of ${rows.length} elements`),
+           ? `all ${tally(rows.length)} elements`
+           : `${tally(view.total)} of ${tally(rows.length)} elements`),
       built.tools, built.table);
   };
   select.addEventListener("change", () => draw(select.value));

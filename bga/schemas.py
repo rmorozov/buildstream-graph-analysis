@@ -3549,6 +3549,8 @@ _ANALYZE_HINTS = {
                     "type": "object",
                     "properties": {
                         **_RESOURCE_COUNTS,
+                        "measured_elements": {QUANTITY: "count"},
+                        "by_element_kind": {"additionalProperties": {QUANTITY: "count"}},
                         "direct_elements": {
                             GROWS: "elements directly sourcing that resource (subset, no cap)",
                             "items": {"type": "string", "description": "element uid"},

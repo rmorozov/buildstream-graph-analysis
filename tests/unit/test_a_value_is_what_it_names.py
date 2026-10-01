@@ -164,7 +164,11 @@ def test_the_constant_column_sentence_says_both_runs_not_presence_both(two_plane
 
 _BIG = ("--layers", "20", "--width", "60")
 
+#: A count's bare run of four digits; a run touching a word, `.,:/#-` (uid, path, decimal, date, hex) is no count.
+_BARE = r"/(?<![\w.,:\/#-])\d{4,}(?!\w|[.:\/-]\d)/"
+
 _SAID = r"""
+const BARE = %s;
 (async () => {
   for (const b of document.querySelectorAll("section.chapter")) b.setAttribute("data-open", "true");
   document.querySelectorAll("details").forEach((d) => { d.open = true; });
@@ -174,12 +178,13 @@ _SAID = r"""
   const cards = [...document.querySelectorAll("[id^=element-]")];
   const text = (node) => node.textContent.replace(/\s+/g, " ");
   const bools = cards.flatMap((c) => text(c).match(/.{0,24}\b(true|false)\b/g) ?? []);
-  const rows = [];
+  const rows = [], bare = [];
   const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
   for (let node = walker.nextNode(); node; node = walker.nextNode()) {
     if (/\b\d{4,}\b rows/.test(node.data)) rows.push(node.data.trim().slice(0, 80));
+    if (!node.parentElement?.closest("script, code, pre") && BARE.test(node.data)) bare.push(node.data.trim().slice(0, 80));
   }
-  const out = { cards: cards.length, demand: /Is a leaf(yes|no)/.test(document.getElementById("element-layer10-mod010-bst")?.textContent ?? ""), bools, rows, badges: null };
+  const out = { cards: cards.length, demand: /Is a leaf(yes|no)/.test(document.getElementById("element-layer10-mod010-bst")?.textContent ?? ""), bools, rows, bare, badges: null };
   const table = document.querySelector('table[data-table="elements"]');
   const tools = table?.parentNode.querySelector(".table-tools");
   const select = tools?.querySelector("select.top-n");
@@ -219,7 +224,7 @@ def said(big_page, tmp_path_factory):
     for label in ("golden", "macro_micro"):
         out[label] = pages.export_uri(pages.FIXTURES[label], tmp_path_factory.mktemp(f"value-{label}"))
     with Browser(chrome) as browser:
-        return {label: browser.measure(uri, _SAID) for label, uri in out.items()}
+        return {label: browser.measure(uri, _SAID % _BARE) for label, uri in out.items()}
 
 
 @needs_browser
@@ -238,3 +243,7 @@ class TestAValueReadsTheSameEverywhere:
 
     def test_a_count_of_a_thousand_carries_its_comma(self, said):
         assert {k: v["rows"] for k, v in said.items() if v["rows"]} == {}
+
+    def test_no_visible_count_reads_four_bare_digits(self, said):
+        """`UX-1213` follow-up: `1202 processes` and `(1201 downstream)` beside badges reading `1,202`."""
+        assert {k: v["bare"] for k, v in said.items() if v["bare"]} == {}

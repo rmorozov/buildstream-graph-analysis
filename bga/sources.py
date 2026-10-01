@@ -493,9 +493,9 @@ def monorepo_headline(rows: list[dict], element_count: int, share: float = MONOR
             cost = f", {format_work(row['measured_us'] / US_PER_S)} of measured build work"
         return (
             f"One repository decides most of this build: any commit to "
-            f"{row['identity']} rebuilds {row['blast_count']} of "
-            f"{element_count} elements ({covered:.0%}{cost}), because its "
-            f"{row['direct_count']} direct elements key on its ref rather "
+            f"{row['identity']} rebuilds {row['blast_count']:,} of "
+            f"{element_count:,} elements ({covered:.0%}{cost}), because its "
+            f"{row['direct_count']:,} direct elements key on its ref rather "
             f"than on the files they stage."
         )
     return None

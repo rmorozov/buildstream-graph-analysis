@@ -21,7 +21,7 @@
 // on that one fixture by coincidence rather than by compilation.
 
 import { identify, labelFor, say, uniqueId } from "./controls.js";
-import { title } from "./format.js";
+import { tally, title } from "./format.js";
 
 // `UX-210`: **every query says which plane it is asking.**
 //
@@ -735,11 +735,11 @@ function flowAccounting(make, options) {
   const edges = Number(losses?.edges) || 0;
   if (!options.hasTimeline || !edges) return null;
   const drawn = Number(losses.drawn) || 0;
-  const parts = [`${drawn} of ${edges} dependency edges are drawn as `
+  const parts = [`${tally(drawn)} of ${tally(edges)} dependency edges are drawn as `
                  + `arrows in this trace.`];
   for (const [reason, sentence] of Object.entries(LOSS_SENTENCES)) {
     const count = Number(losses[reason]) || 0;
-    if (count) parts.push(`${count} are not: ${sentence}.`);
+    if (count) parts.push(`${tally(count)} are not: ${sentence}.`);
   }
   const node = make("p", { class: "muted",
                            "data-flow-accounting": String(edges - drawn) });
@@ -958,7 +958,7 @@ function elementPicker(section, make, options) {
   };
   fill("");
   note.textContent = `${lead}Type any part of a uid to search this run's `
-                   + `${population.length} elements; the box offers the `
+                   + `${tally(population.length)} elements; the box offers the `
                    + `first ${PICKER_SHOWN} that match. The default is the `
                    + "one the report's first action names.";
   box.append(label, search, list, note);

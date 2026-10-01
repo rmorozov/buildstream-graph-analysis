@@ -1,5 +1,5 @@
 {
-  "paths": ["bga/graph/fan_in.py"],
+  "paths": ["bga/findings.py", "bga/schemas.py"],
   "files": {
     ".claude/hooks/agent_worktree_limits.py": {"duplicate_blocks": 0, "file_lines": 128, "longest_function": 23},
     ".claude/hooks/gate_covers_push.py": {"duplicate_blocks": 1, "file_lines": 168, "longest_function": 28},
@@ -27,7 +27,7 @@
     "bga/diagnostics/analyzer.py": {"duplicate_blocks": 2, "file_lines": 1205, "longest_function": 119},
     "bga/disclosure.py": {"duplicate_blocks": 3, "file_lines": 848, "longest_function": 16},
     "bga/exceptions.py": {"duplicate_blocks": 0, "file_lines": 57, "longest_function": 0},
-    "bga/findings.py": {"duplicate_blocks": 0, "file_lines": 2783, "longest_function": 187},
+    "bga/findings.py": {"duplicate_blocks": 0, "file_lines": 2785, "longest_function": 184},
     "bga/fingerprint.py": {"duplicate_blocks": 0, "file_lines": 137, "longest_function": 29},
     "bga/floors/__init__.py": {"duplicate_blocks": 0, "file_lines": 18, "longest_function": 0},
     "bga/floors/capacity.py": {"duplicate_blocks": 0, "file_lines": 78, "longest_function": 24},
@@ -66,7 +66,7 @@
     "bga/report/text.py": {"duplicate_blocks": 0, "file_lines": 1971, "longest_function": 258},
     "bga/run_store.py": {"duplicate_blocks": 1, "file_lines": 833, "longest_function": 78},
     "bga/schema_hints.py": {"duplicate_blocks": 0, "file_lines": 542, "longest_function": 164},
-    "bga/schemas.py": {"duplicate_blocks": 0, "file_lines": 6996, "longest_function": 62},
+    "bga/schemas.py": {"duplicate_blocks": 0, "file_lines": 6997, "longest_function": 62},
     "bga/shown.py": {"duplicate_blocks": 0, "file_lines": 32, "longest_function": 15},
     "bga/sources.py": {"duplicate_blocks": 0, "file_lines": 524, "longest_function": 84},
     "bga/store_aggregate.py": {"duplicate_blocks": 0, "file_lines": 698, "longest_function": 140},

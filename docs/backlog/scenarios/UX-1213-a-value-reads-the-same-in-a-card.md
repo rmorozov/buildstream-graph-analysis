@@ -68,3 +68,7 @@ Deviation: re-based two guards in `test_a_filter_is_a_property_of_a_table.py`
 declared files; the styleguide's §3 badge row gains the `10 matched` form. Hand-built fold
 summaries (`decision.js` 97/326, `element.js` 704, `sections.js` 111, `views.js` 911) still print
 an unseparated count and are left to a row of their own.
+Follow-up 1 (`tally` in format.js, the one count formatter, routes quantity "count", plural, badgeText, sentences;
+finding prose takes `:,`; two resource_blast count hints in schemas.py): bare 4+-digit text nodes 55 on big + 2 on
+macro_micro -> 0 (`test_no_visible_count_reads_four_bare_digits`; reverting the count case, `_downstream`, the status
+line or a hint: 1 failed). Page half +23 B. Re-based `test_all_rows_means_all_rows.py`'s caption to `all 1,202`.

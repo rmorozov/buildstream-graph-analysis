@@ -25,7 +25,7 @@ import { chapters } from "./chapters.js";
 import { renderProvenance } from "./decision.js";
 import { GRADE_EXHIBIT, SERIES_MIN_POINTS, decomposition, interval, strip } from "./drawings.js";
 import { resolvePath } from "./element.js";
-import { COLUMNS, DECOMPOSITION, DISTRIBUTION, INLINE, INTERVAL, KEYED_BY, KEYED_BY_BINARY, KEYED_BY_TASK_UID, QUANTITY, SERIES, SEVERITY, attachBlockDoor, bytes, childNode, cssId, describedTerm, el, guessQuantity, heading, hintsOf, keyAsShown, quantity, quantityFor, readerLabel, sectionHead, spoken, taskUid, TERMS, title } from "./format.js";
+import { COLUMNS, DECOMPOSITION, DISTRIBUTION, INLINE, INTERVAL, KEYED_BY, KEYED_BY_BINARY, KEYED_BY_TASK_UID, QUANTITY, SERIES, SEVERITY, attachBlockDoor, bytes, childNode, cssId, describedTerm, el, guessQuantity, heading, hintsOf, keyAsShown, quantity, quantityFor, readerLabel, sectionHead, spoken, taskUid, TERMS, tally, title } from "./format.js";
 import { matches } from "./nav.js";
 import { handOff } from "./perfetto.js";
 import { findingAnchor, plainValue, served } from "./primitives.js";
@@ -34,7 +34,7 @@ import { recordSource } from "./rawjson.js";
 import { CONTROLS, classify } from "./shapes.js";
 import { ARRAY_INLINE_ITEMS, CELL_NEST_LIMIT, LIFTED_SECTION, OBJECT_INLINE_FIELDS, TABLE_OPENS_BOUNDED_ABOVE, filterSection, foldedList, liftedCriticalPath, mapTable, oneRecord, renderStructured, renderTable } from "./structured.js";
 import { renderPairs, taskSignalTable } from "./pairs.js";
-import { boundCards, columnCells } from "./tables.js";
+import { boundCards, columnCells, plural } from "./tables.js";
 import { investigationsFor } from "./trace_context.js";
 import { joinHash } from "./viewstate.js";
 import { INCOMPLETE, PLANE2_NOT_CAPTURED, renderEvidence }
@@ -108,8 +108,7 @@ export function renderFindingEvidence(evidence, node = undefined, said = new Set
   return el("details", { class: "evidence-fold", "data-fold": "evidence",
                          "data-levels": "1", "data-rows": String(rows) },
             el("summary", {},
-               `Evidence · 1 level, `
-               + `${rows} row${rows === 1 ? "" : "s"}`),
+               `Evidence · 1 level, ${plural(rows, "row")}`),
             door, list);
 }
 
@@ -828,8 +827,8 @@ export const SECTION_ANSWERS = {
     const [joined, one, two] = counts;
     return joined === one && joined === two
       ? `The two planes agree on all ${many(joined, "element")}.`
-      : `The two planes agree on ${joined} of ${many(one, "element")}; `
-        + `Plane 2 saw ${two}.`;
+      : `The two planes agree on ${tally(joined)} of ${many(one, "element")}; `
+        + `Plane 2 saw ${tally(two)}.`;
   },
 };
 

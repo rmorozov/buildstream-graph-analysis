@@ -19,7 +19,7 @@ import { BARE_KEY, COMMAND, QUANTITY, COLUMNS, SERIES, DISTRIBUTION, KEYED_BY,
          KEYED_BY_BINARY, KEYED_BY_ELEMENTS, KEYED_BY_TASK_UID, bytes,
          childNode, cssId, dataKeyed, el, elementColumn, guessQuantity, heading,
          hintsOf, itemsAsShown, keyAsShown, quantity, quantityFor, readerLabel,
-         sectionHead, taskUid, title } from "./format.js";
+         sectionHead, tally, taskUid, title } from "./format.js";
 import { commandLine, identify, say } from "./controls.js";
 // UX-303: §2's two drawings. They import nothing and take their
 // formatter, so the quantity table stays here and the geometry stays
@@ -232,7 +232,7 @@ function boundedList(value, noun, item = null) {
     more.title = `Show the next ${Math.min(REVEAL_STEP, remaining)} ${noun} `
       + `of the ${remaining} still between the first ${head.length} and `
       + `the last ${tail.length}`;
-    more.textContent = `+${remaining} More ${noun} (${items.length} in all)`;
+    more.textContent = `+${tally(remaining)} More ${noun} (${tally(items.length)} in all)`;
     position.textContent = page < 0 ? "" : `${noun} ${start + 1}-`
       + `${start + chunk.length} of ${middle.length} (page ${page + 1} of `
       + `${pages})`;
@@ -870,7 +870,7 @@ function foldTheMiddle(table, total, { head, tail, noun = "rows" }) {
     // is behind it rather than promising "more".
     title: `Show the ${middle.length} ${noun} between the first ${head} `
            + `and the last ${tail}`,
-  }, `+${middle.length} More ${noun} (${total} in all)`);
+  }, `+${tally(middle.length)} More ${noun} (${tally(total)} in all)`);
   const row = el("tr", { class: "fold-row", "data-fold-rows": String(middle.length) },
                  el("td", { colspan: String(cells) }, more));
   more.addEventListener?.("click", () => {
@@ -1225,7 +1225,7 @@ export function interrogable(table, specs, total, depth = 0, undrawn = []) {
     // beside it agree with the count in one place rather than two.
     const matched = state.filtered ?? 0;
     const rows = !filtered() ? plural(n, "row")
-      : n < matched ? `first ${n} of ${plural(matched, "matched row")}` : plural(n, "matched row");
+      : n < matched ? `first ${tally(n)} of ${plural(matched, "matched row")}` : plural(n, "matched row");
     // `UX-1165`: nothing shown, nothing to copy or to say of the rows.
     for (const node of [copyRows, copyRows.parentNode?.querySelector?.(".uniform-columns")]) {
       if (node) node.hidden = !n;

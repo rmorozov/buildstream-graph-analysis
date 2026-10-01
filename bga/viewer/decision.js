@@ -94,8 +94,7 @@ export function renderProvenance(provenance, options = {}) {
   // depth and count alone, so an unlabeled fold names its content too.
   const named = `${options.label || "The rule"} · `;
   summary.textContent =
-    `${named}1 level, ${evidence.length} `
-    + `row${evidence.length === 1 ? "" : "s"}`;
+    `${named}1 level, ${plural(evidence.length, "row")}`;
   details.append(summary);
 
   const why = document.createElement("p");
@@ -323,8 +322,7 @@ function renderSaidOnce(common) {
   // `UX-357` (§3a.1): one level, the findings are its rows.
   box.setAttribute("data-levels", "1");
   box.setAttribute("data-rows", String(common.length));
-  summary.textContent = `What they share \u00b7 1 level, ${common.length} `
-    + `row${common.length === 1 ? "" : "s"}`;
+  summary.textContent = `What they share \u00b7 1 level, ${plural(common.length, "row")}`;
   box.append(summary);
   for (const { finding, ranks } of common) {
     const line = document.createElement("p");

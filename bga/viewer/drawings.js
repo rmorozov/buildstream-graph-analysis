@@ -577,7 +577,7 @@ export function twinRows(marks, format) {
     ...(marks.p99 === null ? [] : [["p99", format(marks.p99)]]),
     ["max", format(marks.max)],
     ...(marks.mean === null ? [] : [["mean", format(marks.mean)]]),
-    ...(marks.n === null ? [] : [["n", String(marks.n)]]),
+    ...(marks.n === null ? [] : [["n", marks.n.toLocaleString("en-US")]]),
   ];
 }
 
@@ -702,7 +702,7 @@ export function strip(distribution, {
   if (labelled.has("p99")) parts.push(`p99 ${format(marks.p99)}`);
   if (grade === GRADE_EXHIBIT) wrap.append(exhibitAxis(doc, axisTicks));
   const sentenceText = `${parts.join(", ")}`
-    + (marks.n === null ? "." : ` — n=${marks.n}.`);
+    + (marks.n === null ? "." : ` — n=${marks.n.toLocaleString("en-US")}.`);
   const sentence = box(doc, "span", { class: "density-sentence",
                                       "data-role": "density-sentence" },
                        sentenceText);

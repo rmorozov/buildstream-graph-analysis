@@ -11,7 +11,7 @@
 // `UX-201`'s column metadata says which columns are quantities and in
 // what unit, which is what makes `> 5s` parseable at all.
 
-import { el } from "./format.js";
+import { el, tally } from "./format.js";
 
 /** How many microseconds/bytes/… one suffix is worth, per quantity. */
 const UNITS = {
@@ -410,12 +410,12 @@ export function openingBound(presets, total, bound) {
  * appeared: a sentence written for a population and read over one row.
  */
 export function plural(count, noun) {
-  return `${count.toLocaleString("en-US")} ${noun}${count === 1 ? "" : "s"}`;
+  return `${tally(count)} ${noun}${count === 1 ? "" : "s"}`;
 }
 
 /** `12 of 1,202` - and just the total when nothing is filtered. */
 export function badgeText(shown, total, matched = total, { offset = 0, sorted = "" } = {}) {
-  const n = (value) => value.toLocaleString("en-US");
+  const n = tally;
   // The `N of M` form needs no agreement: a denominator is always a
   // population, and `1 of 12` is right as it stands.
   // UX-1158: an emptied table says why beside the box that emptied it.

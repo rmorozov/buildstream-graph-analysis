@@ -702,8 +702,7 @@ function elementSection(record, places, investigate, format, bounded = null) {
     fold.setAttribute("data-rows", String(evidenceRows));
     const summary = document.createElement("summary");
     summary.textContent =
-      `What Plane 2 saw · 1 level, ${evidenceRows} `
-      + `row${evidenceRows === 1 ? "" : "s"}`;
+      `What Plane 2 saw · 1 level, ${plural(evidenceRows, "row")}`;
     fold.append(summary);
     for (const block of blocks) {
       if (!block.key.split(" ").every((key) => claims.has(CLAIMED_BY[key]))) {

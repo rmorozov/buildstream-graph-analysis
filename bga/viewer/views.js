@@ -22,7 +22,7 @@ import { SCALE, GRADE_ANNOTATION, GRADE_EXHIBIT, exhibitAxis, exhibitTwin,
 // one. `controls.js` imports nothing, which is why this module may use
 // it where it may not use `app.js` - see the note below.
 import { commandLine, identify, labelFor } from "./controls.js";
-import { TERMS } from "./format.js";
+import { TERMS, tally } from "./format.js";
 import { plural } from "./tables.js";
 // `UX-337`: the primitives the chapters share. Extracted because the
 // chapters were *not* acyclic without them - see `primitives.js`.
@@ -851,7 +851,7 @@ export function renderEvidence(payload) {
   const plane2 = payload?.plane2_coverage;
   if (plane2 && typeof plane2.processes === "number") {
     rows.push([TERMS.plane2_processes,
-               `${plane2.processes} processes`
+               `${tally(plane2.processes)} processes`
                + (typeof plane2.opens_coverage === "number"
                   ? `, opens ${(plane2.opens_coverage * 100).toFixed(0)}%` : ""),
                "plane2_coverage.processes"]);
@@ -908,8 +908,7 @@ export function renderEvidence(payload) {
   fold.setAttribute("data-rows", String(rows.length));
   const summary = document.createElement("summary");
   summary.textContent =
-    `The numbers behind that · 1 level, ${rows.length} `
-    + `row${rows.length === 1 ? "" : "s"}`;
+    `The numbers behind that · 1 level, ${plural(rows.length, "row")}`;
   fold.append(summary);
 
   const list = document.createElement("dl");
@@ -949,7 +948,7 @@ export function statusLine(payload) {
   }
   const plane2 = payload?.plane2_coverage;
   parts.push(plane2 && typeof plane2.processes === "number"
-    ? `Plane 2: ${plane2.processes} processes`
+    ? `Plane 2: ${tally(plane2.processes)} processes`
     : PLANE2_NOT_CAPTURED);
   return parts.join(" \u00b7 ");
 }

@@ -128,3 +128,8 @@ under tools 52-152/72-200 px at 1440/390; Jump to a binary (by_binary, UX-1199's
 lands a `tr` below its table's sticky tools: rows at 152/200 px and 106/166 px, the centre the row's own cell.
 `test_a_landed_row_is_not_under_the_table_tools` reads `elementFromPoint` at 1440 and 390; the old margin back reddens
 it 4 failed, 12 passed.
+
+Merged-tree follow-up: `test_a_jump_lands_on_its_target` still expected a binary row at the section margin (60) and read
+top 158. The target is a `tr` under sticky tools (bare margin: centre hits `div.table-tools`), so the guard was stale: a
+row's expected top is now the stuck tools' bottom, read off their rect (105 at the old landing), and must
+exceed the section margin. Mutation: `revealAndLand` at the bare margin again gives top 60 vs 105, 1 failed, 6 passed.

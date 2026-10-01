@@ -255,7 +255,7 @@ class TestTheComparisonCitesTheCandidatesChain:
         comparison quoting it - and following them against the wrong
         document is the failure this field exists to prevent."""
         record = comparison.to_dict()["candidate_diagnosis"]["provenance"]
-        assert record["document"] == "analyze/v6"
+        assert record["document"] == "analyze/v7"
         for entry in record["evidence"]:
             assert provenance.resolve(comparison.to_dict(), entry["path"]) is provenance.UNRESOLVED
             assert provenance.resolve(golden, entry["path"]) == entry["value"]

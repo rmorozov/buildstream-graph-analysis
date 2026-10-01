@@ -195,10 +195,12 @@ class TestTheNumbersReachTheReader:
     def test_the_frequency_half_is_on_the_page(self, booted):
         """`by_binary` is the count per binary for the whole run - the
         "how often" the question asks for."""
-        counts = _report()["by_binary"]
-        top = max(counts, key=counts.get)
-        assert str(counts[top]) in booted["text"], f"{top} ran {counts[top]} times and the count is not on the page"
-        assert len(counts) >= 5, counts
+        rows = _report()["by_binary"]
+        top = max(rows, key=lambda row: row["calls"])
+        assert str(top["calls"]) in booted["text"], (
+            f"{top['binary']} ran {top['calls']} times and the count is not on the page"
+        )
+        assert len(rows) >= 5, rows
 
     def test_the_caveat_is_published_with_the_number(self, booted):
         """`UX-346`: the note says why the share is a floor. A share

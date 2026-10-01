@@ -248,7 +248,7 @@ a wider corpus could test, which is §5's argument.
 So: publish `lb_cpu` beside `lb`, with its coverage and its governing
 core count, and let the note say which one binds. `lb`,
 `certified_headroom` and `efficiency_score` keep their exact current
-meanings, and `analyze/v6` gains keys rather than changing any.
+meanings, and `analyze/v7` carries the keys rather than changing any.
 
 ### 4d. What it is worth today
 
@@ -373,8 +373,8 @@ report, and in `floors`:
 
 The Certified Floors block gains one line and the standing note gains
 one clause naming which floor binds. `lb`, `certified_headroom`,
-`efficiency_score` and every Part 16 term are untouched, so `analyze/v6`
-gains keys under the rule that additive keys do not bump a contract —
+`efficiency_score` and every Part 16 term are untouched, so `analyze/v7`
+carries keys under the rule that additive keys do not bump a contract —
 but `lb_cpu_us` must not enter `required`, which would
 (`test_a_required_set_grew_under_an_unchanged_id.py`).
 

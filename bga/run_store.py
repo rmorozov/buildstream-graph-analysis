@@ -775,7 +775,7 @@ CAPTURE_LAYOUT = (
     (
         f"{STORE_DIRNAME}/{RUNS_DIRNAME}/<stamp>/{ANALYSIS_NAME}",
         CONDITIONAL,
-        "analyze/v6",
+        "analyze/v7",
         "the analysis this capture published, so `bga view` renders "
         "rather than re-deriving. Absent means the viewer "
         "parses the run itself, and the trace carries no graph structure.",

@@ -65,7 +65,7 @@ against the rule above:
 | `failed-processes` | the page reports that an element failed; this reports which command did |
 | `process-storm` | needs the per-process count *and* their durations together |
 | `cpu-versus-wall` | per-process `debug.cpu_us` against each slice's own wall time |
-| `cost-by-executable` | the page has `by_binary`, which is counts; this is wall, CPU and peak RSS per program |
+| `cost-by-executable` | the page has `by_binary`, CPU, wall and calls per program (`UX-1247`); this adds peak RSS |
 | `executables-in-element` | the same pivot inside one sandbox: `binary_cost` has that element's CPU per binary, this adds the wall time and the peak resident set |
 | `resource-queues` | `attribution.resource_wait_us` is the waiting summed over every scheduler queue at once; this is per queue, and only the per-queue figure says which limit to raise |
 

@@ -142,7 +142,8 @@ from .schema_hints import (
 # array of level *numbers* - always `[0 … n-1]`, the row number - and is
 # an array of rows naming each level's members. A consumer indexing it
 # as integers breaks, which is what a version move is for.
-ANALYZE = "analyze/v6"
+# `UX-1247`: v7 - `by_binary` is ranked rows of CPU, wall, calls and elements, not a calls map.
+ANALYZE = "analyze/v7"
 COMPARE = "compare/v2"
 BLAST = "blast/v2"
 STORE = "store/v1"
@@ -153,7 +154,16 @@ STORE = "store/v1"
 # reads a `v2` analyze document by name - the keys this item renamed
 # resolve through `guessQuantity` rather than through a declaration, so
 # an old snapshot still renders, with the fallback saying so.
-SUPERSEDED = ("analyze/v5", "analyze/v4", "analyze/v3", "analyze/v2", "compare/v1", "blast/v1", "correlate/v1")
+SUPERSEDED = (
+    "analyze/v6",
+    "analyze/v5",
+    "analyze/v4",
+    "analyze/v3",
+    "analyze/v2",
+    "compare/v1",
+    "blast/v1",
+    "correlate/v1",
+)
 # UX-234: the store as a distribution rather than as a list. Beside
 # `store/v1` rather than inside it: a listing is one row per snapshot
 # and this is one row per *host class*, and a consumer wanting the
@@ -398,8 +408,8 @@ _ANALYZE_OPTIONAL = {
     # `UX-370`: what Plane 2 saw the build run, in calls and in CPU.
     # Projected from the Plane 2 report beside the join, so present on
     # exactly the runs the join is - additive, so `analyze/v4` does not
-    # bump.
-    "by_binary": "object",
+    # bump. `UX-1247` made `by_binary` rows: `analyze/v7`.
+    "by_binary": "array",
     "binary_cost": "array",
     "configure_phase": "object",
     # `UX-383`: the run-level halves of the three blocks `UX-370` left
@@ -4808,18 +4818,42 @@ _ANALYZE_HINTS = {
     # three are that answer, declared so the generic renderer draws
     # them as quantities rather than as a wall of bare integers.
     "by_binary": {
-        QUESTION: 'What did this build actually run, and how often?',
+        QUESTION: 'What did this build actually run, and what did each binary cost?',
         RAIL: 'act',
         KEYED_BY: KEYED_BY_BINARY,
-        QUANTITY: "count",
         GROWS: "distinct binaries Plane 2 saw exec (real grower, no "
-        "cap in the payload; structured.js's table/map bound "
-        "applies on the page)",
-        "description": "Every binary Plane 2 saw exec, and how many "
-        "times the whole run ran it. The frequency half "
-        "of the question; binary cost is the time "
-        "half, per element.",
-        "additionalProperties": {QUANTITY: "count", "title": "Calls in run"},
+        "cap in the payload; structured.js's table bound applies "
+        "on the page)",
+        COLUMNS: [
+            "binary",
+            {"key": "cpu_us", "title": "CPU"},
+            {"key": "wall_us", "title": "Wall"},
+            {"key": "calls", "title": "Calls in run"},
+            {"key": "elements", "title": "Elements"},
+        ],
+        "description": "Every binary Plane 2 saw exec, ranked by the "
+        "CPU it cost the whole run: its CPU and wall summed over "
+        "binary cost's rows, how many times the run ran it, and in "
+        "how many elements. Binary cost is the per-element "
+        "drill-down.",
+        "items": {
+            "properties": {
+                "binary": {"description": "The executable name, as it was exec'd."},
+                "cpu_us": {
+                    QUANTITY: "duration_us",
+                    "description": "CPU across every element's calls: the "
+                    "sum of its binary cost rows. Absent when the Plane 2 "
+                    "report published only top-5 rankings, or no element "
+                    "it measured ran it.",
+                },
+                "wall_us": {
+                    QUANTITY: "duration_us",
+                    "description": "Wall-clock those calls spanned, summed the same way; absent with CPU.",
+                },
+                "calls": {QUANTITY: "count", "description": "How many times the whole run ran it."},
+                "elements": {QUANTITY: "count", "description": "How many elements ran it; absent with CPU."},
+            },
+        },
     },
     "binary_cost": {
         QUESTION: 'Which binaries cost this build its time?',

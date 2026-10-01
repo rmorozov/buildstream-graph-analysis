@@ -535,9 +535,11 @@ const all = (n, pred, out = []) => {
 
 function draw(key, size, taskUidKeyed) {
   const node = schema.properties[key];
-  const value = {};
+  // `UX-1247`: by_binary is rows, one per binary, since analyze/v7.
+  const value = [node.type].flat().includes("array") ? [] : {};
   for (let i = 0; i < size; i++) {
-    value[taskUidKeyed ? `el-${i}.bst|BUILD|BUILD|0` : `binary-${i}`] = i;
+    if (Array.isArray(value)) value.push({ binary: `binary-${i}`, cpu_us: i, wall_us: i, calls: i, elements: 1 + (i % 3) });
+    else value[taskUidKeyed ? `el-${i}.bst|BUILD|BUILD|0` : `binary-${i}`] = i;
   }
   const section = app.renderSection(key, value, app.hintsOf(node), node);
   const table = find(section, (n) => n.tagName === "table");
@@ -589,7 +591,7 @@ function drawRecordWithCatchAll() {
 function drawEmpty(key) {
   const node = schema.properties[key];
   try {
-    const section = app.renderSection(key, {}, app.hintsOf(node), node);
+    const section = app.renderSection(key, [node.type].flat().includes("array") ? [] : {}, app.hintsOf(node), node);
     return { threw: false,
              ok: section === null || section.attrs?.["data-empty"] === "true" };
   } catch (error) {
@@ -631,9 +633,9 @@ console.log(JSON.stringify({
         assert seen["hasTable"], seen
         assert seen["dataRows"] == "41", seen
         assert seen["hasFilter"], "a table over the bound has no filter"
-        assert seen["sortable"] == ["true", "true"], seen
-        assert seen["headers"] == ["Binary", "Calls in run"], (
-            "UX-1199: the key's own noun and the schema's title for its value: " + str(seen)
+        assert seen["sortable"] == ["true"] * 5, seen
+        assert seen["headers"] == ["Binary", "CPU", "Wall", "Calls in run", "Elements"], (
+            "UX-1247: the binary, then the schema's titles for its four totals: " + str(seen)
         )
 
     def test_twelve_hundred_tasks_render_a_table_with_filter_and_sort(self, probed):

@@ -675,7 +675,7 @@ pairing for every merged row from round 103 on.
 | 159 | implementer | opus | implementer: T1 UX-1195 UX-1197 UX-1196 | — | — | — | see round-159 | cost: +1,250 B; mm controls 790, h 38,389; app.js revealAndLand near T3 popstate |
 | 159 | implementer | opus | implementer: T2 UX-1194 UX-1199 | — | — | — | see round-159 | cost: +772 B; task_durations_us; leaves_detail to the Leaves view; mm controls 796/800; parseQuery data-share skip owed by T1 |
 | 159 | implementer | opus | implementer: T3 UX-1203 rail tools and pager | — | — | — | see round-159 | cost: +499 B; tier LARGE; sortable headers print blank (pre-existing, fixed 31b5971b); guard red under full-suite load (fixed c31ada8b) |
-| 159 | implementer | opus | implementer: B1 UX-1198 Focus filters each keyed table | — | — | — | see round-159 | cost: +604 B; base 1fc53d38 + d16abd2c; 7 mutations red |
+| 159 | implementer | opus | implementer: B1 UX-1198 Focus filters each keyed table | — | — | — | see round-159 | cost: +604 B; base T2 UX-1199 + T1 UX-1195; 7 mutations red |
 | 159 | implementer | opus | implementer: B2 UX-1200 Blocks lists as links | — | — | — | see round-159 | cost: +204 B; bounds raised on the owner's 05:49 decision; dev_sizes --adopt failed (pylint exited 32) |
 | 159 | implementer | sonnet | implementer: B3 UX-1201 compare table words and negatives | ~45k | — | ~15m | see round-159 | cost: ~+0.2 KB; 2 mutations red; -0 ms residue |
 | 159 | implementer | opus | implementer: B4 UX-1202 UX-1204 bounded values, 390 fit | — | — | — | see round-159 | cost: +706 B; longest aria-label 12,170 to 283; 390 pastes 17/17 to 0 |

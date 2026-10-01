@@ -504,7 +504,7 @@ with the tables above destroys the one thing the entry is for
 (`UX-653`). The newest entry is the exception: every round that
 re-grounds the document rewrites it.
 
-Updated 2026-10-01 (after `UX-1194`), covering no change to this
+Updated 2026-10-01 (after `UX-1218`), covering no change to this
 document in round 159. `analyze/v6` gains `task_durations_us`, the
 task table's Duration column (`UX-1194`); no contract moved. The
 figures are re-grounded in `bga analyze --schema`

@@ -44,6 +44,7 @@ task file, which is the only place it ever lived twice.
 | UX-1230 | [the badge's all-N-matched arm and the said-back clause's owned-words rule have a mutation that reddens them](UX-1230-the-badge-s-all-n-matched-arm-and-the-said-back.md) | guards | Low | R1 | 🔴 Not Started |
 | UX-1231 | [the styleguide states two rules: a filtering link moves focus to its filter, an entry naming no View is at the opening View](UX-1231-the-styleguide-states-two-rules-a-filtering-link.md) | docs | Low | R1 | 🔴 Not Started |
 | UX-1232 | [the hang guard's sleeper does not take 49.9 s of wall at 2.05 s of user](UX-1232-the-hang-guard-s-sleeper-does-not-take-49-9-s-of.md) | guards | Medium | R1 | 🔴 Not Started |
+| UX-1233 | [the page budget is raised to 165,000 B for round 161's eleven viewer rows](UX-1233-the-page-budget-is-raised-to-165-000-b.md) | guards | Medium | R1 | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

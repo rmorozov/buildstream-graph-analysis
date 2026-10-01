@@ -204,7 +204,7 @@ def test_a_card_s_more_blocks_reach_every_element_it_counts(label, request, tmp_
     with Browser(find_chrome()) as browser:
         typed = browser.measure(uri, _DEPENDS.replace("__UID__", uid), 1440, 900)
         if label == "big":
-            followed = browser.measure(f"{uri}#{_anchor(uid)}", _FOLLOW, 1440, 900, fresh_history=True)
+            followed = browser.measure(f"{uri}#{_anchor(uid)}", _FOLLOW, 1440, 900)
             landed = browser.measure(uri + followed["href"], _DEPENDS.replace("__UID__", uid), 1440, 900)
     assert count > 0 and typed["columns"] == 0, (uid, typed)
     assert (typed["matched"] if typed["matched"] is not None else typed["listed"]) == count, (uid, count, typed)

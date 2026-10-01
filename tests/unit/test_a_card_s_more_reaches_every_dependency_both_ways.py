@@ -112,7 +112,6 @@ def test_a_card_s_more_reaches_every_dependency_both_ways(label, request, tmp_pa
                     _FOLLOW.replace("__UID__", uid).replace("__LIST__", key),
                     1440,
                     900,
-                    fresh_history=True,
                 )
                 for uid, key in ((blocker, "dependents"), (needer, "direct"))
             ]

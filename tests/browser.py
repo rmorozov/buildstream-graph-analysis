@@ -348,7 +348,7 @@ class Browser:
             raise RuntimeError(done.stderr)
         return json.loads(done.stdout)
 
-    def measure(self, url, expression, width=1440, height=900, coarse=False, media=None, fresh_history=None):
+    def measure(self, url, expression, width=1440, height=900, coarse=False, media=None):
         """Load `url` at `width`x`height` and return `expression`'s value.
 
         The evaluation happens in node rather than here because the CDP
@@ -358,8 +358,7 @@ class Browser:
         sets `Emulation.setEmulatedMedia`'s actual media type, so a print
         rule is exercised the way a browser's own print preview would.
         Every drive resets the shared tab's history first (`UX-1215`), so
-        a guard that walks Back is not pruned at the 50-entry cap;
-        `fresh_history` is accepted and ignored.
+        a guard that walks Back is not pruned at the 50-entry cap.
         """
         extra = list(("--coarse",) if coarse else ())
         if media:

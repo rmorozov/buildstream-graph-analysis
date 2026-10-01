@@ -393,12 +393,7 @@ class TestFocusAnswersWhereTheHandIs:
 
 #: `UX-536`: three of the four controls the census found saying less
 #: than they do, on the page an export produces.
-#:
-#: The Markdown box is driven from a **known** start - every box
-#: unchecked - rather than from whatever the shared Chromium's
-#: `localStorage` carries: `Browser(chrome)` reuses one profile across
-#: fixtures, so a previous drive's preference is a state this would
-#: otherwise inherit and read as a pass.
+#: Every box is unchecked first so the Markdown box's one check is the only state read.
 _SAYS = r"""
 (() => {
   for (const box of document.querySelectorAll("section.chapter")) {

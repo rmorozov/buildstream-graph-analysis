@@ -80,3 +80,18 @@ label browser guards 262 passed, 19 skipped.
 wall, so LB >= 0.95 x wall already exceeds it. Kept as the Decision's clause; `test_a_chain_at_the_floor_stays_chain_bound`
 holds the chain check's precedence instead.
 
+
+Verifier fix (UX-1246 merged): the step now comes from `capacity_recommendation`. With a `host_cores` binding row,
+the page's sentence ends "Builders are held at the host's 4 cores by policy while the CPU could feed 18: measure
+above that cap with bga sweep." and its first action reads "Measure builders above the host's 4-core cap with bga
+sweep". The page no longer says raise beside keep. An unclamped row names the recommended count, and with no
+recommendation the RESOURCE WAIT hint is used with its backticks dropped. In the viewer the step row's "why"
+links to `#finding-capacity-recommendation` (the target exists); there is still no numbered disclosure, because the
+row has no element facts. `test_every_rule_carrying_this_constant_carries_its_value` now reads
+`a_chain_beside_a_crowd` (scheduler_bound, chain 0.571, LB 92.9%) because `shared_base_wide` became capacity_bound
+(LB 98.3%). The test's claim is unchanged. Related guards: 463 passed, 20 skipped.
+
+| mutation | reddened | run printed |
+|---|---|---|
+| skip the `host_cores` branch of `_capacity_step` | `test_a_host_cap_is_named_and_measured_above_not_raised` | 1 failed, 19 passed |
+| skip the recommended-count branch | `test_an_unclamped_binding_names_the_recommended_count` | 1 failed, 19 passed |

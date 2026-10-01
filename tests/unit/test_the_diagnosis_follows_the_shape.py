@@ -189,6 +189,34 @@ class TestACapacityBoundRunReadsCapacityBound:
         assert "--capacity" in actions[0]["step"], actions[0]
         assert actions[1]["element_uid"] == "layer00/mod010.bst", actions
 
+    def test_a_host_cap_is_named_and_measured_above_not_raised(self):
+        """The page's recommendation: builders 4 held at 4 host cores, the CPU could feed 18."""
+        run = _CapacityRun()
+        run.capacity_recommendation = {
+            "binding_constraint": "host_cores",
+            "host_cpu_count": 4,
+            "recommended_builders": 4,
+            "builders_change": 0,
+            "constraints": [{"name": "host_cores", "allows": 4, "clamped_from": 18}],
+        }
+        sentence = diagnose(run)["sentence"]
+        step = compute_headline(run, self.FINDINGS)["top_actions"][0]["step"]
+        assert "held at the host's 4 cores by policy while the CPU could feed 18" in sentence, sentence
+        assert step == "Measure builders above the host's 4-core cap with bga sweep", step
+        assert "higher N" not in sentence + step and "`" not in sentence + step
+
+    def test_an_unclamped_binding_names_the_recommended_count(self):
+        run = _CapacityRun()
+        run.capacity_recommendation = {
+            "binding_constraint": "CPU",
+            "host_cpu_count": 8,
+            "recommended_builders": 6,
+            "builders_change": 2,
+            "constraints": [{"name": "CPU", "allows": 6}],
+        }
+        assert "CPU binds at 6 builders" in diagnose(run)["sentence"]
+        assert compute_headline(run, self.FINDINGS)["top_actions"][0]["step"] == "Run with 6 builders and measure it"
+
     def test_a_chain_at_the_floor_stays_chain_bound(self):
         """LB above the line but equal to t-infinity: the chain check runs first."""
         run = _CapacityRun()

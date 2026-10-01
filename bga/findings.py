@@ -281,8 +281,7 @@ DIAGNOSIS_SENTENCES = {
     "chain.",
     DIAGNOSIS_CAPACITY_BOUND: "This build is capacity-bound, not scheduler-bound: the resource floor "
     "is {ratio} of wall-clock, at or above the {bound} capacity-bound line, "
-    "so its builder slots set the wall, not the chain or the scheduler. "
-    "The step this run supports is a builders step, measured: {step}.",
+    "so its builder slots set the wall, not the chain or the scheduler. {step}.",
     DIAGNOSIS_INCONCLUSIVE: "Neither the chain nor the scheduler can be named the constraint: "
     "this run did not record the durations the comparison needs.",
 }
@@ -2301,7 +2300,7 @@ def diagnose(result: AnalysisResult) -> dict:
         name = DIAGNOSIS_CAPACITY_BOUND
     if name == DIAGNOSIS_CAPACITY_BOUND:
         sentence = DIAGNOSIS_SENTENCES[name].format(
-            ratio=qty.share(floors['lb'] / total), bound=qty.share(CAPACITY_BOUND_SHARE), step=_capacity_step(result)
+            ratio=qty.share(floors['lb'] / total), bound=qty.share(CAPACITY_BOUND_SHARE), step=_capacity_step(result)[0]
         )
     else:
         sentence = DIAGNOSIS_SENTENCES[name].format(ratio=qty.share(ratio), bound=qty.share(CHAIN_BOUND_RATIO))
@@ -2320,19 +2319,36 @@ def _capacity_is_the_wall(floors: dict, total: int, t_infinity: int) -> bool:
     return lb / total >= CAPACITY_BOUND_SHARE and lb > t_infinity
 
 
-def _capacity_step(result: AnalysisResult) -> str:
-    """The builders step the run supports: the RESOURCE WAIT hint, Plane 2's where it has one."""
+def _capacity_step(result: AnalysisResult) -> tuple[str, str]:
+    """`(sentence, action)` for the builders step: the recommendation's, else the RESOURCE WAIT hint."""
+    recommendation = getattr(result, 'capacity_recommendation', None) or {}
+    binding = recommendation.get('binding_constraint')
+    row = next((c for c in recommendation.get('constraints') or [] if c.get('name') == binding), {})
+    if binding == 'host_cores':
+        cores = recommendation.get('host_cpu_count')
+        return (
+            f"Builders are held at the host's {plural(cores, 'core')} by policy while the CPU could feed "
+            f"{row.get('clamped_from')}: measure above that cap with bga sweep",
+            f"Measure builders above the host's {cores}-core cap with bga sweep",
+        )
+    if binding and recommendation.get('recommended_builders') is not None:
+        builders = recommendation['recommended_builders']
+        return (
+            f"{binding} binds at {plural(builders, 'builder')}: run with {builders} and measure it",
+            f"Run with {plural(builders, 'builder')} and measure it",
+        )
     from .report._shared import resolve_attribution_hint
 
-    step = _plane2_capacity_hint(result, 'resource_wait_us') or resolve_attribution_hint(
+    hint = _plane2_capacity_hint(result, 'resource_wait_us') or resolve_attribution_hint(
         'resource_wait_us', getattr(result, 'capacity_verdict', None)
     )
-    return (step or "time more builders with `bga sweep`").rstrip('.')
+    hint = (hint or "time more builders with bga sweep").replace('`', '').rstrip('.')
+    return f"The step this run supports is a builders step, measured: {hint}", hint
 
 
 def _builders_actions(result: AnalysisResult, by_id: dict) -> list[dict]:
     """The decision's first action on a capacity-bound run: the builders step, and the finding reasoning it."""
-    action = {'step': _capacity_step(result)}
+    action = {'step': _capacity_step(result)[1]}
     finding = next((fid for fid in ('capacity-recommendation', 'wait-category') if fid in by_id), None)
     if finding:
         action['finding_id'] = finding

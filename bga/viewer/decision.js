@@ -12,7 +12,7 @@
  */
 import { commandLine, identify, labelFor } from "./controls.js";
 import {
-  SVG, svg, seconds, mib, bar, OVERVIEW_SHOWN, elementAnchor, plainValue,
+  SVG, svg, seconds, mib, bar, OVERVIEW_SHOWN, elementAnchor, findingAnchor, plainValue,
 } from "./primitives.js";
 import {
   SCALE, GRADE_ANNOTATION, GRADE_EXHIBIT, exhibitAxis, exhibitTwin,
@@ -914,7 +914,8 @@ function actionRow(action, investigate, whyBlock = null) {
   if (!whyBlock) {
     const why = document.createElement("a");
     why.className = "why";
-    why.setAttribute("href", "#findings");
+    why.setAttribute("href", action.element_uid || !action.finding_id
+      ? "#findings" : `#${findingAnchor(action.finding_id)}`);
     why.textContent = "why";
     row.append(why);
   }

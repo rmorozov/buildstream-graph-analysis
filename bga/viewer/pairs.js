@@ -136,6 +136,12 @@ export function elementSignalTable(elements, node, join = null,
     [QUESTION]: "Which element should I look at?",
     [KEYED_BY]: KEYED_BY_ELEMENT,
   };
+  // `UX-1214`: each row's published direct dependencies, undrawn, so `depends_on:<uid>` lists what <uid> blocks.
+  const direct = elements.fan_in;
+  if (direct && typeof direct === "object") {
+    for (const row of rows) row.depends_on = direct[row.element]?.direct ?? [];
+    hint[COLUMNS].push({ key: "depends_on", title: "Depends on", drawn: false });
+  }
   return { rows, hint, merged: present, joined: joinedIn };
 }
 
@@ -229,7 +235,7 @@ export function presetTable(key, rows, presets, hint, node, payload) {
     const viewHint = {
       ...hint,
       [COLUMNS]: (hint[COLUMNS] ?? []).filter(
-        (spec) => columns.includes(typeof spec === "string" ? spec : spec.key)),
+        (spec) => spec.drawn === false || columns.includes(typeof spec === "string" ? spec : spec.key)),
       [QUESTION]: preset.question ?? hint[QUESTION],
     };
     const built = buildTable("elements", view.shown, viewHint, node);

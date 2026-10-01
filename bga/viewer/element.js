@@ -738,7 +738,21 @@ function elementSection(record, places, investigate, format, bounded = null) {
     else line.append(...named.items.flatMap((item) => [", ", FAN_IN_LISTS.has(named.key)
       ? el("a", { href: `#${elementAnchor(item)}`, "data-raw": item }, item)
       : el(READER_LABELS[item] ? "span" : "code", { "data-raw": item }, READER_LABELS[item] ?? item)]).slice(1));
-    if (named.more > 0) line.append(el("span", { "data-more": named.more }, `, +${named.more.toLocaleString("en-US")} more`));
+    if (!(named.more > 0)) continue;
+    const more = `+${named.more.toLocaleString("en-US")} more`;
+    // `UX-1214`: what it blocks past the cap is the element table filtered to what depends on it, every one of them.
+    const query = `depends_on:${uid}`;
+    const rest = named.key !== "dependents" ? el("span", { "data-more": named.more }, `, ${more}`)
+      : el("a", { href: joinHash("elements", new URLSearchParams({ "f.elements": query }).toString()), "data-more": named.more }, more);
+    if (named.key === "dependents") {
+      rest.addEventListener?.("click", () => {
+        const view = document.querySelector?.('select.preset-view[data-table="elements"]');
+        if (view?.selectedIndex) { view.selectedIndex = 0; view.dispatchEvent(new Event("change")); }
+        filterSection(document, "elements", query);
+      });
+      line.append(", ");
+    }
+    line.append(rest);
   }
 
   if (record.entering.length) {

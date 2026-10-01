@@ -128,8 +128,10 @@ function matchesKey(tr, clause, stated = {}) {
   const cell = [...tr.children].find((td) => td.getAttribute("data-column") === clause.column);
   const said = cell ? { raw: cell.getAttribute("data-raw"), shown: cell.textContent } : stated[clause.column];
   const raw = String(said?.raw ?? "");
-  const got = [clause.part === null ? raw : raw.split("|")[clause.part] ?? ""];
-  if (clause.part === null) got.push(String(said?.shown ?? "").replace("⌕", "").trim());
+  // `UX-1214`: an undrawn list column matches any one of its members.
+  const listed = tr.getAttribute(`data-list-${clause.column}`);
+  const got = listed !== null ? listed.split(" ") : [clause.part === null ? raw : raw.split("|")[clause.part] ?? ""];
+  if (listed === null && clause.part === null) got.push(String(said?.shown ?? "").replace("⌕", "").trim());
   return got.some((value) => (clause.prefix ? value.toLowerCase().startsWith(clause.value)
     : value.toLowerCase() === clause.value));
 }

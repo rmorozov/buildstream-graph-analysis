@@ -580,11 +580,14 @@ export function buildTable(key, rows, hint = {}, node = undefined,
                            depth = 0, options = {}) {
   // `UX-1186`: a list's key columns, or a map's `key`.
   const keyed = [hint[KEYED_BY] ?? []].flat();
-  const specs = columnSpecs(hint, rows, node).map((spec) => {
+  const declared = columnSpecs(hint, rows, node).map((spec) => {
     const kind = keyed.includes(spec.key) ? spec.key
       : spec.key === "key" && keyed.length === 1 ? keyed[0] : null;
     return kind && !spec.role ? { ...spec, role: kind } : spec;
   });
+  // `UX-1214`: an undrawn list column has no head, cell or Copy column; the box reads it off the row.
+  const specs = declared.filter((spec) => spec.drawn !== false);
+  const undrawn = declared.filter((spec) => spec.drawn === false);
   const columns = specs.map((s) => s.key);
   // `UX-1199`: a keyed list column names every element its row holds, for Focus.
   const listed = specs.find((spec) => spec.role === KEYED_BY_ELEMENTS)?.key;
@@ -688,6 +691,7 @@ export function buildTable(key, rows, hint = {}, node = undefined,
           : plainValue(raw)));
     }
     if (Array.isArray(row?.[listed])) tr.setAttribute("data-elements", row[listed].join(" "));
+    for (const spec of undrawn) if (Array.isArray(row?.[spec.key])) tr.setAttribute(`data-list-${spec.key}`, row[spec.key].join(" "));
     body.append(tr);
   }
   table.append(body);
@@ -749,7 +753,7 @@ export function buildTable(key, rows, hint = {}, node = undefined,
   const { note: uniform, gone } = statedOnce(table, specs, rows.length);
   // `UX-1151`: a column said once above the table ranks nothing - no preset over it.
   const tools = interrogable(table, specs.filter((spec) => !gone.has(spec.key)),
-                             rows.length, depth);
+                             rows.length, depth, undrawn);
   // `UX-1055`: after `copy-rows`, not before it - a plain `prepend`
   // put this note ahead of `copy-rows`, undoing its guaranteed first
   // place in the row (styleguide §3l).
@@ -911,7 +915,7 @@ export function renderTable(key, rows, hint = {}, node = undefined,
  * metadata is what makes `> 5s` parseable: the column declares that it
  * is a `duration_us`, so the suffix has a meaning.
  */
-export function interrogable(table, specs, total, depth = 0) {
+export function interrogable(table, specs, total, depth = 0, undrawn = []) {
   const state = { text: "", thresholds: {}, exact: [], top: null, sort: null };
   const narrowed = () => Boolean(state.text.trim() || Object.keys(state.thresholds).length || state.exact.length);
   // UX-334: what these controls are called. The table key is the name
@@ -997,7 +1001,7 @@ export function interrogable(table, specs, total, depth = 0) {
         (th) => [th.getAttribute("data-column"), th.textContent]));
       const share = new Set(ownHeads(table).filter((th) => th.hasAttribute?.("data-share"))
         .map((th) => th.getAttribute("data-column")));
-      const columns = [...filterable, ...Object.values(STATED.get(table) ?? {}).map((said) => said.spec)];
+      const columns = [...filterable, ...Object.values(STATED.get(table) ?? {}).map((said) => said.spec), ...undrawn];
       const query = parseQuery(box.value, columns.map((spec) => (share.has(spec?.key) ? { ...spec, share: true } : spec)),
                                labels);
       Object.assign(state, { text: query.text, exact: query.exact, thresholds: query.thresholds });

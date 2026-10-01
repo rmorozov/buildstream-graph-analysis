@@ -101,7 +101,8 @@ def _line(row, field, count):
     return names and {
         "names": names,
         "links": [f"#{_anchor(n)}" for n in names],
-        "more": f", +{more:,} more" if more > 0 else None,
+        # `UX-1214`: Blocks' rest is a link of its own, after the list's comma.
+        "more": (f"+{more:,} more" if field == "dependents" else f", +{more:,} more") if more > 0 else None,
     }
 
 
@@ -152,5 +153,63 @@ def test_the_card_counts_the_dependents_past_the_cap(big, tmp_path):
         cards = browser.measure(uri, _CARDS, 1440, 900)
         blocks = browser.measure(uri, _FOCUSED.replace("__UID__", uid), 1440, 900)
     built = [line for name, on_demand, line, _ in cards if name == uid and not on_demand]
-    assert [line["more"] for line in built] == [", +1,160 more"], built
+    assert [line["more"] for line in built] == ["+1,160 more"], built
     assert blocks == [str(len(built[0]["links"]) + 1160)] == ["1200"], (blocks, built)
+
+
+# UX-1214: `depends_on:<uid>` on the element table - the rows a fresh load or a typist gets, and no drawn column.
+_DEPENDS = """(() => {
+  const uid = "__UID__";
+  const t = document.querySelector('table[data-table="elements"]');
+  const tools = t.parentNode.querySelector(".table-tools");
+  const box = tools?.querySelector("input.table-filter");
+  const rows = [...t.querySelectorAll("tbody tr")];
+  const listed = rows.filter((tr) => (tr.getAttribute("data-list-depends_on") ?? "").split(" ").includes(uid)).length;
+  if (box && box.value !== `depends_on:${uid}`) {
+    box.value = `depends_on:${uid}`;
+    box.dispatchEvent(new Event("input", { bubbles: true }));
+  }
+  const copy = tools?.querySelector(".copy-rows")?.textContent ?? "";
+  return { listed, matched: box ? Number((/([\\d,]+) matched row/.exec(copy) ?? [0, "-1"])[1].replace(/,/g, "")) : null,
+           columns: [...t.querySelectorAll("th, td")].filter((c) => c.dataset.column === "depends_on").length,
+           view: document.querySelector('select.preset-view[data-table="elements"]')?.value ?? null };
+})()"""
+
+# UX-1214: from another view, the card's "+N more" pressed.
+_FOLLOW = """(() => {
+  const view = document.querySelector('select.preset-view[data-table="elements"]');
+  view.value = "Leaves";
+  view.dispatchEvent(new Event("change"));
+  const more = document.querySelector('section[data-element="toolchain.bst"] [data-list="dependents"] [data-more]');
+  more?.click();
+  const t = document.querySelector('table[data-table="elements"]');
+  const copy = t.parentNode.querySelector(".table-tools .copy-rows")?.textContent ?? "";
+  return { tag: more?.tagName ?? null, href: more?.getAttribute("href") ?? null, view: view.value,
+           matched: Number((/([\\d,]+) matched row/.exec(copy) ?? [0, "-1"])[1].replace(/,/g, "")) };
+})()"""
+
+
+@pytest.mark.skipif(find_chrome() is None, reason=NO_BROWSER)
+@pytest.mark.parametrize("label", ["golden", "macro_micro", "big"])
+def test_a_card_s_more_blocks_reach_every_element_it_counts(label, request, tmp_path):
+    """The card's Blocks "+N more" lands on the element table filtered `depends_on:<uid>`, which holds every
+    element its Blocks counts - the listed 40 and the N more; on each page the most-blocking uid's filter does."""
+    from tools.bga_view import payloads
+
+    run = request.getfixturevalue("big") if label == "big" else FIXTURES[label]
+    fan_in = payloads(str(run))["report.json"]["elements"]["fan_in"]
+    uid = max(fan_in, key=lambda u: fan_in[u]["dependent_count"])
+    count = fan_in[uid]["dependent_count"]
+    uri = pages.export_uri(run, tmp_path)
+    with Browser(find_chrome()) as browser:
+        typed = browser.measure(uri, _DEPENDS.replace("__UID__", uid), 1440, 900)
+        if label == "big":
+            followed = browser.measure(f"{uri}#{_anchor(uid)}", _FOLLOW, 1440, 900, fresh_history=True)
+            landed = browser.measure(uri + followed["href"], _DEPENDS.replace("__UID__", uid), 1440, 900)
+    assert count > 0 and typed["columns"] == 0, (uid, typed)
+    assert (typed["matched"] if typed["matched"] is not None else typed["listed"]) == count, (uid, count, typed)
+    if label != "big":
+        return
+    assert uid == "toolchain.bst" and count == 1200 and len(fan_in[uid]["dependents"]) == 40, uid
+    assert followed["tag"] == "A" and followed["view"] == "All elements" and followed["matched"] == count, followed
+    assert landed["matched"] == count and landed["view"] == "All elements", landed

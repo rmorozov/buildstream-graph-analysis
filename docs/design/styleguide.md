@@ -627,7 +627,9 @@ the placeholder `> 10`.
   or fewer no self-built strip is drawn: the rows are the values —
   filtered to them too (`UX-1170`). A bound over a filter reads
   `25 of 112 matched`, one population (`UX-1195`), and a filter keeping no
-  more than the window `10 matched` (`UX-1213`); a threshold that empties the table hides
+  more than the window `10 matched` (`UX-1213`), one keeping every row `10 of 1,202 matched`
+  or `all 12 matched`, never the unfiltered text (`test_a_value_is_what_it_names.py`); a
+  threshold that empties the table hides
   the copy tools as the text box does. A name that stands alone in the
   rail or the accessibility tree may repeat its cell's label (`UX-1177`).
 

@@ -72,3 +72,7 @@ Follow-up 1 (`tally` in format.js, the one count formatter, routes quantity "cou
 finding prose takes `:,`; two resource_blast count hints in schemas.py): bare 4+-digit text nodes 55 on big + 2 on
 macro_micro -> 0 (`test_no_visible_count_reads_four_bare_digits`; reverting the count case, `_downstream`, the status
 line or a hint: 1 failed). Page half +23 B. Re-based `test_all_rows_means_all_rows.py`'s caption to `all 1,202`.
+Follow-up 2: `bst` on the elements table under Top 10 read `10 of 1,202`, the unfiltered text; badgeText takes
+`narrowed` from the table's state and reads `10 of 1,202 matched` (`all N matched` unbounded), styleguide §3 amended.
+`test_a_filter_matching_every_row_still_says_matched`: `hit` back to `matched < total`, or the caller passing
+`narrowed: false`, reds it (1 failed each). Page half 158,220 -> 158,276 B.

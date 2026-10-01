@@ -202,6 +202,10 @@ const BARE = %s;
     await turn();
     out.badges.filtered.push([uid.slice(0, k), badge()]);
   }
+  box.value = "bst";
+  box.dispatchEvent(new Event("input", { bubbles: true }));
+  await turn();
+  out.badges.every = badge();
   return out;
 })()
 """
@@ -240,6 +244,11 @@ class TestAValueReadsTheSameEverywhere:
         kept = [b for _, b in badges["filtered"] if re.fullmatch(r"\d+ matched", b)]
         assert "10 matched" in kept and "1 matched" in kept, badges
         assert not [b for _, b in badges["filtered"] if re.fullmatch(r"\d+ of 1,202", b)], badges
+
+    def test_a_filter_matching_every_row_still_says_matched(self, said):
+        """`UX-1213` follow-up: `bst` kept all 1,202 and the badge read the unfiltered `10 of 1,202`."""
+        badges = said["big"]["badges"]
+        assert badges["every"] == "10 of 1,202 matched" != badges["window"], badges
 
     def test_a_count_of_a_thousand_carries_its_comma(self, said):
         assert {k: v["rows"] for k, v in said.items() if v["rows"]} == {}

@@ -951,7 +951,8 @@ export function interrogable(table, specs, total, depth = 0, undrawn = []) {
   const view = () => {
     const sort = state.sort && (state.sort.column !== rank || state.sort.direction !== "descending") ? state.sort : null;
     const head = sort && ownHeads(table).find((th) => th.getAttribute("data-column") === sort.column);
-    return { offset: state.top?.offset ?? 0, sorted: sort ? `${head?.textContent.trim() || sort.column}, ${sort.direction}` : "" };
+    return { offset: state.top?.offset ?? 0, sorted: sort ? `${head?.textContent.trim() || sort.column}, ${sort.direction}` : "",
+             narrowed: narrowed() };
   };
   const refresh = () => {
     // `applyFilters` also writes `state.filtered` and `state.kept` - the pre-`top` population.

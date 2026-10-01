@@ -5,7 +5,8 @@ media at 794 px a folded paragraph prints once and a held-back count
 prints as text, not a button; on screen every twin table and SQL paste
 is `hidden="until-found"`, and a find opens the twin. On the
 1,202-element two-plane run every element a bound left unmounted is a
-Jump hit, a press on one opens its card, and a bounded element table's
+Jump hit, a press on one - or on a ranked card's element in a shut
+chapter - opens its card and lands on it, and a bounded element table's
 filter placeholder names Jump.
 """
 
@@ -79,14 +80,27 @@ _JUMP = r"""
     return [...document.querySelectorAll(".jump-hits button[data-jump]")].find((b) => b.getAttribute("data-jump") === uid);
   };
   const missed = detached.filter((uid) => !hit(uid));
+  // A card after a press: its height, its chapter's state and its top against the anchor margin.
+  const land = async (uid) => {
+    hit(uid)?.click();
+    await turn(1200);
+    const at = document.querySelector(`section[data-section^="element-"][data-element="${uid}"]`);
+    const box = at?.getBoundingClientRect();
+    return { uid, height: Math.round(box?.height ?? 0), top: Math.round(box?.top ?? -1),
+             margin: Math.round(parseFloat(at ? getComputedStyle(at).scrollMarginTop : "0")),
+             chapter: at?.closest("section.chapter")?.getAttribute("data-open") ?? null };
+  };
+  // A ranked card whose chapter is shut at rest, its element mounted in a table row.
+  const shut = [...document.querySelectorAll('section.chapter[data-open="false"] section[data-section^="element-"]')]
+    .map((card) => card.getAttribute("data-element")).find((uid) => mounted.has(uid) && !detached.includes(uid));
+  const ranked = shut ? await land(shut) : null;
   const pressed = detached[0];
-  hit(pressed)?.click();
-  await turn(300);
+  const built = await land(pressed);
   const card = document.querySelector(`section[data-section^="element-"][data-on-demand="true"]`);
   const table = document.querySelector('table[data-table="elements"]');
   const filter = table?.closest("dd, section")?.querySelector("input.table-filter");
   return { uids: uids.length, detached: detached.length, missed: missed.slice(0, 5), missedCount: missed.length,
-           pressed, hash: decodeURIComponent(location.hash), card: card?.getAttribute("data-section") ?? null,
+           ranked, built, pressed, hash: decodeURIComponent(location.hash), card: card?.getAttribute("data-section") ?? null,
            bounded: Number(table?.getAttribute("data-rows") ?? 0),
            placeholder: filter?.getAttribute("placeholder") ?? null };
 })()
@@ -149,6 +163,10 @@ class TestPrintAndFindReachTheContent:
     def test_a_jump_to_an_unmounted_element_opens_its_card(self, seen):
         jump = seen["big"]["jump"]
         assert jump["hash"].startswith("#element-") and jump["card"] == jump["hash"][1:].split("~")[0], jump
+        # Both a built card and a ranked one in a shut chapter: open, and landed at the anchor margin.
+        for card in (jump["built"], jump["ranked"]):
+            assert card and card["height"] > 100 and card["chapter"] == "true", jump
+            assert abs(card["top"] - card["margin"]) <= 8, card
 
     def test_the_bounded_element_table_names_jump(self, seen):
         jump = seen["big"]["jump"]

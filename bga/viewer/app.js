@@ -229,14 +229,17 @@ export function wireJumpBox(nav, root, payload, context = {}) {
 
   const go = (target) => {
     if (target.kind === "rail") { target.link.click(); return; }
+    if (target.kind === "element") {
+      // `UX-1179`: an element's place is its card, built, opened and landed as a pasted anchor is.
+      const next = joinHash(elementAnchor(target.key), splitHash(location.hash).query);
+      history[next === location.hash ? "replaceState" : "pushState"](null, "", next);
+      window.dispatchEvent(new Event("hashchange"));
+      return;
+    }
     const escaped = CSS?.escape?.(target.key) ?? target.key;
     const node = target.kind === "section"
       ? document.getElementById(target.key)
-      : target.kind === "binary"
-        ? root.querySelector(`[data-binary="${escaped}"]`) ?? document.getElementById(target.section)
-        : root.querySelector(`[data-element="${escaped}"]`);
-    // `UX-1179`: an unmounted element opens its card.
-    if (!node && target.kind === "element") location.hash = joinHash(elementAnchor(target.key), splitHash(location.hash).query);
+      : root.querySelector(`[data-binary="${escaped}"]`) ?? document.getElementById(target.section);
     if (!node) return;
     // UX-347: a folded chapter is not a wall. Every way in opens it
     // first - here, on a rail link, and on a pasted `#anchor` - so the

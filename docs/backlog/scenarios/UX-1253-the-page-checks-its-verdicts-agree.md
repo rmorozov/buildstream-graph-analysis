@@ -69,3 +69,14 @@ Golden and macro_micro (`--plane2`): none (both `lb == t_infinity_observed`, `ch
 
 `test_the_committed_fixtures_report_none` does not discriminate under these mutations (fewer pairs report fewer
 disagreements); it holds the Acceptance's "golden and macro_micro report none".
+
+Verifier fix (after UX-1244 and UX-1246 merged): a fourth row, `capacity_bound_vs_recommendation`, flags a
+capacity-bound diagnosis beside a recommendation that keeps builders (`builders_change == 0`) while its binding
+row is not the `host_cores` cap. Silent cases added: capacity_bound beside LB at the wall, and beside a host-cap
+keep. The page after the merge reports 0 disagreements. Guard: 11 passed.
+
+| mutation | reddened | run printed |
+|---|---|---|
+| delete PAIRS row `capacity_bound_vs_recommendation` | `test_every_pair_has_a_disagreeing_case`, `[capacity_bound_vs_recommendation]` | 2 failed, 9 passed |
+| drop `DIAGNOSIS_CAPACITY_BOUND` from the floors exclusion | `test_agreeing_sides_report_nothing[capacity_bound_beside_lb_at_the_wall]` | 1 failed, 10 passed |
+| drop `'host_cores'` from the new row's exclusion | `test_agreeing_sides_report_nothing[capacity_bound_beside_a_host_cap_keep]` | 1 failed, 10 passed |

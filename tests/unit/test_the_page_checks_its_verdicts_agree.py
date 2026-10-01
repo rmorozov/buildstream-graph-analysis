@@ -23,6 +23,7 @@ AGREEING = {
     'potential_oversubscription': False,
     'capacity_checks_ran': True,
     'capacity_oversubscribed': False,
+    'builders_change': 0,
 }
 
 #: One contradiction per pair, the 2,402-element page's readings.
@@ -30,7 +31,24 @@ DISAGREEING = {
     'diagnosis_vs_floors': {'diagnosis': 'scheduler_bound', 'lb_us': 2_817_875_000, 't_infinity_us': 277_500_000},
     'oversubscription_vs_capacity_verdict': {'potential_oversubscription': True},
     'binding_constraint_vs_cpu_floor': {'binding_constraint': 'CPU'},
+    'capacity_bound_vs_recommendation': {'diagnosis': 'capacity_bound'},
 }
+
+#: The same sides read consistently: each pair's silent case.
+SILENT = {
+    'capacity_bound_beside_lb_at_the_wall': {
+        'diagnosis': 'capacity_bound',
+        'lb_us': 2_817_875_000,
+        't_infinity_us': 277_500_000,
+        'builders_change': 2,
+    },
+    'capacity_bound_beside_a_host_cap_keep': {'diagnosis': 'capacity_bound', 'binding_constraint': 'host_cores'},
+}
+
+
+@pytest.mark.parametrize('case', sorted(SILENT))
+def test_agreeing_sides_report_nothing(case):
+    assert disagreements({**AGREEING, **SILENT[case]}) == []
 
 
 def test_every_pair_has_a_disagreeing_case():

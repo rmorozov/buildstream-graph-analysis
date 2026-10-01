@@ -31,6 +31,7 @@ def read_verdicts(result, headline: Optional[dict]) -> dict:
         'lb_share_of_wall': lb / wall if lb is not None and wall else None,
         'lb_cpu_binds': floors.get('lb_cpu_binds'),
         'binding_constraint': recommendation.get('binding_constraint'),
+        'builders_change': recommendation.get('builders_change'),
         'potential_oversubscription': utilisation.get('potential_oversubscription'),
         'capacity_checks_ran': verdict.get('checks_ran'),
         'capacity_oversubscribed': verdict.get('oversubscribed'),
@@ -78,6 +79,17 @@ PAIRS = (
         'floors.lb_cpu_binds',
         lambda v: v['binding_constraint'] == 'CPU' and v['lb_cpu_binds'] is False,
         lambda v: ('CPU binds', 'the CPU floor does not bind'),
+    ),
+    Pair(
+        'capacity_bound_vs_recommendation',
+        'headline.diagnosis',
+        'capacity_recommendation.builders_change',
+        lambda v: (
+            v['diagnosis'] == DIAGNOSIS_CAPACITY_BOUND
+            and v['builders_change'] == 0
+            and v['binding_constraint'] not in (None, 'host_cores')
+        ),
+        lambda v: (DIAGNOSIS_CAPACITY_BOUND, f"keep builders, {v['binding_constraint']} binds and is not a cap"),
     ),
 )
 

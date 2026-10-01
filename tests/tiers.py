@@ -1152,8 +1152,8 @@ MEDIUM = (
     "tests/unit/test_one_name_one_population.py",  #  5.6s
     # UX-1183's heavy page, its export and two Chromium reads 4.14s.
     "tests/unit/test_a_traced_elements_binaries_reach_the_page.py",  #  4.1s
-    # UX-1187's 1,202-element export and one Chromium read 4.46s.
-    "tests/unit/test_an_element_view_answers_whole.py",  #  4.5s
+    # UX-1187's 1,202-element export and Chromium reads, merged tree: 14.92 / 14.78 / 14.69s.
+    "tests/unit/test_an_element_view_answers_whole.py",  # 14.8s
     # UX-1182's three gen-synthetic stores, merged tree: 2.06 / 2.05 / 2.07s.
     # UX-1181's test_a_page_half_is_read_once.py, 0.56 / 0.53 / 0.53s, stays small.
     "tests/unit/test_the_synthetic_workload_runs_hundreds_of_binaries.py",  #  4.2s

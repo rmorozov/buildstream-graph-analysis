@@ -256,3 +256,22 @@ class TestAValueReadsTheSameEverywhere:
     def test_no_visible_count_reads_four_bare_digits(self, said):
         """`UX-1213` follow-up: `1202 processes` and `(1201 downstream)` beside badges reading `1,202`."""
         assert {k: v["bare"] for k, v in said.items() if v["bare"]} == {}
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="node is not installed")
+def test_a_filter_that_keeps_every_row_says_all_n_matched():
+    import os
+    import subprocess
+
+    script = (
+        'const t = await import(process.env.BGA_REPO + "/bga/viewer/tables.js");'
+        "console.log(JSON.stringify([t.badgeText(5, 5, 5, { narrowed: true }), t.badgeText(5, 5)]));"
+    )
+    out = subprocess.run(
+        [shutil.which("node"), "--input-type=module", "-e", script],
+        capture_output=True,
+        text=True,
+        check=True,
+        env={**os.environ, "BGA_REPO": str(pages.REPO)},
+    )
+    assert json.loads(out.stdout) == ["all 5 matched", "5 rows"], out.stdout

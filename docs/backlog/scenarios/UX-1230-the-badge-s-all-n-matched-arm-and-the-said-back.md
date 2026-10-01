@@ -2,7 +2,7 @@
 
 **Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-160 residue pass, track R (2026-10-01) | **Serves:** R1 | **Topic:** guards | **Area:** tests | **Shape:** mechanical | **Reading:** container
 
-**Guard:** none — open, no guard named yet
+**Guard:** `tests/unit/test_a_value_is_what_it_names.py::test_a_filter_that_keeps_every_row_says_all_n_matched`, `tests/unit/test_a_key_column_matches_exactly.py::test_a_word_another_column_also_names_is_not_taken_as_the_column_s_own`
 
 ## Motivation
 
@@ -41,4 +41,16 @@ Question:  none
 
 ## Outcome
 
-Open.
+**Gap measured.** Before: `grep -rl "all [0-9a-zN]* matched" tests/unit` found only this commit's new test; the shared-word rule had no test naming it (Decision: neither arm is reached today).
+
+**Close measured.** Two node unit tests, no browser: `badgeText(5, 5, 5, { narrowed: true })` is `all 5 matched` (and `badgeText(5, 5)` stays `5 rows`); `parseQuery("element foo kind:x", [element, element_kind])` leaves `element foo` as text, `unread` empty, one exact clause on `element_kind`. Both files: 31 passed in 44.76s (`-n 2`). No viewer change committed; `tables.js` restored from a copy.
+
+**Mutation table.**
+
+| Mutation | Red | Count |
+|---|---|---|
+| `tables.js:441` `(matched < total ? of : `all ${of}`)` -> `of` | `test_a_filter_that_keeps_every_row_says_all_n_matched` only | 1 failed, 1 passed |
+| `tables.js:115` drop `&& (names.get(word) ?? spec) === spec` | `test_a_word_another_column_also_names_is_not_taken_as_the_column_s_own` only | 1 failed, 1 passed |
+
+**Deviation.** The Decision cites the second arm at line 114; the filter is on line 115 (114 is the `const own` opener).
+

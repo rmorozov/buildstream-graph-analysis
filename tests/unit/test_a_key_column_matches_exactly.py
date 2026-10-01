@@ -13,8 +13,11 @@ import base64
 import collections
 import gzip
 import json
+import os
 import pathlib
 import re
+import shutil
+import subprocess
 
 import pytest
 
@@ -332,3 +335,22 @@ def test_a_spaced_unit_no_column_reads_is_quoted_whole(seen):
     got = seen["older"]["wall_clock_share_us > 1 min"]
     assert got["invalid"] == "true" and "\u201c> 1 min\u201d" in (got["unread"] or ""), got
     assert "matched" not in got["badge"], got
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="node is not installed")
+def test_a_word_another_column_also_names_is_not_taken_as_the_column_s_own():
+    script = (
+        'const t = await import(process.env.BGA_REPO + "/bga/viewer/tables.js");'
+        'const specs = [{ key: "element", title: "Element" }, { key: "element_kind", title: "Element kind" }];'
+        'console.log(JSON.stringify(t.parseQuery("element foo kind:x", specs)));'
+    )
+    out = subprocess.run(
+        [shutil.which("node"), "--input-type=module", "-e", script],
+        capture_output=True,
+        text=True,
+        check=True,
+        env={**os.environ, "BGA_REPO": str(pages.REPO)},
+    )
+    got = json.loads(out.stdout)
+    assert got["unread"] == [] and got["text"] == "element foo", got
+    assert [(c["column"], c["value"]) for c in got["exact"]] == [("element_kind", "x")], got

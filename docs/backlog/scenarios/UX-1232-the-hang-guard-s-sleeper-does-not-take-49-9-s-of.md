@@ -2,7 +2,7 @@
 
 **Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-160 integration (2026-10-01) | **Serves:** R1 | **Topic:** guards | **Area:** tests | **Shape:** mechanical | **Reading:** container
 
-**Guard:** none — open, no guard named yet
+**Guard:** `tests/unit/test_a_hang_is_caught_inside_the_one_run.py::test_a_sleeping_test_fails_with_the_timeout_and_its_node_id`
 
 ## Motivation
 
@@ -41,4 +41,24 @@ Question:  none
 
 ## Outcome
 
-Open.
+**Gap measured.** Before: sleeper `time.sleep(30)`, `timeout=1`, harness `timeout=20`: a 49.9 s wall (round 160) passed the harness limit while the child's own timer fired on the child's clock.
+
+**Close measured.** Sleeper sleeps 300 s against `-o timeout=1`; harness limit 240 s is a backstop only; the test prints the subprocess wall and `RUSAGE_CHILDREN` user time. The round-160 three-file set is not recorded; run beside `test_a_fold_stays_open_in_the_link.py` and `test_a_status_is_announced.py` (Chromium), `-n 0 -s`:
+
+```text
+tests/unit/test_a_hang_is_caught_inside_the_one_run.py sleeper wall 1.40 s, user 0.37 s
+============================= 22 passed in 10.31s ==============================
+```
+
+Alone: `sleeper wall 1.88 s, user 0.73 s`, 2 passed.
+
+**Mutation table.**
+
+| Mutation | Red | Count |
+|---|---|---|
+| `-o timeout=1` to `-o timeout=0` | `AssertionError: the sleeping test ran to the harness limit - no per-test timeout is active` | 1 failed, 1 deselected in 240.35s |
+
+Reverted from a copy; rerun: 2 passed.
+
+**Deviation.** The Decision names returncode/"Timeout" as the red; with the timer off the sleeper outlives the 240 s harness limit, so the red is the harness-limit assertion (the guard's own, named for the missing timeout).
+

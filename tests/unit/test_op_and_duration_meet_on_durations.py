@@ -29,12 +29,15 @@ _LOOK = r"""
   const rows = () => [...t.querySelector(":scope > tbody").children].map(cells);
   const lead = t.closest("section").querySelector("p.section-lead")?.textContent ?? null;
   const out = { heads, lead, opening: rows(), q: {} };
-  const box = t.parentNode.querySelector(".table-tools input.table-filter");
-  for (const text of box ? ["op:BUILD > 60s", "op:BUILD > 5s"] : []) {
+  const tools = t.parentNode.querySelector(".table-tools");
+  const box = tools?.querySelector("input.table-filter");
+  for (const text of box ? ["op:BUILD > 60s", "op:BUILD > 5s", "> 60s", ""] : []) {
     box.value = text;
     box.dispatchEvent(new Event("input", { bubbles: true }));
-    const copy = t.parentNode.querySelector(".table-tools .copy-rows").textContent;
-    out.q[text] = { matched: Number(/([\d,]+) matched row/.exec(copy)[1].replace(/,/g, "")), rows: rows() };
+    const copy = tools.querySelector(".copy-rows").textContent;
+    const unread = tools.parentNode.querySelector(".filter-unread");
+    out.q[text] = { matched: Number(/([\d,]+) matched row/.exec(copy)?.[1].replace(/,/g, "") ?? NaN), rows: rows(),
+                    unread: unread && !unread.hidden ? unread.textContent : null };
   }
   return out;
 })()
@@ -115,8 +118,19 @@ def test_the_duration_column_stands_before_the_marked_share(seen, label):
 @needs_browser
 def test_without_the_key_the_share_table_is_as_it_was(seen):
     got = seen["older"]["page"]
-    assert got["heads"] == [["key", False], ["value", False]], got["heads"]
+    assert got["heads"] == [["key", False], ["value", True]], got["heads"]
     assert "not a duration" in (got["lead"] or ""), got["lead"]
+
+
+@needs_browser
+def test_without_the_key_a_bare_threshold_reads_no_share(seen):
+    # `UX-1194` follow-up: the share is marked on an older payload too, so `> 60s` is said back, not read as a duration.
+    got = seen["older"]["page"]
+    whole = {row["key"] for row in got["q"][""]["rows"]}
+    for text in ("> 60s", "op:BUILD > 60s"):
+        said = got["q"][text]
+        assert said["unread"] and "not applied" in said["unread"], (text, said["unread"])
+        assert {row["key"] for row in said["rows"]} == whole, (text, said["matched"])
 
 
 @needs_browser

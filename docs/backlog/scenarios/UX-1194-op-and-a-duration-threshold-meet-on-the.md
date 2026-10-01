@@ -113,3 +113,7 @@ Re-based in this commit: `test_a_column_is_named_for_its_field.py` (the lead and
 Shares over their own duration: walk 1 (toolchain.bst 0 us, share 291,775,000) -> 0; macro_micro 1 (20,433,333) -> 0; the sum is unchanged (1,447,950,000; 43,200,000). The 60 s premise goes; `op:BUILD > 5s` holds the non-vacuity (share count differs).
 `test_a_mark_says_its_value.py` re-based: its outlier was this defect, so the fixture plants 291,775,000 and the rest's spread is read against the cut (p95 at x 40, bound 10 x 100 x cut/max = 16.5).
 Mutation: the zero-length filter keeping every event gives `test_no_task_holds_more_of_the_window_than_it_ran[walk, macro_micro]` 2 failed, 11 passed.
+
+**Deviation (round 159 verification, older payload).** The share was marked `data-share` only beside Duration, so without `task_durations_us` a bare `> 60s` and `op:BUILD > 60s` read the share (toolchain.bst at 4.9 min, the gap above) and `parseQuery`'s share skip never ran. The share is marked always; the lead stays where Duration is absent.
+Stripped walk page, this commit: `> 60s` and `op:BUILD > 60s` say "“> 60s” is not a threshold this table can read, so it is not applied." and keep all 1,202 rows; heads `[key, value(data-share)]`.
+Mutations: marking only beside Duration gives 2 failed, 11 passed (`..._share_table_is_as_it_was`, `..._a_bare_threshold_reads_no_share`); `!spec.share` dropped from `parseQuery`'s primary gives 1 failed, 12 passed.

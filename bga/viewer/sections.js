@@ -511,8 +511,9 @@ function mapSectionLabels(box, key, hint, node, payload) {
       ?? (named ? title(key, measure) : measure ? title(measure, measure) : "Value"));
     // `UX-1194`: beside the task's own duration the share is marked, and a bare threshold reads the duration.
     const beside = table.querySelector?.('th[data-column="duration_us"]');
-    if (beside) valueHead.setAttribute("data-share", "");
-    else if (named && measure === "duration_us") {
+    const share = named && measure === "duration_us";
+    if (beside || share) valueHead.setAttribute("data-share", "");
+    if (share && !beside) {
       box.prepend(el("p", { class: "section-lead", "data-lead": key },
         "A share of the active window, not a duration: each element's own is in ",
         el("a", { href: "#elements" }, "the element table"), "."));

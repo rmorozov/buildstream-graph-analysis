@@ -117,7 +117,7 @@ class TestTheGateMessageIsSpaced:
 
 _NODE_DURATION = r"""
 const { duration } = await import(process.env.BGA_REPO + "/bga/viewer/format.js");
-process.stdout.write(JSON.stringify([-5_060_000, -50_000, 5_060_000, -8_460_000].map(duration)) + "\n");
+process.stdout.write(JSON.stringify([-5_060_000, -50_000, 5_060_000, -8_460_000, -400, -499, -500].map(duration)) + "\n");
 """
 
 _COMPARE_TEXT = r"""
@@ -144,7 +144,7 @@ def test_a_negative_duration_scales_as_a_positive_one_does():
         check=True,
         env={**os.environ, "BGA_REPO": str(pages.REPO)},
     )
-    assert json.loads(out.stdout) == ["-5.1 s", "-50 ms", "5.1 s", "-8.5 s"], out.stdout
+    assert json.loads(out.stdout) == ["-5.1 s", "-50 ms", "5.1 s", "-8.5 s", "0 ms", "0 ms", "-1 ms"], out.stdout
 
 
 @needs_browser

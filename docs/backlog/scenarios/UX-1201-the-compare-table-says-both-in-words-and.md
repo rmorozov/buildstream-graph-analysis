@@ -44,3 +44,7 @@ Close measured (`PYTHONPATH=. PYTEST_XDIST= python3 -m pytest tests/unit/test_a_
 | delete `READER_LABELS.both` | `test_the_constant_column_sentence_says_both_runs_not_presence_both` | 1 failed, 5 passed |
 
 Deviation: the task's "-5050 ms prints as -5.1 s" is 5.05 s, which `toFixed(1)` rounds to 5.0 (binary float); the guard uses 5,060,000 us. The guard's page is `two_plane_run` (SHAPE 8x14), whose compare table carries the sentence; xl_both was not built.
+
+**Deviation (round 159 verification).** `duration(-400)` and `duration(-499)` printed "-0 ms": the sign was prefixed to a magnitude that rounds to 0; such a negative now prints "0 ms".
+Node, `[-400, -499, -500].map(duration)`: `["-0 ms", "-0 ms", "-1 ms"]` -> `["0 ms", "0 ms", "-1 ms"]`.
+Mutation: the zero test removed gives `test_a_negative_duration_scales_as_a_positive_one_does` 1 failed, 5 passed.

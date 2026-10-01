@@ -182,7 +182,8 @@ const INSTANT = "bga:instant";
 
 export function duration(microseconds) {
   if (microseconds === null || microseconds === undefined) return ABSENT;
-  if (microseconds < 0) return `-${duration(-microseconds)}`;
+  // `UX-1201`: a negative that rounds to nothing prints as nothing, never "-0 ms".
+  if (microseconds < 0) return (shown => (/^0 /.test(shown) ? shown : `-${shown}`))(duration(-microseconds));
   const s = microseconds / 1e6;
   if (s < 1) return `${Math.round(microseconds / 1000)} ms`;
   if (s < 90) return `${s.toFixed(1)} s`;

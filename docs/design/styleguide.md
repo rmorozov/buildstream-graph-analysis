@@ -1570,7 +1570,10 @@ not make its marks, values or threshold readable. A sentence that is only
 a range and a count ("0 ms → 8.1 min across 6 rows") names no image, so
 a column strip's name leads with its column ("Buckets: 0 ms → …", `UX-1155`),
 a published strip's with its key, and a column strip's route is every row
-value it plots, never a range (`UX-1162`). Each drawing shape
+value it plots, never a range (`UX-1162`) - up to 600 characters; past
+that a route states its count, min, p50, p90, p95, max and far outlier,
+and its `aria-details` names the table (`UX-1202`,
+`test_a_status_is_announced.py`). Each drawing shape
 names its route: the density strip, decomposition and interval draw
 their table twin (§2a, §2f) behind a control in the same figure, and an
 annotation-grade drawing points at the table or values it sits beside

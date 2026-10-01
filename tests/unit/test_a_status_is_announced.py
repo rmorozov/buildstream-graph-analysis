@@ -4,7 +4,9 @@ Chromium's own accessibility tree, on `macro_micro` and the 114-element
 two-plane run at 1440, every door open: each table badge is a `status`
 node at rest, each table has a name, and the Jump and Ask boxes name a
 mounted node that carries their no-match line. The drawing-values clip
-rule (`UX-1169`) is read as computed style.
+rule (`UX-1169`) is read as computed style. UX-1202: no aria-label past
+600 chars; a value note past it states p50/p95 and details its table;
+`#handoff-refusal` is no empty live region at rest.
 """
 
 import sys
@@ -19,6 +21,22 @@ from tests import pages
 from tests.browser import NO_BROWSER, Browser, find_chrome
 
 needs_browser = pytest.mark.skipif(find_chrome() is None, reason=NO_BROWSER)
+
+#: UX-1202: above the longest label that is not a value note on any built page (under 300).
+LABEL_BOUND = 600
+
+_SAID = r"""
+(() => {
+  const labels = [...document.querySelectorAll("[aria-label]")].map((n) => n.getAttribute("aria-label"));
+  const notes = [...document.querySelectorAll("[data-role=drawing-values]")].map((n) => ({
+    label: n.getAttribute("aria-label") ?? "",
+    to: document.getElementById(n.getAttribute("aria-details") ?? "")?.tagName ?? null,
+  }));
+  const refusal = document.getElementById("handoff-refusal");
+  return { longest: Math.max(0, ...labels.map((s) => s.length)), notes,
+           refusal: refusal && { role: refusal.getAttribute("role"), text: refusal.textContent.trim() } };
+})()
+"""
 
 _OPEN = pages.OPEN_EVERY_DOOR_JS + "  return ['status', 'table'];"
 
@@ -68,6 +86,7 @@ def heard(tmp_path_factory):
             label: {
                 "tree": browser.ax(uri, "(() => {" + _OPEN + "})()", 1440, 900),
                 "typed": browser.measure(uri, _TYPE, 1440, 900),
+                "said": browser.measure(uri, _SAID, 1440, 900),
                 "tables": browser.measure(
                     uri,
                     "(() => {"
@@ -120,3 +139,21 @@ class TestAStatusIsAnnounced:
             assert values["clip"] == "inset(50%)", (label, values)
             assert values["width"] <= 1 and values["height"] <= 1, (label, values)
         assert heard["two_plane"]["typed"]["values"] is not None, heard["two_plane"]["typed"]
+
+    def test_no_aria_label_passes_the_bound(self, heard):
+        for label, out in heard.items():
+            assert out["said"]["longest"] <= LABEL_BOUND, (label, out["said"]["longest"])
+
+    def test_a_value_note_past_the_bound_states_its_shape_and_details_its_table(self, heard):
+        for label, out in heard.items():
+            shaped = [n for n in out["said"]["notes"] if " values: " in n["label"]]
+            assert all("p50 " in n["label"] and "p95 " in n["label"] and n["to"] == "TABLE" for n in shaped), (
+                label,
+                shaped,
+            )
+        assert any(" values: " in n["label"] for n in heard["two_plane"]["said"]["notes"]), heard["two_plane"]["said"]
+
+    def test_the_refusal_banner_is_no_empty_live_region_at_rest(self, heard):
+        for label, out in heard.items():
+            refusal = out["said"]["refusal"]
+            assert refusal is None or refusal["role"] is None or refusal["text"], (label, refusal)

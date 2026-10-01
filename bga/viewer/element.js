@@ -1285,8 +1285,7 @@ export function renderElementHistory(store, uid, schema = null) {
   if (line) {
     const route = valueRoute(document,
       series.filter((point) => typeof point.duration_us === "number")
-        .map((point) => `${point.stamp} ${seconds(point.duration_us)}`)
-        .join(", ") + ".");
+        .map((point) => [point.stamp, point.duration_us]), { format: seconds });
     block.append(route);
     nameDrawing(line, sentence.textContent, route);
   }

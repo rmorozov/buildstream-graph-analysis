@@ -182,11 +182,36 @@ export function nameDrawing(drawing, sentence, routeNode, name) {
  * `test_the_page_has_a_volume_budget.py`'s `main.textContent` word
  * count (`UX-360`) never sees it - a table twin's cells would have.
  */
-export function valueRoute(doc, allMarksText) {
+export function valueRoute(doc, values, { format = String, names = [], table = null,
+                                         column = null } = {}) {
   const node = box(doc, "span", { "data-role": "drawing-values", role: "note" });
-  node.setAttribute("aria-label", allMarksText);
+  // UX-1202: a value is a number or a [label, number] pair.
+  const pairs = values.map((v) => (Array.isArray(v) ? v : [null, v]));
+  const said = ([label, v]) => (label === null ? format(v) : `${label} ${format(v)}`);
+  const spelled = pairs.map(said).join(", ") + ".";
+  if (spelled.length <= VALUE_ROUTE_CHARS) {
+    node.setAttribute("aria-label", spelled);
+    return node;
+  }
+  const sorted = pairs.map(([, v], i) => [v, names[i] ?? pairs[i][0]])
+    .filter(([v]) => numeric(v)).sort((a, b) => a[0] - b[0]);
+  const rank = (p) => sorted[Math.max(0, Math.ceil((p / 100) * sorted.length) - 1)][0];
+  const [high, who] = sorted.at(-1);
+  const far = high > 10 * rank(90) && who ? ` Far outlier: ${who} ${format(high)}.` : "";
+  let where = "";
+  if (table?.setAttribute) {
+    if (!table.getAttribute?.("id")) table.setAttribute("id", `drawing-table-${ROUTE_SEQ++}`);
+    node.setAttribute("aria-details", table.getAttribute("id"));
+    where = ` Every value: the ${column ?? "plotted"} column of the table.`;
+  }
+  node.setAttribute("aria-label", `${sorted.length.toLocaleString("en-US")} values: `
+    + [["min", sorted[0][0]], ["p50", rank(50)], ["p90", rank(90)], ["p95", rank(95)],
+       ["max", high]].map(([k, v]) => `${k} ${format(v)}`).join(", ") + `.${far}${where}`);
   return node;
 }
+
+//: UX-1202: past this many characters a route states its shape and names its table.
+export const VALUE_ROUTE_CHARS = 600;
 
 // UX-316: an exhibit's tick labels, and its table twin.
 //
@@ -476,8 +501,7 @@ export function sparkline(values, {
     wrap.append(twin);
     route = twin;
   } else {
-    route = valueRoute(doc, points.map((v, i) => `${unit} ${i + origin} ${format(v)}`)
-                                  .join(", ") + ".");
+    route = valueRoute(doc, points.map((v, i) => [`${unit} ${i + origin}`, v]), { format });
     wrap.append(route);
   }
   nameDrawing(line, sentenceText, route);
@@ -696,7 +720,7 @@ export function strip(distribution, {
     wrap.append(twin);
     route = twin;
   } else {
-    route = valueRoute(doc, rows.map(([k, v]) => `${k} ${v}`).join(", ") + ".");
+    route = valueRoute(doc, rows);
     wrap.append(route);
   }
   nameDrawing(drawn, sentenceText, route, name);
@@ -1003,7 +1027,7 @@ export function interval(marks, {
 
 export function columnStrip(values, { format = String, doc = document,
                                       label = null, of, names = [],
-                                      grade = GRADE_ANNOTATION, name } = {}) {
+                                      grade = GRADE_ANNOTATION, name, table = null } = {}) {
   // `UX-316`: annotation grade by construction and by argument both -
   // a strip drawn beside a table *is* the §2a annotation case, and the
   // parameter exists so the guard reads one rule rather than two.
@@ -1045,8 +1069,9 @@ export function columnStrip(values, { format = String, doc = document,
   const sentence = box(doc, "span", { class: "density-sentence",
                                       "data-role": "density-sentence" },
                        sentenceText);
-  // UX-1162: the route is every row value it plots - rows, never its p50/p95.
-  const route = valueRoute(doc, numbers.map((v) => format(v)).join(", "));
+  // UX-1162/UX-1202: every row value it plots, or past the bound its shape and its table.
+  const route = valueRoute(doc, numbers, { format, names: named.map(([, k]) => k), table,
+                                           column: name });
   wrap.append(sentence);
   wrap.append(route);
   nameDrawing(drawn, sentenceText, route, name);

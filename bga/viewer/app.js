@@ -483,12 +483,15 @@ export function announceHandoff(status, text, { refused = false } = {}) {
     status.textContent = text;
     return;
   }
+  // UX-1202: an alert while it holds a refusal, no live region at rest.
   if (refused) {
     banner.textContent = text;
+    banner.setAttribute("role", "alert");
     banner.hidden = false;
     status.textContent = "";
   } else {
     banner.textContent = "";
+    banner.removeAttribute("role");
     banner.hidden = true;
     status.textContent = text;
   }

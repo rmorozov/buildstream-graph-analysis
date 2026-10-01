@@ -126,11 +126,12 @@ export function parseQuery(text, specs = [], labels = {}) {
       exact.push({ column: spec.key, part, prefix, value: (prefix ? value.slice(0, -1) : value).toLowerCase() });
       continue;
     }
-    // `UX-1236`: a name with no quantity of its own (`downstream`) reads the one quantity column carrying that word.
+    // `UX-1236`: an undrawn name (`downstream`) with no quantity of its own reads the one quantity column carrying that word.
     const word = name ? slug(name) : null;
-    const carried = word && !spec?.quantity ? specs.filter((s) => s?.quantity && s.numeric !== false && !s.share && !s.stated
+    const undrawn = word && spec?.drawn === false && !spec.quantity;
+    const carried = undrawn ? specs.filter((s) => s?.quantity && s.numeric !== false && !s.share && !s.stated
       && [s.key, s.title, labels[s.key]].map(slug).filter(Boolean).some((said) => said.split("_").includes(word))) : [];
-    if (word && !spec?.quantity && carried.length !== 1) {
+    if (undrawn && carried.length !== 1) {
       unread.push({ clause, column: name });
       continue;
     }

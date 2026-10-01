@@ -50,3 +50,5 @@ The closure clause itself (UX-1228).
 | `passes` returns true | bare form, `matched` 1202 | 1 failed, 1 passed |
 
 **Deviation:** none. Candidates are named through the existing heads list, not a new message.
+
+**Fix round (verifier):** the fallback re-pointed `element > 1` onto Element duration ("25 of 1,200 matched"). It now applies only to an undrawn name (`spec.drawn === false`, no quantity); a drawn column or a word no column carries is said back unread, unfiltered ("25 of 1,202"). Guard `test_a_drawn_name_or_one_no_column_carries_is_not_re_pointed` (`element > 1`, `blocks > 1`). Mutation (drop the `drawn === false` exclusion): `element` form red, badge "25 of 1,200 matched"; 1 failed, 2 passed. Reverted: 3 passed.

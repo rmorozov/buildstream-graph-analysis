@@ -2,7 +2,7 @@
 
 **Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-160 residue pass, track W3 (2026-10-01) | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical | **Reading:** container
 
-**Guard:** none — open, no guard named yet
+**Guard:** `tests/unit/test_a_press_at_390_opens_no_keyboard.py`
 
 ## Motivation
 
@@ -41,4 +41,26 @@ Question:  none; a reading on Ruslan's phone settles it.
 
 ## Outcome
 
-Open.
+**Gap measured.** `big.html` (1,202 elements, `gen-synthetic --seed 1 --store --layers 20 --width 60`), headless Chromium at 390x844, card `toolchain.bst`, "+1,160 more" pressed, `visualViewport.height` before and after:
+
+```text
+before the fix   fine    before 844  after 844  active INPUT.table-filter
+before the fix   coarse  before 844  after 844  active INPUT.table-filter
+```
+
+Headless Chromium draws no on-screen keyboard, so 844 -> 844 cannot answer whether the focus opens one; the emulator cannot settle the keyboard question. A device reading would. Taken: the Decision's reversible default.
+
+**Close measured.** Under `(pointer: coarse)` the press focuses the Elements heading (`tabindex=-1`), the box still holding the filter; a fine pointer keeps focus in the box (`UX-1214`).
+
+```text
+after the fix    fine    before 844  after 844  active INPUT.table-filter  value depends_on:toolchain.bst
+after the fix    coarse  before 844  after 844  active H3 "Which element should I look at?"  value depends_on:toolchain.bst
+$ pytest -q -n 2 tests/unit/test_a_press_at_390_opens_no_keyboard.py
+2 passed in 3.68s
+golden page half: 159,050 -> 159,146 B (+96)
+```
+
+| mutation | reddened | count |
+|---|---|---|
+| coarse condition dropped (`false ?`): the box at coarse 390 | `[coarse]`: `(False, True) == (True, False)` | 1 failed, 1 passed |
+| condition forced (`true ?`): the heading at fine 390 | `[fine]`: `(True, False) == (False, True)` | 1 failed, 1 passed |

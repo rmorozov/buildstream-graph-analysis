@@ -750,7 +750,11 @@ function elementSection(record, places, investigate, format, bounded = null) {
       const view = document.querySelector?.('select.preset-view[data-table="elements"]');
       if (view?.selectedIndex) { view.selectedIndex = 0; view.dispatchEvent(new Event("change")); }
       // Focus follows the reader to the box that holds the filter just written.
-      filterSection(document, "elements", query)?.focus({ preventScroll: true });
+      const box = filterSection(document, "elements", query);
+      // UX-1229: a touch keyboard would cover the rows, so a coarse pointer focuses the heading.
+      const head = globalThis.matchMedia?.("(pointer: coarse)").matches ? document.getElementById("elements")?.querySelector("h2, h3") : null;
+      head?.setAttribute("tabindex", "-1");
+      (head || box)?.focus({ preventScroll: true });
     });
     line.append(", ", rest);
   }

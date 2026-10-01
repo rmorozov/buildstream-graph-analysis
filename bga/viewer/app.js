@@ -1166,6 +1166,18 @@ async function boot() {
     }, true);
     document.addEventListener?.("click", (event) => {
       const href = fragment(event);
+      // `UX-1196`: a card's "Also in" link lands its element's row there, a folded one included.
+      const uid = event.target?.closest?.("a[data-where]")?.closest?.("[data-element]")?.getAttribute("data-element");
+      const box = uid && href ? document.getElementById(href.slice(1)) : null;
+      box?._hydrate?.();
+      const row = box?.querySelector?.(`tr[data-element="${CSS?.escape?.(uid) ?? uid}"]`);
+      if (row) {
+        event.preventDefault();
+        window.history.pushState(null, "", joinHash(href.slice(1), splitHash(location.hash).query));
+        // At the section's own margin, so the sticky header does not cover the row.
+        revealAndLand(row, undefined, parseFloat(getComputedStyle(box).scrollMarginTop) || 0);
+        return;
+      }
       if (href && href.length > 1) revealAnchor(href.slice(1));
     });
     window.addEventListener?.("popstate", (event) => {

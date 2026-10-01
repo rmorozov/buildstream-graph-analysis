@@ -811,6 +811,11 @@ export function revealAndLand(node, behavior, at) {
   const box = revealChapter(node);
   // `UX-1177`: a fold an anchor names is opened, with every fold around it.
   for (let fold = node?.closest?.("details"); fold; fold = fold.parentElement?.closest?.("details")) fold.open = true;
+  // `UX-1196`: and a head-and-tail fold whose middle holds it, through the fold's own control.
+  const middle = node?.closest?.("tr[data-fold-middle]");
+  if (middle?.hidden) {
+    [...(middle.parentNode?.children ?? [])].find((tr) => tr.className === "fold-row")?.querySelector?.("button")?.click?.();
+  }
   const view = node?.ownerDocument?.defaultView ?? globalThis;
   let landed = null;
   let landedAt = null;

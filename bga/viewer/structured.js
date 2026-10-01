@@ -853,7 +853,8 @@ function foldTheMiddle(table, total, { head, tail, noun = "rows" }) {
   const all = ownRows(table);
   const middle = all.slice(head, all.length - tail);
   if (!middle.length) return null;
-  for (const row of middle) row.hidden = true;
+  // `UX-1196`: marked, so print shows them, Copy takes them and a landing opens the fold.
+  for (const row of middle) { row.hidden = true; row.setAttribute("data-fold-middle", ""); }
   const cells = all[0]?.children?.length ?? 1;
   const more = el("button", {
     type: "button", class: "fold-more", "data-folded": String(middle.length),
@@ -1024,10 +1025,11 @@ export function interrogable(table, specs, total, depth = 0) {
   // UX-673: a preset that cannot shrink the table is apparatus without
   // effect - skip any `n >= total`, and offer no control at all once
   // even the smallest preset fails that test.
+  // `UX-1196`: nor one that hides a single row - `Top 10` of 11 is apparatus too.
   // `UX-1028`: the step past the "All rows" ceiling - built once, set
   // here, appended into `tools` below.
   let pager = null;
-  if ((presets.length && total > 10) || opening) {
+  if ((presets.length && total > 11) || opening) {
     const preset = el("select", { class: "top-n", "aria-label": `Rows shown: ${named}` });
     identify(preset, `top-${key}`);
     // `UX-1028` (styleguide §3k): "All rows" mounts the whole table in
@@ -1039,7 +1041,7 @@ export function interrogable(table, specs, total, depth = 0) {
     }
     // `UX-1197`: bounds only - the rank is the header's sort, the first quantity's at opening.
     for (const n of presets.length ? [10, 25] : []) {
-      if (n < total) preset.append(el("option", { value: `${n}:${rank}` }, `Top ${n} rows`));
+      if (n < total - 1) preset.append(el("option", { value: `${n}:${rank}` }, `Top ${n} rows`));
     }
     if (!presets.length) {
       preset.append(el("option", { value: `${TABLE_OPENS_BOUNDED_ABOVE}:` },
@@ -1188,7 +1190,9 @@ export function interrogable(table, specs, total, depth = 0) {
   // should choose once - `localStorage`, which is where this page
   // already remembers per-reader preferences, and which failing is not
   // allowed to take the report down with it.
-  const shownRows = () => ownRows(table).filter((tr) => !tr.hidden);
+  // `UX-1196`: a head-and-tail fold's held middle is shown rows too; its stub is none.
+  const shownRows = () => ownRows(table).filter((tr) => tr.className !== "fold-row"
+    && (!tr.hidden || (tr.hasAttribute?.("data-fold-middle") && tr.parentNode)));
   // `UX-1189` (§4c): a filter names a population, and copy takes it - up to `ALL_ROWS_CEILING` - not the page.
   const filtered = narrowed;
   const copied = () => (filtered() ? (state.kept ?? []).slice(0, ALL_ROWS_CEILING) : shownRows());
@@ -1322,9 +1326,16 @@ export function liftedCriticalPath(document, node) {
   // `UX-319`: the chain's listing, folded by the chain's own numbers -
   // the same `PATH_HEAD`/`PATH_TAIL` the drawing uses, so the two
   // surfaces show the same chain rather than two elisions of it.
-  return renderTable(LIFTED_SECTION, rows, hintsOf(child), child,
-                     { fold: { head: PATH_HEAD, tail: PATH_TAIL,
-                               noun: "elements" } });
+  const section = renderTable(LIFTED_SECTION, rows, hintsOf(child), child,
+                              { fold: { head: PATH_HEAD, tail: PATH_TAIL,
+                                        noun: "elements" } });
+  // `UX-1196`: the listing's order is a claim, so its header sorts at any length.
+  const table = section.querySelector?.("table");
+  if (table) {
+    sortable(table, ownHeads(table).map((th) => ({ sortable: th.getAttribute("data-sortable") !== "false",
+                                                  quantity: th.getAttribute("data-quantity") })), { always: true });
+  }
+  return section;
 }
 
 // UX-269: a long value is truncated; a long *sentence* is not.

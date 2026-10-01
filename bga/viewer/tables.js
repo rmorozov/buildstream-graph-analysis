@@ -701,10 +701,12 @@ export function showSort(table, sort) {
 // table's *behaviour* - filters, bounds, presets, copy - and sorting
 // is behaviour. It was in the DOM builder only because that is where
 // it was first written.
-export function sortable(table, specs = []) {
+export function sortable(table, specs = [], { always = false } = {}) {
   const body = ownBody(table);
-  if (everyRow(body).length <= SORTABLE_ABOVE) return;
+  // `UX-1196`: `always` - a listing whose order is a claim sorts at any length; a head already sortable is left.
+  if (everyRow(body).length <= SORTABLE_ABOVE && !always) return;
   ownHeads(table).forEach((th, index) => {
+    if (th.querySelector?.("button.th-sort")) return;
     // UX-201: a column the schema declares unsortable stays unsortable,
     // whatever its values happen to look like.
     if (specs[index] && specs[index].sortable === false) return;

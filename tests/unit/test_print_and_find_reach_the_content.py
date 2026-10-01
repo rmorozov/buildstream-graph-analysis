@@ -8,8 +8,12 @@ is `hidden="until-found"`, and a find opens the twin. On the
 Jump hit, a press on one - or on a ranked card's element in a shut
 chapter - opens its card and lands on it, and a bounded element table's
 filter placeholder names Jump.
+UX-1196: there the critical path's head-and-tail fold prints all 22 rows
+and no stub at 794 and 390, copies 22 rows and no stub, and its card's
+link lands a folded row in view; `macro_micro`'s 10-row listing sorts.
 """
 
+import json
 import sys
 from pathlib import Path
 
@@ -27,7 +31,8 @@ _PRINT = r"""
 (() => {
   const shown = (node) => { const r = node.getBoundingClientRect(); return r.width > 0 && r.height > 0; };
   const folds = [...document.querySelectorAll("details.long-text")];
-  const more = [...document.querySelectorAll("button.fold-more")].filter((b) => !b.hidden);
+  // `UX-1196`: a head-and-tail stub is no held-back count - its rows print.
+  const more = [...document.querySelectorAll("button.fold-more")].filter((b) => !b.hidden && !b.closest("tr.fold-row"));
   return {
     folds: folds.length,
     twice: folds.filter((d) => [...d.querySelectorAll(".long-text-head, .full-text")].filter(shown).length !== 1).length,
@@ -107,6 +112,61 @@ _JUMP = r"""
 """
 
 
+#: `UX-1196`: the critical-path listing's own rows and stub, every chapter open.
+_FOLD = r"""
+(async () => {
+  let copied = null;
+  Object.defineProperty(navigator, "clipboard", { value: { writeText: async (t) => { copied = t; } }, configurable: true });
+  const turn = (ms = 50) => new Promise((done) => setTimeout(done, ms));
+  document.querySelectorAll("section.chapter[data-open]").forEach((n) => n.setAttribute("data-open", "true"));
+  await turn();
+  const table = document.querySelector('table[data-table="critical_path_detail"]');
+  const shown = (node) => { const r = node.getBoundingClientRect(); return r.width > 0 && r.height > 0; };
+  const rows = [...table.querySelector("tbody").children];
+  const out = { total: Number(table.getAttribute("data-rows")),
+                rows: rows.filter((tr) => tr.hasAttribute("data-element") && shown(tr)).length,
+                stubs: rows.filter((tr) => tr.classList.contains("fold-row") && shown(tr)).length,
+                buttons: table.querySelectorAll("thead button.th-sort").length };
+  if (!MEDIA_SCREEN) return out;
+  const copy = table.parentNode.querySelector(".table-tools .copy-rows");
+  out.label = copy.textContent;
+  copy.click();
+  await turn();
+  out.copied = copied;
+  const quantity = [...table.querySelectorAll("thead th")].find((th) => th.getAttribute("data-quantity")
+    && th.querySelector("button.th-sort"));
+  quantity?.querySelector("button").click();
+  const column = quantity?.getAttribute("data-column");
+  out.sorted = { column, sort: quantity?.getAttribute("aria-sort") ?? null,
+                 values: [...table.querySelector("tbody").children].filter((tr) => tr.hasAttribute("data-element") && !tr.hidden)
+                   .map((tr) => Number(tr.querySelector(`td[data-column="${column}"]`)?.getAttribute("data-raw"))) };
+  return out;
+})()
+"""
+
+#: `UX-1196`: Jump to an element, then its card's "Also in" link to the critical path: where its row lands.
+_FOLD_JUMP = r"""
+(async () => {
+  const turn = (ms = 50) => new Promise((done) => setTimeout(done, ms));
+  const uid = "layer12/mod058.bst";
+  const jump = document.getElementById("jump");
+  jump.value = uid;
+  jump.dispatchEvent(new Event("input", { bubbles: true }));
+  [...document.querySelectorAll(".jump-hits button[data-jump]")].find((b) => b.getAttribute("data-jump") === uid)?.click();
+  await turn(1200);
+  const card = document.querySelector(`section[data-section^="element-"][data-element="${uid}"]`);
+  const link = card?.querySelector('a[data-where="critical_path_detail"]');
+  link?.click();
+  await turn(1500);
+  const row = document.querySelector(`table[data-table="critical_path_detail"] tr[data-element="${uid}"]`);
+  const box = row?.getBoundingClientRect();
+  return { link: Boolean(link), hidden: row ? row.hidden : null, top: Math.round(box?.top ?? -1),
+           head: Math.round(document.querySelector("body > header")?.getBoundingClientRect().bottom ?? 0),
+           height: Math.round(box?.height ?? 0), viewport: innerHeight, hash: decodeURIComponent(location.hash) };
+})()
+"""
+
+
 @pytest.fixture(scope="module")
 def seen(tmp_path_factory):
     uris = pages.pages(tmp_path_factory, prefix="ux1179", labels=["golden", "macro_micro"])
@@ -127,6 +187,14 @@ def seen(tmp_path_factory):
             if label != "big"
         }
         out["big"] = {"jump": browser.measure(uris["big"], _JUMP, 1440, 900)}
+        screen, paper = _FOLD.replace("MEDIA_SCREEN", "true"), _FOLD.replace("MEDIA_SCREEN", "false")
+        out["fold"] = {
+            "print": browser.measure(uris["big"], paper, 794, 1123, media="print"),
+            "narrow": browser.measure(uris["big"], paper, 390, 844, media="print"),
+            "screen": browser.measure(uris["big"], screen, 1440, 900),
+            "jump": browser.measure(uris["big"], _FOLD_JUMP, 1440, 900),
+            "short": browser.measure(uris["macro_micro"], screen, 1440, 900),
+        }
         return out
 
 
@@ -167,6 +235,29 @@ class TestPrintAndFindReachTheContent:
         for card in (jump["built"], jump["ranked"]):
             assert card and card["height"] > 100 and card["chapter"] == "true", jump
             assert abs(card["top"] - card["margin"]) <= 8, card
+
+    def test_print_holds_every_folded_row_and_no_stub(self, seen):
+        for media in ("print", "narrow"):
+            got = seen["fold"][media]
+            assert got["total"] == 22 and got["rows"] == 22 and got["stubs"] == 0, (media, got)
+
+    def test_copy_takes_every_row_the_fold_holds_and_never_the_stub(self, seen):
+        got = seen["fold"]["screen"]
+        rows = json.loads(got["copied"])
+        assert got["label"] == "Copy 22 rows" and len(rows) == 22, (got["label"], len(rows))
+        assert all(row and row.get("element_uid") for row in rows), rows
+
+    def test_a_folded_row_is_a_landing(self, seen):
+        got = seen["fold"]["jump"]
+        assert got["link"] and got["hidden"] is False and got["height"] > 0, got
+        # Below the sticky header, not under it.
+        assert 0 < got["head"] <= got["top"] < got["viewport"] - got["height"], got
+
+    def test_a_short_listing_keeps_its_sort(self, seen):
+        got = seen["fold"]["short"]
+        values = got["sorted"]["values"]
+        assert got["total"] <= 10 and got["buttons"] > 0 and got["sorted"]["sort"] == "descending", got
+        assert len(values) == got["total"] and values == sorted(values, reverse=True), got
 
     def test_the_bounded_element_table_names_jump(self, seen):
         jump = seen["big"]["jump"]

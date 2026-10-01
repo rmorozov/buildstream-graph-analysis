@@ -482,6 +482,31 @@
   {
     "exception": null,
     "role": "button",
+    "text": "Element"
+  },
+  {
+    "exception": null,
+    "role": "button",
+    "text": "Kind"
+  },
+  {
+    "exception": null,
+    "role": "button",
+    "text": "Duration"
+  },
+  {
+    "exception": null,
+    "role": "button",
+    "text": "Share of path"
+  },
+  {
+    "exception": null,
+    "role": "button",
+    "text": "Realizable"
+  },
+  {
+    "exception": null,
+    "role": "button",
     "text": "Copy # row"
   },
   {
@@ -927,26 +952,6 @@
   {
     "exception": null,
     "role": "th",
-    "text": "Kind"
-  },
-  {
-    "exception": null,
-    "role": "th",
-    "text": "Duration"
-  },
-  {
-    "exception": null,
-    "role": "th",
-    "text": "Share of path"
-  },
-  {
-    "exception": null,
-    "role": "th",
-    "text": "Realizable"
-  },
-  {
-    "exception": null,
-    "role": "th",
     "text": "Saving"
   },
   {
@@ -958,6 +963,11 @@
     "exception": null,
     "role": "th",
     "text": "Cumulative"
+  },
+  {
+    "exception": null,
+    "role": "th",
+    "text": "Duration"
   },
   {
     "exception": null,
@@ -1323,11 +1333,6 @@
     "exception": null,
     "role": "button",
     "text": "Wall-clock share"
-  },
-  {
-    "exception": null,
-    "role": "button",
-    "text": "Element"
   },
   {
     "exception": null,
@@ -1833,26 +1838,6 @@
     "exception": null,
     "role": "heading",
     "text": "Which durations could this run not express?"
-  },
-  {
-    "exception": null,
-    "role": "button",
-    "text": "Kind"
-  },
-  {
-    "exception": null,
-    "role": "button",
-    "text": "Duration"
-  },
-  {
-    "exception": null,
-    "role": "button",
-    "text": "Share of path"
-  },
-  {
-    "exception": null,
-    "role": "button",
-    "text": "Realizable"
   },
   {
     "exception": null,

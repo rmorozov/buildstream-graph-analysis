@@ -209,7 +209,7 @@ def test_rail_next_visits_every_entry_in_order(browser, uris, width):
 @needs_browser
 @pytest.mark.parametrize("label", ["golden", "macro_micro", "big"])
 def test_expand_and_collapse_push_one_entry_and_back_drops_the_filter(browser, uris, label):
-    got = browser.measure(uris[label], _HISTORY, width=1440, height=900)
+    got = browser.measure(uris[label], _HISTORY, width=1440, height=900, fresh_history=True)
     assert got["expand"] == got["collapse"] == "pushed", got
     assert got["back"] == ["expanded", True, "start", True], got
     if label != "golden":  # golden has no table long enough for a filter

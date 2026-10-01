@@ -113,3 +113,8 @@ print, 794 px, th with no printed text   golden 7 of 49 -> 0; macro_micro 31 of 
 mutation: the hiding restored            test_every_table_header_prints_its_label 1 failed
 mutation: the button shown as a box      test_no_control_prints 6 failed (7 controls on golden)
 ```
+
+**Deviation (round 159, the full suite).** The Back guard went red on all three pages in `make test` and `make push-check`. At the shared tab's 50-entry cap, the page's own gesture-less entries are pruned, so the second Back left the document (`history.length` 50 throughout; after n = 2/4/6 pushes the first Back lands and the second leaves).
+`measure(..., fresh_history=True)` resets the tab's history before the load (`Page.resetNavigationHistory`).
+Red then green: 50 navigations, then the guard, gives 3 failed, then 3 passed; the 123 browser files at `-n 4` give 3 failed, then 1797 passed.
+Mutations rerun: Expand/Collapse `pushState` removed gives 3 failed; popstate `box.value = ""` removed gives 2 failed.

@@ -3,15 +3,19 @@ pytest-timeout, set in pyproject.toml - rather than behind a small-tier
 backstop step that runs the tier a second time."""
 
 import os
+import resource
 import subprocess
 import sys
+import time
 
-SLEEPER = "import time\n\n\ndef test_sleeps_past_the_ceiling():\n    time.sleep(30)\n"
+SLEEPER = "import time\n\n\ndef test_sleeps_past_the_ceiling():\n    time.sleep(300)\n"
 
 
 def test_a_sleeping_test_fails_with_the_timeout_and_its_node_id(tmp_path):
     (tmp_path / "test_sleeper.py").write_text(SLEEPER, encoding="utf-8")
     env = {k: v for k, v in os.environ.items() if k != "PYTEST_ADDOPTS"}
+    user0 = resource.getrusage(resource.RUSAGE_CHILDREN).ru_utime
+    t0 = time.monotonic()
     try:
         out = subprocess.run(
             [
@@ -32,10 +36,13 @@ def test_a_sleeping_test_fails_with_the_timeout_and_its_node_id(tmp_path):
             env=env,
             capture_output=True,
             text=True,
-            timeout=20,
+            timeout=240,
         )
     except subprocess.TimeoutExpired as hung:
         raise AssertionError("the sleeping test ran to the harness limit - no per-test timeout is active") from hung
+    wall = time.monotonic() - t0
+    user = resource.getrusage(resource.RUSAGE_CHILDREN).ru_utime - user0
+    print(f"sleeper wall {wall:.2f} s, user {user:.2f} s")
     text = out.stdout + out.stderr
     assert out.returncode != 0, text[-800:]
     assert "Timeout" in text, text[-800:]

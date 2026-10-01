@@ -267,7 +267,7 @@ class TestTheRuleIsTheDeclaration:
 
     def test_the_suffix_comes_off_the_quantity_that_accounts_for_it(self):
         cases = [["execution_on_chain_us", "duration_us"], ["peak_rss_bytes", "bytes"], ["useful_share", "share"]]
-        assert _run(_TITLES, {"BGA_CASES": json.dumps(cases)}) == ["Execution on chain", "Peak rss", "Useful"]
+        assert _run(_TITLES, {"BGA_CASES": json.dumps(cases)}) == ["Execution on chain", "Peak RSS", "Useful"]
 
     def test_a_key_that_only_looks_like_a_duration_keeps_its_suffix(self):
         """`_us` on a `count` is not a unit the value spells - the

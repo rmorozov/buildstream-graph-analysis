@@ -309,19 +309,25 @@ export function collapsible(root, { document: doc, storage,
     toggles.set(key, apply);
   }
 
+  // `UX-1219`: a history entry carries the section folds.
+  const restore = (keys) => {
+    collapsed.clear();
+    for (const [key, apply] of toggles) {
+      apply(keys.includes(key));
+      if (keys.includes(key)) collapsed.add(key);
+    }
+    writeCollapsed(storage, collapsed);
+  };
   return {
     keys: [...toggles.keys()],
+    shut: () => [...collapsed],
+    restore,
     all(shut) {
       // The enclosing layer first when opening, so the sections it
       // holds are on screen by the time they are told to open; and
       // last when shutting, for the same reason in reverse.
       if (!shut) enclosing?.(true);
-      collapsed.clear();
-      for (const [key, apply] of toggles) {
-        apply(shut);
-        if (shut) collapsed.add(key);
-      }
-      writeCollapsed(storage, collapsed);
+      restore(shut ? [...toggles.keys()] : []);
       if (shut) enclosing?.(false);
     },
   };
@@ -945,7 +951,9 @@ export function jumpTargets(root, payload, rail = null, uids = []) {
   }
   // `UX-1186`: from the payload; the DOM mounts one page.
   const binaries = new Set();
-  for (const table of root.querySelectorAll?.("table[data-keyed-by]") ?? []) {
+  // `UX-1225`: a binary's place is the table keyed by it alone, ahead of a pair table that also holds it.
+  const alone = (table) => table.getAttribute("data-keyed-by") === "binary";
+  for (const table of [...root.querySelectorAll?.("table[data-keyed-by]") ?? []].sort((a, b) => alone(b) - alone(a))) {
     if (!table.getAttribute("data-keyed-by").split(" ").includes("binary")) continue;
     const key = table.getAttribute("data-table");
     const section = table.closest?.("section[data-section]")?.getAttribute("data-section") ?? key;

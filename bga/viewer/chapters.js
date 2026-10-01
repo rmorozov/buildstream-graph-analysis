@@ -825,7 +825,8 @@ export function revealAndLand(node, behavior, at) {
     const style = tools && view.getComputedStyle?.(tools);
     return style?.position === "sticky" ? (parseFloat(style.top) || 0) + tools.offsetHeight : 0;
   };
-  const margin = () => Math.max(at ?? (parseFloat(view.getComputedStyle?.(node)?.scrollMarginTop) || 0), clear());
+  // `UX-1221`: an `at` above the viewport stands; only sticky tools floor it.
+  const margin = () => Math.max(at ?? (parseFloat(view.getComputedStyle?.(node)?.scrollMarginTop) || 0), clear() || -Infinity);
   const land = () => {
     if (!node?.getBoundingClientRect) return;
     const top = (view.scrollY ?? 0) + node.getBoundingClientRect().top - margin();

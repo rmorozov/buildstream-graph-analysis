@@ -708,6 +708,7 @@ button.chapter-open:hover, button.chapter-open[aria-expanded="true"] {
   details.long-text > summary, pre.query[hidden] { display: none !important; }
   button.fold-more { font-size: 0; border: 0; background: none; padding: 0; min-height: 0; }
   button.fold-more::after { content: attr(data-folded) " more " attr(data-noun) ", not printed"; font-size: var(--font-small); }
+  .badge[data-filter]::after { content: " - filter: " attr(data-filter); }
   /* `UX-1196`: a head-and-tail fold's middle is in the document, so it prints and its stub does not. */
   tr[data-fold-middle] { display: table-row !important; }
   tr.fold-row { display: none !important; }

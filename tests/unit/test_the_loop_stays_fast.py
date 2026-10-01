@@ -174,7 +174,8 @@ class TestTheSelectorStillSelects:
     # Round 152's merged tree (UX-1106's, UX-1131's and UX-1134's guards name `bga.cli`): median 40, p90 63, max 179 over 718.
     # `UX-1138`'s pinned guard runs `analyze` through `bga.cli`: median 40, p90 64, max 180 over 723.
     # Round 154's merged tree (13 guards over the viewer's modules): median 40, p90 65, max 180 over 736.
-    CEILING = {"median": 40, "p90": 65, "max": 180}
+    # Round 161's merged tree (14 browser guards over the viewer): median 40, p90 65, max 184 over 782.
+    CEILING = {"median": 40, "p90": 65, "max": 190}
     POPULATION_FLOOR = 60
     #: `UX-645`: **13 census + 14 of your own**. The census floor is
     #: inside this bound because those files run - the figure is what

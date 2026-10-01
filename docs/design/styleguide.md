@@ -49,7 +49,7 @@ listed under its topic as `§6e.N`; since round 142 every one is binding.
 | | §6e.9 | a drawing's accessible name is its sentence, with a route to its values; a mark says its value, a strip names its outliers | binding |
 | **Tables and folds** | §3 | tables open bounded, numbers right, one tool row, folds labeled with a count | binding |
 | | §3a | depth is announced; deeper than one level opens in table focus | binding |
-| | §3d | table tools appear at the row cap; a one-value column is a sentence; the tools say the count once (`UX-1163`) | binding |
+| | §3d | table tools appear at the row cap; a one-value column is a sentence; the tools say the count once (`UX-1163`); a link that filters moves focus to its box; an entry naming no View is at the opening View (`UX-1231`) | binding |
 | | §3j | a fold bounds its hidden controls, not only its visible rows | binding |
 | | §3k | every population opens at a named bound, and the step past it is bounded too | binding |
 | **Navigation** | §3b | any section is at most two interactions from the rail | binding |
@@ -636,6 +636,11 @@ the placeholder `> 10`.
   threshold that empties the table hides
   the copy tools as the text box does. A name that stands alone in the
   rail or the accessibility tree may repeat its cell's label (`UX-1177`).
+- **A link that filters a table moves focus to that table's filter box,
+  and an entry naming no View is at the opening View** (`UX-1231`): Enter
+  on a card's "+N more" leaves focus in the box holding the filter; Back
+  returns the reader's own View, Forward the link's, and a history entry
+  that names none is at the View the page opened in (`test_a_card_s_more_reaches_every_dependency_both_ways.py`).
 
 Sorting is exempt from all of this: it costs no ink and helps at every
 length.
@@ -2445,7 +2450,7 @@ headings, so a renumber there moves it.
 | §3a | `test_a_level_names_who_is_in_it.py`, `test_a_value_shows_what_it_is.py`, `test_the_chain_folds_and_clicks_are_counted.py`, `test_the_fold_says_how_deep_it_goes.py`, `test_the_max_jobs_advice_is_one_level.py`, `test_the_merge_carries_every_field.py`, `test_the_page_conforms_to_its_sections.py`, `test_the_provenance_names_its_rule.py`, `test_the_report_you_can_attach.py`, `test_the_serial_chains_are_ranked.py`, `test_the_store_section_takes_a_window.py`, `test_why_bga_believes_what_it_believes.py` | |
 | §3b | `test_the_chain_folds_and_clicks_are_counted.py`, `test_the_page_conforms_to_its_sections.py`, `test_the_rail_is_a_source_list.py` | |
 | §3c | `test_a_new_control_class_lands_declared.py`, `test_the_chain_folds_and_clicks_are_counted.py`, `test_the_merge_carries_every_field.py` | `UX-665`'s registry names the § each control class belongs to, so the census cites this one for the rail's; §3e's volume budget is still the measured half |
-| §3d | `test_a_key_column_matches_exactly.py`, `test_a_new_control_class_lands_declared.py`, `test_the_max_jobs_advice_is_one_level.py`, `test_the_merge_carries_every_field.py` | `UX-349`'s `test_the_tools_scale_with_the_table.py` also holds it and cites §3 |
+| §3d | `test_a_card_s_more_reaches_every_dependency_both_ways.py`, `test_a_key_column_matches_exactly.py`, `test_a_new_control_class_lands_declared.py`, `test_the_max_jobs_advice_is_one_level.py`, `test_the_merge_carries_every_field.py` | `UX-349`'s `test_the_tools_scale_with_the_table.py` also holds it and cites §3 |
 | §3e | `test_the_chain_folds_and_clicks_are_counted.py`, `test_the_page_has_a_volume_budget.py` | |
 | §3f | `test_the_handoff_box_is_measured_served.py`, `test_the_page_has_a_volume_budget.py` | `UX-1050`: the 4,100 class with both planes |
 | §3g | `test_the_ceilings_reach_a_reader.py` | |

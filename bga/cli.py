@@ -708,6 +708,12 @@ def analyzed_with_analyzer(args: argparse.Namespace, section: Optional[str] = No
     else:
         result = analyzer.analyze(run_dir, section=section)
     _attach_plane2_capacity(args, analyzer, result)
+    from bga.correlate import compute_agent_sizing
+
+    # UX-1254: after the recommendation and envelope it reads, never recomputing either.
+    result.agent_sizing = compute_agent_sizing(
+        result, getattr(getattr(analyzer, 'run_context', None), 'max_jobs', None)
+    )
     _attach_resource_blast(run_dir, analyzer, result)
     # UX-680: after Plane 2 is attached, so the compiler-offload half
     # can read `result.plane2_report` when there is one.

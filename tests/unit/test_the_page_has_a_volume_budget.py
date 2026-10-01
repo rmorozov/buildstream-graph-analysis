@@ -380,7 +380,9 @@ BUDGETS = (
     # macro_micro's 71-row `binary_cost` unrolls: 38,226 px measured. 174 of headroom.
     # UX-1200b, Ruslan 05:49 (ranked cards list Blocks/Depends on): px 38,400 -> 39,188, controls
     # 800 -> 868 - macro_micro's measured +788 px, +68 controls; headroom unchanged.
-    (50, 39_188, 13_200, 868, 7_900),
+    # `UX-1254`: controls 868 -> 872 - the sizing card's rail link, fold, JSON door and three source
+    # links (+6) on macro_micro's 866; the owner's call, pending, like UX-1200b's.
+    (50, 39_188, 13_200, 872, 7_900),
     # `UX-1050`: px 36,500 -> 43,500, words 9,600 -> 13,200, nodes
     # 6,000 -> 7,500 on the 4,100 class: `xl_both` (Plane 2 and a store)
     # reads 42,982 px, 12,872 words, 7,209 nodes; Plane 2's cost is flat

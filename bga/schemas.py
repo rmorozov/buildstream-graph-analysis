@@ -361,6 +361,8 @@ _ANALYZE_OPTIONAL = {
     # the Plane 1 sweep with Plane 2's draw, and `capacity_verdict` -
     # "was the capacity right?" - is already here for it to sit beside.
     "capacity_recommendation": "object",
+    # UX-1254: on every full report; with one plane it carries its absence sentence.
+    "agent_sizing": "object",
     # UX-676: the same axis in cores rather than job slots, and the two
     # populations of window that violate it. Not gated on Plane 2 the
     # way `capacity_recommendation` above is - the host is sampled on
@@ -1133,6 +1135,8 @@ ANALYZE_FULL_KEYS = (
     # tables are conditional: they are populations, and an empty one is
     # a run with no violating window rather than a shortened document.
     "utilization_envelope",
+    # `UX-1254`: on every full report; with one plane it carries its absence sentence.
+    "agent_sizing",
 )
 
 # UX-215: the keys a full report carries only when `--plane2` was
@@ -3869,6 +3873,41 @@ _ANALYZE_HINTS = {
                 "one, as `{name, builders}`. Present only "
                 "alongside that memory ceiling."
             },
+        },
+    },
+    # UX-1254: copied from the sections each field names in `source`, never computed.
+    "agent_sizing": {
+        QUESTION: 'What does this build want from this host?',
+        RAIL: 'act',
+        "description": "Builders, cores and memory in one place, each read off the section it links.",
+        "properties": {
+            "builders": {
+                "description": "Recommended, the graph's ceiling, and what this run had.",
+                "properties": {
+                    "recommended": {QUANTITY: "count", "description": "The recommendation's builders."},
+                    "graph_ceiling": {QUANTITY: "count", "description": "The sweep's knee."},
+                    "observed": {QUANTITY: "count", "description": "This run's builders."},
+                },
+            },
+            "cores": {
+                "description": "Cores busy on average, and the p95 peak where the host was sampled.",
+                "properties": {
+                    "average": {QUANTITY: "ratio", "description": "Plane 2's cores busy."},
+                    "peak": {QUANTITY: "ratio", "description": "The host series' p95."},
+                    "host": {QUANTITY: "count", "description": "The host's cores."},
+                },
+            },
+            "memory": {
+                "description": "At most: the largest per-element peak RSS times the builders, as if all peak at once.",
+                "properties": {
+                    "basis": {"description": "`envelope` (memory_envelope) or `process_peak` (Plane 2's peaks)."},
+                    "per_element_bytes": {QUANTITY: "bytes", "description": "The largest element's peak RSS."},
+                    "builders": {QUANTITY: "count", "description": "The builders it is multiplied by."},
+                    "bytes": {QUANTITY: "bytes", "description": "The product."},
+                },
+            },
+            "caveat": {"description": "The recommendation's own caveat."},
+            "absence": {"description": "Which of cores and memory this run did not measure, and why."},
         },
     },
     "capacity_verdict": {

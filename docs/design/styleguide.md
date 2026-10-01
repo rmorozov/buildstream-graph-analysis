@@ -768,7 +768,7 @@ column re-read in round 73:
                  elements   landed   opened    words   controls    nodes
 golden                  4    3,800   15,618    7,144        427    2,498
 macro_micro            11    5,965   31,804   12,002        750    5,686
-budget, to 50 elts             7,600   39,188   13,200        868    7,900
+budget, to 50 elts             7,600   39,188   13,200        872    7,900
 
 scale               1,202    4,763   26,242   36,542      1,941   24,294
 budget, to 4,000 elts          7,000   32,000   41,000      2,300   27,500
@@ -927,6 +927,10 @@ exactly the measured delta: the small class's height 38,400 -> 39,188 and
 controls 800 -> 868 (`macro_micro` +788, +68); the 4,100 class's height
 44,629 -> 46,822 and controls 1,020 -> 1,192 (`xl_both` +2,193, +172);
 its nodes bound stays 7,500 - the merged round reads 7,284.
+
+`UX-1254`'s sizing card moved the small class's controls 868 -> 872:
+its rail link, fold, JSON door and three source links, +6 on
+`macro_micro`'s 866 - pending the owner's call.
 
 `UX-1152`'s card links read section titles, not ids; alone they took
 `macro_micro` to 38,201 px and 13,441 words. Round 154's merged tree,

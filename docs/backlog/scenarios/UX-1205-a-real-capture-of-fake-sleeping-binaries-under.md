@@ -72,3 +72,5 @@ SKIPPED [1] ...:99: bst/bwrap/cc not all found on PATH - see docs/spec/ingestion
 The bst half's own mutations (a skipped call, a static sleep giving 0 records) are unmeasured here: no bst.
 
 Re-based in the same commit: `test_a_generated_project_builds.py`'s bst-gated file census 20 -> 21 and CAS-writing 18 -> 19 (this file builds through `_bst_env.bst_env`); the `bst/bwrap/cc` skip reason's measured count 6 -> 7 in `tests/conftest.py`.
+
+**Deviation (#306 bst-tests).** The staged-toolchain skip sat in the test body, so `test_a_guard_reads_only_what_a_clone_has` flagged the file on the one runner that stages `files/toolchain` (1 failed of 11,697). It is now a `skipif` keyed on `is_dir()`. With the path present locally: before 1 failed, after 2 passed.

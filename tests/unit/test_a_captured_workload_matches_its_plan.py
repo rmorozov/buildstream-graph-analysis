@@ -101,10 +101,12 @@ def test_the_written_project_execs_each_planned_call(tmp_path):
     not (shutil.which("bst") and shutil.which("bwrap") and (shutil.which("cc") or shutil.which("gcc"))),
     reason="bst/bwrap/cc not all found on PATH - see docs/spec/ingestion-pipeline.md",
 )
+@pytest.mark.skipif(
+    not (TOOLCHAIN / "usr/bin").is_dir(),
+    reason="examples/05-cmake-cpp-toolchain's toolchain isn't staged - run stage_cpp_toolchain.sh first",
+)
 def test_a_real_capture_counts_every_planned_call(tmp_path):
     """Plane 2's records per element per binary equal the plan's calls; the heavy element shows 200 binaries."""
-    if not (TOOLCHAIN / "usr/bin").is_dir():
-        pytest.skip("examples/05-cmake-cpp-toolchain's toolchain isn't staged - run stage_cpp_toolchain.sh first")
     from tests.unit._bst_env import bst_env
     from tools.bst_native_build_tracer import pair_events, parse_trace_log, run_traced_build
 

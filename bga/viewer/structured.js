@@ -949,12 +949,12 @@ export function interrogable(table, specs, total, depth = 0) {
   const filterable = specs.map((spec) => !worthFiltering || !spec?.quantity || columnCells(table, spec.key)
     .some((td) => Number.isFinite(Number(td.getAttribute("data-raw")))) ? spec : { ...spec, quantity: null });
   const primary = filterable.find((spec) => spec?.quantity && spec.numeric !== false);
+  const jumps = Boolean(table.getAttribute?.("data-keyed-by"));
   const box = worthFiltering ? el("input", {
     type: "search", class: "table-filter",
-    // `UX-1179`: Jump reaches the rows a bound detaches.
-    placeholder: ["filter", keyed && `${keyed.role === "task_uid" ? "op" : keyed.role}:\u2026`,
-                  primary && (PLACEHOLDER[primary.quantity] ?? "> 0"),
-                  table.getAttribute?.("data-keyed-by") && "or Jump\u2026"].filter(Boolean).join(", "),
+    // `UX-1179`: Jump reaches the rows a bound detaches, in the key hint's place so it fits at 390.
+    placeholder: ["filter", !jumps && keyed && `${keyed.role === "task_uid" ? "op" : keyed.role}:\u2026`,
+                  primary && (PLACEHOLDER[primary.quantity] ?? "> 0"), jumps && "or Jump\u2026"].filter(Boolean).join(", "),
     "aria-label": `Filter rows: ${named}`,
     title: "a word matches any cell; column:value that column exactly (value* its start); column > 5s, or a bare > 5s, a threshold",
   }) : null;

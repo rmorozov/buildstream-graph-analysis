@@ -125,8 +125,6 @@ _FOLD = r"""
 (async () => {
   let copied = null;
   Object.defineProperty(navigator, "clipboard", { value: { writeText: async (t) => { copied = t; } }, configurable: true });
-  // The copy is read as JSON, whatever format an earlier page in this worker's Chrome stored.
-  localStorage.removeItem("bga.copy-format");
   const turn = (ms = 50) => new Promise((done) => setTimeout(done, ms));
   document.querySelectorAll("section.chapter[data-open]").forEach((n) => n.setAttribute("data-open", "true"));
   await turn();

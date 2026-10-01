@@ -46,8 +46,6 @@ _LOOK = r"""
   tools?.querySelector(".copy-rows").click();
   await new Promise((done) => setTimeout(done, 20));
   out.copied = copied?.split("\n")[0] ?? null;
-  // The worker's one Chrome shares file:// storage with every later guard's page.
-  localStorage.removeItem("bga.copy-format");
   return out;
 })()
 """

@@ -1166,4 +1166,6 @@ MEDIUM = (
     # UX-1182's three gen-synthetic stores, merged tree: 2.06 / 2.05 / 2.07s.
     # UX-1181's test_a_page_half_is_read_once.py, 0.56 / 0.53 / 0.53s, stays small.
     "tests/unit/test_the_synthetic_workload_runs_hundreds_of_binaries.py",  #  4.2s
+    # `UX-1215`, `UX-1217`: two fixtures, eight Chromium drives; alone in one process: 4.06 / 4.42 / 4.33s.
+    "tests/unit/test_a_browser_drive_starts_clean.py",  #  4.3s
 )

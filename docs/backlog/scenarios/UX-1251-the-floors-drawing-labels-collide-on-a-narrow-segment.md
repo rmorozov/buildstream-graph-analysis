@@ -41,12 +41,14 @@ On this page at 1440 and 390, and on a fixture with a 2% segment, no two label b
 
 ## Outcome
 
-**Gap measured:** `decomposition()` at 390 and 1440 with a 9.8% chain part: the chain and gap `.draw-tick` boxes intersect while `.decomposition .draw-tick` is `position: absolute; left: at%` (mutation run below).
+**Gap measured:** `decomposition()` at 1440 with a 9.8% chain part: the chain and gap `.draw-tick` boxes intersect while `.decomposition .draw-tick` is `position: absolute; left: at%`; all labels the same grey, no tie to a segment.
 
-**Close measured:** `pytest tests/unit/test_a_segment_label_never_overprints_its_neighbour.py` 6 passed; with `test_the_compact_page_fits_its_width.py`, `test_a_drawing_is_graded.py`, `test_level_decomposition.py` 101 passed. CSS delta about +190 bytes net (3 lines added, 1 removed in `style.css`); `drawings.js` untouched.
+**Close measured:** each stacked label takes a 3px left border in its segment's fill (`--line`, the lead part `--accent-mark` via `data-tone="lead"`, set in `drawings.js`). `pytest tests/unit/test_a_segment_label_never_overprints_its_neighbour.py` 6 passed. Print emulation (`media="print"`, macro_micro, 1440): no hits, no stray, no untoned. Byte delta: `style.css` +3/-1 lines, `drawings.js` +2/-1 lines, about +330 bytes in the page.
 
 | Mutation | Reddened | Count |
 |---|---|---|
-| `.decomposition .draw-tick` back to `position: absolute; left: at%` | `test_constructed_parts_never_intersect[390]`, `[1440]` | 2 failed, 4 passed |
+| `.decomposition .draw-tick` back to `position: absolute; left: at%` | constructed [390], [1440] (overlap) | 2 failed, 4 passed |
+| `margin-left: 0` (label drifts off its segment) | constructed [1440], 4 page cases (`strayed`) | 5 failed, 1 passed |
+| lead tone rule `border-left-color: var(--line)` (tone no longer matches fill) | all (`untoned`) | 6 failed |
 
-**Deviation:** `drawings.js` not touched (CSS alone stacks the labels; `left: auto !important` beats the CSSOM inline `left`); no segment tone or leader added.
+**Deviation:** the guard checks horizontal overlap with the label's own segment (+-3px), not the label's left edge: the `translateX(-at%)` shift (UX-1153) keeps a late label inside the bar, so its left edge is legitimately left of its segment.

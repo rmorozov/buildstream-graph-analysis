@@ -31,7 +31,15 @@ const hits = (axis) => {
     if (r.left < s.right - 0.5 && s.left < r.right - 0.5 && r.top < s.bottom - 0.5 && s.top < r.bottom - 0.5)
       out.push(`${a} / ${b}`);
   }));
-  return { hits: out, ticks: boxes.length };
+  const strayed = [], untoned = [];
+  for (const t of axis.querySelectorAll(".draw-tick")) {
+    const seg = axis.parentElement.querySelector(`rect[data-part="${t.dataset.mark}"]`);
+    if (!seg) { strayed.push("noseg"); continue; }
+    const r = t.getBoundingClientRect(), g = seg.getBoundingClientRect();
+    if (r.right < g.left - 3 || r.left > g.right + 3) strayed.push(t.textContent);
+    if (getComputedStyle(t).borderLeftColor !== getComputedStyle(seg).fill) untoned.push(t.textContent);
+  }
+  return { hits: out, ticks: boxes.length, strayed, untoned };
 };
 """
 
@@ -48,7 +56,7 @@ _CONSTRUCTED = (
     [["a", 5], ["b", 7], ["c", 88]],
   ]) {
     const wrap = mod.decomposition(
-      parts.map(([key, value]) => ({ key, value, label: `Segment ${key} named long`})),
+      parts.map(([key, value]) => ({ key, value, label: `${key}`})),
       { grade: "exhibit", total: 100, format: (v) => `${v} min`, doc: document });
     document.body.append(wrap);
     out.push(hits(wrap.querySelector(".draw-axis")));
@@ -96,6 +104,8 @@ class TestASegmentLabelNeverOverprintsItsNeighbour:
         out = browser.measure(served_url, _CONSTRUCTED, width, 900)
         assert [o["ticks"] for o in out] == [2, 3, 3], out
         assert [o["hits"] for o in out] == [[], [], []], out
+        assert [o["strayed"] for o in out] == [[], [], []], out
+        assert [o["untoned"] for o in out] == [[], [], []], out
 
     @pytest.mark.parametrize("label", ["golden", "macro_micro"])
     @pytest.mark.parametrize("width", WIDTHS)
@@ -104,3 +114,4 @@ class TestASegmentLabelNeverOverprintsItsNeighbour:
         out = browser.measure(uri, _PAGE, width, 900)
         assert out, "no decomposition on the page"
         assert [o["hits"] for o in out] == [[] for _ in out], out
+        assert [o["strayed"] + o["untoned"] for o in out] == [[] for _ in out], out

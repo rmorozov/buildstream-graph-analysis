@@ -1,6 +1,6 @@
 # UX-1201: the compare table says 'both' in words and scales negative durations
 
-**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-158 walk and verification (2026-10-01) | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** judgement | **Reading:** container
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the round-158 walk and verification (2026-10-01) | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** judgement | **Reading:** container
 
 **Guard:** `tests/unit/test_a_value_is_what_it_names.py`
 

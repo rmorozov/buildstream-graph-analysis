@@ -1,6 +1,6 @@
 # UX-1198: Focus shows the focused element's row in each keyed table, and a focus link restores the bar
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-158 walk and verification (2026-10-01) | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical | **Reading:** container
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the round-158 walk and verification (2026-10-01) | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical | **Reading:** container
 
 **Guard:** `tests/unit/test_a_population_key_is_declared.py` (`TestFocusShowsTheFocusedRow`)
 

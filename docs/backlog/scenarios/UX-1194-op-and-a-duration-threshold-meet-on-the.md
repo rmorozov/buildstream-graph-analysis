@@ -1,6 +1,6 @@
 # UX-1194: op: and a duration threshold meet on the table that holds durations
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-158 walk and verification (2026-10-01) | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical | **Reading:** container
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the round-158 walk and verification (2026-10-01) | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical | **Reading:** container
 
 **Guard:** `tests/unit/test_op_and_duration_meet_on_durations.py`
 

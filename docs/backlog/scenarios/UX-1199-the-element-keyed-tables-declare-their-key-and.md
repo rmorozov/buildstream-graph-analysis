@@ -1,6 +1,6 @@
 # UX-1199: the element-keyed tables declare their key, and by_binary, binary_cost and serial_chains rank and name their quantity
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-158 walk and verification (2026-10-01) | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer, bga/schemas | **Shape:** mechanical | **Reading:** container
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the round-158 walk and verification (2026-10-01) | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer, bga/schemas | **Shape:** mechanical | **Reading:** container
 
 **Guard:** `tests/unit/test_a_population_key_is_declared.py` (`TestAListKeyedTableAndARankAreDeclared`)
 

@@ -1,6 +1,6 @@
 # UX-1195: the filter grammar matches what the page shows: a constant column, the displayed word, the column's name
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-158 walk and verification (2026-10-01) | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical | **Reading:** container
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the round-158 walk and verification (2026-10-01) | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical | **Reading:** container
 
 **Guard:** test_a_key_column_matches_exactly.py
 

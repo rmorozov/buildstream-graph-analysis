@@ -1,6 +1,6 @@
 # UX-1197: the Rows-shown bound holds across Next, sort and the link, and a page step and a sort are announced and named
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-158 walk and verification (2026-10-01) | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical | **Reading:** container
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the round-158 walk and verification (2026-10-01) | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical | **Reading:** container
 
 **Guard:** test_a_pager_continues_the_view.py
 

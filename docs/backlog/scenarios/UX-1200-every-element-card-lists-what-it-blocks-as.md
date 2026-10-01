@@ -1,6 +1,6 @@
 # UX-1200: every element card lists what it blocks, as links, with one count
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-158 walk and verification (2026-10-01) | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical | **Reading:** container
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the round-158 walk and verification (2026-10-01) | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical | **Reading:** container
 
 **Guard:** `tests/unit/test_an_element_view_answers_whole.py` (`test_the_card_lists_what_an_element_blocks`, `test_the_card_counts_the_dependents_past_the_cap`)
 

@@ -1,6 +1,6 @@
 # UX-1205: a real capture of fake sleeping binaries under the LD_PRELOAD hook
 
-**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-158 walk and verification (2026-10-01) | **Serves:** R1 | **Topic:** capture | **Area:** tools | **Shape:** mechanical | **Reading:** container
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the round-158 walk and verification (2026-10-01) | **Serves:** R1 | **Topic:** capture | **Area:** tools | **Shape:** mechanical | **Reading:** container
 
 **Guard:** `tests/unit/test_a_captured_workload_matches_its_plan.py`
 

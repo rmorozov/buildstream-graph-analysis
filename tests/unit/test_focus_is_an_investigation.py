@@ -87,8 +87,8 @@ class TestTheEvidenceIsAssembled:
         assert len(chain) >= 3, chain
         out = self._panel(payload, chain[1])
         relations = {row["label"]: row["text"] for row in out["rows"] if row["group"] == "relationships"}
-        assert relations["Waits on (chain)"] == chain[0]
-        assert relations["Blocks (chain)"] == chain[2]
+        assert relations["Before it on the critical path"] == chain[0]
+        assert relations["After it on the critical path"] == chain[2]
 
     def test_an_absent_plane_says_so_rather_than_going_quiet(self, payload):
         """ "Plane 2 saw nothing" and "Plane 2 was not run" are

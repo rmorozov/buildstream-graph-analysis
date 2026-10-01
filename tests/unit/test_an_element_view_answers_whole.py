@@ -69,8 +69,17 @@ _CARDS = """(() => [...document.querySelectorAll('section[data-element]')].map((
   const line = s.querySelector('[data-list="dependents"]');
   return [s.dataset.element, s.dataset.onDemand === 'true', line && {
     names: [...line.querySelectorAll('[data-raw]')].map((n) => n.dataset.raw),
+    links: [...line.querySelectorAll('a[href][data-raw]')].map((a) => a.getAttribute('href')),
     more: line.querySelector('[data-more]')?.textContent ?? null}];
 }))()"""
+
+# UX-1200: the on-demand card's Focus, and the investigation's one Blocks figure.
+_FOCUSED = """(() => {
+  document.querySelector(`section[data-on-demand="true"] button.focus-this[data-focus-element="__UID__"]`)?.click();
+  const panel = document.querySelector('[data-role=focus-investigation] [data-group=relationships]');
+  const rows = [...(panel?.querySelectorAll('dt') ?? [])].map((dt) => [dt.textContent, dt.nextElementSibling]);
+  return rows.filter(([label]) => label === 'Blocks').map(([, dd]) => dd.dataset.raw);
+})()"""
 
 
 @pytest.fixture(scope="module")
@@ -86,7 +95,8 @@ def _anchor(uid):
 @pytest.mark.parametrize("label", ["golden", "macro_micro", "big"])
 def test_the_card_lists_what_an_element_blocks(label, request, tmp_path):
     """No ranked card carries the Blocks list (+2,193 px on `xl_both`); the card an anchor
-    builds names the most-blocking unranked element's dependents, exactly."""
+    builds links the most-blocking unranked element's dependents, exactly, and its Focus
+    investigation's Blocks is `dependent_count`."""
     from tools.bga_view import payloads
 
     run = request.getfixturevalue("big") if label == "big" else FIXTURES[label]
@@ -102,8 +112,11 @@ def test_the_card_lists_what_an_element_blocks(label, request, tmp_path):
         uid = unranked[0]
         assert fan_in[uid]["dependent_count"] > 1, uid
         cards = browser.measure(f"{uri}#{_anchor(uid)}", _CARDS, 1440, 900)
+        blocks = browser.measure(f"{uri}#{_anchor(uid)}", _FOCUSED.replace("__UID__", uid), 1440, 900)
     built = [line for name, on_demand, line in cards if name == uid and on_demand]
-    assert built == [{"names": fan_in[uid]["dependents"], "more": None}], built
+    names = fan_in[uid]["dependents"]
+    assert built == [{"names": names, "links": [f"#{_anchor(n)}" for n in names], "more": None}], built
+    assert blocks == [str(fan_in[uid]["dependent_count"])], blocks
 
 
 @pytest.mark.skipif(find_chrome() is None, reason=NO_BROWSER)
@@ -121,7 +134,11 @@ def test_the_card_counts_the_dependents_past_the_cap(big, tmp_path, monkeypatch)
         return documents
 
     monkeypatch.setattr(view, "payloads", past_the_cap)
+    uri = f"{pages.export_uri(big, tmp_path)}#{_anchor(uid)}"
     with Browser(find_chrome()) as browser:
-        cards = browser.measure(f"{pages.export_uri(big, tmp_path)}#{_anchor(uid)}", _CARDS, 1440, 900)
-    built = [line["more"] for name, on_demand, line in cards if name == uid and on_demand]
-    assert built == [", +1,200 more"], built
+        cards = browser.measure(uri, _CARDS, 1440, 900)
+        blocks = browser.measure(uri, _FOCUSED.replace("__UID__", uid), 1440, 900)
+    built = [line for name, on_demand, line in cards if name == uid and on_demand]
+    assert [line["more"] for line in built] == [", +1,200 more"], built
+    # One count: the card's links plus its "+N more" is the investigation's Blocks.
+    assert blocks == [str(len(built[0]["links"]) + 1200)], (blocks, built)

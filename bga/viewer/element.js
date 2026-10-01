@@ -307,6 +307,7 @@ const ELEMENT_LIST_MAPS = [
   // UX-1187: its mirror, and the count past the 40 names.
   ["elements.fan_in", "dependents", "Blocks", "dependent_count"],
 ];
+const FAN_IN_LISTS = new Set(ELEMENT_LIST_MAPS.map(([, field]) => field));
 
 /**
  * One element's record, whether or not the report's ranking reached it.
@@ -724,9 +725,10 @@ function elementSection(record, places, investigate, format, bounded = null) {
     const folded = bounded?.(named.key, named.items);
     section.append(line);
     if (folded) section.append(folded);
-    // `UX-1159`: a Plane 2 flag reads as its phrase; a name stays copyable.
-    else line.append(...named.items.flatMap((item) => [", ",
-      el(READER_LABELS[item] ? "span" : "code", { "data-raw": item }, READER_LABELS[item] ?? item)]).slice(1));
+    // `UX-1159`: a Plane 2 flag reads as its phrase; a name stays copyable; UX-1200: a fan_in uid is a link.
+    else line.append(...named.items.flatMap((item) => [", ", FAN_IN_LISTS.has(named.key)
+      ? el("a", { href: `#${elementAnchor(item)}`, "data-raw": item }, item)
+      : el(READER_LABELS[item] ? "span" : "code", { "data-raw": item }, READER_LABELS[item] ?? item)]).slice(1));
     if (named.more > 0) line.append(el("span", { "data-more": named.more }, `, +${named.more.toLocaleString("en-US")} more`));
   }
 

@@ -499,15 +499,21 @@ function investigationRelations(payload, uid) {
     const at = chain.indexOf(uid);
     const cite = (i) => `critical_path_detail[${i}].element_uid`;
     if (at > 0) {
-      rows.push({ label: "Waits on (chain)", path: cite(at - 1),
+      rows.push({ label: "Before it on the critical path", path: cite(at - 1),
                   raw: chain[at - 1], text: chain[at - 1],
                   href: `#${elementAnchor(chain[at - 1])}` });
     }
     if (at !== -1 && at < chain.length - 1) {
-      rows.push({ label: "Blocks (chain)", path: cite(at + 1),
+      rows.push({ label: "After it on the critical path", path: cite(at + 1),
                   raw: chain[at + 1], text: chain[at + 1],
                   href: `#${elementAnchor(chain[at + 1])}` });
     }
+  }
+  // UX-1200: "Blocks" is the card's count, one figure wherever it is drawn.
+  const blocks = resolvePath(payload, `elements.fan_in[${uid}].dependent_count`);
+  if (typeof blocks === "number") {
+    rows.push({ label: "Blocks", path: `elements.fan_in[${uid}].dependent_count`,
+                raw: blocks, text: plural(blocks, "element") });
   }
   const downstream = resolvePath(
     payload, `elements.blast_radius[${uid}].downstream_count`);

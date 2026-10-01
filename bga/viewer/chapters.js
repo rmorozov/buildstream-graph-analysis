@@ -819,7 +819,13 @@ export function revealAndLand(node, behavior, at) {
   const view = node?.ownerDocument?.defaultView ?? globalThis;
   let landed = null;
   let landedAt = null;
-  const margin = () => at ?? (parseFloat(view.getComputedStyle?.(node)?.scrollMarginTop) || 0);
+  // A row lands below its table's sticky tools, which would otherwise cover it.
+  const tools = node?.tagName === "TR" ? node.closest?.("table")?.parentNode?.querySelector?.(":scope > .table-tools") : null;
+  const clear = () => {
+    const style = tools && view.getComputedStyle?.(tools);
+    return style?.position === "sticky" ? (parseFloat(style.top) || 0) + tools.offsetHeight : 0;
+  };
+  const margin = () => Math.max(at ?? (parseFloat(view.getComputedStyle?.(node)?.scrollMarginTop) || 0), clear());
   const land = () => {
     if (!node?.getBoundingClientRect) return;
     const top = (view.scrollY ?? 0) + node.getBoundingClientRect().top - margin();

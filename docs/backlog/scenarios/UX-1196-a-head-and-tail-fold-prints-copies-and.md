@@ -122,3 +122,9 @@ tables.js/structured.js/viewstate.js/chapters.js/app.js/style.css, the fold, the
 Re-based guards: `test_print_and_find_reach_the_content.py`'s held-back-count case skips a stub inside `tr.fold-row`
 (its rows now print); `test_a_rail_click_lands_on_its_section.py` counts five `revealAndLand` callers in app.js, not
 four; `docs/design/rendered-strings.json` regenerated (the listing's heads are buttons now).
+
+Follow-up (walk N5): the landed row sat under its sticky table tools - row centre hit `div.table-tools`, rows at 60/80 px
+under tools 52-152/72-200 px at 1440/390; Jump to a binary (by_binary, UX-1199's key) the same. `revealAndLand` now
+lands a `tr` below its table's sticky tools: rows at 152/200 px and 106/166 px, the centre the row's own cell.
+`test_a_landed_row_is_not_under_the_table_tools` reads `elementFromPoint` at 1440 and 390; the old margin back reddens
+it 4 failed, 12 passed.

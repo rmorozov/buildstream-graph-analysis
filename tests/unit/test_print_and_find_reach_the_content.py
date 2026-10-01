@@ -12,6 +12,7 @@ UX-1196: there the critical path's head-and-tail fold prints all 22 rows
 and no stub at 794 and 390, copies 22 rows and no stub, and its card's
 link lands a folded row in view; `macro_micro`'s 10-row listing sorts.
 UX-1203: in print every `th` on golden and `macro_micro` has its label.
+A row "Also in" or Jump to a binary lands is what sits at its centre, at 1440 and 390.
 """
 
 import json
@@ -167,9 +168,29 @@ _FOLD_JUMP = r"""
   await turn(1500);
   const row = document.querySelector(`table[data-table="critical_path_detail"] tr[data-element="${uid}"]`);
   const box = row?.getBoundingClientRect();
+  const hit = box && document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
   return { link: Boolean(link), hidden: row ? row.hidden : null, top: Math.round(box?.top ?? -1),
+           over: hit && !row.contains(hit) ? `${hit.tagName}.${hit.className}` : null,
            head: Math.round(document.querySelector("body > header")?.getBoundingClientRect().bottom ?? 0),
            height: Math.round(box?.height ?? 0), viewport: innerHeight, hash: decodeURIComponent(location.hash) };
+})()
+"""
+
+#: N5: Jump to a binary mid-way down by_binary: what sits at its row's centre once landed.
+_BINARY_JUMP = r"""
+(async () => {
+  const rows = [...document.querySelectorAll('table[data-table="by_binary"] tr[data-binary]')];
+  const key = rows[Math.floor(rows.length / 2)]?.getAttribute("data-binary");
+  const jump = document.getElementById("jump");
+  jump.value = key;
+  jump.dispatchEvent(new Event("input", { bubbles: true }));
+  [...document.querySelectorAll(".jump-hits button[data-jump]")].find((b) => b.getAttribute("data-jump") === key)?.click();
+  await new Promise((done) => setTimeout(done, 1500));
+  const row = document.querySelector(`table[data-table="by_binary"] tr[data-binary="${CSS.escape(key)}"]`);
+  const box = row?.getBoundingClientRect();
+  const hit = box && document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
+  return { key, rows: rows.length, top: Math.round(box?.top ?? -1), height: Math.round(box?.height ?? 0),
+           over: !hit ? "nothing" : row.contains(hit) ? null : `${hit.tagName}.${hit.className}` };
 })()
 """
 
@@ -184,6 +205,8 @@ def seen(tmp_path_factory):
         page = tmp_path_factory.mktemp(f"ux1179-{label}-page") / "report.html"
         view.export(str(run), str(page))
         uris[label] = page.as_uri()
+    heavy = tmp_path_factory.mktemp("ux1179-heavy-page") / "report.html"
+    view.export(str(pages.heavy_binary_run(tmp_path_factory.mktemp("ux1179-heavy"))), str(heavy))
     with Browser(find_chrome()) as browser:
         out = {
             label: {
@@ -200,6 +223,9 @@ def seen(tmp_path_factory):
             "narrow": browser.measure(uris["big"], paper, 390, 844, media="print"),
             "screen": browser.measure(uris["big"], screen, 1440, 900),
             "jump": browser.measure(uris["big"], _FOLD_JUMP, 1440, 900),
+            "jump390": browser.measure(uris["big"], _FOLD_JUMP, 390, 844),
+            "binary": browser.measure(heavy.as_uri(), _BINARY_JUMP, 1440, 900),
+            "binary390": browser.measure(heavy.as_uri(), _BINARY_JUMP, 390, 844),
             "short": browser.measure(uris["macro_micro"], screen, 1440, 900),
         }
         return out
@@ -265,6 +291,11 @@ class TestPrintAndFindReachTheContent:
         assert got["link"] and got["hidden"] is False and got["height"] > 0, got
         # Below the sticky header, not under it.
         assert 0 < got["head"] <= got["top"] < got["viewport"] - got["height"], got
+
+    @pytest.mark.parametrize("case", ["jump", "jump390", "binary", "binary390"])
+    def test_a_landed_row_is_not_under_the_table_tools(self, seen, case):
+        got = seen["fold"][case]
+        assert got["top"] >= 0 and got["over"] is None, got
 
     def test_a_short_listing_keeps_its_sort(self, seen):
         got = seen["fold"]["short"]

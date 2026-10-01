@@ -1170,6 +1170,19 @@
         "app.bst|BUILD|BUILD|0": 1575000.0,
         "all.bst|BUILD|BUILD|0": 0.0
     },
+    "task_durations_us": {
+        "codegen.bst|BUILD|BUILD|0": 7000000,
+        "core.bst|BUILD|BUILD|0": 19050000,
+        "toolchain.bst|BUILD|BUILD|0": 0,
+        "lib-a.bst|BUILD|BUILD|0": 3000000,
+        "lib-b.bst|BUILD|BUILD|0": 4000000,
+        "lib-c.bst|BUILD|BUILD|0": 3000000,
+        "lib-d.bst|BUILD|BUILD|0": 4000000,
+        "lib-e.bst|BUILD|BUILD|0": 3000000,
+        "lib-f.bst|BUILD|BUILD|0": 4000000,
+        "app.bst|BUILD|BUILD|0": 3150000,
+        "all.bst|BUILD|BUILD|0": 0
+    },
     "ready_queue": {
         "average_depth": 0.0,
         "peak_depth": 0,
@@ -2331,10 +2344,10 @@
         }
     ],
     "document_shape": {
-        "leaves": 1570,
+        "leaves": 1581,
         "deepest_depth": 7,
         "deepest_path": "findings.[].evidence.steps.[].entering.[]",
         "deeper_than_three": 958,
-        "deeper_than_three_share": 0.6101910828025477
+        "deeper_than_three_share": 0.6059456040480709
     }
 }

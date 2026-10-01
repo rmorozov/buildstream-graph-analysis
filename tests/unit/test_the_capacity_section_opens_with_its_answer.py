@@ -111,7 +111,7 @@ def test_the_clamp_is_told_in_the_sentence():
         {"cores_busy": 0.5138, "host_cpu_count": 4}, {}, knee=8, knee_range_top=8, builders=4
     )
     assert got["verdict"].startswith("Keep 4 builders:"), got["verdict"]
-    assert "could feed 31" in got["verdict"] and "cap, not load, binds" in got["verdict"], got["verdict"]
+    assert "could feed 31" in got["verdict"] and "the host's 4 cores cap it" in got["verdict"], got["verdict"]
     assert "the graph allows 8" in got["verdict"], got["verdict"]
 
 

@@ -1092,7 +1092,7 @@ the real payload instead of by validation:
 
 ```bash
 bga compare --schema | jq '."bga:always_written"'
-# ["verdict_provenance", "build_class_comparison", "baseline_band_sources"]
+# ["verdict_provenance", "build_class_comparison", "baseline_band_sources", "total_duration_delta_share"]
 ```
 
 `compare/v2`'s `verdict_provenance` is the worked example. `UX-610`

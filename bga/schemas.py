@@ -1212,7 +1212,12 @@ _COMPARE_REQUIRED = {
 # live id stops a document a consumer already wrote from validating.
 # The guarantee is the emitter's, held against the real payload by
 # `tests/unit/test_a_required_set_grew_under_an_unchanged_id.py`.
-_COMPARE_ALWAYS_WRITTEN = ("verdict_provenance", "build_class_comparison", "baseline_band_sources")
+_COMPARE_ALWAYS_WRITTEN = (
+    "verdict_provenance",
+    "build_class_comparison",
+    "baseline_band_sources",
+    "total_duration_delta_share",
+)
 
 # UX-221: `element_diff` has been emitted since UX-79 and declared by
 # nothing, so `UX-190`'s contract never covered it and `bga view` had no
@@ -1248,6 +1253,8 @@ _COMPARE_OPTIONAL = {
     # `_COMPARE_ALWAYS_WRITTEN` rather than required - the same third
     # state the two keys above are in.
     "baseline_band_sources": "array",
+    # `UX-1257`: the wall delta over the baseline's wall-clock; `null` with no baseline total.
+    "total_duration_delta_share": "number",
 }
 
 _BLAST_REQUIRED = {
@@ -3723,7 +3730,8 @@ _ANALYZE_HINTS = {
                         "key": "name",
                         "title": "Constraint",
                         "sortable": True,
-                        "description": "`graph`, `CPU` or `memory` — which of the four inputs this ceiling comes from.",
+                        "description": "`graph`, `CPU`, `host_cores` or `memory` — which of the four inputs "
+                        "this ceiling comes from. `host_cores` is the CPU figure capped at the host's cores.",
                     },
                     {"key": "allows", "title": "Builders it allows", "quantity": "count", "sortable": True},
                     {
@@ -3736,7 +3744,7 @@ _ANALYZE_HINTS = {
                         "title": "Before clamping",
                         "quantity": "count",
                         "sortable": True,
-                        "description": "Present only on the CPU row, "
+                        "description": "Present only on the host_cores row, "
                         "and only when the derived figure "
                         "exceeded the host's cores — the "
                         "unclamped value `allows` was capped "
@@ -3931,7 +3939,8 @@ _ANALYZE_HINTS = {
     "violations": {
         QUESTION: 'What did not add up?',
         RAIL: 'prove',
-        GROWS: "ordering/clamp violations, one per offending dependency edge or resource check (no cap observed)",
+        GROWS: "ordering/clamp violations, one per offending dependency edge or resource check (no cap observed), "
+        "and at most one verdict_disagreement per bga.consistency.PAIRS row",
         "items": {"type": "object"},
     },
     # `UX-344`: every claim's chain, once, beside the claims.
@@ -4786,6 +4795,10 @@ _ANALYZE_HINTS = {
                             "rebuilds — the cost of "
                             "touching it, beside the gain.",
                         },
+                        "step": {
+                            "description": "A capacity-bound run's builders "
+                            "step, leading the list in place of an element.",
+                        },
                     },
                 },
             },
@@ -5229,12 +5242,14 @@ _ANALYZE_HINTS = {
                 "this accounting, not the capacity verdict."
             },
             "oversubscription_evidence": {
-                "description": "What that hint rests on, including the case where there was not enough to say."
+                "description": "What that hint rests on, including the case where there was not enough "
+                "to say. HIGH_SLOT_OCCUPANCY is builder slots full and is no hint on its own; "
+                "HIGH_CPU_UTILIZATION needs Plane 2's cores busy."
             },
             "max_observed_concurrency": {
                 QUANTITY: "count",
                 "title": "Peak tasks at once",
-                "description": "The most tasks seen running together in this accounting's own view of the run.",
+                "description": "The most task intervals that overlap at one instant.",
             },
             "useful_share": {
                 INLINE: "name",
@@ -5661,6 +5676,11 @@ _CONFIDENCE = {
 
 
 _COMPARE_HINTS = {
+    "total_duration_delta_share": {
+        QUANTITY: "share",
+        DIRECTION: "lower_is_better",
+        "description": "The wall-clock change as a share of the baseline's wall-clock. Negative is faster.",
+    },
     # `UX-610`: the same shape `analyze/v5` publishes a claim's chain
     # in, so a consumer that learned to read one has learned to read
     # this. Its own description, because these paths walk `compare/v2`

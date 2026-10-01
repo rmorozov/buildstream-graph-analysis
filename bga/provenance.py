@@ -326,6 +326,20 @@ def _diagnosis_rule(claim, document):
     name = resolve(document, "headline.diagnosis")
     if ratio is UNRESOLVED or ratio is None:
         return _unconditional("Neither branch could be taken: this run did not record both durations the ratio needs.")
+    if name == _findings.DIAGNOSIS_CAPACITY_BOUND:
+        lb, wall = resolve(document, "floors.lb"), resolve(document, "total_duration_us")
+        share = lb / wall if isinstance(lb, (int, float)) and isinstance(wall, (int, float)) and wall else None
+        return _rule(
+            "CAPACITY_BOUND_SHARE",
+            _findings.CAPACITY_BOUND_SHARE,
+            ">=",
+            None,
+            f"The critical path is {qty.share(ratio)} of the task horizon, below the "
+            f"{qty.share(_findings.CHAIN_BOUND_RATIO)} chain-bound line, and the resource floor is "
+            f"{qty.share(share)} of wall-clock, at or above the "
+            f"{qty.share(_findings.CAPACITY_BOUND_SHARE)} line and longer than the critical path, "
+            f"so this build is capacity-bound.",
+        )
     fired = ">=" if name == _findings.DIAGNOSIS_CHAIN_BOUND else "<"
     # UX-674 (styleguide §4b, extended to sentences): `fired` and `name`
     # stay raw in the *rule* - `comparison` and the diagnosis value are
@@ -550,7 +564,11 @@ def _fan_in_paths(claim: dict, document: dict) -> tuple[str, ...]:
 
 
 _CLAIMS = {
-    "diagnosis": (("floors.t_infinity_observed", "total_duration_us", "headline.chain_share"), _diagnosis_rule, ()),
+    "diagnosis": (
+        ("floors.t_infinity_observed", "total_duration_us", "headline.chain_share", "floors.lb"),
+        _diagnosis_rule,
+        (),
+    ),
     "build-failed": (
         ("violations[type=build_failed].failed_count", "violations[type=build_failed].interrupted"),
         _unconditional(

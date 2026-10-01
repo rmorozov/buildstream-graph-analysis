@@ -78,7 +78,7 @@ async function questions() {
       timelineDegraded: run?.timeline_degraded,
       flowLosses: run?.trace_flow_losses,
       elements: report ? elementUids(report) : [],
-      element: report?.headline?.top_actions?.[0]?.element_uid ?? null,
+      element: report?.headline?.top_actions?.find((a) => a?.element_uid)?.element_uid ?? null,
     };
     // `UX-194`'s dead-control rule, which this page had never applied
     // to its own button - and the merge is what made that visible.

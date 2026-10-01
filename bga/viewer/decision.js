@@ -12,7 +12,7 @@
  */
 import { commandLine, identify, labelFor } from "./controls.js";
 import {
-  SVG, svg, seconds, mib, bar, OVERVIEW_SHOWN, elementAnchor, plainValue,
+  SVG, svg, seconds, mib, bar, OVERVIEW_SHOWN, elementAnchor, findingAnchor, plainValue,
 } from "./primitives.js";
 import {
   SCALE, GRADE_ANNOTATION, GRADE_EXHIBIT, exhibitAxis, exhibitTwin,
@@ -28,7 +28,7 @@ import {
 // `UX-643`: the fold `UX-347` built, driven by the choice this module
 // already collects. The role decides what is promoted; `chapters.js`
 // owns how a thing folds and this module does not learn a second way.
-import { applyRole } from "./chapters.js";
+import { applyRole, compareLead } from "./chapters.js";
 import { plural } from "./tables.js";
 
 // ------------------------------------------------- UX-207: the decision
@@ -692,6 +692,10 @@ export function renderDecision(payload, investigate = null, copy = null,
   sentence.setAttribute("data-field", "headline.sentence");
   sentence.textContent = headline.sentence ?? "";
   section.append(sentence);
+  // `UX-1257`: the delta against the run before, the compare chapter's own lead; a refused baseline says so in `band`.
+  const lead = "comparison" in options && (compareLead(options.comparison)
+    ?? (options.comparison || options.refused ? null : "No earlier run to compare against."));
+  if (lead) section.append(el("p", { "data-role": "compare-lead" }, lead));
 
   // `UX-372`: and, for a reader who says who they are, their own
   // biggest lever. Below the diagnosis, which is true for everyone.
@@ -879,12 +883,17 @@ function actionRow(action, investigate, whyBlock = null) {
 
   // UX-216: the decision panel names an element; naming it and not
   // linking it is the gap this item closes.
-  const name = document.createElement("a");
-  name.setAttribute("href", `#${elementAnchor(action.element_uid ?? "")}`);
-  const code = document.createElement("code");
-  code.textContent = action.element_uid ?? "";
-  name.append(code);
-  row.append(name);
+  if (action.element_uid) {
+    const name = document.createElement("a");
+    name.setAttribute("href", `#${elementAnchor(action.element_uid)}`);
+    const code = document.createElement("code");
+    code.textContent = action.element_uid;
+    name.append(code);
+    row.append(name);
+  } else if (action.step) {
+    // `UX-1244`: a capacity-bound run's builders step names no element.
+    row.append(el("span", { "data-field": "step" }, action.step));
+  }
 
   if (typeof action.saving_us === "number") {
     const worth = document.createElement("span");
@@ -909,13 +918,14 @@ function actionRow(action, investigate, whyBlock = null) {
   if (!whyBlock) {
     const why = document.createElement("a");
     why.className = "why";
-    why.setAttribute("href", "#findings");
+    why.setAttribute("href", action.element_uid || !action.finding_id
+      ? "#findings" : `#${findingAnchor(action.finding_id)}`);
     why.textContent = "why";
     row.append(why);
   }
 
   // UX-204's transport, where there is a timeline behind it.
-  if (investigate) {
+  if (investigate && action.element_uid) {
     const button = investigate(action);
     if (button) row.append(button);
   }

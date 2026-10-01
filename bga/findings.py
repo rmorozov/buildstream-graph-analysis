@@ -236,6 +236,10 @@ OPPORTUNITY_FLOOR_PCT = 1.0
 # "how long do I take".
 CHAIN_BOUND_RATIO = 0.9
 
+# UX-1253: at or above this share of wall-clock the resource floor LB is the
+# wall, so the run is bound by its capacity rather than by its schedule.
+CAPACITY_BOUND_SHARE = 0.95
+
 # UX-70: at or above this share of zero-slack elements the graph is a
 # mesh of near-equal chains rather than one chain, and "optimize the top
 # element" stops being meaningful advice on its own. Named by UX-229,
@@ -249,8 +253,9 @@ MESH_ZERO_SLACK_SHARE = 0.5
 # rather than surviving only as a clause of one finding's title.
 DIAGNOSIS_CHAIN_BOUND = 'chain_bound'
 DIAGNOSIS_SCHEDULER_BOUND = 'scheduler_bound'
+DIAGNOSIS_CAPACITY_BOUND = 'capacity_bound'
 DIAGNOSIS_INCONCLUSIVE = 'inconclusive'
-DIAGNOSES = (DIAGNOSIS_CHAIN_BOUND, DIAGNOSIS_SCHEDULER_BOUND, DIAGNOSIS_INCONCLUSIVE)
+DIAGNOSES = (DIAGNOSIS_CHAIN_BOUND, DIAGNOSIS_SCHEDULER_BOUND, DIAGNOSIS_CAPACITY_BOUND, DIAGNOSIS_INCONCLUSIVE)
 
 # One wording, read by the text report, the JSON and the page. The
 # clause `_time_concentration_findings` used to spell out itself is now
@@ -274,6 +279,9 @@ DIAGNOSIS_SENTENCES = {
     "is {ratio} of the time tasks were running, below the {bound} "
     "chain-bound line, so the time is going somewhere other than the "
     "chain.",
+    DIAGNOSIS_CAPACITY_BOUND: "This build is capacity-bound, not scheduler-bound: the resource floor "
+    "is {ratio} of wall-clock, at or above the {bound} capacity-bound line, "
+    "so its builder slots set the wall, not the chain or the scheduler. {step}.",
     DIAGNOSIS_INCONCLUSIVE: "Neither the chain nor the scheduler can be named the constraint: "
     "this run did not record the durations the comparison needs.",
 }
@@ -1203,7 +1211,9 @@ def _capacity_recommendation_finding(result: AnalysisResult) -> list[dict]:
     # than leaving the clamp implicit in the number alone.
     binding_row = next(c for c in recommendation['constraints'] if c['name'] == binding)
     clamped_from = binding_row.get('clamped_from')
-    clamp_note = f" (the host's cores bound it, not the raw {clamped_from})" if clamped_from else ""
+    clamp_note = f"; the CPU alone could feed {clamped_from}" if clamped_from else ""
+    # UX-1246: a host-core cap is named as the cap, never as CPU binding.
+    cap = f"the host's {plural(recommendation['host_cpu_count'], 'core')} cap it" if binding == 'host_cores' else ""
     if recommended > builders:
         # Deliberately weaker than "raise it to N". Measured on a
         # reconstructed macro-fixed `examples/06` where this block said
@@ -1217,7 +1227,7 @@ def _capacity_recommendation_finding(result: AnalysisResult) -> list[dict]:
         # it, and saying otherwise would be UX-14's caveat with the
         # caveat removed.
         verdict = (
-            f"{binding} binds first, at {recommended}{clamp_note} — nothing "
+            f"{cap or f'{binding} binds first,'} at {recommended}{clamp_note} — nothing "
             f"measured here rules out {plural(recommended - builders, 'more builder')}, "
             f"which is a hypothesis to time rather than a "
             f"setting to apply"
@@ -1225,14 +1235,14 @@ def _capacity_recommendation_finding(result: AnalysisResult) -> list[dict]:
         severity = SEVERITY_MEDIUM
     elif recommended < builders:
         verdict = (
-            f"{binding} binds at {recommended}{clamp_note}, below the "
+            f"{cap or f'{binding} binds'} at {recommended}{clamp_note}, below the "
             f"{builders} configured — more builders contend rather than "
             f"overlap here"
         )
         severity = SEVERITY_HIGH
     else:
         verdict = (
-            f"{binding} binds at exactly {recommended}{clamp_note} — this "
+            f"{cap or f'{binding} binds'} at exactly {recommended}{clamp_note} — this "
             f"run is already at the setting its own measurements support"
         )
         severity = SEVERITY_INFO
@@ -2286,13 +2296,63 @@ def diagnose(result: AnalysisResult) -> dict:
     against, source = _diagnosis_denominator(result, total)
     ratio = t_infinity / against
     name = DIAGNOSIS_CHAIN_BOUND if ratio >= CHAIN_BOUND_RATIO else DIAGNOSIS_SCHEDULER_BOUND
+    if ratio < CHAIN_BOUND_RATIO and _capacity_is_the_wall(floors, total, t_infinity):
+        name = DIAGNOSIS_CAPACITY_BOUND
+    if name == DIAGNOSIS_CAPACITY_BOUND:
+        sentence = DIAGNOSIS_SENTENCES[name].format(
+            ratio=qty.share(floors['lb'] / total), bound=qty.share(CAPACITY_BOUND_SHARE), step=_capacity_step(result)[0]
+        )
+    else:
+        sentence = DIAGNOSIS_SENTENCES[name].format(ratio=qty.share(ratio), bound=qty.share(CHAIN_BOUND_RATIO))
     return {
         'diagnosis': name,
         'chain_share': ratio,
         'chain_bound_share': CHAIN_BOUND_RATIO,
         'chain_share_of': source,
-        'sentence': DIAGNOSIS_SENTENCES[name].format(ratio=qty.share(ratio), bound=qty.share(CHAIN_BOUND_RATIO)),
+        'sentence': sentence,
     }
+
+
+def _capacity_is_the_wall(floors: dict, total: int, t_infinity: int) -> bool:
+    """LB within `CAPACITY_BOUND_SHARE` of the wall and longer than the chain (UX-1244)."""
+    lb = floors.get('lb') or 0
+    return lb / total >= CAPACITY_BOUND_SHARE and lb > t_infinity
+
+
+def _capacity_step(result: AnalysisResult) -> tuple[str, str]:
+    """`(sentence, action)` for the builders step: the recommendation's, else the RESOURCE WAIT hint."""
+    recommendation = getattr(result, 'capacity_recommendation', None) or {}
+    binding = recommendation.get('binding_constraint')
+    row = next((c for c in recommendation.get('constraints') or [] if c.get('name') == binding), {})
+    if binding == 'host_cores':
+        cores = recommendation.get('host_cpu_count')
+        return (
+            f"Builders are held at the host's {plural(cores, 'core')} by policy while the CPU could feed "
+            f"{row.get('clamped_from')}: measure above that cap with bga sweep",
+            f"Measure builders above the host's {cores}-core cap with bga sweep",
+        )
+    if binding and recommendation.get('recommended_builders') is not None:
+        builders = recommendation['recommended_builders']
+        return (
+            f"{binding} binds at {plural(builders, 'builder')}: run with {builders} and measure it",
+            f"Run with {plural(builders, 'builder')} and measure it",
+        )
+    from .report._shared import resolve_attribution_hint
+
+    hint = _plane2_capacity_hint(result, 'resource_wait_us') or resolve_attribution_hint(
+        'resource_wait_us', getattr(result, 'capacity_verdict', None)
+    )
+    hint = (hint or "time more builders with bga sweep").replace('`', '').rstrip('.')
+    return f"The step this run supports is a builders step, measured: {hint}", hint
+
+
+def _builders_actions(result: AnalysisResult, by_id: dict) -> list[dict]:
+    """The decision's first action on a capacity-bound run: the builders step, and the finding reasoning it."""
+    action = {'step': _capacity_step(result)[1]}
+    finding = next((fid for fid in ('capacity-recommendation', 'wait-category') if fid in by_id), None)
+    if finding:
+        action['finding_id'] = finding
+    return [action]
 
 
 def _top_actions(result: AnalysisResult, findings: list[dict]) -> list[dict]:
@@ -2305,6 +2365,8 @@ def _top_actions(result: AnalysisResult, findings: list[dict]) -> list[dict]:
     """
     by_id = findings_by_id(findings)
     actions: list[dict] = []
+    # UX-1244: a capacity-bound run leads with its builders step, before any element.
+    builders = _builders_actions(result, by_id) if diagnose(result)['diagnosis'] == DIAGNOSIS_CAPACITY_BOUND else []
 
     concentration = by_id.get('time-concentration')
     for row in ((concentration or {}).get('evidence') or {}).get('rows') or []:
@@ -2331,7 +2393,7 @@ def _top_actions(result: AnalysisResult, findings: list[dict]) -> list[dict]:
                     'downstream_count': (blast.get(uid) or {}).get('downstream_count', 0),
                 }
             )
-    return actions[:TOP_ACTIONS_SHOWN]
+    return (builders + actions)[:TOP_ACTIONS_SHOWN]
 
 
 def compute_headline(result: AnalysisResult, findings: Optional[list[dict]] = None) -> dict:
@@ -2590,13 +2652,13 @@ def compute_next_steps(result: AnalysisResult, headline: Optional[dict] = None) 
                 }
             )
 
-    if headline.get('diagnosis') == DIAGNOSIS_SCHEDULER_BOUND:
+    if headline.get('diagnosis') in (DIAGNOSIS_SCHEDULER_BOUND, DIAGNOSIS_CAPACITY_BOUND):
         gap = headline.get('scheduling_gap_us')
         steps.append(
             {
                 'id': 'sweep-the-capacity',
                 'reason': (
-                    "This build is scheduler-bound"
+                    f"This build is {headline['diagnosis'].replace('_', '-')}"
                     # Only where the number would say something: a gap that
                     # rounds to "0.0s" reads as a contradiction of the
                     # sentence it is supposed to support.

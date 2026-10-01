@@ -2,7 +2,7 @@
 
 **Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-162 view UI review on a 2,402-element two-plane page (2026-10-01), brainstorm B5, filed at Ruslan's request | **Serves:** R4, R7, R8 | **Topic:** viewer | **Area:** bga, bga/viewer | **Shape:** mechanical | **Reading:** container
 
-**Guard:** none — open, no guard named yet
+**Guard:** `tests/unit/test_the_compare_chapter_leads_with_the_delta.py`
 
 ## Motivation
 
@@ -38,3 +38,23 @@ The comparison itself; runs with no baseline, which say so in one sentence.
 ## Acceptance Test
 
 On this page the compare lead reads the delta and its verdict, and the decision panel shows the same sentence; a single-snapshot store reads one absence sentence. Mutation: empty the lead, and the guard reds.
+
+## Outcome
+
+The gap measured, at `9b55e0d4`, the Motivation's page (`two_plane_run(shape=(--layers 40 --width 60 --workload
+binaries), runs=2)`, exported in place, Chromium): `{'chapter': True, 'lead': [], 'panel': [], 'absent': 0}` - the
+old `answer` read `payload.comparison`, which `analyze/v5` never carries.
+
+The close measured, same page: `{'chapter': True, 'lead': ['-0.1% (2.5 s faster) than the run before, inside the
+noise band.'], 'panel': [<the same sentence>], 'absent': 0}`. `--layers 8 --width 14`: `-1.8% (2.4 s faster) than
+the run before, outside the noise band: improved.` in both. One snapshot: no `#chapter-compare`, panel `No earlier run
+to compare against.`, once. `compare/v2` gains `total_duration_delta_share` (always written, `null` with no baseline
+total). Page half: macro_micro 160,033 -> 160,409 B; the 2,402-element page 160,035 -> 160,411 B (of 165,000).
+Guard: 3 passed (3.9 s); with the compare, schema, chapters, said-once and attach guards 230 passed, 2 skipped.
+
+| mutation | reddened | run printed |
+|---|---|---|
+| `compareLead` returns `null` | `test_the_lead_is_the_delta_and_the_panel_says_it_too` | 1 failed, 2 passed |
+| drop the decision panel's `section.append(... compare-lead ...)` | both browser tests | 2 failed, 1 passed |
+| `_delta_share` returns `None` | the lead test, `test_compare_publishes_the_delta_as_a_share_of_the_baseline` | 2 failed, 1 passed |
+| reverted | | 3 passed |

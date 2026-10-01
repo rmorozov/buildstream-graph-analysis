@@ -266,8 +266,11 @@ export function renderPairs(key, object, hint = {}, node = undefined,
   const doors = [];
   // UX-268: the element-keyed signals leave the pair list and become
   // one table, so they are drawn once rather than six times.
+  // `UX-1199`: and `leaves_detail`'s fields, which the Leaves view shows.
+  const leaves = Object.entries(payload?.leaf_analysis?.leaves_detail ?? {})
+    .map(([element, detail]) => ({ ...detail, element }));
   const joined = key === "elements"
-    ? elementSignalTable(object, node, payload?.element_join,
+    ? elementSignalTable(object, node, [...(payload?.element_join ?? []), ...leaves],
                          childNode(root, "element_join"))
     : null;
   const merged = new Set(joined?.merged ?? []);

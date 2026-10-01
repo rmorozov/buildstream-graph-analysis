@@ -16,7 +16,7 @@
 import { plainValue, served } from "./primitives.js";
 import { COPY_FORMAT_MIRROR, readCopyFormat } from "./viewstate.js";
 import { BARE_KEY, COMMAND, QUANTITY, COLUMNS, SERIES, DISTRIBUTION, KEYED_BY,
-         KEYED_BY_BINARY, KEYED_BY_TASK_UID, bytes,
+         KEYED_BY_BINARY, KEYED_BY_ELEMENTS, KEYED_BY_TASK_UID, bytes,
          childNode, cssId, dataKeyed, el, elementColumn, guessQuantity, heading,
          hintsOf, itemsAsShown, keyAsShown, quantity, quantityFor, readerLabel,
          sectionHead, taskUid, title } from "./format.js";
@@ -168,7 +168,7 @@ export function mapTable(key, rows, hint, node, nested, depth = 0, path = key, l
     // UX-1173: a list's index is not a name, so a list draws its items alone.
     declared = { ...hint, [COLUMNS]: [
       ...(list ? [] : [{ key: "key", title: "Name" }]), ...beside,
-      { key: "value", title: title(key, measure), quantity: measure }] };
+      { key: "value", title: node?.additionalProperties?.title ?? title(key, measure), quantity: measure }] };
   }
   const { table, tools } = buildTable(path, rows, declared, node, depth);
   // `UX-1163`'s rule: a list left one column says its name in its fold, not a header.
@@ -585,6 +585,8 @@ export function buildTable(key, rows, hint = {}, node = undefined,
     return kind && !spec.role ? { ...spec, role: kind } : spec;
   });
   const columns = specs.map((s) => s.key);
+  // `UX-1199`: a keyed list column names every element its row holds, for Focus.
+  const listed = specs.find((spec) => spec.role === KEYED_BY_ELEMENTS)?.key;
   // `UX-526`: how many rows the table *has*. The DOM used to answer
   // that and no longer does - a row past the bound leaves it - so the
   // population is published where a reader and a guard can both read it.
@@ -684,6 +686,7 @@ export function buildTable(key, rows, hint = {}, node = undefined,
           : typeof raw === "string" ? renderText(column, raw, memberTitle(column, raw, node))
           : plainValue(raw)));
     }
+    if (Array.isArray(row?.[listed])) tr.setAttribute("data-elements", row[listed].join(" "));
     body.append(tr);
   }
   table.append(body);

@@ -127,6 +127,8 @@ export const KEYED_BY_TASK_UID = "task_uid";
 // `UX-1186`: a list's `KEYED_BY` names these columns.
 export const KEYED_BY_ELEMENT = "element";
 export const KEYED_BY_BINARY = "binary";
+// `UX-1199`: a list column of element uids that keys its row.
+export const KEYED_BY_ELEMENTS = "elements";
 
 /**
  * What a map's key should *show*, given the map's own declaration.

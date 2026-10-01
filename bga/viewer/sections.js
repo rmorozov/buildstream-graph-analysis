@@ -25,17 +25,18 @@ import { chapters } from "./chapters.js";
 import { renderProvenance } from "./decision.js";
 import { GRADE_EXHIBIT, SERIES_MIN_POINTS, decomposition, interval, strip } from "./drawings.js";
 import { resolvePath } from "./element.js";
-import { COLUMNS, DECOMPOSITION, DISTRIBUTION, INLINE, INTERVAL, KEYED_BY, KEYED_BY_TASK_UID, QUANTITY, SERIES, SEVERITY, attachBlockDoor, bytes, childNode, cssId, describedTerm, el, guessQuantity, heading, hintsOf, keyAsShown, quantity, quantityFor, readerLabel, sectionHead, spoken, taskUid, TERMS, title } from "./format.js";
+import { COLUMNS, DECOMPOSITION, DISTRIBUTION, INLINE, INTERVAL, KEYED_BY, KEYED_BY_BINARY, KEYED_BY_TASK_UID, QUANTITY, SERIES, SEVERITY, attachBlockDoor, bytes, childNode, cssId, describedTerm, el, guessQuantity, heading, hintsOf, keyAsShown, quantity, quantityFor, readerLabel, sectionHead, spoken, taskUid, TERMS, title } from "./format.js";
 import { matches } from "./nav.js";
 import { handOff } from "./perfetto.js";
 import { findingAnchor, plainValue, served } from "./primitives.js";
 import { byId, copyButton } from "./questions.js";
 import { recordSource } from "./rawjson.js";
 import { CONTROLS, classify } from "./shapes.js";
-import { ARRAY_INLINE_ITEMS, CELL_NEST_LIMIT, LIFTED_SECTION, OBJECT_INLINE_FIELDS, TABLE_OPENS_BOUNDED_ABOVE, foldedList, liftedCriticalPath, mapTable, oneRecord, renderStructured, renderTable } from "./structured.js";
+import { ARRAY_INLINE_ITEMS, CELL_NEST_LIMIT, LIFTED_SECTION, OBJECT_INLINE_FIELDS, TABLE_OPENS_BOUNDED_ABOVE, filterSection, foldedList, liftedCriticalPath, mapTable, oneRecord, renderStructured, renderTable } from "./structured.js";
 import { renderPairs, taskSignalTable } from "./pairs.js";
 import { boundCards, columnCells } from "./tables.js";
 import { investigationsFor } from "./trace_context.js";
+import { joinHash } from "./viewstate.js";
 import { INCOMPLETE, PLANE2_NOT_CAPTURED, renderEvidence }
   from "./views.js";
 
@@ -377,6 +378,8 @@ export const FIELDS_DRAWN_ELSEWHERE = {
     element_count: "the section's lead, which opens with the count",
   },
   confidence: { ordering_violations: "the hard gates' ordering row (`UX-1163`)" },
+  // `UX-1199`: each leaf is a row of the element table, so its fields are that table's Leaves view.
+  leaf_analysis: { leaves_detail: "the element table's Leaves view (`_ELEMENT_PRESETS`), keyed by its element" },
 };
 
 //: `UX-401`: the fourth destination, and the only silent one allowed.
@@ -489,7 +492,7 @@ function statedOp(cells, hint) {
   return cells.length >= SERIES_MIN_POINTS && ops.size === 1 ? [...ops][0] : null;
 }
 
-function mapSectionLabels(box, key, hint, node) {
+function mapSectionLabels(box, key, hint, node, payload) {
   const table = box.querySelector?.("table");
   if (!table) return box;
   const keyHead = [...table.querySelectorAll("th")].find(
@@ -504,7 +507,8 @@ function mapSectionLabels(box, key, hint, node) {
       ?? (record ? null : "count");
     // `UX-1184`: a field that names its own quantity titles its column; the bare unit is for the rest.
     const named = measure && (Object.hasOwn(TERMS, key) || title(key, measure) !== title(key));
-    relabelHead(valueHead, named ? title(key, measure) : measure ? title(measure, measure) : "Value");
+    relabelHead(valueHead, node?.additionalProperties?.title
+      ?? (named ? title(key, measure) : measure ? title(measure, measure) : "Value"));
     // `UX-1194`: beside the task's own duration the share is marked, and a bare threshold reads the duration.
     const beside = table.querySelector?.('th[data-column="duration_us"]');
     if (beside) valueHead.setAttribute("data-share", "");
@@ -516,9 +520,18 @@ function mapSectionLabels(box, key, hint, node) {
   }
   const keys = columnCells(table, "key");
   const op = taskUidKeyed ? statedOp(keys, hint) : null;
+  // `UX-1199`: a binary the cost table holds links to its rows there.
+  const costed = new Set(hint[KEYED_BY] === KEYED_BY_BINARY ? (payload?.binary_cost ?? []).map((row) => row.binary) : []);
   for (const cell of keys) {
     const raw = cell.getAttribute("data-raw");
     cell.setAttribute("data-key", raw);
+    if (costed.has(raw)) {
+      const query = `binary:${raw}`;
+      const link = el("a", { href: joinHash("binary_cost", new URLSearchParams({ "f.binary_cost": query }).toString()),
+                             title: `${raw}'s rows in binary cost` }, raw);
+      link.addEventListener?.("click", () => filterSection(document, "binary_cost", query));
+      cell.replaceChildren(link);
+    }
     if (!taskUidKeyed) continue;
     const shown = keyAsShown(raw, hint);
     if (!shown) continue;
@@ -656,7 +669,7 @@ export function renderSection(key, value, hint = {}, node = undefined,
       const box = mapTable(key, rows, hint, node, false, 0, key, false, beside ? [beside] : []);
       return el("section", { "data-section": key,
                              "data-rail": heading(key, hint).rail },
-                sectionHead(key, hint), mapSectionLabels(box, key, hint, node));
+                sectionHead(key, hint), mapSectionLabels(box, key, hint, node, payload));
     }
     // `UX-361` (§2d): a section whose declaration says its numbers are
     // a *total split into parts*, or *values on one axis*, draws that

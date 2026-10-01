@@ -632,7 +632,9 @@ console.log(JSON.stringify({
         assert seen["dataRows"] == "41", seen
         assert seen["hasFilter"], "a table over the bound has no filter"
         assert seen["sortable"] == ["true", "true"], seen
-        assert seen["headers"] == ["Binary", "Count"], "the key's own noun and the value's declared unit: " + str(seen)
+        assert seen["headers"] == ["Binary", "Calls in run"], (
+            "UX-1199: the key's own noun and the schema's title for its value: " + str(seen)
+        )
 
     def test_twelve_hundred_tasks_render_a_table_with_filter_and_sort(self, probed):
         seen = probed["wall_clock_share_us"]

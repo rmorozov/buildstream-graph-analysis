@@ -38,6 +38,11 @@ export function applyFocus(root, uid) {
     if (mine) node.removeAttribute?.("data-dimmed");
     else node.setAttribute("data-dimmed", "true");
   }
+  // `UX-1199`: a row keyed by a list of elements is the uid's when the list holds it.
+  for (const node of root.querySelectorAll?.("[data-elements]") ?? []) {
+    if (node.getAttribute("data-elements").split(" ").includes(uid)) node.removeAttribute?.("data-dimmed");
+    else node.setAttribute("data-dimmed", "true");
+  }
   for (const section of root.querySelectorAll?.("section[data-section]") ?? []) {
     // `UX-1186`: a declared population dims, never folds.
     const mentions = section.getAttribute("data-element") === uid
@@ -52,7 +57,9 @@ export function applyFocus(root, uid) {
 
 export function clearFocus(root) {
   root.removeAttribute?.("data-focus");
-  for (const node of elementNodes(root)) node.removeAttribute?.("data-dimmed");
+  for (const node of root.querySelectorAll?.("[data-element], [data-elements]") ?? []) {
+    node.removeAttribute?.("data-dimmed");
+  }
   for (const section of root.querySelectorAll?.("section[data-section]") ?? []) {
     section.removeAttribute?.("data-unfocused");
   }

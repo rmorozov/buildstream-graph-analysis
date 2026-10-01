@@ -58,6 +58,7 @@ from .schema_hints import (
     KEYED_BY,
     KEYED_BY_BINARY,
     KEYED_BY_ELEMENT,
+    KEYED_BY_ELEMENTS,
     KEYED_BY_TASK_UID,
     LEAD,
     MARKERS,
@@ -1999,6 +2000,8 @@ _ELEMENT_PRESETS = [
             "downstream_count",
             "element_kind",
             "is_structural_kind",
+            "is_potentially_deferrable",
+            "deferral_risk",
         ],
         "sort": {"column": "element_durations", "direction": "desc"},
     },
@@ -2197,9 +2200,9 @@ _STRUCTURAL_TABLES = {
             # synthetic run.
             "levels": {
                 GROWS: "graph depth (levels), each level's own membership grows with elements",
-                "description": "One row per level of the graph, from "
-                "the roots down: how wide it is and "
+                "description": "One row per level of the graph, from the roots down: how wide it is and "
                 "which elements sit on it.",
+                KEYED_BY: KEYED_BY_ELEMENTS,
                 COLUMNS: [
                     {
                         "key": "level",
@@ -2283,13 +2286,11 @@ _STRUCTURAL_TABLES = {
             "serial_chains": {
                 GROWS: False,
                 "maxItems": 40,  # `SERIAL_CHAINS_MAX`
-                "description": "Every maximal non-branching run of "
-                "elements, ranked by how much of the "
-                "build's duration it accounts for — "
-                "capped the same as any other table.",
+                "description": "Every maximal non-branching run of elements, ranked by how much of the "
+                "build's duration it accounts for — capped the same as any other table.",
                 QUESTION: "Which chain should I split first?",
                 COLUMNS: [
-                    {"key": "rank", "title": "Rank", "quantity": "count", "sortable": True},
+                    {"key": "rank", "title": "Rank", "sortable": True},
                     {
                         "key": "best_split",
                         "title": "Split this first",
@@ -2299,7 +2300,6 @@ _STRUCTURAL_TABLES = {
                         "largest — splitting it shortens "
                         "this chain the most.",
                     },
-                    {"key": "length", "title": "Length", "quantity": "count", "sortable": True},
                     {
                         "key": "weighted_duration_us",
                         "title": "Total",
@@ -2307,6 +2307,7 @@ _STRUCTURAL_TABLES = {
                         "sortable": True,
                         "description": "The members' durations, summed.",
                     },
+                    {"key": "length", "title": "Length", "quantity": "count", "sortable": True},
                     {
                         "key": "wall_share",
                         "title": "Of longest path",
@@ -2327,7 +2328,7 @@ _STRUCTURAL_TABLES = {
                     # `rank`/`length`/`weighted_duration_us`/`wall_share`
                     # still resolve now that `members` needs `properties`.
                     COLUMNS: [
-                        {"key": "rank", "title": "Rank", "quantity": "count", "sortable": True},
+                        {"key": "rank", "title": "Rank", "sortable": True},
                         {"key": "length", "title": "Length", "quantity": "count", "sortable": True},
                         {
                             "key": "weighted_duration_us",
@@ -2569,9 +2570,9 @@ _STRUCTURAL_TABLES = {
         GROWS: "element groups sharing consumers (real grower, no cap "
         "in the payload; structured.js's table bound applies on "
         "the page)",
-        "description": "Elements that are always consumed together and "
-        "could be one element. Structural: read from the "
-        "graph's own edges, never from a timing estimate.",
+        "description": "Elements that are always consumed together and could be one element. "
+        "Structural: read from the graph's own edges, never from a timing estimate.",
+        KEYED_BY: KEYED_BY_ELEMENTS,
         COLUMNS: [
             {"key": "elements", "title": "Could be one element"},
             {"key": "shared_consumers", "title": "Always consumed by"},
@@ -3190,16 +3191,12 @@ _SIGNALS_TABLES = {
                     "properties": {
                         "element_kind": {"description": "The kind BuildStream gives this element."},
                         "is_structural_kind": {
-                            "description": "Whether its dependents are "
-                            "the graph's shape rather "
-                            "than a task — a `stack` or "
-                            "an `import`."
+                            "description": "Whether its dependents are the graph's shape rather than a task — "
+                            "a `stack` or an `import`."
                         },
                         "is_potentially_deferrable": {
-                            "description": "Whether nothing in this run "
-                            "waited on it, so building it "
-                            "later would have cost the "
-                            "makespan nothing."
+                            "description": "Whether nothing in this run waited on it, so building it later "
+                            "would have cost the makespan nothing."
                         },
                         "deferral_risk": {"description": "How safe deferring it looks: `low`, `medium` or `high`."},
                     }
@@ -4821,7 +4818,7 @@ _ANALYZE_HINTS = {
         "times the whole run ran it. The frequency half "
         "of the question; binary cost is the time "
         "half, per element.",
-        "additionalProperties": {QUANTITY: "count"},
+        "additionalProperties": {QUANTITY: "count", "title": "Calls in run"},
     },
     "binary_cost": {
         QUESTION: 'Which binaries cost this build its time?',
@@ -4833,9 +4830,9 @@ _ANALYZE_HINTS = {
         COLUMNS: [
             "element",
             "binary",
-            "calls",
             {"key": "cpu_us", "title": "CPU"},
             {"key": "cpu_share", "title": "Share of CPU"},
+            "calls",
             {"key": "wall_us", "title": "Wall"},
         ],
         "description": "One row per element and binary Plane 2 saw it "

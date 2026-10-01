@@ -1116,8 +1116,8 @@ MEDIUM = (
     "tests/unit/test_copy_takes_the_matched_population.py",  #  8.5s
     # `UX-1184`: 6.85 / 7.18s.
     "tests/unit/test_a_column_is_named_for_its_field.py",  #  7.0s
-    # `UX-1186`: 5.21 / 5.08s.
-    "tests/unit/test_a_population_key_is_declared.py",  #  5.2s
+    # `UX-1186`: 5.21 / 5.08s; `UX-1199`'s 1,202-element page in it: 12.88 / 12.59 / 12.64s.
+    "tests/unit/test_a_population_key_is_declared.py",  # 12.6s
     # `UX-1192`: 8.38 / 8.49 / 9.43s.
     "tests/unit/test_a_mark_says_its_value.py",  #  8.5s
     # `UX-1191`: 7.44 / 6.86s.

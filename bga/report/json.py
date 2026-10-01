@@ -315,6 +315,12 @@ def _add_capacity_recommendation(data, result, section, by_kind):
         data['capacity_recommendation'] = result.capacity_recommendation
 
 
+def _add_agent_sizing(data, result, section, by_kind):
+    # UX-1254: published with one plane too - its absence sentence is the Plane 1-only answer.
+    if section is None and getattr(result, 'agent_sizing', None):
+        data['agent_sizing'] = result.agent_sizing
+
+
 def _add_utilization_envelope(data, result, section, by_kind):
     # UX-676: the same question in cores. Published whenever the section
     # was computed at all, including when it computed to a named
@@ -636,6 +642,7 @@ _SECTIONS = (
     _add_capacity_verdict,
     _add_duration_resolution,
     _add_capacity_recommendation,
+    _add_agent_sizing,
     _add_utilization_envelope,
     _add_plane2_coverage,
     _add_plane2_absence,

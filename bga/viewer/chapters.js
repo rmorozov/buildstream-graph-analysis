@@ -175,7 +175,8 @@ export const CHAPTERS = [
     // and an unchaptered section is one the guard reddens on - which is
     // what put it here rather than at the foot of the page under
     // "Everything else".
-    sections: ["occupancy", "utilisation", "floors", "capacity_verdict",
+    // UX-1254: the sizing card first - the chapter's answer for an agent's operator.
+    sections: ["agent_sizing", "occupancy", "utilisation", "floors", "capacity_verdict",
                // `UX-344`: how much was runnable and not running is a
                // fact about the machine, not about an element - the one
                // lifted table whose rail points at the wrong chapter.

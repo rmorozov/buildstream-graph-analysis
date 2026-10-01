@@ -2,7 +2,7 @@
 
 **Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-162 view UI review on a 2,402-element two-plane page (2026-10-01), brainstorm B2, filed at Ruslan's request | **Serves:** R5 | **Topic:** viewer | **Area:** bga, bga/viewer | **Shape:** mechanical | **Reading:** container
 
-**Guard:** none — open, no guard named yet
+**Guard:** test_an_agent_sizing_card_reads_its_sources.py
 
 ## Motivation
 
@@ -39,3 +39,48 @@ Cross-build aggregation (`store-aggregate/v1`); a queueing model.
 ## Acceptance Test
 
 On this page the card shows builders, cores and memory with values equal to their source sections and one link each; a Plane 1-only run shows the card with cores and memory said absent in one sentence. Mutation: read memory from a different field, and the guard reds.
+
+## Outcome (2026-10-01)
+
+### The gap, measured
+
+Base `62a86546`, `bga analyze --format json`: no key holds the answer.
+
+```text
+macro_micro --plane2:  agent_sizing None   (builders 4 -> 2 in capacity_recommendation,
+                       cores_busy 1.60 there, 153.5 MiB largest peak only on element_join rows)
+golden (Plane 1 only): agent_sizing None
+```
+
+### The close, measured
+
+This branch, `#agent_sizing` drawn first in "Was the machine used well?":
+
+```text
+2,402-element page (seed 1, 40x60, binaries; 20260303T091500Z):
+  Builders: 4 recommended; the graph allows 8; this run had 4 — Capacity recommendation
+  Cores: 0.86 of 4 busy on average — Capacity recommendation
+  Memory: 256.0 MiB, 64.0 MiB per element × 4 builders — Peak memory
+macro_micro:
+  Builders: 2 recommended; the graph allows 2; this run had 4 — Capacity recommendation
+  Cores: 1.60 of 4 busy on average — Capacity recommendation
+  Memory: 307.0 MiB, 153.5 MiB per element × 2 builders — Peak memory
+golden (Plane 1 only):
+  Builders: this run had 2
+  Cores and memory need Plane 2, which this run did not capture.
+```
+
+`bga view --export`, before -> after: page half 159,921 -> 160,529 B
+(`macro_micro`) and 159,923 -> 160,531 B (2,402 elements), +608 B against
+`PAGE_BUDGET_B` 165,000; data half +2,107 B and +1,626 B. `macro_micro`'s
+opened page: 872 controls (card +6 on 866).
+
+### Mutations verified red and reverted (4)
+
+| # | mutation | reddened |
+|---|---|---|
+| M1 | memory bytes from `memory_envelope.at_observed_builders` (the Decision's) | equals-its-source: 1 failed |
+| M2 | Plane 1-only absence reads "were not measured" | both absence clauses: 3 failed |
+| M3 | `agent_sizing` second in the machine chapter | first-section, both pages x widths: 4 failed |
+| M4 | the source link drawn as a `span` | one-link-a-row, both widths: 2 failed |
+

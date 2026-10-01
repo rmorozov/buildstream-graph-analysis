@@ -434,6 +434,24 @@ function isEmptyPopulation(value) {
   return value === null || value === undefined;
 }
 
+/** `UX-1254`: each row a published value and a link to the section it was read off. */
+function sizingCard(value, hint) {
+  const row = (field, said, src) => el("li", { "data-field": field }, said, src ? " \u2014 " : null,
+    src ? el("a", { href: `#${src}`, "data-section-link": src }, title(src)) : null);
+  const { builders: b = {}, cores: c, memory: m } = value;
+  const of = (n, text) => (typeof n === "number" ? text.replace("#", tally(n)) : null);
+  return el("section", { "data-section": "agent_sizing", "data-rail": heading("agent_sizing", hint).rail },
+    sectionHead("agent_sizing", hint), el("ul", {},
+    row("builders", "Builders: " + [of(b.recommended, "# recommended"), of(b.graph_ceiling, "the graph allows #"),
+      of(b.observed, "this run had #")].filter(Boolean).join("; "), b.source),
+    c ? row("cores", `Cores: ${c.average.toFixed(2)}${typeof c.host === "number" ? ` of ${tally(c.host)}` : ""} busy on average`, c.source) : null,
+    c?.peak_source ? row("cores_peak", `Cores: ${c.peak.toFixed(2)} busy at p95`, c.peak_source) : null,
+    m ? row("memory", `Memory: ${bytes(m.bytes)}, ${bytes(m.per_element_bytes)} per element `
+      + `\u00d7 ${tally(m.builders)} builders`, m.source) : null),
+    value.absence ? el("p", { class: "empty-population" }, value.absence) : null,
+    value.caveat ? el("p", { class: "muted" }, value.caveat) : null);
+}
+
 /** The heading, the sentence, and the one line that says it is empty. */
 function renderEmptySection(key, hint, node, sentence = null) {
   const info = heading(key, hint);
@@ -557,6 +575,7 @@ export function renderSection(key, value, hint = {}, node = undefined,
     value = Object.fromEntries(
       Object.entries(value).filter(([name]) => !(name in elsewhere)));
   }
+  if (key === "agent_sizing" && value) return sizingCard(value, hint);
   // `UX-536`: **a join with no Plane 2 in it is not a measurement of
   // zero.** The evidence line already says these words on the same
   // condition; the section presenting the zeros said nothing, under a

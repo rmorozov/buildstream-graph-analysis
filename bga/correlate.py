@@ -1308,6 +1308,56 @@ def compute_capacity_recommendation(
     }
 
 
+def compute_agent_sizing(result, builders: Optional[int] = None) -> dict:
+    """UX-1254: builders, cores and memory for this build on this host, each read off the section it links."""
+    rec = getattr(result, 'capacity_recommendation', None) or {}
+    plane2 = getattr(result, 'plane2_capacity', None) or {}
+    envelope = getattr(result, 'memory_envelope', None) or {}
+    host = getattr(result, 'utilization_envelope', None) or {}
+    graph = next((c['allows'] for c in rec.get('constraints') or [] if c.get('name') == 'graph'), None)
+    observed = rec.get('builders') or builders
+    recommended = rec.get('recommended_builders')
+    sized = {
+        'recommended': recommended,
+        'graph_ceiling': graph,
+        'observed': observed,
+        'source': 'capacity_recommendation' if rec else None,
+    }
+    cores = None
+    if plane2.get('cores_busy') is not None:
+        peak = host.get('busy_cores_p95') if host.get('available') else None
+        cores = {
+            'average': plane2['cores_busy'],
+            'peak': peak,
+            'host': plane2.get('host_cpu_count'),
+            'source': 'capacity_recommendation' if rec else 'cpu_time',
+            'peak_source': 'utilization_envelope' if peak is not None else None,
+        }
+    memory = None
+    # The envelope needs the host's RAM; the per-element peak does not, so a capture without it still sizes.
+    per_element = envelope.get('largest_element_peak_bytes') or (
+        resource_profile(getattr(result, 'plane2_report', None) or {}).get('peak_rss_bytes')
+    )
+    count = recommended or observed
+    if per_element and count:
+        memory = {
+            'per_element_bytes': per_element,
+            'builders': count,
+            'bytes': per_element * count,
+            'source': 'peak_memory',
+        }
+    missing = [name for name, value in (('cores', cores), ('memory', memory)) if value is None]
+    absence = None
+    if missing:
+        two = len(missing) == 2
+        if getattr(result, 'plane2_report', None) is None:
+            why = f"{'need' if two else 'needs'} Plane 2, which this run did not capture"
+        else:
+            why = f"{'were' if two else 'was'} not measured by this capture"
+        absence = f"{' and '.join(missing).capitalize()} {why}."
+    return {'builders': sized, 'cores': cores, 'memory': memory, 'caveat': rec.get('caveat'), 'absence': absence}
+
+
 def compute_ready_set_width(replay_scheduler) -> Optional[int]:
     """UX-1005 track A: the graph's own ready-set width - the most tasks
     ever simultaneously ready to run, from a replay given effectively

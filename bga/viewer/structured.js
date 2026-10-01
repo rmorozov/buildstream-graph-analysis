@@ -1207,8 +1207,8 @@ export function interrogable(table, specs, total, depth = 0, undrawn = []) {
   // already remembers per-reader preferences, and which failing is not
   // allowed to take the report down with it.
   // `UX-1196`: a head-and-tail fold's held middle is shown rows too; its stub is none.
-  const shownRows = () => ownRows(table).filter((tr) => tr.className !== "fold-row"
-    && (!tr.hidden || (tr.hasAttribute?.("data-fold-middle") && tr.parentNode)));
+  const shownRows = () => ownRows(table).filter((tr) => !tr.hidden
+    || (tr.hasAttribute?.("data-fold-middle") && tr.parentNode));
   // `UX-1189` (§4c): a filter names a population, and copy takes it - up to `ALL_ROWS_CEILING` - not the page.
   const filtered = narrowed;
   const copied = () => (filtered() ? (state.kept ?? []).slice(0, ALL_ROWS_CEILING) : shownRows());

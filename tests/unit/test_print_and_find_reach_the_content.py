@@ -13,6 +13,8 @@ and no stub at 794 and 390, copies 22 rows and no stub, and its card's
 link lands a folded row in view; `macro_micro`'s 10-row listing sorts.
 UX-1203: in print every `th` on golden and `macro_micro` has its label.
 A row "Also in" or Jump to a binary lands is what sits at its centre, at 1440 and 390.
+UX-1210: Top 10 then a sort on Element shows 10 element rows and no stub, All rows 22; the chain
+drawing draws 9 boxes and More, then 22 and none; no `hidden` node is drawn on any of the five pages.
 """
 
 import json
@@ -152,6 +154,61 @@ _FOLD = r"""
 })()
 """
 
+#: `UX-1210`: the critical path bounded to Top 10, sorted by Element, then All rows; its chain drawing's More.
+_FOLD_SORT = r"""
+(async () => {
+  let copied = null;
+  Object.defineProperty(navigator, "clipboard", { value: { writeText: async (t) => { copied = t; } }, configurable: true });
+  localStorage.removeItem("bga.copy-format");
+  const turn = (ms = 50) => new Promise((done) => setTimeout(done, ms));
+  document.querySelectorAll("section.chapter[data-open]").forEach((n) => n.setAttribute("data-open", "true"));
+  await turn();
+  const drawn = (node) => { const r = node.getBoundingClientRect(); return r.width > 0 && r.height > 0; };
+  const table = document.querySelector('table[data-table="critical_path_detail"]');
+  const tools = table.parentNode.querySelector(".table-tools");
+  const read = async () => {
+    const rows = [...table.querySelector("tbody").children].filter(drawn);
+    const label = tools.querySelector(".copy-rows").textContent;
+    tools.querySelector(".copy-rows").click();
+    await turn();
+    return { rows: rows.length, elements: rows.filter((tr) => tr.hasAttribute("data-element")).length,
+             stubs: rows.filter((tr) => tr.classList.contains("fold-row")).length,
+             label, copied: JSON.parse(copied ?? "[]").length,
+             badge: tools.querySelector(".badge")?.textContent ?? "" };
+  };
+  const preset = tools.querySelector("select.top-n");
+  const choose = async (value) => { preset.value = value; preset.dispatchEvent(new Event("change", { bubbles: true })); await turn(); };
+  await choose([...preset.options].find((option) => option.value.startsWith("10:")).value);
+  const bound = await read();
+  await turn(1300);
+  table.querySelector('thead th[data-column="element_uid"] button.th-sort').click();
+  await turn();
+  const top = await read();
+  await turn(1300);
+  await choose("");
+  const all = await read();
+  const strip = [...document.querySelectorAll(".path-box")].map((box) => box.parentNode).find(Boolean);
+  const boxes = () => [...strip.querySelectorAll(".path-box")].filter(drawn).length;
+  const more = strip.querySelector("button.path-more");
+  const chain = { rest: boxes(), more: drawn(more) };
+  more.click();
+  await turn();
+  Object.assign(chain, { opened: boxes(), after: drawn(more), total: strip.querySelectorAll(".path-box").length });
+  return { bound, top, all, chain };
+})()
+"""
+
+#: `UX-1210`: every `hidden` node a page draws anyway, chapters open; `until-found` is a fold find reaches.
+_HIDDEN_DRAWN = r"""
+(async () => {
+  document.querySelectorAll("section.chapter[data-open]").forEach((n) => n.setAttribute("data-open", "true"));
+  await new Promise((done) => setTimeout(done, 50));
+  return [...document.querySelectorAll('[hidden]:not([hidden="until-found"])')]
+    .filter((node) => getComputedStyle(node).display !== "none")
+    .map((node) => `${node.tagName.toLowerCase()}.${node.className}`);
+})()
+"""
+
 #: `UX-1196`: Jump to an element, then its card's "Also in" link to the critical path: where its row lands.
 _FOLD_JUMP = r"""
 (async () => {
@@ -227,7 +284,10 @@ def seen(tmp_path_factory):
             "binary": browser.measure(heavy.as_uri(), _BINARY_JUMP, 1440, 900),
             "binary390": browser.measure(heavy.as_uri(), _BINARY_JUMP, 390, 844),
             "short": browser.measure(uris["macro_micro"], screen, 1440, 900),
+            "sort": browser.measure(uris["big"], _FOLD_SORT, 1440, 900),
         }
+        out["hidden"] = {label: browser.measure(uri, _HIDDEN_DRAWN, 1440, 900) for label, uri in uris.items()}
+        out["hidden"]["heavy"] = browser.measure(heavy.as_uri(), _HIDDEN_DRAWN, 1440, 900)
         return out
 
 
@@ -285,6 +345,22 @@ class TestPrintAndFindReachTheContent:
         rows = json.loads(got["copied"])
         assert got["label"] == "Copy 22 rows" and len(rows) == 22, (got["label"], len(rows))
         assert all(row and row.get("element_uid") for row in rows), rows
+
+    def test_the_stub_never_sorts_bounds_or_counts(self, seen):
+        bound, top, every = (seen["fold"]["sort"][key] for key in ("bound", "top", "all"))
+        assert bound["rows"] == bound["elements"] == 10 and bound["stubs"] == 0, bound
+        assert top["rows"] == top["elements"] == 10 and top["stubs"] == 0, top
+        assert top["label"] == "Copy 10 rows" and top["copied"] == 10, top
+        assert every["rows"] == every["elements"] == 22 and every["stubs"] == 0, every
+        assert every["label"] == "Copy 22 rows" and every["copied"] == 22 and "23" not in every["badge"], every
+
+    def test_the_chain_draws_no_more_once_every_box_is_drawn(self, seen):
+        chain = seen["fold"]["sort"]["chain"]
+        assert chain == {"rest": 9, "more": True, "opened": 22, "after": False, "total": 22}, chain
+
+    @pytest.mark.parametrize("label", ["golden", "macro_micro", "two_plane", "big", "heavy"])
+    def test_no_hidden_node_is_drawn(self, seen, label):
+        assert seen["hidden"][label] == [], (label, seen["hidden"][label][:5])
 
     def test_a_folded_row_is_a_landing(self, seen):
         got = seen["fold"]["jump"]

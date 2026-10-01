@@ -208,7 +208,8 @@ const HELD = new WeakMap();
 export function everyRow(body) {
   const state = HELD.get(body);
   if (state?.out.size) return state.order;
-  const order = childrenNamed(body, "tr");
+  // `UX-1210`: a head-and-tail fold's stub is no row - never sorted, bounded, counted or copied.
+  const order = childrenNamed(body, "tr").filter((tr) => tr.className !== "fold-row");
   if (body) HELD.set(body, { order, out: new Set() });
   return order;
 }
@@ -224,6 +225,8 @@ function showOnly(body, order, shown) {
     out.add(tr);
   }
   for (const tr of shown) { tr.hidden = false; body.append?.(tr); }
+  // `UX-1210`: a filtered, bounded or sorted table has left the listing order its fold was drawn on.
+  for (const tr of childrenNamed(body, "tr")) if (tr.className === "fold-row") tr.hidden = true;
   HELD.set(body, { order, out });
 }
 

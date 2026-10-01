@@ -72,6 +72,7 @@ import gzip
 import hashlib
 import itertools
 import json
+import operator
 import os
 import platform
 import re
@@ -84,6 +85,7 @@ import tempfile
 import threading
 import time
 from collections import defaultdict
+from collections.abc import Iterable
 from typing import Optional
 
 from bga import progress
@@ -3621,86 +3623,227 @@ def merge_record_streams(records: list[dict], consume: bool = False) -> list[dic
     in place, rather than a second copy of every record at the peak.
     """
     copy = (lambda record: record) if consume else dict
-    spine_records = [r for r in records if r.get("src") == "spine"]
-    if not spine_records:
+    plan = _merge_plan(
+        len(records),
+        lambda i: records[i]["start_ts"],
+        lambda i: records[i].get("src") == "spine",
+        lambda i: (records[i].get("invocation"), records[i]["pid"]),
+    )
+    if plan is None:
         for record in records:
             record.setdefault("coverage", COVERAGE_HOOK_ONLY)
         return records
+    return [_join_entry(copy(records[i]), None if partner < 0 else records[partner], partner) for i, partner in plan]
 
-    hook_by_key: dict[tuple[Optional[str], int], list[dict]] = {}
-    for record in records:
-        if record.get("src") == "spine":
-            continue
-        hook_by_key.setdefault((record.get("invocation"), record["pid"]), []).append(record)
+
+#: `_merge_plan`'s partner for a hook record no spine record claimed.
+_HOOK_LEFT = -2
+
+
+def _merge_plan(count, start_of, is_spine, key_of):
+    """`merge_record_streams`' pairing over indices, so a packed store
+    (`PackedRecords`) joins without a dict per record: `[(index,
+    partner)]` in the merged order, partner `-1` for a spine record
+    alone and `_HOOK_LEFT` for an unclaimed hook record, or `None` when
+    there is no spine record."""
+    spines = [i for i in range(count) if is_spine(i)]
+    if not spines:
+        return None
+    hook_by_key: dict = {}
+    for i in range(count):
+        if not is_spine(i):
+            hook_by_key.setdefault(key_of(i), []).append(i)
     for pending in hook_by_key.values():
-        pending.sort(key=lambda r: r["start_ts"])
-
-    merged: list[dict] = []
-    matched_hooks = set()
-    for record in sorted(spine_records, key=lambda r: r["start_ts"]):
-        key = (record.get("invocation"), record["pid"])
+        pending.sort(key=start_of)
+    plan = []
+    matched = set()
+    for i in sorted(spines, key=start_of):
         # UX-123: the *nearest* candidate within tolerance, not the
         # first. A `--unshare-pid` sandbox recycles small pids quickly -
         # this repository's own tests assert that it does - so a stale
         # unmatched hook record from an earlier holder of the pid could
         # capture a later spine record simply by being first in the list.
-        partner = None
+        partner = -1
         best = None
-        for candidate in hook_by_key.get(key) or []:
-            if id(candidate) in matched_hooks:
+        for candidate in hook_by_key.get(key_of(i)) or []:
+            if candidate in matched:
                 continue
-            distance = abs(candidate["start_ts"] - record["start_ts"])
+            distance = abs(start_of(candidate) - start_of(i))
             if distance <= MERGE_START_TOLERANCE_S and (best is None or distance < best):
                 partner, best = candidate, distance
-        entry = copy(record)
-        if partner is None:
-            entry["coverage"] = COVERAGE_SPINE_ONLY
-            if "cpu_us" in entry:
-                entry["cpu_source"] = "spine"
-        else:
-            matched_hooks.add(id(partner))
-            entry["coverage"] = COVERAGE_BOTH
-            # What the hook alone can measure. Never its lifecycle and
-            # never a second copy of a quantity the spine already
-            # carries, which is the whole defect this function exists to
-            # prevent.
-            for field in ("children_cpu_us", "children_max_rss_kb"):
-                if field in partner:
-                    entry[field] = partner[field]
-            if "max_rss_kb" in partner:
-                entry["hook_max_rss_kb"] = partner["max_rss_kb"]
-            # UX-53's free test: the same CPU time measured by two
-            # mechanisms - `getrusage` at exit against `/proc/<pid>/stat`
-            # read at the exit-stop. Kept as evidence rather than
-            # averaged; a disagreement is a fact about the capture.
-            #
-            # And the *resolution* differs, which decides which of the
-            # two is used. `/proc/<pid>/stat` reports whole `USER_HZ`
-            # ticks - 10ms - and truncates, so every process shorter than
-            # a tick reads as zero: on a real `examples/06` capture the
-            # 531 processes under 20ms totalled 0.83s by the spine
-            # against 3.82s by the hook, while the 34 over 200ms agreed
-            # to 0.7%. The hook's microsecond figure is therefore the one
-            # used wherever it exists; the spine's stands alone only for
-            # a static process, where it is the only measurement there
-            # is and its truncation is stated rather than hidden.
-            if "cpu_us" in partner:
-                if "cpu_us" in entry:
-                    entry["spine_cpu_us"] = entry["cpu_us"]
-                entry["hook_cpu_us"] = partner["cpu_us"]
-                entry["cpu_us"] = partner["cpu_us"]
-                entry["cpu_source"] = "hook"
-            elif "cpu_us" in entry:
-                entry["cpu_source"] = "spine"
-        merged.append(entry)
+        if partner >= 0:
+            matched.add(partner)
+        plan.append((i, partner))
+    plan += [(i, _HOOK_LEFT) for i in range(count) if not is_spine(i) and i not in matched]
+    return sorted(plan, key=lambda pair: start_of(pair[0]))
 
-    for record in records:
-        if record.get("src") == "spine" or id(record) in matched_hooks:
-            continue
-        entry = copy(record)
+
+def _join_entry(entry: dict, partner: Optional[dict], plan_partner: int) -> dict:
+    """One `_merge_plan` pair joined into `entry`, in place."""
+    if plan_partner == _HOOK_LEFT:
         entry["coverage"] = COVERAGE_HOOK_ONLY
-        merged.append(entry)
-    return sorted(merged, key=lambda r: r["start_ts"])
+        return entry
+    if partner is None:
+        entry["coverage"] = COVERAGE_SPINE_ONLY
+        if "cpu_us" in entry:
+            entry["cpu_source"] = "spine"
+    else:
+        entry["coverage"] = COVERAGE_BOTH
+        # What the hook alone can measure. Never its lifecycle and
+        # never a second copy of a quantity the spine already
+        # carries, which is the whole defect this function exists to
+        # prevent.
+        for field in ("children_cpu_us", "children_max_rss_kb"):
+            if field in partner:
+                entry[field] = partner[field]
+        if "max_rss_kb" in partner:
+            entry["hook_max_rss_kb"] = partner["max_rss_kb"]
+        # UX-53's free test: the same CPU time measured by two
+        # mechanisms - `getrusage` at exit against `/proc/<pid>/stat`
+        # read at the exit-stop. Kept as evidence rather than
+        # averaged; a disagreement is a fact about the capture.
+        #
+        # And the *resolution* differs, which decides which of the
+        # two is used. `/proc/<pid>/stat` reports whole `USER_HZ`
+        # ticks - 10ms - and truncates, so every process shorter than
+        # a tick reads as zero: on a real `examples/06` capture the
+        # 531 processes under 20ms totalled 0.83s by the spine
+        # against 3.82s by the hook, while the 34 over 200ms agreed
+        # to 0.7%. The hook's microsecond figure is therefore the one
+        # used wherever it exists; the spine's stands alone only for
+        # a static process, where it is the only measurement there
+        # is and its truncation is stated rather than hidden.
+        if "cpu_us" in partner:
+            if "cpu_us" in entry:
+                entry["spine_cpu_us"] = entry["cpu_us"]
+            entry["hook_cpu_us"] = partner["cpu_us"]
+            entry["cpu_us"] = partner["cpu_us"]
+            entry["cpu_source"] = "hook"
+        elif "cpu_us" in entry:
+            entry["cpu_source"] = "spine"
+    return entry
+
+
+def _picker(indices):
+    """`itemgetter` that always returns a tuple, for 0, 1 or many."""
+    if len(indices) == 1:
+        only = indices[0]
+        return lambda values: (values[only],)
+    return operator.itemgetter(*indices) if indices else lambda values: ()
+
+
+class PackedRecords:
+    """UX-1242: the process records between pairing and the fold, packed.
+
+    A record dict was 1,232 bytes; here its numbers are one `struct`
+    row in a shared buffer and its strings are interned references, and
+    `merged()` yields dicts equal to `merge_record_streams(...,
+    consume=True)`'s, in its order, one at a time.
+    """
+
+    _CODES = {float: "d", int: "q", bool: "?", type(None): "n"}
+
+    def __init__(self):
+        self._shapes: list = []
+        self._shape_ids: dict = {}
+        self._shape = array.array("H")
+        self._numbers = bytearray()
+        self._number_at = array.array("Q")
+        self._objects: list = []
+        self._object_at = array.array("Q")
+        self._start = array.array("d")
+        self._spine = bytearray()
+        self._strings: dict = {}
+
+    @classmethod
+    def of(cls, records) -> "PackedRecords":
+        packed = cls()
+        for record in records:
+            packed.append(record)
+        return packed
+
+    def __len__(self):
+        return len(self._shape)
+
+    def _shape_of(self, record, cached=True):
+        signature = (tuple(record), tuple(map(type, record.values())))
+        found = self._shape_ids.get(signature) if cached else None
+        if found is not None:
+            return found
+        codes = []
+        for value in record.values():
+            code = self._CODES.get(type(value), "o")
+            if code == "q" and not -(1 << 63) <= value < 1 << 63:
+                code = "o"
+            codes.append(code)
+        numeric = [i for i, code in enumerate(codes) if code in "dq?"]
+        held = [i for i, code in enumerate(codes) if code == "o"]
+        # Where each value sits in `numbers + objects + (None,)`.
+        source = [
+            numeric.index(i)
+            if code in "dq?"
+            else len(numeric) + held.index(i)
+            if code == "o"
+            else len(numeric) + len(held)
+            for i, code in enumerate(codes)
+        ]
+        self._shapes.append(
+            (
+                signature[0],
+                struct.Struct("<" + "".join(codes[i] for i in numeric)),
+                _picker(numeric),
+                _picker(held),
+                len(held),
+                _picker(source),
+            )
+        )
+        if cached:
+            self._shape_ids[signature] = len(self._shapes) - 1
+        return len(self._shapes) - 1
+
+    def append(self, record: dict) -> None:
+        index = self._shape_of(record)
+        values = (*record.values(), None)
+        try:
+            packed = self._shapes[index][1].pack(*self._shapes[index][2](values))
+        except struct.error:
+            # An int past 64 bits under a cached shape: held as an object.
+            index = self._shape_of(record, cached=False)
+            packed = self._shapes[index][1].pack(*self._shapes[index][2](values))
+        strings = self._strings
+        self._object_at.append(len(self._objects))
+        self._objects += [strings.setdefault(v, v) if type(v) is str else v for v in self._shapes[index][3](values)]
+        self._shape.append(index)
+        self._number_at.append(len(self._numbers))
+        self._numbers += packed
+        self._start.append(record["start_ts"])
+        self._spine.append(record.get("src") == "spine")
+
+    def record(self, index: int) -> dict:
+        keys, row, _numeric, _held, held, source = self._shapes[self._shape[index]]
+        at = self._object_at[index]
+        parts = (*row.unpack_from(self._numbers, self._number_at[index]), *self._objects[at : at + held], None)
+        return dict(zip(keys, source(parts)))
+
+    def merged(self):
+        """The records in `merge_record_streams`' order, joined, each a
+        fresh dict."""
+        order = array.array("Q", sorted(range(len(self)), key=self._start.__getitem__))
+        plan = _merge_plan(
+            len(order),
+            lambda i: self._start[order[i]],
+            lambda i: self._spine[order[i]] == 1,
+            lambda i: (lambda r: (r.get("invocation"), r["pid"]))(self.record(order[i])),
+        )
+        if plan is None:
+            for index in order:
+                entry = self.record(index)
+                entry.setdefault("coverage", COVERAGE_HOOK_ONLY)
+                yield entry
+            return
+        for i, partner in plan:
+            entry = self.record(order[i])
+            yield _join_entry(entry, None if partner < 0 else self.record(order[partner]), partner)
 
 
 # UX-37: findings below this much recoverable wall-clock are omitted
@@ -5650,7 +5793,7 @@ def build_spans_from_wrapped_log(path: str) -> list[dict]:
     return sorted(spans.values(), key=lambda s: s["start"])
 
 
-def sandbox_durations(records: list[dict]) -> dict[str, float]:
+def sandbox_durations(records: Iterable[dict]) -> dict[str, float]:
     """UX-64: how long each sandbox was alive, in seconds, from its own
     processes' `CLOCK_MONOTONIC` stamps.
 
@@ -7062,9 +7205,8 @@ def load_and_summarize(
         # start, which is the order every downstream reader has always
         # seen; that list is the remaining floor, and it is O(processes)
         # rather than O(events).
-        records = merge_record_streams(
-            sorted(stream_records(events, unmatched), key=lambda record: record["start_ts"]), consume=True
-        )
+        # UX-1242: packed, a record a fifth of its dict; `merged()` is the join.
+        records = PackedRecords.of(stream_records(events, unmatched))
     fork_only_exits = unmatched["fork_only"]
     unmatched_ends = unmatched["unmatched"]
 
@@ -7101,7 +7243,7 @@ def load_and_summarize(
         # UX-64: give the correlation real intervals rather than start
         # instants. Under `--builders 4` an instant sits inside four
         # overlapping spans and resolves almost nothing.
-        correlation = correlate_invocations(invocations, spans, durations=sandbox_durations(records))
+        correlation = correlate_invocations(invocations, spans, durations=sandbox_durations(records.merged()))
         correlation["elements_in_plane1"] = len(spans)
 
     # UX-297: fold the records into the aggregates and drop each one as
@@ -7111,9 +7253,8 @@ def load_and_summarize(
     # `UX-56`'s relabelling happens on the way in for the same reason:
     # there is no list left to rewrite afterwards.
     fold = Plane2Fold(resolved=(correlation or {}).get("resolved"))
-    for index in range(len(records)):
-        fold.add(records[index])
-        records[index] = None
+    for record in records.merged():
+        fold.add(record)
     del records
     if correlation is not None:
         correlation["relabelled_processes"] = fold.relabelled

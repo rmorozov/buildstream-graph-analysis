@@ -685,6 +685,9 @@ MEDIUM = (
     # `UX-1240`: two subprocess opens passes at 1,202 x 40 x 50, and two fuzzes.
     # Measured alone in one process: 6.74 / 6.20s.
     "tests/unit/test_the_opens_pass_holds_paths_as_ids.py",  #    6.7s
+    # `UX-1242`: two tracemalloc subprocesses at 20,000 records, and two fuzzes.
+    # Measured alone in one process, `--durations=0`: 3.68s.
+    "tests/unit/test_the_records_are_packed.py",  #    3.7s
     # `UX-667`, tiered on landing. One Chromium, one module-scoped
     # page - the rail's landing state, a 68-mark walk and the CSS
     # sweep all read from it. Measured single-process, `--durations=0`:

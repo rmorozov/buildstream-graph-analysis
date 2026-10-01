@@ -643,8 +643,15 @@ LARGE = (
     # `UX-1178`, round 158's merged tree with its follow-up clause: eighteen
     # Chromium loads at 390/320/1440. Alone in one process: 23.84 / 24.01 / 23.96s.
     "tests/unit/test_the_narrow_page_keeps_its_place.py",  #   24.0s
-    # `UX-1203`: a two-plane run built, then 16 Chromium loads. Alone in one process: 37.09 / 37.69s.
-    "tests/unit/test_the_rail_tools_and_the_pager_read_as_one_set.py",  #   37.4s
+    # `UX-1203`: a two-plane run built, then 16 Chromium loads. Alone in one process: 37.09 / 37.69s;
+    # round 159's merged tree with its residue: 54.24 / 54.36s.
+    "tests/unit/test_the_rail_tools_and_the_pager_read_as_one_set.py",  #   54.3s
+    # `UX-1186`, `UX-1199`'s 1,202-element page; round 159's merged tree with its residue,
+    # alone in one process: 27.20 / 26.86s.
+    "tests/unit/test_a_population_key_is_declared.py",  #   27.0s
+    # `UX-1179`, `UX-1196`; round 159's merged tree builds one more page, alone in one
+    # process: 30.58 / 30.93s.
+    "tests/unit/test_print_and_find_reach_the_content.py",  #   30.8s
 )
 
 MEDIUM = (
@@ -1120,21 +1127,16 @@ MEDIUM = (
     "tests/unit/test_copy_takes_the_matched_population.py",  #  8.5s
     # `UX-1184`: 6.85 / 7.18s.
     "tests/unit/test_a_column_is_named_for_its_field.py",  #  7.0s
-    # `UX-1186`: 5.21 / 5.08s; `UX-1199`'s 1,202-element page in it: 12.88 / 12.59 / 12.64s.
-    "tests/unit/test_a_population_key_is_declared.py",  # 12.6s
-    # `UX-1192`: 8.38 / 8.49 / 9.43s.
-    "tests/unit/test_a_mark_says_its_value.py",  #  8.5s
+    # `UX-1192`: 8.38 / 8.49 / 9.43s; round 159's merged tree: 11.20 / 11.32s.
+    "tests/unit/test_a_mark_says_its_value.py",  # 11.3s
     # `UX-1191`: 7.44 / 6.86s.
     "tests/unit/test_a_key_column_matches_exactly.py",  #  7.2s
-    # `UX-1194`: 6.87 / 6.46s.
-    "tests/unit/test_op_and_duration_meet_on_durations.py",  #  6.9s
+    # `UX-1194`: 6.87 / 6.46s; round 159's merged tree: 6.80 / 7.17s.
+    "tests/unit/test_op_and_duration_meet_on_durations.py",  #  7.0s
     # `UX-1176`: 7.23 / 7.51s.
     "tests/unit/test_a_status_is_announced.py",  #  7.4s
     # `UX-1177`: 2.63 / 2.70s; its Jump-lands residue, merged tree: 9.75 / 9.70 / 9.73s.
     "tests/unit/test_jump_finds_what_the_rail_lists.py",  #  9.7s
-    # `UX-1179`: 11.51 / 11.84 / 11.68s, the 1,202-element page built in it;
-    # its card-Jump residue, merged tree: 13.57 / 13.57 / 13.38s.
-    "tests/unit/test_print_and_find_reach_the_content.py",  # 13.5s
     # Round 147, tiered on the merged tree: three single-process runs
     # alone each (setup+call+teardown).
     # `UX-1083`: 4.17 / 4.08 / 4.23s.

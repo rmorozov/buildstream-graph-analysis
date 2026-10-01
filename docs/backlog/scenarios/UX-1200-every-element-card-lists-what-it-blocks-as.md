@@ -50,6 +50,12 @@ Question:  lift the 50 class to 38,700 px / 870 controls and the 4,100 class to 
 
 Budgets 1200a: 0 at rest. On-demand cards are built only on an anchor, the investigation only on Focus. Page half: under 0.3 KB.
 
+**Owner decision (Ruslan, 2026-10-01 05:49, option "Full lists"):** every ranked card shows its Blocks and
+Depends on lists open, as links - the architect's "full lists, links" row, not the closed fold. UX-1187's
+"no ranked list" clause is reversed. 1200b: `listsFor(payload, uid, lists)` out of `elementFactsFor`, and
+`renderElementSections` feeds each ranked record through it. The bounds the lists push over rise by exactly
+this commit's measured delta, in a separate commit; the others do not move.
+
 ## Out of Scope
 
 The deep-leaf bound (`UX-1187`).
@@ -93,3 +99,33 @@ Page half 151,905 -> 152,033 B (+128) on golden and macro_micro; `test_the_page_
 | reverted | | 7 passed |
 
 Re-based: `test_focus_is_an_investigation.py`'s chain clause reads the relabelled rows.
+
+**1200b** (the owner's 05:49 decision). Gap: `layer12/mod058.bst`'s ranked card on the same page, `card Blocks
+line: None` above. Close: the guard reads 6 Blocks links on it, and toolchain.bst's ranked card draws 40 links
+and ", +1,160 more" against the investigation's Blocks 1,200 (no monkeypatch now). Volume, the guard's own
+`_LOOK` and build, opened, a53e2300 -> the lists (landed unmoved on every page):
+
+```text
+golden      height 19,139 -> 19,292 (+153)  words 7,744 -> 7,750 (+6)  controls 378 -> 382 (+4)  nodes 2,708 -> 2,716 (+8)
+macro_micro height 38,308 -> 39,096 (+788)  words 13,060 -> 13,138 (+78)  controls 788 -> 856 (+68)  nodes 6,801 -> 6,889 (+88)
+scale       height 30,871 -> 33,165 (+2,294)  words 8,784 -> 9,003 (+219)  controls 827 -> 1,019 (+192)  nodes 5,369 -> 5,609 (+240)
+xl          height 32,224 -> 34,487 (+2,263)  words 8,911 -> 9,115 (+204)  controls 858 -> 1,037 (+179)  nodes 5,865 -> 6,092 (+227)
+xl_both     height 43,548 -> 45,741 (+2,193)  words 12,739 -> 12,936 (+197)  controls 998 -> 1,170 (+172)  nodes 7,455 -> 7,675 (+220)
+```
+
+Over: 50 class height (39,096 > 38,400) and controls (856 > 800); 4,100 class height (45,741 > 44,629),
+controls (1,170 > 1,020) and nodes (7,675 > 7,500). Raised by each binding page's delta, headroom unchanged:
+50 class 38,400 -> 39,188 px and 800 -> 868 controls (macro_micro +788, +68); 4,100 class 44,629 -> 46,822
+px, 1,020 -> 1,192 controls, 7,500 -> 7,720 nodes (xl_both +2,193, +172, +220). Page half 152,033 -> 152,109
+B (+76).
+
+| mutation | reddened | run printed |
+|---|---|---|
+| ranked records skip `listsFor` | `..._blocks[golden,macro_micro,big]`, `..._past_the_cap` | 4 failed, 3 passed |
+| ranked cards drop Depends on | `..._blocks[golden,macro_micro,big]` | 3 failed, 4 passed |
+| fan_in uid drawn as `code` | `..._blocks[golden,macro_micro,big]`, `..._past_the_cap` | 4 failed, 3 passed |
+| no investigation Blocks row | `..._blocks[big]`, `..._past_the_cap` | 2 failed, 5 passed |
+| reverted | | 7 passed |
+
+Re-based: `test_the_card_lists_what_an_element_blocks`'s ranked `== []` clause (UX-1187's, reversed by the
+owner) and the monkeypatch in `test_the_card_counts_the_dependents_past_the_cap`.

@@ -317,6 +317,19 @@ const FAN_IN_LISTS = new Set(ELEMENT_LIST_MAPS.map(([, field]) => field));
  * element", and the section built from it says so rather than being
  * absent.
  */
+// `lists` plus each `ELEMENT_LIST_MAPS` list it does not hold; a new array, so a cached record is untouched.
+function listsFor(payload, uid, lists) {
+  const out = [...lists], held = new Set(lists.map((l) => l.key));
+  for (const [path, field, label, count] of ELEMENT_LIST_MAPS) {
+    const map = path.split(".").reduce((node, key) => node?.[key], payload);
+    const items = map?.[uid]?.[field];
+    if (!Array.isArray(items) || !items.length || held.has(field)) continue;
+    held.add(field);
+    out.push({ key: field, label, items: items.map(String), more: (map[uid][count] ?? 0) - items.length });
+  }
+  return out;
+}
+
 /**
  * `UX-369`: every element uid this payload knows, sorted.
  *
@@ -394,14 +407,7 @@ export function elementFactsFor(payload, uid) {
       path: `${path}[${uid}]${field === null ? "" : `.${field}`}`,
     });
   }
-  const heldLists = new Set(record.lists.map((l) => l.key));
-  for (const [path, field, label, count] of ELEMENT_LIST_MAPS) {
-    const map = path.split(".").reduce((node, key) => node?.[key], payload);
-    const items = map?.[uid]?.[field];
-    if (!Array.isArray(items) || !items.length || heldLists.has(field)) continue;
-    heldLists.add(field);
-    record.lists.push({ key: field, label, items: items.map(String), more: (map[uid][count] ?? 0) - items.length });
-  }
+  record.lists = listsFor(payload, uid, record.lists);
   if (known) return record;
   for (const finding of payload?.findings ?? []) {
     if ((finding.elements ?? []).includes(uid)) record.findings.push(finding);
@@ -580,7 +586,9 @@ export function renderElementSections(payload, root, options = {}) {
   const sections = [];
   const all = [...facts.values()];
   for (const record of all.slice(0, ELEMENTS_SHOWN)) {
-    sections.push(elementSection(record, places.get(record.element),
+    // UX-1200: a ranked card lists what it blocks and depends on, as the on-demand card does.
+    sections.push(elementSection({ ...record, lists: listsFor(payload, record.element, record.lists) },
+                                 places.get(record.element),
                                  investigate, format, bounded));
   }
   if (all.length > ELEMENTS_SHOWN) {

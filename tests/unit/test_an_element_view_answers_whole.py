@@ -66,16 +66,19 @@ FIXTURES = {
 }
 
 _CARDS = """(() => [...document.querySelectorAll('section[data-element]')].map((s) => {
-  const line = s.querySelector('[data-list="dependents"]');
-  return [s.dataset.element, s.dataset.onDemand === 'true', line && {
-    names: [...line.querySelectorAll('[data-raw]')].map((n) => n.dataset.raw),
-    links: [...line.querySelectorAll('a[href][data-raw]')].map((a) => a.getAttribute('href')),
-    more: line.querySelector('[data-more]')?.textContent ?? null}];
+  const read = (key) => {
+    const line = s.querySelector(`[data-list="${key}"]`);
+    return line && {
+      names: [...line.querySelectorAll('[data-raw]')].map((n) => n.dataset.raw),
+      links: [...line.querySelectorAll('a[href][data-raw]')].map((a) => a.getAttribute('href')),
+      more: line.querySelector('[data-more]')?.textContent ?? null};
+  };
+  return [s.dataset.element, s.dataset.onDemand === 'true', read('dependents'), read('direct')];
 }))()"""
 
-# UX-1200: the on-demand card's Focus, and the investigation's one Blocks figure.
+# UX-1200: the card's Focus, and the investigation's one Blocks figure.
 _FOCUSED = """(() => {
-  document.querySelector(`section[data-on-demand="true"] button.focus-this[data-focus-element="__UID__"]`)?.click();
+  document.querySelector(`button.focus-this[data-focus-element="__UID__"]`)?.click();
   const panel = document.querySelector('[data-role=focus-investigation] [data-group=relationships]');
   const rows = [...(panel?.querySelectorAll('dt') ?? [])].map((dt) => [dt.textContent, dt.nextElementSibling]);
   return rows.filter(([label]) => label === 'Blocks').map(([, dd]) => dd.dataset.raw);
@@ -91,12 +94,22 @@ def _anchor(uid):
     return "element-" + re.sub(r"[^\w-]+", "-", uid)
 
 
+def _line(row, field, count):
+    """What a card's `data-list=<field>` line must read for one `fan_in` row."""
+    names = row[field]
+    more = row[count] - len(names)
+    return names and {
+        "names": names,
+        "links": [f"#{_anchor(n)}" for n in names],
+        "more": f", +{more:,} more" if more > 0 else None,
+    }
+
+
 @pytest.mark.skipif(find_chrome() is None, reason=NO_BROWSER)
 @pytest.mark.parametrize("label", ["golden", "macro_micro", "big"])
 def test_the_card_lists_what_an_element_blocks(label, request, tmp_path):
-    """No ranked card carries the Blocks list (+2,193 px on `xl_both`); the card an anchor
-    builds links the most-blocking unranked element's dependents, exactly, and its Focus
-    investigation's Blocks is `dependent_count`."""
+    """Every card, ranked (Ruslan 05:49) or built by an anchor, links what its element blocks
+    and depends on, exactly, and its Focus investigation's Blocks is `dependent_count`."""
     from tools.bga_view import payloads
 
     run = request.getfixturevalue("big") if label == "big" else FIXTURES[label]
@@ -104,41 +117,40 @@ def test_the_card_lists_what_an_element_blocks(label, request, tmp_path):
     uri = pages.export_uri(run, tmp_path)
     with Browser(find_chrome()) as browser:
         ranked = browser.measure(uri, _CARDS, 1440, 900)
-        assert ranked and [uid for uid, _, line in ranked if line] == [], ranked
-        unranked = sorted(set(fan_in) - {uid for uid, _, _ in ranked}, key=lambda u: -fan_in[u]["dependent_count"])
+        wrong = [
+            (uid, blocks, direct)
+            for uid, _, blocks, direct in ranked
+            if uid in fan_in
+            and (blocks or None, direct or None)
+            != (
+                _line(fan_in[uid], "dependents", "dependent_count") or None,
+                _line(fan_in[uid], "direct", "direct_count") or None,
+            )
+        ]
+        assert ranked and wrong == [], wrong
+        unranked = sorted(set(fan_in) - {card[0] for card in ranked}, key=lambda u: -fan_in[u]["dependent_count"])
         if label != "big":
             assert unranked == [], unranked
             return
+        assert len([card[2]["links"] for card in ranked if card[0] == "layer12/mod058.bst"][0]) == 6
         uid = unranked[0]
         assert fan_in[uid]["dependent_count"] > 1, uid
         cards = browser.measure(f"{uri}#{_anchor(uid)}", _CARDS, 1440, 900)
         blocks = browser.measure(f"{uri}#{_anchor(uid)}", _FOCUSED.replace("__UID__", uid), 1440, 900)
-    built = [line for name, on_demand, line in cards if name == uid and on_demand]
-    names = fan_in[uid]["dependents"]
-    assert built == [{"names": names, "links": [f"#{_anchor(n)}" for n in names], "more": None}], built
+    built = [line for name, on_demand, line, _ in cards if name == uid and on_demand]
+    assert built == [_line(fan_in[uid], "dependents", "dependent_count")], built
     assert blocks == [str(fan_in[uid]["dependent_count"])], blocks
 
 
 @pytest.mark.skipif(find_chrome() is None, reason=NO_BROWSER)
-def test_the_card_counts_the_dependents_past_the_cap(big, tmp_path, monkeypatch):
-    """The 1,202 run's one element past 40 dependents (toolchain.bst, 1,200) has a ranked card,
-    so the count is published past the cap on an unranked one to draw it."""
-    import tools.bga_view as view
-
-    real = view.payloads
-    uid = "layer18/mod001.bst"
-
-    def past_the_cap(*args, **kwargs):
-        documents = real(*args, **kwargs)
-        documents["report.json"]["elements"]["fan_in"][uid]["dependent_count"] += 1200
-        return documents
-
-    monkeypatch.setattr(view, "payloads", past_the_cap)
+def test_the_card_counts_the_dependents_past_the_cap(big, tmp_path):
+    """The 1,202 run's one element past 40 dependents (toolchain.bst, 1,200) draws "+N more" on
+    its ranked card, and its links plus N is the investigation's Blocks."""
+    uid = "toolchain.bst"
     uri = f"{pages.export_uri(big, tmp_path)}#{_anchor(uid)}"
     with Browser(find_chrome()) as browser:
         cards = browser.measure(uri, _CARDS, 1440, 900)
         blocks = browser.measure(uri, _FOCUSED.replace("__UID__", uid), 1440, 900)
-    built = [line for name, on_demand, line in cards if name == uid and on_demand]
-    assert [line["more"] for line in built] == [", +1,200 more"], built
-    # One count: the card's links plus its "+N more" is the investigation's Blocks.
-    assert blocks == [str(len(built[0]["links"]) + 1200)], (blocks, built)
+    built = [line for name, on_demand, line, _ in cards if name == uid and not on_demand]
+    assert [line["more"] for line in built] == [", +1,160 more"], built
+    assert blocks == [str(len(built[0]["links"]) + 1160)] == ["1200"], (blocks, built)

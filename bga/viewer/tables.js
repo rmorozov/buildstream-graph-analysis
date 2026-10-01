@@ -15,7 +15,7 @@ import { el } from "./format.js";
 
 /** How many microseconds/bytes/… one suffix is worth, per quantity. */
 const UNITS = {
-  duration_us: { us: 1, ms: 1e3, s: 1e6, m: 60e6, h: 3600e6 },
+  duration_us: { us: 1, ms: 1e3, s: 1e6, m: 60e6, min: 60e6, h: 3600e6 },
   // UX-341: one unit per dimension. `seconds`, `megabytes`,
   // `kilobytes` and `percent` were retired from the vocabulary, so a
   // column can no longer be declared in them and these tables no
@@ -88,24 +88,38 @@ export function parseQuery(text, specs = [], labels = {}) {
   const exact = [];
   const thresholds = {};
   const unread = [];
-  let rest = String(text ?? "").replace(/(^|\s)([a-z_][\w-]*):\s*(\S+)/gi, (whole, lead, name, value) => {
-    const spec = names.get(slug(name));
-    if (!spec) { unread.push({ clause: whole.slice(lead.length), column: name }); return lead; }
-    const part = spec.role !== "task_uid" ? null : slug(name) === "op" ? 1 : slug(name) === "element" ? 0 : null;
-    const prefix = value.endsWith("*");
-    exact.push({ column: spec.key, part, prefix, value: (prefix ? value.slice(0, -1) : value).toLowerCase() });
-    return lead;
-  });
-  rest = rest.replace(/(^|\s)(?:([a-z_][\w-]*)\s*)?(>=|<=|>|<|=)\s*(\S*)/gi, (whole, lead, name, op, value) => {
-    // `UX-1195`: a word that names no column is said back and applies nothing - no substring residue.
+  // `UX-1206`: a column's whole displayed name, of any number of words, reads as that column.
+  const phrases = [...names.keys()].filter((name) => name.includes("_")).sort((a, b) => b.length - a.length);
+  const said = String(text ?? "").replace(new RegExp(`(^|\\s)(${phrases.map((name) => name.split("_")
+    .join("[\\s_-]+")).join("|") || "(?!)"})(?=\\s*[:<>=])`, "gi"), (whole, lead, name) => lead + slug(name));
+  let rest = "";
+  let from = 0;
+  for (const found of said.matchAll(/(^|\s)(?:([a-z_][\w-]*):\s*(\S+)|(?:([a-z_][\w-]*)\s*)?(>=|<=|>|<|=)\s*(\S*))/gi)) {
+    const [whole, lead, key, value, name, op, bound] = found;
     const clause = whole.slice(lead.length);
-    if (name && !names.has(slug(name))) { unread.push({ clause, column: name }); return lead; }
+    const before = said.slice(from, found.index);
+    from = found.index + whole.length;
+    // `UX-1195`, `UX-1206`: a name no column has is said back with the words before it, and none of it applies.
+    if ((key ?? name) && !names.has(slug(key ?? name))) {
+      const run = before.trim() ? `${before.trim()} ` : "";
+      unread.push({ clause: run + clause, column: run + (key ?? name) });
+      rest += " ";
+      continue;
+    }
+    rest += before + lead;
+    if (key) {
+      const spec = names.get(slug(key));
+      const part = spec.role !== "task_uid" ? null : slug(key) === "op" ? 1 : slug(key) === "element" ? 0 : null;
+      const prefix = value.endsWith("*");
+      exact.push({ column: spec.key, part, prefix, value: (prefix ? value.slice(0, -1) : value).toLowerCase() });
+      continue;
+    }
     const spec = name ? names.get(slug(name)) : primary;
-    const parsed = spec?.quantity ? parseThreshold(`${op} ${value}`, spec.quantity) : null;
+    const parsed = spec?.quantity ? parseThreshold(`${op} ${bound}`, spec.quantity) : null;
     if (parsed) thresholds[spec.key] = parsed;
-    else unread.push({ clause, column: null });
-    return lead;
-  });
+    else unread.push({ clause, column: null, share: name || primary ? null : specs.find((s) => s?.share)?.key ?? null });
+  }
+  rest += said.slice(from);
   return { text: rest.replace(/\s+/g, " ").trim(), exact, thresholds, unread };
 }
 

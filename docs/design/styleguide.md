@@ -616,7 +616,11 @@ the placeholder `> 10`.
   (`is_leaf:yes`), a column answers to its name's singular
   (`duration > 5s`) and `binary: make` reads as `binary:make`; a word
   naming no column applies nothing and names the columns there are.
-  `test_a_key_column_matches_exactly.py`.
+  A column's whole shown name, of any number of words, is that column
+  (`wall-clock share > 2s`); a name no column has takes the words
+  before it, so nothing of a clause said back as not applied filters;
+  a bare threshold on a table whose one quantity is a share says so
+  (`UX-1206`). `test_a_key_column_matches_exactly.py`.
 - **A table's tools say its count once** (`UX-1163`): `Copy N rows` at
   rest, the badge only as `N of M`, the one-value sentence as "Every
   row:", and a short table left one column draws no header. At two rows

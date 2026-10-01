@@ -98,7 +98,17 @@ _WALK_QUERIES = [
     ["elements", "share > 50%"],
     ["elements", "level = 12"],
     ["elements", "layer1"],
+    # `UX-1206`: a column's whole displayed name, and the words before a name no column has.
+    ["wall_clock_share_us", "wall-clock share > 2s"],
+    ["wall_clock_share_us", "share > 2s"],
+    ["elements", "element durations > 0.05min"],
+    ["elements", "blast radius > 10min"],
 ]
+
+#: `UX-1206`: the Leaves view's column, by its whole name and by one word of it.
+_LEAVES = """(() => { const view = document.querySelector('select.preset-view[data-table="elements"]');
+  view.value = "Leaves"; view.dispatchEvent(new Event("change")); })();"""
+_LEAF_QUERIES = [["elements", "is potentially deferrable:yes"], ["elements", "deferrable:yes"]]
 
 
 @pytest.fixture(scope="module")
@@ -109,12 +119,30 @@ def seen(tmp_path_factory):
     heavy = pages.export_page(pages.heavy_binary_run(into), into / "heavy.html")
     walk = into / "walk.html"
     view.export(str(pages.two_plane_run(into, ("--layers", "20", "--width", "60"), name="walk")), str(walk))
+    # `UX-1206`: an analysis from before `task_durations_us` - the share is the task table's one quantity.
+    text = walk.read_text(encoding="utf-8")
+    packed = re.search(r'id="bga-report-gz">([^<]*)</script>', text)
+    report = json.loads(gzip.decompress(base64.b64decode(packed.group(1))))
+    del report["task_durations_us"]
+    older = into / "older.html"
+    older.write_text(
+        text[: packed.start(1)]
+        + base64.b64encode(gzip.compress(json.dumps(report).encode())).decode()
+        + text[packed.end(1) :],
+        encoding="utf-8",
+    )
     uris = {"heavy": heavy.as_uri(), **pages.pages(tmp_path_factory, "key-exact", ("golden", "macro_micro"))}
     with Browser(chrome) as browser:
         return {
             "report": _report_in(heavy),
             "walk_report": _report_in(walk),
             "walk": browser.measure(walk.as_uri(), _QUERY.replace("QUERIES", json.dumps(_WALK_QUERIES)), 1440, 900),
+            "leaves": browser.measure(
+                walk.as_uri(), _LEAVES + _QUERY.replace("QUERIES", json.dumps(_LEAF_QUERIES)), 1440, 900
+            ),
+            "older": browser.measure(
+                older.as_uri(), _QUERY.replace("QUERIES", '[["wall_clock_share_us", "> 2s"]]'), 1440, 900
+            ),
             "heavy": browser.measure(uris["heavy"], _QUERY.replace("QUERIES", json.dumps(_heavy_queries())), 1440, 900),
             "macro": browser.measure(
                 uris["macro_micro"], _QUERY.replace("QUERIES", '[["binary_cost", "binary:ld"]]'), 1440, 900
@@ -219,3 +247,34 @@ def test_the_badge_states_one_population(seen):
 def test_the_placeholder_fits_its_box_at_390(seen):
     over = [(label, box) for label, got in seen["narrow"].items() for box in got["boxes"] if box[2] > box[3]]
     assert not over and any(got["boxes"] for got in seen["narrow"].values()), over
+
+
+@needs_browser
+def test_a_column_s_whole_displayed_name_reads_as_that_column(seen):
+    report, got = seen["walk_report"], seen["walk"]
+    shares = sum(us > 2e6 for us in report["wall_clock_share_us"].values())
+    whole, word = got["wall_clock_share_us wall-clock share > 2s"], got["wall_clock_share_us share > 2s"]
+    assert whole["matched"] == word["matched"] == shares > 0 and whole["unread"] is None, (whole, word)
+    over = sum(us > 3e6 for us in report["elements"]["element_durations"].values())
+    assert got["elements element durations > 0.05min"]["matched"] == over > 0, got[
+        "elements element durations > 0.05min"
+    ]
+    leaves = report["leaf_analysis"]["leaves_detail"].values()
+    deferrable = sum(row["is_potentially_deferrable"] for row in leaves)
+    said = seen["leaves"]
+    assert said["elements is potentially deferrable:yes"]["matched"] == deferrable > 0, said
+    assert said["elements deferrable:yes"]["matched"] == deferrable and deferrable < len(leaves), said
+
+
+@needs_browser
+def test_a_clause_not_applied_filters_nothing(seen):
+    got = seen["walk"]["elements blast radius > 10min"]
+    assert got["badge"] == "25 of 1,202" and len(got["binaries"]) == 25, got
+    assert "“blast radius”" in (got["unread"] or ""), got
+
+
+@needs_browser
+def test_a_bare_threshold_on_a_share_says_it_is_a_share(seen):
+    got = seen["older"]["wall_clock_share_us > 2s"]
+    assert got["invalid"] == "true" and "is a share, not a duration" in (got["unread"] or ""), got
+    assert "wall-clock share > 2s" in got["unread"] and "matched" not in got["badge"], got

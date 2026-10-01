@@ -1006,9 +1006,13 @@ export function interrogable(table, specs, total, depth = 0) {
       box.setAttribute("aria-invalid", String(bad));
       unread.hidden = !bad;
       const heads = columns.map((spec) => labels[spec?.key] ?? spec?.title).filter(Boolean).join(", ");
-      unread.textContent = query.unread.map(({ clause, column }) => (column
+      // `UX-1206`: a bare threshold on a table whose only quantity is a share says so, and how to name it.
+      const shareOf = (key) => labels[key] ?? columns.find((spec) => spec?.key === key)?.title ?? key;
+      unread.textContent = query.unread.map(({ clause, column, share }) => (column
         ? `\u201c${clause}\u201d: no column here is called \u201c${column}\u201d (${heads}), so it is not applied.`
-        : `\u201c${clause}\u201d is not a threshold this table can read, so it is not applied.`)).join(" ");
+        : share ? `\u201c${clause}\u201d is not applied: ${shareOf(share)} is a share, not a duration - name it, `
+          + `as in \u201c${shareOf(share).toLowerCase()} ${clause}\u201d.`
+          : `\u201c${clause}\u201d is not a threshold this table can read, so it is not applied.`)).join(" ");
       if (bad && !unread.parentNode) box.after?.(unread);
       rewind?.();
       refresh();

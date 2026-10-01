@@ -144,7 +144,7 @@ function inlineObject(value, node) {
  * top-level section needs lives there, beside that one call, so this
  * function's body is unchanged from its cell-only years.
  */
-export function mapTable(key, rows, hint, node, nested, depth = 0, path = key, list = false, beside = []) {
+export function mapTable(key, rows, hint, node, nested, depth = 0, path = key, list = false, beside = [], titles = null) {
   let declared = hint;
   if (!nested) {
     // A `{name: number}` map's value column has to *declare* a
@@ -167,9 +167,9 @@ export function mapTable(key, rows, hint, node, nested, depth = 0, path = key, l
       ?? (record ? null : "count");
     // UX-1173: a list's index is not a name, so a list draws its items alone.
     declared = { ...hint, [COLUMNS]: [
-      // `UX-1194`: a task-keyed map's key column is Task in its header, each cell's label and Copy alike.
-      ...(list ? [] : [{ key: "key", title: hint[KEYED_BY] === KEYED_BY_TASK_UID ? "Task" : "Name" }]), ...beside,
-      { key: "value", title: node?.additionalProperties?.title ?? title(key, measure), quantity: measure }] };
+      // `UX-1207`: a top-level map's `titles` name both columns once, for th, cell labels and Copy.
+      ...(list ? [] : [{ key: "key", title: titles?.key ?? "Name" }]), ...beside,
+      { key: "value", title: titles?.value ?? node?.additionalProperties?.title ?? title(key, measure), quantity: measure }] };
   }
   const { table, tools } = buildTable(path, rows, declared, node, depth);
   // `UX-1163`'s rule: a list left one column says its name in its fold, not a header.

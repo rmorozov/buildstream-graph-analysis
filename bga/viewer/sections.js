@@ -459,30 +459,6 @@ function renderEmptySection(key, hint, node, sentence = null) {
 }
 
 /**
- * `UX-864`: the one place `mapTable`'s call for a top-level map
- * differs from its call for a nested cell.
- *
- * `mapTable` itself is unchanged - a cell's fold already labels the
- * value, so its "name"/section-title header pair is right there. A
- * section standing on its own names the key's own noun (`Task`,
- * `Binary`) and the value's declared unit instead, and every row
- * still carries the raw published key verbatim in `data-key` -
- * `describedTerm`'s own rule for a `<dt>` (`UX-374`), read off
- * `data-raw` so no lookup has to survive a Top-N rank reordering the
- * rows. Where the map is keyed by task uid (`UX-391`) the shown text
- * is the element the composite names rather than the composite
- * itself; everywhere else `buildTable` already rendered the key
- * verbatim, so only the attribute is added.
- */
-function relabelHead(th, label) {
-  if (!th) return;
-  // `UX-1190`: a sortable header's label is its button's.
-  const sort = th.querySelector?.("button.th-sort");
-  if (sort) sort.textContent = label;
-  else th.textContent = label;
-}
-
-/**
  * `UX-1191` (§3d): a task table whose every row is one op says it once.
  * The qualifier each cell would carry is the one-value column §3d makes a
  * sentence; `null` where the ops differ or the rows are too few to be a fact.
@@ -492,23 +468,28 @@ function statedOp(cells, hint) {
   return cells.length >= SERIES_MIN_POINTS && ops.size === 1 ? [...ops][0] : null;
 }
 
-function mapSectionLabels(box, key, hint, node, payload) {
+/** `UX-1207`: the one place a top-level map's two column titles are decided; `buildTable` writes th, each cell's label and Copy from them. */
+function mapTitles(key, hint, node) {
+  const record = Boolean(node?.properties);
+  const measure = hintsOf(node)[QUANTITY] ?? guessQuantity(key) ?? (record ? null : "count");
+  // `UX-1184`: a field that names its own quantity titles its column; the bare unit is for the rest.
+  const named = Boolean(measure && (Object.hasOwn(TERMS, key) || title(key, measure) !== title(key)));
+  return {
+    key: hint[KEYED_BY] === KEYED_BY_TASK_UID ? "Task" : title(key.replace(/^by_/, "")),
+    value: node?.additionalProperties?.title
+      ?? (named ? title(key, measure) : measure ? title(measure, measure) : "Value"),
+    measure, named,
+  };
+}
+
+function mapSectionLabels(box, key, hint, node, payload, titles) {
   const table = box.querySelector?.("table");
   if (!table) return box;
-  const keyHead = [...table.querySelectorAll("th")].find(
-    (th) => th.getAttribute("data-column") === "key");
   const taskUidKeyed = hint[KEYED_BY] === KEYED_BY_TASK_UID;
-  relabelHead(keyHead, taskUidKeyed ? "Task" : title(key.replace(/^by_/, "")));
   const valueHead = [...table.querySelectorAll("th")].find(
     (th) => th.getAttribute("data-column") === "value");
   if (valueHead) {
-    const record = Boolean(node?.properties);
-    const measure = hintsOf(node)[QUANTITY] ?? guessQuantity(key)
-      ?? (record ? null : "count");
-    // `UX-1184`: a field that names its own quantity titles its column; the bare unit is for the rest.
-    const named = measure && (Object.hasOwn(TERMS, key) || title(key, measure) !== title(key));
-    relabelHead(valueHead, node?.additionalProperties?.title
-      ?? (named ? title(key, measure) : measure ? title(measure, measure) : "Value"));
+    const { measure, named } = titles;
     // `UX-1194`: beside the task's own duration the share is marked, and a bare threshold reads the duration.
     const beside = table.querySelector?.('th[data-column="duration_us"]');
     const share = named && measure === "duration_us";
@@ -667,10 +648,11 @@ export function renderSection(key, value, hint = {}, node = undefined,
       const rows = Object.entries(value).map(
         ([name, member]) => ({ key: name, value: member }));
       const beside = taskSignalTable(rows, hint, payload, root);
-      const box = mapTable(key, rows, hint, node, false, 0, key, false, beside ? [beside] : []);
+      const titles = mapTitles(key, hint, node);
+      const box = mapTable(key, rows, hint, node, false, 0, key, false, beside ? [beside] : [], titles);
       return el("section", { "data-section": key,
                              "data-rail": heading(key, hint).rail },
-                sectionHead(key, hint), mapSectionLabels(box, key, hint, node, payload));
+                sectionHead(key, hint), mapSectionLabels(box, key, hint, node, payload, titles));
     }
     // `UX-361` (§2d): a section whose declaration says its numbers are
     // a *total split into parts*, or *values on one axis*, draws that

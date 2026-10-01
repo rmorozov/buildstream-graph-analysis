@@ -170,6 +170,68 @@ def test_no_task_holds_more_of_the_window_than_it_ran(seen, label):
         assert report["task_durations_us"]["toolchain.bst|BUILD|BUILD|0"] == 0
 
 
+#: `UX-1207`: each top-level map's columns, named by th, by every cell's label and by Copy's header.
+_MAP_NAMES = r"""
+(async () => {
+  let copied = null;
+  Object.defineProperty(navigator, "clipboard", { value: { writeText: async (s) => { copied = s; } }, configurable: true });
+  localStorage.setItem("bga.copy-format", "markdown");
+  const out = [];
+  for (const t of document.querySelectorAll("section[data-section] > div.map-table > table")) {
+    const heads = [...t.querySelectorAll(":scope > thead th")];
+    const name = (th) => (th.querySelector("button.th-sort") ?? th).textContent.trim();
+    const tools = t.parentNode.querySelector(".table-tools");
+    copied = null;
+    tools?.querySelector(".copy-rows")?.click();
+    await new Promise((done) => setTimeout(done, 10));
+    const copy = (copied?.split("\n")[0] ?? "").split("|").slice(1, -1).map((c) => c.trim().replace(/ \([^)]*\)$/, ""));
+    out.push({
+      table: t.getAttribute("data-table"),
+      columns: heads.map((th) => th.getAttribute("data-column")),
+      heads: heads.map(name),
+      labels: heads.map((th) => [...t.querySelectorAll(":scope > tbody > tr > td")]
+        .filter((td) => td.getAttribute("data-column") === th.getAttribute("data-column"))
+        .map((td) => td.getAttribute("data-label"))),
+      copy,
+    });
+  }
+  localStorage.removeItem("bga.copy-format");
+  return out;
+})()
+"""
+
+
+@pytest.fixture(scope="module")
+def maps(tmp_path_factory):
+    into = tmp_path_factory.mktemp("map-names")
+    walk = pages.two_plane_run(into, ("--layers", "20", "--width", "60"), name="walk")
+    built = {
+        "walk": pages.export_page(walk, into / "walk", "walk.html"),
+        "heavy": pages.export_page(pages.heavy_binary_run(into), into / "heavy", "heavy.html"),
+    }
+    built.update(
+        {label: pages.export_page(fixture, into / label, f"{label}.html") for label, fixture in pages.FIXTURES.items()}
+    )
+    with Browser(chrome) as browser:
+        return {label: browser.measure(page.as_uri(), _MAP_NAMES, 1440, 900) for label, page in built.items()}
+
+
+@needs_browser
+@pytest.mark.parametrize("label", ["walk", "heavy", "golden", "macro_micro"])
+def test_every_map_names_its_columns_once_in_header_cells_and_copy(maps, label):
+    # `UX-1207`: by_binary's header said Binary while each cell's label and Copy said Name.
+    tables = maps[label]
+    assert tables, label
+    for t in tables:
+        assert "key" in t["columns"] and "value" in t["columns"], t
+        assert t["copy"] == t["heads"], t
+        for head, labels in zip(t["heads"], t["labels"]):
+            assert set(labels) <= {head}, (t["table"], head, set(labels))
+    if label in ("walk", "heavy"):
+        by_binary = next(t for t in tables if t["table"] == "by_binary")
+        assert by_binary["heads"][0] == "Binary", by_binary
+
+
 @needs_browser
 def test_the_task_column_is_task_in_its_header_its_cells_and_copy(seen):
     # `UX-1194` follow-up: the header said Task while each cell's label and the Markdown copy said Name.

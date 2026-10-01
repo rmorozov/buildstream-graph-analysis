@@ -124,6 +124,10 @@ Mutations: marking only beside Duration gives 2 failed, 11 passed (`..._share_ta
 **Deviation (round 159 walk, N8).** The task column read Task in its header but Name in each cell's `data-label` and the Copy header: `mapTable` titled every map's key column Name and only the th was relabelled. A task-keyed map titles it Task.
 Walk page: data-label Name -> Task; Markdown copy "| Name | Duration (µs) | Wall-clock share (µs) |" -> "| Task | Duration (µs) | Wall-clock share (µs) |".
 Mutation: the title back to "Name" gives `test_the_task_column_is_task_in_its_header_its_cells_and_copy` 1 failed, 12 passed.
+Merged tree: its guard stored `bga.copy-format=markdown` in the worker's one shared Chrome, so a later file:// page copied Markdown -
+`test_copy_takes_every_row_the_fold_holds_and_never_the_stub` JSONDecodeError at char 0, red every time the two run in that order
+in one process (1 failed, 28 passed). The guard removes the key after it reads; the copy guard clears it before it clicks. Either
+alone gives 29 passed; neither, the 1 failed.
 
 **Deviation (round 159 walk, N7).** Print gave `th` `overflow-wrap: anywhere`, which lets a header's column shrink to one letter: "Duratio / n" at 390. A header prints `break-word`, so it breaks between words; cells keep `anywhere`.
 Walk page, print at 390, lines per header word: Duration 2 -> 1; Task, Wall-clock, share 1; document scrollWidth 375 before and after.

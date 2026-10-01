@@ -136,6 +136,7 @@ export function parseQuery(text, specs = [], labels = {}) {
 
 /** Does a row's key cell - its published value or the word it shows - equal (or start with) the clause's value? */
 function matchesKey(tr, clause, stated = {}) {
+  if (clause.reach) return clause.reach.has(tr.getAttribute("data-element")?.toLowerCase());
   const cell = [...tr.children].find((td) => td.getAttribute("data-column") === clause.column);
   const said = cell ? { raw: cell.getAttribute("data-raw"), shown: cell.textContent } : stated[clause.column];
   const raw = String(said?.raw ?? "");
@@ -145,6 +146,17 @@ function matchesKey(tr, clause, stated = {}) {
   if (listed === null && clause.part === null) got.push(String(said?.shown ?? "").replace("⌕", "").trim());
   return got.some((value) => (clause.prefix ? value.toLowerCase().startsWith(clause.value)
     : value.toLowerCase() === clause.value));
+}
+
+// `UX-1228`: downstream:X, every row whose depends_on reaches X.
+function reach(rows, uid) {
+  const under = {}, seen = new Set([uid]);
+  for (const tr of rows) {
+    for (const on of tr.getAttribute("data-list-depends_on")?.toLowerCase().split(" ") ?? []) (under[on] ??= []).push(tr.getAttribute("data-element").toLowerCase());
+  }
+  for (const at of seen) for (const next of under[at] ?? []) seen.add(next);
+  seen.delete(uid);
+  return seen;
 }
 
 /** Does one published number pass a parsed threshold? */
@@ -310,6 +322,7 @@ export function applyFilters(table, options = {}) {
   const kept = [];
   const stated = STATED.get(table) ?? {};
   const statedText = Object.values(stated).map((said) => said.shown).join(" ").toLowerCase();
+  for (const clause of exact) if (clause.column === "downstream") clause.reach = reach(rows, clause.value);
   for (const tr of rows) {
     let keep = (!needle || rowText(tr).includes(needle) || statedText.includes(needle))
       && exact.every((clause) => matchesKey(tr, clause, stated));

@@ -2196,7 +2196,12 @@ named constant, and its label states what lies beyond it (§3a.1). **The
 step past a bound is bounded too:** it advances by the same bound with
 the position shown ("rows 26-50 of 4,002"), **in the order the view
 opened on** — a pager continues the ranking, and its position travels
-in the fragment (`UX-1185`) — opens table focus, or
+in the fragment (`UX-1185`). **The bound is the page size, and the
+rank is the header's sort** (`UX-1197`): the Rows-shown select offers
+bounds only (`Top 10 rows`, `Top 25 rows`) and keeps its choice through Next, a
+sort and the link; the window and a pressed sort are said in the
+table's one live region, and every pager and sort button's name ends
+with its table's (`test_a_pager_continues_the_view.py`) — opens table focus, or
 narrows (filter, preset, Top-N); no control draws a population whose
 size grows with the run in one step. **Paging replaces the mounted
 window; it never appends**: after any number of presses a table mounts

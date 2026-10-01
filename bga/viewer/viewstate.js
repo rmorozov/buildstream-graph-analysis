@@ -227,8 +227,12 @@ export function applyView(root, query, { dispatch } = {}) {
     // the row cap, so no table on either fixture had one.
     const preset = params.get(`n.${key}`);
     const select = tools?.querySelector?.("select.top-n");
+    // `UX-1197`: an old `Top 10 by <column>` is the bound `Top 10` and that column's sort.
+    const [bound, ranked] = (preset ?? "").split(":");
+    const offered = [...(select?.children ?? [])].find((option) => option.value === preset)
+      ?? [...(select?.children ?? [])].find((option) => bound && option.value.split(":")[0] === bound);
     if (preset !== null && select) {
-      select.value = preset;
+      select.value = offered?.value ?? preset;
       fire(select, "change");
       applied.push(`n:${key}`);
     }
@@ -238,7 +242,7 @@ export function applyView(root, query, { dispatch } = {}) {
     const filter = [params.get(`f.${key}`), ...legacy].filter(Boolean).join(" ");
     const box = tools?.querySelector?.("input.table-filter");
     if (filter && box) { box.value = filter; fire(box, "input"); applied.push(`f:${key}`); }
-    const sort = params.get(`s.${key}`);
+    const sort = params.get(`s.${key}`) ?? (ranked && offered && offered.value !== preset ? `${ranked}:descending` : null);
     if (sort) {
       const [column, direction] = sort.split(":");
       for (const th of table.querySelectorAll?.("th") ?? []) {

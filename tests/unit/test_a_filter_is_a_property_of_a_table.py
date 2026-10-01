@@ -131,8 +131,9 @@ _PAGED_FILTER = """(() => {
   const pager = section.querySelector(".table-pager");
   const next = pager.querySelector(".page-next");
   const prev = pager.querySelector(".page-prev");
-  const position = pager.querySelector(".page-position");
   const badge = section.querySelector("span.badge");
+  // `UX-1197`: the window is the badge's, the one live region.
+  const position = badge;
   const shown = () => [...t.querySelectorAll("tbody tr")].filter((r) => !r.hidden);
   const out = {};
   const top10 = [...preset.options].find((o) => o.textContent.startsWith("Top 10"));
@@ -291,19 +292,17 @@ class TestThePagerAgreesWithTheFilteredPopulation:
     paged left the position naming rows the filter had just hidden.
     """
 
-    def test_paging_replaces_the_preset_it_no_longer_describes(self, paged_filter):
+    def test_paging_keeps_the_bound_it_pages_by(self, paged_filter):
+        # `UX-1197`: the select names the bound, which is every page's size, so paging keeps it.
         assert paged_filter["presetSelectedBeforePaging"]
-        assert not paged_filter["presetSelectedAfterPaging"], (
-            "the preset still reads 'Top 10 by …' after paging took over "
-            "the window - the label no longer describes what is shown"
-        )
+        assert paged_filter["presetSelectedAfterPaging"], paged_filter
 
     def test_the_position_matches_what_is_actually_on_the_page(self, paged_filter):
-        # `UX-1185`: Next continues from the `Top 10` shown, one 25-row page.
-        assert paged_filter["positionAfterOnePage"].startswith("rows 11-35")
+        # `UX-1197`: Next continues from the `Top 10` shown, one 10-row page.
+        assert paged_filter["positionAfterOnePage"].startswith("rows 11-20")
         shown = paged_filter["shownAfterFilter"]
         assert shown == 1, paged_filter
-        assert paged_filter["positionAfterFilter"] == f"rows 1-{shown} of {shown}", paged_filter
+        assert paged_filter["positionAfterFilter"] == f"{shown} of 1,202", paged_filter
 
     def test_the_buttons_bound_themselves_to_the_filtered_population(self, paged_filter):
         assert paged_filter["nextDisabledAfterFilter"]

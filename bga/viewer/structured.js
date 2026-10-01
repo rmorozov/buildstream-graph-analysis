@@ -934,10 +934,17 @@ export function interrogable(table, specs, total, depth = 0) {
   let restart = null;
   let rewind = null;
   let shape = null;
+  let rank = null;
   const few = total <= FEW_ROWS;
+  // `UX-1197`: the window and a sort other than the opening rank are said in the one live region.
+  const view = () => {
+    const sort = state.sort && (state.sort.column !== rank || state.sort.direction !== "descending") ? state.sort : null;
+    const head = sort && ownHeads(table).find((th) => th.getAttribute("data-column") === sort.column);
+    return { offset: state.top?.offset ?? 0, sorted: sort ? `${head?.textContent.trim() || sort.column}, ${sort.direction}` : "" };
+  };
   const refresh = () => {
     // `applyFilters` also writes `state.filtered` and `state.kept` - the pre-`top` population.
-    const said = badgeText(applyFilters(table, state), total, state.filtered);
+    const said = badgeText(applyFilters(table, state), total, state.filtered, view());
     badge.textContent = said === rest ? "" : said;
     pagerRefresh?.();
     relabel?.();
@@ -1013,6 +1020,7 @@ export function interrogable(table, specs, total, depth = 0) {
   // `openingBound` carries why, and a table with nothing to rank by
   // used to get no control and therefore no bound at all.
   const opening = openingBound(presets, total, TABLE_OPENS_BOUNDED_ABOVE);
+  rank = presets[0] ?? null;
   // UX-673: a preset that cannot shrink the table is apparatus without
   // effect - skip any `n >= total`, and offer no control at all once
   // even the smallest preset fails that test.
@@ -1029,12 +1037,9 @@ export function interrogable(table, specs, total, depth = 0) {
     if (total <= ALL_ROWS_CEILING) {
       preset.append(el("option", { value: "" }, "All rows"));
     }
-    for (const column of presets) {
-      for (const n of [10, 25]) {
-        if (n >= total) continue;
-        preset.append(el("option", { value: `${n}:${column}` },
-                         `Top ${n} by ${specs.find((s) => s.key === column)?.title ?? title(column)}`));
-      }
+    // `UX-1197`: bounds only - the rank is the header's sort, the first quantity's at opening.
+    for (const n of presets.length ? [10, 25] : []) {
+      if (n < total) preset.append(el("option", { value: `${n}:${rank}` }, `Top ${n} rows`));
     }
     if (!presets.length) {
       preset.append(el("option", { value: `${TABLE_OPENS_BOUNDED_ABOVE}:` },
@@ -1050,15 +1055,14 @@ export function interrogable(table, specs, total, depth = 0) {
     // selected while paging showed a plain offset window).
     let offset = 0;
     let paging = false;
-    // `UX-1185` (D4): the pager steps the ranking the table opened on, one page the opening bound's size.
-    const size = opening?.top.n ?? TABLE_OPENS_BOUNDED_ABOVE;
+    // `UX-1197`: a page is the chosen bound's size, in the table's current sort.
+    const size = () => state.top?.n ?? opening?.top.n ?? TABLE_OPENS_BOUNDED_ABOVE;
     let ranking = opening?.top.column ?? null;
     const canPage = total > ALL_ROWS_CEILING;
-    const position = canPage ? el("span", { class: "page-position" }, "") : null;
     const prev = canPage ? el("button", { type: "button", class: "page-prev",
-                              "aria-label": "previous rows" }, "‹ Prev") : null;
+                              "aria-label": `previous rows: ${named}` }, "‹ Prev") : null;
     const next = canPage ? el("button", { type: "button", class: "page-next",
-                              "aria-label": "next rows" }, "Next ›") : null;
+                              "aria-label": `next rows: ${named}` }, "Next ›") : null;
     // Runs from `refresh` itself, so a filter or threshold narrowing
     // the population while paging keeps the position and the buttons'
     // bounds measured against `state.filtered` - the text/threshold
@@ -1066,21 +1070,19 @@ export function interrogable(table, specs, total, depth = 0) {
     // of the unfiltered `total` (Review #295, `UX-1028`).
     if (canPage) {
       pagerRefresh = () => {
-        if (!paging) { position.textContent = ""; pager?.removeAttribute?.("data-offset"); return; }
+        if (!paging) { pager?.removeAttribute?.("data-offset"); return; }
         const denom = state.filtered ?? total;
-        const lastStart = denom === 0 ? 0 : Math.floor((denom - 1) / size) * size;
+        const lastStart = denom === 0 ? 0 : Math.floor((denom - 1) / size()) * size();
         // The filtered population can shrink under the current window
         // (typing a filter mid-page) - clamp back onto its last real
         // page rather than claim a range past what is now filtered.
         if (offset > lastStart) {
           offset = lastStart;
-          state.top = { n: size, column: ranking, offset };
-          const said = badgeText(applyFilters(table, state), total, state.filtered);
+          state.top = { n: size(), column: ranking, offset };
+          const said = badgeText(applyFilters(table, state), total, state.filtered, view());
           badge.textContent = said === rest ? "" : said;
         }
-        const end = Math.min(offset + size, denom);
-        position.textContent = denom === 0 ? "no rows match"
-          : `rows ${offset + 1}-${end} of ${denom.toLocaleString("en-US")}`;
+        const end = Math.min(offset + size(), denom);
         prev.disabled = offset <= 0;
         next.disabled = end >= denom;
         // `UX-1185`: the fragment's `p.` - `viewstate.js` reads it here and writes it back through `bga:page`; none on the first rows.
@@ -1089,20 +1091,17 @@ export function interrogable(table, specs, total, depth = 0) {
       };
       const step = () => {
         paging = true;
-        state.top = { n: size, column: ranking, offset };
-        // The preset no longer describes what is on the page - paging
-        // replaces its claim rather than leaving it beside a window it
-        // did not choose (Review #295).
-        preset.selectedIndex = -1;
+        // `UX-1197`: the select keeps its bound - it is every page's size.
+        state.top = { n: size(), column: ranking, offset };
         refresh();
       };
       prev.addEventListener("click", () => {
-        offset = Math.max(0, offset - size);
+        offset = Math.max(0, offset - size());
         step();
       });
       next.addEventListener("click", () => {
-        // From the end of what is shown, so `Top 10` then Next is rows 11-35; `pagerRefresh` clamps it.
-        offset = paging ? offset + size : (state.top?.n ?? size);
+        // `Top 10` then Next is rows 11-20; `pagerRefresh` clamps it.
+        offset = paging ? offset + size() : size();
         step();
       });
       // `UX-1185`: a filter edit names a new population, so the pager starts at its front.
@@ -1110,7 +1109,7 @@ export function interrogable(table, specs, total, depth = 0) {
         offset = 0;
         if (state.top) state.top = { ...state.top, offset: 0 };
       };
-      pager = el("span", { class: "table-pager" }, prev, position, next);
+      pager = el("span", { class: "table-pager" }, prev, next);
       pager.addEventListener?.("bga:page", () => {
         offset = Math.max(0, Number(pager.getAttribute("data-offset")) || 0);
         step();
@@ -1132,10 +1131,9 @@ export function interrogable(table, specs, total, depth = 0) {
       // "unbounded" the way `state.top = null` would.
       state.top = preset.value ? { n: Number(n), column: column || null }
         : preset.selectedIndex === -1 ? (opening?.top ?? null) : null;
-      // `UX-1190`: a ranked preset is a sort, shown on its header.
-      if (state.top?.column) showSort(table, state.sort = { column: state.top.column, direction: "descending" });
+      // `UX-1197`: a bound keeps the table's sort; with none yet it ranks by the first quantity, shown on its header.
+      if (state.top?.column && !state.sort) showSort(table, state.sort = { column: state.top.column, direction: "descending" });
       offset = 0;
-      ranking = state.top?.column ?? opening?.top.column ?? null;
       paging = false;
       refresh();
     });
@@ -1157,21 +1155,22 @@ export function interrogable(table, specs, total, depth = 0) {
     // Not paged at build time: at rest the table opens on `opening`'s
     // own bound, and the paging step only takes over once pressed.
     if (prev) prev.disabled = true;
-    // `UX-1190`: a header's sort starts the bound at the front, and a preset it contradicts steps aside.
+    // `UX-1190`: a header's sort starts the bound at the front; `UX-1197`: the bound stays chosen.
     restart = (sort) => {
       offset = 0;
       ranking = sort.column;
       if (state.top) state.top = { ...state.top, offset: 0 };
-      if (preset.value && (preset.value.split(":")[1] !== sort.column || sort.direction !== "descending")) {
-        preset.selectedIndex = -1;
-      }
     };
   }
   table.addEventListener?.("bga:sort", (event) => {
     state.sort = event.detail;
     restart?.(state.sort);
-    // Unbounded and unfiltered, `sortable` reorders every row itself.
-    if (!state.top && !narrowed()) return;
+    // Unbounded and unfiltered, `sortable` reorders every row itself; the live region still says the sort.
+    if (!state.top && !narrowed()) {
+      const said = badgeText(total, total, total, view());
+      badge.textContent = said === rest ? "" : said;
+      return;
+    }
     event.preventDefault?.();
     refresh();
   });
@@ -1276,6 +1275,12 @@ export function interrogable(table, specs, total, depth = 0) {
   // of its own and the same cramped table one level nearer the top. The
   // rule is unchanged - a table inside a cell offers the way out - and
   // the number it is spelled with followed the document.
+  // `UX-1197`: a sort button's name ends with its table's, once the section has relabelled its heads.
+  globalThis.queueMicrotask?.(() => {
+    for (const sort of ownHeads(table).map((th) => th.querySelector?.("button.th-sort")).filter(Boolean)) {
+      sort.setAttribute("aria-label", `${sort.textContent.trim()}, sort: ${named}`);
+    }
+  });
   const nested = depth > 0;
   const expand = served() && (nested || total > TABLE_OPENS_BOUNDED_ABOVE)
     ? expandTableControl(table, depth) : null;

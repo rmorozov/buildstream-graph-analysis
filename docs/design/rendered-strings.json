@@ -1177,7 +1177,7 @@
   {
     "exception": null,
     "role": "option",
-    "text": "Top # by Contracts"
+    "text": "Top # rows"
   },
   {
     "exception": null,
@@ -1817,72 +1817,12 @@
   {
     "exception": null,
     "role": "option",
-    "text": "Top # by Wall-clock share"
-  },
-  {
-    "exception": null,
-    "role": "option",
-    "text": "Top # by Calls"
-  },
-  {
-    "exception": "acronym",
-    "role": "option",
-    "text": "Top # by CPU"
-  },
-  {
-    "exception": "acronym",
-    "role": "option",
-    "text": "Top # by Share of CPU"
-  },
-  {
-    "exception": null,
-    "role": "option",
-    "text": "Top # by Wall"
-  },
-  {
-    "exception": null,
-    "role": "option",
-    "text": "Top # by By binary"
-  },
-  {
-    "exception": null,
-    "role": "option",
     "text": "Choke points (#)"
   },
   {
     "exception": null,
     "role": "option",
     "text": "Plane # (sandbox) (#)"
-  },
-  {
-    "exception": null,
-    "role": "option",
-    "text": "Top # by Element durations"
-  },
-  {
-    "exception": null,
-    "role": "option",
-    "text": "Top # by Downstream count"
-  },
-  {
-    "exception": null,
-    "role": "option",
-    "text": "Top # by Unweighted depth"
-  },
-  {
-    "exception": null,
-    "role": "option",
-    "text": "Top # by Rank"
-  },
-  {
-    "exception": null,
-    "role": "option",
-    "text": "Top # by Total"
-  },
-  {
-    "exception": null,
-    "role": "option",
-    "text": "Top # by Of longest path"
   },
   {
     "exception": "product name",
@@ -2038,31 +1978,6 @@
     "exception": "product name",
     "role": "option",
     "text": "layer#/mod#.bst"
-  },
-  {
-    "exception": null,
-    "role": "option",
-    "text": "Top # by Duration"
-  },
-  {
-    "exception": null,
-    "role": "option",
-    "text": "Top # by Share of path"
-  },
-  {
-    "exception": null,
-    "role": "option",
-    "text": "Top # by Realizable"
-  },
-  {
-    "exception": null,
-    "role": "option",
-    "text": "Top # by Level"
-  },
-  {
-    "exception": null,
-    "role": "option",
-    "text": "Top # by Elements here"
   },
   {
     "exception": null,

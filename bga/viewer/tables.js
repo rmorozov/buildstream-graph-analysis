@@ -394,16 +394,18 @@ export function plural(count, noun) {
 }
 
 /** `12 of 1,202` - and just the total when nothing is filtered. */
-export function badgeText(shown, total, matched = total) {
+export function badgeText(shown, total, matched = total, { offset = 0, sorted = "" } = {}) {
   const n = (value) => value.toLocaleString("en-US");
   // The `N of M` form needs no agreement: a denominator is always a
   // population, and `1 of 12` is right as it stands.
   // UX-1158: an emptied table says why beside the box that emptied it.
   // `UX-1195`: a bound over a filter states one population, the matched one.
-  return shown === total ? plural(total, "row")
+  const of = shown < matched && matched < total ? `${n(matched)} matched` : n(total);
+  // `UX-1197`: a page past the first says its window; a sort pressed says itself.
+  const said = shown === total ? plural(total, "row")
     : !shown ? `none of ${n(total)} match`
-      : shown < matched && matched < total ? `${n(shown)} of ${n(matched)} matched`
-        : `${n(shown)} of ${n(total)}`;
+      : offset ? `rows ${n(offset + 1)}-${n(offset + shown)} of ${of}` : `${n(shown)} of ${of}`;
+  return sorted ? `${said}, sorted by ${sorted}` : said;
 }
 
 /**

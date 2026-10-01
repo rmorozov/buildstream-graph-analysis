@@ -115,7 +115,7 @@ _DRIVE = r"""
         pressed += 1;
         guard += 1;
       }
-      const position = body().querySelector(".page-position");
+      const position = body().querySelector(".table-tools .badge");
       const match = /of ([\d,]+)$/.exec(position ? position.textContent : "");
       reachedEnd = match ? Number(match[1].replace(/,/g, "")) : null;
     }

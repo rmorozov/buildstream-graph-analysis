@@ -76,7 +76,7 @@ _NARROW = r"""
   await new Promise((done) => setTimeout(done, 100));
   const box = document.querySelector("[data-role=query-element]");
   const cs = box && getComputedStyle(box);
-  const ctx = document.createElement("canvas").getContext("2d");
+  const ctx = new OffscreenCanvas(1, 1).getContext("2d");
   if (box) ctx.font = cs.font;
   return {
     box: box && { need: Math.ceil(ctx.measureText(box.placeholder).width),

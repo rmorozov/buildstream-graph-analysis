@@ -65,3 +65,5 @@ element.js renderElementHistory point: empty <title>  history: all 10 drawings  
 ```
 
 Deviation: orchestrator's.
+
+Follow-up deviation (round 160 merge): retiring the node harness left `createElement` with no `BGA_DOM_SHIM`, reddening `test_every_harness_that_needs_a_node_imports_the_shim`; `_NARROW` measures on an `OffscreenCanvas`.

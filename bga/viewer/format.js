@@ -317,6 +317,7 @@ export const TERMS = {
 export const READER_LABELS = {
   chain_bound: "Chain-bound",
   scheduler_bound: "Scheduler-bound",
+  capacity_bound: "Capacity-bound",
   task_horizon: "Time tasks were running",
   wall_clock: "Wall clock",
   detected_host_cpu_count: "Detected host cores",

@@ -879,12 +879,17 @@ function actionRow(action, investigate, whyBlock = null) {
 
   // UX-216: the decision panel names an element; naming it and not
   // linking it is the gap this item closes.
-  const name = document.createElement("a");
-  name.setAttribute("href", `#${elementAnchor(action.element_uid ?? "")}`);
-  const code = document.createElement("code");
-  code.textContent = action.element_uid ?? "";
-  name.append(code);
-  row.append(name);
+  if (action.element_uid) {
+    const name = document.createElement("a");
+    name.setAttribute("href", `#${elementAnchor(action.element_uid)}`);
+    const code = document.createElement("code");
+    code.textContent = action.element_uid;
+    name.append(code);
+    row.append(name);
+  } else if (action.step) {
+    // `UX-1244`: a capacity-bound run's builders step names no element.
+    row.append(el("span", { "data-field": "step" }, action.step));
+  }
 
   if (typeof action.saving_us === "number") {
     const worth = document.createElement("span");
@@ -915,7 +920,7 @@ function actionRow(action, investigate, whyBlock = null) {
   }
 
   // UX-204's transport, where there is a timeline behind it.
-  if (investigate) {
+  if (investigate && action.element_uid) {
     const button = investigate(action);
     if (button) row.append(button);
   }

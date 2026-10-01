@@ -253,8 +253,9 @@ MESH_ZERO_SLACK_SHARE = 0.5
 # rather than surviving only as a clause of one finding's title.
 DIAGNOSIS_CHAIN_BOUND = 'chain_bound'
 DIAGNOSIS_SCHEDULER_BOUND = 'scheduler_bound'
+DIAGNOSIS_CAPACITY_BOUND = 'capacity_bound'
 DIAGNOSIS_INCONCLUSIVE = 'inconclusive'
-DIAGNOSES = (DIAGNOSIS_CHAIN_BOUND, DIAGNOSIS_SCHEDULER_BOUND, DIAGNOSIS_INCONCLUSIVE)
+DIAGNOSES = (DIAGNOSIS_CHAIN_BOUND, DIAGNOSIS_SCHEDULER_BOUND, DIAGNOSIS_CAPACITY_BOUND, DIAGNOSIS_INCONCLUSIVE)
 
 # One wording, read by the text report, the JSON and the page. The
 # clause `_time_concentration_findings` used to spell out itself is now
@@ -278,6 +279,10 @@ DIAGNOSIS_SENTENCES = {
     "is {ratio} of the time tasks were running, below the {bound} "
     "chain-bound line, so the time is going somewhere other than the "
     "chain.",
+    DIAGNOSIS_CAPACITY_BOUND: "This build is capacity-bound, not scheduler-bound: the resource floor "
+    "is {ratio} of wall-clock, at or above the {bound} capacity-bound line, "
+    "so its builder slots set the wall, not the chain or the scheduler. "
+    "The step this run supports is a builders step, measured: {step}.",
     DIAGNOSIS_INCONCLUSIVE: "Neither the chain nor the scheduler can be named the constraint: "
     "this run did not record the durations the comparison needs.",
 }
@@ -2290,13 +2295,46 @@ def diagnose(result: AnalysisResult) -> dict:
     against, source = _diagnosis_denominator(result, total)
     ratio = t_infinity / against
     name = DIAGNOSIS_CHAIN_BOUND if ratio >= CHAIN_BOUND_RATIO else DIAGNOSIS_SCHEDULER_BOUND
+    if ratio < CHAIN_BOUND_RATIO and _capacity_is_the_wall(floors, total, t_infinity):
+        name = DIAGNOSIS_CAPACITY_BOUND
+    if name == DIAGNOSIS_CAPACITY_BOUND:
+        sentence = DIAGNOSIS_SENTENCES[name].format(
+            ratio=qty.share(floors['lb'] / total), bound=qty.share(CAPACITY_BOUND_SHARE), step=_capacity_step(result)
+        )
+    else:
+        sentence = DIAGNOSIS_SENTENCES[name].format(ratio=qty.share(ratio), bound=qty.share(CHAIN_BOUND_RATIO))
     return {
         'diagnosis': name,
         'chain_share': ratio,
         'chain_bound_share': CHAIN_BOUND_RATIO,
         'chain_share_of': source,
-        'sentence': DIAGNOSIS_SENTENCES[name].format(ratio=qty.share(ratio), bound=qty.share(CHAIN_BOUND_RATIO)),
+        'sentence': sentence,
     }
+
+
+def _capacity_is_the_wall(floors: dict, total: int, t_infinity: int) -> bool:
+    """LB within `CAPACITY_BOUND_SHARE` of the wall and longer than the chain (UX-1244)."""
+    lb = floors.get('lb') or 0
+    return lb / total >= CAPACITY_BOUND_SHARE and lb > t_infinity
+
+
+def _capacity_step(result: AnalysisResult) -> str:
+    """The builders step the run supports: the RESOURCE WAIT hint, Plane 2's where it has one."""
+    from .report._shared import resolve_attribution_hint
+
+    step = _plane2_capacity_hint(result, 'resource_wait_us') or resolve_attribution_hint(
+        'resource_wait_us', getattr(result, 'capacity_verdict', None)
+    )
+    return (step or "time more builders with `bga sweep`").rstrip('.')
+
+
+def _builders_actions(result: AnalysisResult, by_id: dict) -> list[dict]:
+    """The decision's first action on a capacity-bound run: the builders step, and the finding reasoning it."""
+    action = {'step': _capacity_step(result)}
+    finding = next((fid for fid in ('capacity-recommendation', 'wait-category') if fid in by_id), None)
+    if finding:
+        action['finding_id'] = finding
+    return [action]
 
 
 def _top_actions(result: AnalysisResult, findings: list[dict]) -> list[dict]:
@@ -2309,6 +2347,8 @@ def _top_actions(result: AnalysisResult, findings: list[dict]) -> list[dict]:
     """
     by_id = findings_by_id(findings)
     actions: list[dict] = []
+    # UX-1244: a capacity-bound run leads with its builders step, before any element.
+    builders = _builders_actions(result, by_id) if diagnose(result)['diagnosis'] == DIAGNOSIS_CAPACITY_BOUND else []
 
     concentration = by_id.get('time-concentration')
     for row in ((concentration or {}).get('evidence') or {}).get('rows') or []:
@@ -2335,7 +2375,7 @@ def _top_actions(result: AnalysisResult, findings: list[dict]) -> list[dict]:
                     'downstream_count': (blast.get(uid) or {}).get('downstream_count', 0),
                 }
             )
-    return actions[:TOP_ACTIONS_SHOWN]
+    return (builders + actions)[:TOP_ACTIONS_SHOWN]
 
 
 def compute_headline(result: AnalysisResult, findings: Optional[list[dict]] = None) -> dict:
@@ -2594,13 +2634,13 @@ def compute_next_steps(result: AnalysisResult, headline: Optional[dict] = None) 
                 }
             )
 
-    if headline.get('diagnosis') == DIAGNOSIS_SCHEDULER_BOUND:
+    if headline.get('diagnosis') in (DIAGNOSIS_SCHEDULER_BOUND, DIAGNOSIS_CAPACITY_BOUND):
         gap = headline.get('scheduling_gap_us')
         steps.append(
             {
                 'id': 'sweep-the-capacity',
                 'reason': (
-                    "This build is scheduler-bound"
+                    f"This build is {headline['diagnosis'].replace('_', '-')}"
                     # Only where the number would say something: a gap that
                     # rounds to "0.0s" reads as a contradiction of the
                     # sentence it is supposed to support.

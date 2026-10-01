@@ -2,7 +2,7 @@
 
 **Priority:** High | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-162 view UI review on a 2,402-element two-plane page (2026-10-01), finding H1 | **Serves:** R1, R5, R8 | **Topic:** analysis | **Area:** bga, bga/viewer | **Shape:** mechanical | **Reading:** container
 
-**Guard:** none — open, no guard named yet
+**Guard:** `tests/unit/test_the_diagnosis_follows_the_shape.py`
 
 ## Motivation
 
@@ -49,3 +49,34 @@ The capacity policy that caps builders at host cores (`UX-861`); the other findi
 ## Acceptance Test
 
 On this page the decision reads capacity-bound, names builders, and its first action is a builders step; golden and macro_micro keep their current diagnosis. Mutation: drop the third arm, and the guard reds on this page only.
+
+## Outcome
+
+The gap measured, at `4deb3e57` (UX-1253 landed), the Motivation's page, `bga analyze @last --format json`:
+`headline.diagnosis scheduler_bound`, chain share 9.8% of the task horizon; `top_actions` three
+`blast-radius-ranking` rows (`layer00/mod010.bst` 2194 downstream, ...); UX-1253's `diagnosis_vs_floors`
+disagreement published ("headline.diagnosis reads scheduler_bound; floors.lb reads LB 99.6% of wall").
+
+The close measured, same page: `diagnosis capacity_bound`; sentence "This build is capacity-bound, not
+scheduler-bound: the resource floor is 99.6% of wall-clock, at or above the 95.0% capacity-bound line, so its
+builder slots set the wall, not the chain or the scheduler. The step this run supports is a builders step,
+measured: a resource (PROCESS/DOWNLOAD/UPLOAD) was saturated — try --capacity N with a higher N, or `bga sweep`
+to find the real knee point."; `top_actions[0]` `{finding_id: capacity-recommendation, step: <that hint>}`, then two
+blast rows; `next_steps` keeps `sweep-the-capacity` ("This build is capacity-bound: 42.5 min ..."). The
+diagnosis pair is silent: `violations` 3 -> 2 (`oversubscription_vs_capacity_verdict`,
+`binding_constraint_vs_cpu_floor`, UX-1245/UX-1246's). Chromium 1440x900 and 390x844: the first action row reads
+the step with no element link and no Investigate button; no `element-undefined` record. Golden and
+macro_micro: `chain_bound`, unchanged. Guards: 58 passed; with the decision, next-step, provenance, budget and
+label browser guards 262 passed, 19 skipped.
+
+| mutation | reddened | run printed |
+|---|---|---|
+| delete the capacity arm in `diagnose()` | `test_the_page_reads_capacity_bound_and_names_builders`, `test_its_first_action_is_the_builders_step` | 2 failed, 16 passed |
+| `builders = []` in `_top_actions` | `test_its_first_action_is_the_builders_step` | 1 failed, 17 passed |
+| drop `and lb > t_infinity` | nothing | 18 passed |
+| reverted | | 18 passed |
+
+`lb > t_infinity` does not discriminate and cannot: below the chain line t-infinity < 0.9 x horizon <= 0.9 x
+wall, so LB >= 0.95 x wall already exceeds it. Kept as the Decision's clause; `test_a_chain_at_the_floor_stays_chain_bound`
+holds the chain check's precedence instead.
+

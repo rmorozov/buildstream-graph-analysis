@@ -11,11 +11,9 @@ both sides. It names the disagreement; it does not pick a winner.
 from typing import Callable, NamedTuple, Optional
 
 from . import shown as qty
-from .findings import CAPACITY_BOUND_SHARE, DIAGNOSIS_INCONCLUSIVE
+from .findings import CAPACITY_BOUND_SHARE, DIAGNOSIS_CAPACITY_BOUND, DIAGNOSIS_INCONCLUSIVE
 
 VIOLATION_TYPE = 'verdict_disagreement'
-# The diagnosis that already reads the floor as the wall (UX-1244).
-DIAGNOSIS_CAPACITY_BOUND = 'capacity_bound'
 
 
 def read_verdicts(result, headline: Optional[dict]) -> dict:

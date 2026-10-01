@@ -18,15 +18,24 @@ So the denominator is the task horizon. These are the two properties
 that makes true, and neither can be read off the source.
 """
 
+import json
+import subprocess
+import sys
+from pathlib import Path
+
 import pytest
 
 from bga.findings import (
     CHAIN_BOUND_RATIO,
+    DIAGNOSIS_CAPACITY_BOUND,
     DIAGNOSIS_CHAIN_BOUND,
     DIAGNOSIS_INCONCLUSIVE,
     DIAGNOSIS_SCHEDULER_BOUND,
+    compute_headline,
     diagnose,
 )
+
+REPO = Path(__file__).resolve().parents[2]
 
 
 class _Run:
@@ -150,3 +159,57 @@ class TestTheSentenceNamesTheDenominator:
         assert answer["diagnosis"] == expected
         assert "wall-clock" not in answer["sentence"], answer["sentence"]
         assert "the time tasks were running" in answer["sentence"], answer["sentence"]
+
+
+class _CapacityRun:
+    """`UX-1244`'s 2,402-element page as numbers: t-infinity 9.8% of the
+    horizon, LB 47.0 of 47.2 min wall (`floors`, seed 1, 40x60, binaries)."""
+
+    total_duration_us = 2_829_756_376
+    floors = {"t_infinity_observed": 277_500_000, "lb": 2_817_875_000}
+    attribution = {"untracked_head_us": 0, "untracked_tail_us": 0}
+    capacity_verdict = {"checks_ran": True, "oversubscribed": False}
+    signals = {"blast_radius": {"layer00/mod010.bst": {"downstream_count": 2194}}}
+
+
+class TestACapacityBoundRunReadsCapacityBound:
+    FINDINGS = [
+        {"id": "capacity-recommendation"},
+        {"id": "blast-radius-ranking", "elements": ["layer00/mod010.bst"]},
+    ]
+
+    def test_the_page_reads_capacity_bound_and_names_builders(self):
+        answer = diagnose(_CapacityRun())
+        assert answer["diagnosis"] == DIAGNOSIS_CAPACITY_BOUND, answer
+        assert "builder" in answer["sentence"] and "99.6%" in answer["sentence"], answer["sentence"]
+
+    def test_its_first_action_is_the_builders_step(self):
+        actions = compute_headline(_CapacityRun(), self.FINDINGS)["top_actions"]
+        assert actions[0]["finding_id"] == "capacity-recommendation" and "element_uid" not in actions[0], actions
+        assert "--capacity" in actions[0]["step"], actions[0]
+        assert actions[1]["element_uid"] == "layer00/mod010.bst", actions
+
+    def test_a_chain_at_the_floor_stays_chain_bound(self):
+        """LB above the line but equal to t-infinity: the chain check runs first."""
+        run = _CapacityRun()
+        run.floors = {"t_infinity_observed": 277_500_000, "lb": 277_500_000}
+        run.total_duration_us = 290_000_000
+        assert diagnose(run)["diagnosis"] == DIAGNOSIS_CHAIN_BOUND
+
+    @pytest.mark.parametrize(
+        "args",
+        [
+            ["tests/fixtures/golden/mixed_task_kinds"],
+            ["tests/fixtures/macro_micro/run", "--plane2", "tests/fixtures/macro_micro/plane2.json"],
+        ],
+        ids=["golden", "macro_micro"],
+    )
+    def test_the_committed_fixtures_stay_chain_bound(self, args):
+        out = subprocess.run(
+            [sys.executable, "-m", "bga.cli", "analyze", *args, "--format", "json"],
+            cwd=REPO,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        assert json.loads(out.stdout)["headline"]["diagnosis"] == DIAGNOSIS_CHAIN_BOUND

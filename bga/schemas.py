@@ -4787,6 +4787,10 @@ _ANALYZE_HINTS = {
                             "rebuilds — the cost of "
                             "touching it, beside the gain.",
                         },
+                        "step": {
+                            "description": "A capacity-bound run's builders "
+                            "step, leading the list in place of an element.",
+                        },
                     },
                 },
             },

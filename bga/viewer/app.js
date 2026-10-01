@@ -952,7 +952,7 @@ async function boot() {
         // already pointing at. The three element-scoped queries used
         // to substitute `macro_micro`'s `core.bst` on every project.
         elements: elementUids(payload),
-        element: payload.headline?.top_actions?.[0]?.element_uid ?? null }));
+        element: payload.headline?.top_actions?.find((a) => a?.element_uid)?.element_uid ?? null }));
     }
     // UX-194: only when there is a timeline behind it. A dead button is
     // worse than no button - the run that has no Plane 2 log is exactly

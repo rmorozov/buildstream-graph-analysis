@@ -50,6 +50,19 @@ _LOOK = r"""
 })()
 """
 
+#: `UX-1194` follow-up: every word of a task-table header sits on one line, in print at 390.
+_PRINT_HEADS = r"""
+(() => [...document.querySelectorAll('table[data-table="wall_clock_share_us"] > thead th')].flatMap((th) => {
+  const node = [...th.querySelectorAll("*"), th].flatMap((n) => [...n.childNodes]).filter((c) => c.nodeType === 3);
+  return node.flatMap((text) => [...text.data.matchAll(/\S+/g)].map((m) => {
+    const range = document.createRange();
+    range.setStart(text, m.index);
+    range.setEnd(text, m.index + m[0].length);
+    return [m[0], new Set([...range.getClientRects()].map((r) => Math.round(r.top))).size];
+  }));
+}))()
+"""
+
 
 def _report_in(page):
     text = pathlib.Path(page).read_text(encoding="utf-8")
@@ -76,10 +89,12 @@ def seen(tmp_path_factory):
     built["older"] = into / "older.html"
     built["older"].write_text(text[: packed.start(1)] + repacked + text[packed.end(1) :], encoding="utf-8")
     with Browser(chrome) as browser:
-        return {
+        seen = {
             label: {"report": _report_in(page), "page": browser.measure(page.as_uri(), _LOOK, 1440, 900)}
             for label, page in built.items()
         }
+        seen["walk"]["print"] = browser.measure(built["walk"].as_uri(), _PRINT_HEADS, 390, 844, media="print")
+        return seen
 
 
 def _build_over(report, seconds):
@@ -160,3 +175,9 @@ def test_the_task_column_is_task_in_its_header_its_cells_and_copy(seen):
     # `UX-1194` follow-up: the header said Task while each cell's label and the Markdown copy said Name.
     got = seen["walk"]["page"]
     assert got["labels"][0] == "Task" and got["copied"].startswith("| Task |"), (got["labels"], got["copied"])
+
+
+@needs_browser
+def test_a_task_header_breaks_between_words_in_print_at_390(seen):
+    words = seen["walk"]["print"]
+    assert ["Duration", 1] in words and all(lines == 1 for _, lines in words), words

@@ -121,3 +121,7 @@ Mutations: marking only beside Duration gives 2 failed, 11 passed (`..._share_ta
 **Deviation (round 159 walk, N8).** The task column read Task in its header but Name in each cell's `data-label` and the Copy header: `mapTable` titled every map's key column Name and only the th was relabelled. A task-keyed map titles it Task.
 Walk page: data-label Name -> Task; Markdown copy "| Name | Duration (µs) | Wall-clock share (µs) |" -> "| Task | Duration (µs) | Wall-clock share (µs) |".
 Mutation: the title back to "Name" gives `test_the_task_column_is_task_in_its_header_its_cells_and_copy` 1 failed, 12 passed.
+
+**Deviation (round 159 walk, N7).** Print gave `th` `overflow-wrap: anywhere`, which lets a header's column shrink to one letter: "Duratio / n" at 390. A header prints `break-word`, so it breaks between words; cells keep `anywhere`.
+Walk page, print at 390, lines per header word: Duration 2 -> 1; Task, Wall-clock, share 1; document scrollWidth 375 before and after.
+Mutation: the th rule back to `anywhere` gives `test_a_task_header_breaks_between_words_in_print_at_390` 1 failed, 12 passed. Page half on macro_micro 156,372 of 160,000 B (+~70 for all six follow-ups).

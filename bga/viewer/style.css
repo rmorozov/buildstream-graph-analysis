@@ -693,7 +693,9 @@ button.chapter-open:hover, button.chapter-open[aria-expanded="true"] {
   button.th-sort { display: contents !important; }
   button.th-sort::after { content: none !important; }
   pre, code { white-space: pre-wrap !important; }
-  body, td, th { overflow-wrap: anywhere; }
+  body, td { overflow-wrap: anywhere; }
+  /* A header breaks between words: `anywhere` let its column shrink to a letter ("Duratio/n" at 390). */
+  th { overflow-wrap: break-word; }
   .description { display: block !important; }
   /* An exhibit's twin prints open, so its values reach paper (§2b: hover is never the only door). */
   table.twin-table { display: table !important; }

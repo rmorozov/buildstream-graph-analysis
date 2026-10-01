@@ -2,7 +2,7 @@
 
 **Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-160 walk and verification (2026-10-01) | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical | **Reading:** container
 
-**Guard:** none — open, no guard named yet
+**Guard:** `tests/unit/test_a_printed_filtered_table_states_its_filter.py`
 
 ## Motivation
 
@@ -43,4 +43,21 @@ Question:  none
 
 ## Outcome
 
-Open.
+The gap measured, at `e60195184`, the 1,202-element two-plane page (`pages.two_plane_run --layers 20 --width 60`),
+Chromium 1440x900, print media, toolchain.bst's card "+1,160 more" pressed (`scratchpad/<worktree>/r1224.js`):
+
+```text
+{"more": "+1,160 more", "badge": "25 of 1,200 matched", "filter": null, "after": "none",
+ "box": "depends_on:toolchain.bst", "print": true}
+```
+
+The close measured, same page and probe: `"filter": "depends_on:toolchain.bst"`, badge `::after` content
+`" - filter: depends_on:toolchain.bst"` under print, `none` on screen. The guard: 1,202 page and its `--workload
+binaries` variant at 1440 and 390, 1 passed (12.3 s). Golden's page half 159,146 -> 159,261 B (+115). The print
+guards, `test_the_viewer_js_ships_compressed.py`, `test_a_status_is_announced.py` and
+`test_a_filter_is_a_property_of_a_table.py`: 97 passed.
+
+| mutation | reddened | run printed |
+|---|---|---|
+| delete the `data-filter` write in `refresh` | `test_a_printed_filtered_table_states_its_filter` (`'filter': None` after the press) | 1 failed |
+| reverted | | 1 passed |

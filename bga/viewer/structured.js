@@ -959,6 +959,9 @@ export function interrogable(table, specs, total, depth = 0, undrawn = []) {
     // `applyFilters` also writes `state.filtered` and `state.kept` - the pre-`top` population.
     const said = badgeText(applyFilters(table, state), total, state.filtered, view());
     badge.textContent = said === rest ? "" : said;
+    // `UX-1224`: paper drops the box; the badge prints its filter.
+    const typed = box?.value.trim();
+    if (typed) badge.setAttribute("data-filter", typed); else badge.removeAttribute("data-filter");
     pagerRefresh?.();
     relabel?.();
     // UX-1158: the strip draws, and counts, the rows the filter kept; `UX-1170`: none at two or fewer.

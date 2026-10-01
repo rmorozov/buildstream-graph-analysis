@@ -117,3 +117,7 @@ Mutation: the zero-length filter keeping every event gives `test_no_task_holds_m
 **Deviation (round 159 verification, older payload).** The share was marked `data-share` only beside Duration, so without `task_durations_us` a bare `> 60s` and `op:BUILD > 60s` read the share (toolchain.bst at 4.9 min, the gap above) and `parseQuery`'s share skip never ran. The share is marked always; the lead stays where Duration is absent.
 Stripped walk page, this commit: `> 60s` and `op:BUILD > 60s` say "“> 60s” is not a threshold this table can read, so it is not applied." and keep all 1,202 rows; heads `[key, value(data-share)]`.
 Mutations: marking only beside Duration gives 2 failed, 11 passed (`..._share_table_is_as_it_was`, `..._a_bare_threshold_reads_no_share`); `!spec.share` dropped from `parseQuery`'s primary gives 1 failed, 12 passed.
+
+**Deviation (round 159 walk, N8).** The task column read Task in its header but Name in each cell's `data-label` and the Copy header: `mapTable` titled every map's key column Name and only the th was relabelled. A task-keyed map titles it Task.
+Walk page: data-label Name -> Task; Markdown copy "| Name | Duration (µs) | Wall-clock share (µs) |" -> "| Task | Duration (µs) | Wall-clock share (µs) |".
+Mutation: the title back to "Name" gives `test_the_task_column_is_task_in_its_header_its_cells_and_copy` 1 failed, 12 passed.

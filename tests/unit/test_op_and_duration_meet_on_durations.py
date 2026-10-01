@@ -20,7 +20,10 @@ chrome = find_chrome()
 needs_browser = pytest.mark.skipif(chrome is None, reason=NO_BROWSER)
 
 _LOOK = r"""
-(() => {
+(async () => {
+  let copied = null;
+  Object.defineProperty(navigator, "clipboard", { value: { writeText: async (s) => { copied = s; } }, configurable: true });
+  localStorage.setItem("bga.copy-format", "markdown");
   const t = document.querySelector('table[data-table="wall_clock_share_us"]');
   const heads = [...t.querySelectorAll(":scope > thead th")].map(
     (th) => [th.getAttribute("data-column"), th.hasAttribute("data-share")]);
@@ -28,7 +31,8 @@ _LOOK = r"""
     (td) => [td.getAttribute("data-column"), td.getAttribute("data-raw")]));
   const rows = () => [...t.querySelector(":scope > tbody").children].map(cells);
   const lead = t.closest("section").querySelector("p.section-lead")?.textContent ?? null;
-  const out = { heads, lead, opening: rows(), q: {} };
+  const labels = [...(t.querySelector(":scope > tbody > tr")?.children ?? [])].map((td) => td.getAttribute("data-label"));
+  const out = { heads, lead, labels, opening: rows(), q: {} };
   const tools = t.parentNode.querySelector(".table-tools");
   const box = tools?.querySelector("input.table-filter");
   for (const text of box ? ["op:BUILD > 60s", "op:BUILD > 5s", "> 60s", ""] : []) {
@@ -39,6 +43,9 @@ _LOOK = r"""
     out.q[text] = { matched: Number(/([\d,]+) matched row/.exec(copy)?.[1].replace(/,/g, "") ?? NaN), rows: rows(),
                     unread: unread && !unread.hidden ? unread.textContent : null };
   }
+  tools?.querySelector(".copy-rows").click();
+  await new Promise((done) => setTimeout(done, 20));
+  out.copied = copied?.split("\n")[0] ?? null;
   return out;
 })()
 """
@@ -146,3 +153,10 @@ def test_no_task_holds_more_of_the_window_than_it_ran(seen, label):
     assert not over, over
     if label == "walk":
         assert report["task_durations_us"]["toolchain.bst|BUILD|BUILD|0"] == 0
+
+
+@needs_browser
+def test_the_task_column_is_task_in_its_header_its_cells_and_copy(seen):
+    # `UX-1194` follow-up: the header said Task while each cell's label and the Markdown copy said Name.
+    got = seen["walk"]["page"]
+    assert got["labels"][0] == "Task" and got["copied"].startswith("| Task |"), (got["labels"], got["copied"])

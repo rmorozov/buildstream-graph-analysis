@@ -167,7 +167,8 @@ export function mapTable(key, rows, hint, node, nested, depth = 0, path = key, l
       ?? (record ? null : "count");
     // UX-1173: a list's index is not a name, so a list draws its items alone.
     declared = { ...hint, [COLUMNS]: [
-      ...(list ? [] : [{ key: "key", title: "Name" }]), ...beside,
+      // `UX-1194`: a task-keyed map's key column is Task in its header, each cell's label and Copy alike.
+      ...(list ? [] : [{ key: "key", title: hint[KEYED_BY] === KEYED_BY_TASK_UID ? "Task" : "Name" }]), ...beside,
       { key: "value", title: node?.additionalProperties?.title ?? title(key, measure), quantity: measure }] };
   }
   const { table, tools } = buildTable(path, rows, declared, node, depth);

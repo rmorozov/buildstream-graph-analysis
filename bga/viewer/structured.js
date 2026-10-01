@@ -34,7 +34,7 @@ import { CONTROLS, UNMAPPED, classify, noteUnmapped, depthSentence,
          distributionStrip, shapeOf } from "./shapes.js";
 import { enterTableFocus, focusedTable, leaveTableFocus, registerFocusTarget }
   from "./tablefocus.js";
-import { parseQuery, applyFilters, badgeText, rowJson, cellText,
+import { parseQuery, applyFilters, badgeText, rowJson, jsonNames, cellText,
          copy, presetColumns, openingBound, plural, sortable, ownRows,
          ownBody, showAlso, columnCells, rowsMarkdown, showSort, ownHeads, STATED, ALL_ROWS_CEILING }
   from "./tables.js";
@@ -1242,7 +1242,7 @@ export function interrogable(table, specs, total, depth = 0, undrawn = []) {
     const rows = copied();
     copy(markdown()
       ? rowsMarkdown(rows, specs)
-      : `[${rows.map((tr) => rowJson(tr, specs.map((s) => s.key))).join(",")}]`);
+      : `[${rows.map((tr) => rowJson(tr, specs.map((s) => s.key), jsonNames(specs))).join(",")}]`);
     // `UX-355` (styleguide §4c): and it says so. A clipboard write is
     // invisible by construction, so the control acknowledges the press
     // itself - the same shape `copy-step`, `copy-sql` and `copy-view`

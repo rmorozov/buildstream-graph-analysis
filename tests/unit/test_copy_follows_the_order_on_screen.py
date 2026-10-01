@@ -42,11 +42,14 @@ _COPY = r"""
     await turn();
     const rows = JSON.parse(copied ?? "[]");
     const keys = Object.keys(rows[0] ?? {});
-    const print = (get) => JSON.stringify(keys.map(get));
+    // `UX-1207`: a map's `key`/`value` copy under the header's words; the copy's columns are the table's, in order.
+    const columns = [...table.querySelectorAll(":scope > thead th")].map((th) => th.getAttribute("data-column"));
+    const column = (name, at) => (keys.length === columns.length ? columns[at] : name);
+    const print = (get) => JSON.stringify(keys.map((name, at) => get(name, column(name, at))));
     const shown = [...table.querySelector(":scope > tbody").children]
       .filter((tr) => !tr.hidden && tr.className !== "fold-row")
-      .map((tr) => print((key) => value(tr.querySelector(`:scope > td[data-column="${key}"]`))));
-    return { copied: rows.map((row) => print((key) => row[key] ?? null)), shown };
+      .map((tr) => print((name, key) => value(tr.querySelector(`:scope > td[data-column="${key}"]`))));
+    return { copied: rows.map((row) => print((name) => row[name] ?? null)), shown };
   };
   const out = [];
   for (const table of document.querySelectorAll("table[data-table]")) {

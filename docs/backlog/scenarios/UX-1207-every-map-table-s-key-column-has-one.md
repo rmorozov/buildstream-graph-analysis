@@ -2,7 +2,7 @@
 
 **Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-159 walk and verification (2026-10-01) | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** judgement | **Reading:** container
 
-**Guard:** `tests/unit/test_op_and_duration_meet_on_durations.py::test_every_map_names_its_columns_once_in_header_cells_and_copy`, `::test_a_field_reads_one_title_in_its_card_and_its_column`
+**Guard:** `tests/unit/test_op_and_duration_meet_on_durations.py::test_every_map_names_its_columns_once_in_header_cells_and_copy` (th, cells, Markdown Copy and default JSON Copy), `::test_a_field_reads_one_title_in_its_card_and_its_column`
 
 ## Motivation
 
@@ -21,6 +21,8 @@ Rejected: patching `data-label` in `relabelHead` (Copy's header reads interrogab
 Deviation from the architect's route: `titles` is a `mapTable` argument, not an option inside the COLUMNS declaration, because `mapTable` is the one place the declaration is built and nested cells call it without titles.
 Guard: for every top-level map table on walk, heavy, golden and macro_micro: th text == each td `data-label` of every column == the Markdown Copy header cell (minus its unit suffix); by_binary's key head is "Binary" on walk and heavy.
 Mutation: default "Name" with th relabelled after (the old defect) -> red.
+
+Follow-up decision (round-160 walk N6): the default JSON Copy still wrote `key`/`value` (by_binary `[{"key":"make","value":1200}]`). Route: `jsonNames(specs)` (tables.js) maps a `key`/`value` column to the slug of its title (`binary`, `calls_in_run`, `task`, `wall_clock_share`); `rowJson` writes under it; every other column keeps its published key (`duration_us`). Rejected: a per-table field list (a second writer of the name).
 
 ## Required Fix
 
@@ -52,3 +54,8 @@ Follow-up: the element card read "Is a leaf" over the column's "Is leaf"; the ca
 (`test_a_field_reads_one_title_in_its_card_and_its_column`, is_leaf and observed_critical; "Is a leaf" back reds
 it, 1 failed). `test_a_value_is_what_it_names.py` re-based to `Is leaf`. Other card labels still differ from their
 column (Rebuilds / Downstream count, Depth / Unweighted depth): left to a row of their own.
+
+Follow-up (round-160 walk N6), default JSON Copy on walk, heavy, golden, macro_micro: before, by_binary and the task share
+copied `key`/`value`; after, `["binary","calls_in_run"]` and `["task","duration_us","wall_clock_share"]`, no `key`/`value`
+on any top-level map. Mutation: `jsonNames` returns the spec keys -> the guard red, 4 failed, 13 passed; restored, 17 passed.
+Deviation: `test_copy_follows_the_order_on_screen.py` read the copy's field names as `data-column`s; it now maps them by column position.

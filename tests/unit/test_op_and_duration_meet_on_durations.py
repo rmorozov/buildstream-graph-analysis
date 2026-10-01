@@ -185,7 +185,14 @@ _MAP_NAMES = r"""
     tools?.querySelector(".copy-rows")?.click();
     await new Promise((done) => setTimeout(done, 10));
     const copy = (copied?.split("\n")[0] ?? "").split("|").slice(1, -1).map((c) => c.trim().replace(/ \([^)]*\)$/, ""));
+    localStorage.removeItem("bga.copy-format");
+    copied = null;
+    tools?.querySelector(".copy-rows")?.click();
+    await new Promise((done) => setTimeout(done, 10));
+    const json = Object.keys(JSON.parse(copied ?? "[{}]")[0] ?? {});
+    localStorage.setItem("bga.copy-format", "markdown");
     out.push({
+      json,
       table: t.getAttribute("data-table"),
       columns: heads.map((th) => th.getAttribute("data-column")),
       heads: heads.map(name),
@@ -245,11 +252,14 @@ def test_every_map_names_its_columns_once_in_header_cells_and_copy(maps, label):
     for t in tables:
         assert "key" in t["columns"] and "value" in t["columns"], t
         assert t["copy"] == t["heads"], t
+        # `UX-1207` follow-up: the default JSON Copy names no column "key" or "value".
+        assert len(t["json"]) == len(t["heads"]) and not {"key", "value"} & set(t["json"]), t
         for head, labels in zip(t["heads"], t["labels"]):
             assert set(labels) <= {head}, (t["table"], head, set(labels))
     if label in ("walk", "heavy"):
         by_binary = next(t for t in tables if t["table"] == "by_binary")
         assert by_binary["heads"][0] == "Binary", by_binary
+        assert by_binary["json"][:2] == ["binary", "calls_in_run"], by_binary
 
 
 @needs_browser

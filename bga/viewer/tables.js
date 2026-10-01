@@ -534,7 +534,7 @@ export function boundPairs(list, bound, noun = "row") {
 
 /** What "copy row" puts on the clipboard: the published values, keyed
  *  by column - so it pastes into an issue as JSON that parses. */
-export function rowJson(tr, columns) {
+export function rowJson(tr, columns, names = {}) {
   const out = {};
   for (const td of tr.children) {
     const column = td.getAttribute("data-column");
@@ -545,10 +545,16 @@ export function rowJson(tr, columns) {
     // as one.
     const number = Number(raw);
     // `UX-1189`: and a boolean as one.
-    out[column] = raw === "true" || raw === "false" ? raw === "true"
+    out[names[column] ?? column] = raw === "true" || raw === "false" ? raw === "true"
       : raw !== "" && !Number.isNaN(number) ? number : raw;
   }
   return JSON.stringify(out);
+}
+
+/** `UX-1207`: a map's `key`/`value` columns copy as JSON under the header's own words, never "key"/"value". */
+export function jsonNames(specs) {
+  return Object.fromEntries(specs.filter((spec) => spec.key === "key" || spec.key === "value")
+    .map((spec) => [spec.key, slug(spec.title) || spec.key]));
 }
 
 /** What "copy cell" puts on the clipboard: the published value. */

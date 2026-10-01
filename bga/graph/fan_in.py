@@ -65,15 +65,19 @@ def compute_fan_in(graph, kinds: dict, structural_kinds, foundation=frozenset())
     def capped(names):
         return sorted(sorted(names, key=lambda u: (order.get(u, len(order)), u))[:DIRECT_NAMES_CAP])
 
+    def whole(names):
+        # UX-1214: every name, the card's capped 40 first - the page inverts this into what each element blocks.
+        head = capped(names)
+        return head + sorted(set(names) - set(head))
+
     rows = {}
     # graph.json order: `top_fan_in` and the findings break ties on it.
     for uid in direct:
         rows[uid] = {
             "direct_count": len(direct[uid]),
-            # `UX-829`: the names themselves, for the element card -
-            # `direct_count` is the population, this is the capped list.
-            # Which names by graph order, shown by name (UX-1063).
-            "direct": capped(direct[uid]),
+            # `UX-829`: the names themselves; the card shows the first
+            # `DIRECT_NAMES_CAP`, picked by graph order, shown by name (UX-1063).
+            "direct": whole(direct[uid]),
             "dependent_count": len(dependents[uid]),
             "dependents": capped(dependents[uid]),
             # `compute_reachability` excludes the element itself, so

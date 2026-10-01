@@ -446,13 +446,13 @@ class DiagnosticsAnalyzer:
         if not self.tasks:
             return []
 
-        # Build events: (timestamp, +1 for start/-1 for end, task_key)
+        # (timestamp, +1 start/-1 end, key) pairs; a zero-length task's end would sort before its start: dropped.
         events = []
         for task in self.tasks:
             task_key = str(task.task_key)
             events.append((task.start_us, 1, task_key))
             events.append((task.finish_us, -1, task_key))
-
+        events = [e for start, end in zip(events[::2], events[1::2]) if end[0] > start[0] for e in (start, end)]
         # Sort by timestamp, ends before starts at same time
         events.sort(key=lambda x: (x[0], x[1]))
 

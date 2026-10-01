@@ -6,7 +6,7 @@ level fold leaves it open, the level folds' summaries read apart, the
 Top-N select's name is a phrase, and a partial uid several elements
 share says how many. On the heavy-binary page a Jump press lands an
 element's card, a mounted binary row and a row past the bound at the
-target's scroll margin.
+target's scroll margin, below its table's stuck tools for a row.
 """
 
 import sys
@@ -89,8 +89,11 @@ _LAND = r"""
   const at = KIND === "element"
     ? document.getElementById(`element-${key.replace(/[^\w-]+/g, "-")}`)
     : document.querySelector(`[data-binary="${key}"]`);
+  const section = parseFloat(getComputedStyle(at?.closest("section[data-section]") ?? document.body).scrollMarginTop);
+  const tools = at?.tagName === "TR" ? at.closest("table")?.parentNode?.querySelector(":scope > .table-tools") : null;
+  const stuck = tools && getComputedStyle(tools).position === "sticky" ? tools.getBoundingClientRect().bottom : 0;
   return { kind: KIND, key, top: Math.round(at?.getBoundingClientRect().top ?? -1),
-           margin: Math.round(parseFloat(getComputedStyle(at?.closest("section[data-section]") ?? document.body).scrollMarginTop)),
+           margin: Math.round(Math.max(section, stuck)), section: Math.round(section),
            tag: at?.tagName ?? null, hash: location.hash.split("~")[0] };
 })()
 """
@@ -154,3 +157,6 @@ class TestJumpFindsWhatTheRailLists:
         for target in landed:
             assert target["key"] and target["tag"], landed
             assert abs(target["top"] - target["margin"]) <= 8, str(target)
+        # A row's margin is its table's stuck tools, not the section's: a row under them is covered.
+        assert all(t["margin"] > t["section"] for t in landed if t["tag"] == "TR"), landed
+        assert any(t["tag"] == "TR" for t in landed), landed

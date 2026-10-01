@@ -103,7 +103,7 @@ class TestTheCriticalPathComesFirst:
 class TestTheShapeIsOneLine:
     def test_a_spread_graph_says_so(self):
         line = _shape({"n": 1202, "max": 1201, "is_flat": False, "deciles": {"p50": 30, "p90": 465}})
-        assert "1202 elements reach 30 others or fewer" in line, line
+        assert "1,202 elements reach 30 others or fewer" in line, line
         assert "spread across many elements" in line, line
 
     def test_a_star_graph_says_the_opposite(self):

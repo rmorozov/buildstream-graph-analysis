@@ -17,12 +17,12 @@
 // the defect §2a exists to end (`viewBox: "0 0 100 20"` was written out
 // by hand in this file).
 import { SCALE, GRADE_ANNOTATION, GRADE_EXHIBIT, exhibitAxis, exhibitTwin,
-  nameDrawing } from "./drawings.js";
+  nameDrawing, titled } from "./drawings.js";
 // UX-334: `name`/`id` on every control, and a `<label>` that points at
 // one. `controls.js` imports nothing, which is why this module may use
 // it where it may not use `app.js` - see the note below.
 import { commandLine, identify, labelFor } from "./controls.js";
-import { TERMS } from "./format.js";
+import { TERMS, tally } from "./format.js";
 import { plural } from "./tables.js";
 // `UX-337`: the primitives the chapters share. Extracted because the
 // chapters were *not* acyclic without them - see `primitives.js`.
@@ -135,28 +135,30 @@ export function renderBand(compare) {
   // band solid, because the band is the claim and the extent is its
   // context. Presentation attributes, so `filter: grayscale` cannot
   // take them away.
-  figure.append(svg("rect", {
+  // UX-1204 (§6e.9): every mark says its value on hover.
+  const span = (what, { low, high }) => `${what} ${seconds(low)} → ${seconds(high)}`;
+  figure.append(titled(svg("rect", {
     x: geometry.observed.x, width: geometry.observed.width,
     y: 18, height: 26, class: "observed", "data-role": "observed",
     "data-outline": "dashed", "stroke-dasharray": "2 1.5",
     "stroke-width": 0.6, "fill-opacity": 0.35,
-  }));
-  figure.append(svg("rect", {
+  }), span("observed", geometry.observed)));
+  figure.append(titled(svg("rect", {
     x: geometry.band.x, width: geometry.band.width,
     y: 24, height: 14, class: "band-strip", "data-role": "band",
     "data-outline": "solid", "stroke-width": 0.6,
-  }));
-  for (const run of geometry.runs) {
-    figure.append(svg("circle", {
+  }), span("band", geometry.band)));
+  for (const [i, run] of geometry.runs.entries()) {
+    figure.append(titled(svg("circle", {
       cx: run.x, cy: 31, r: 1.4, class: "baseline-dot", "data-role": "run",
       "data-value": run.value,
-    }));
+    }), `baseline ${i + 1} ${seconds(run.value)}`));
   }
-  figure.append(svg("line", {
+  figure.append(titled(svg("line", {
     x1: geometry.candidate.x, x2: geometry.candidate.x, y1: 8, y2: 54,
     class: "candidate", "data-role": "candidate",
     "data-value": geometry.candidate.value,
-  }));
+  }), `candidate ${seconds(geometry.candidate.value)}`));
 
   const wrapper = document.createElement("section");
   wrapper.setAttribute("data-section", "band");
@@ -337,16 +339,16 @@ export function renderTrend(store, schema = undefined,
   // machines is exactly the blend the aggregate refuses.
   const shape = trendDistribution(aggregate);
   if (shape) {
-    figure.append(svg("rect", {
+    figure.append(titled(svg("rect", {
       x: 0, y: y(shape.p95), width: W,
       height: Math.max(0, y(shape.median) - y(shape.p95)),
       class: "trend-band", "data-band": "median-p95",
       "data-median": shape.median, "data-p95": shape.p95,
-    }));
-    figure.append(svg("line", {
+    }), `median ${seconds(shape.median)} → p95 ${seconds(shape.p95)}`));
+    figure.append(titled(svg("line", {
       x1: 0, x2: W, y1: y(shape.median), y2: y(shape.median),
       class: "trend-median", "data-median": shape.median,
-    }));
+    }), `median ${seconds(shape.median)}`));
   }
   figure.append(svg("polyline", {
     points: rows.map((r, i) => `${x(i)},${y(r.total_duration_us ?? 0)}`).join(" "),
@@ -849,7 +851,7 @@ export function renderEvidence(payload) {
   const plane2 = payload?.plane2_coverage;
   if (plane2 && typeof plane2.processes === "number") {
     rows.push([TERMS.plane2_processes,
-               `${plane2.processes} processes`
+               `${tally(plane2.processes)} processes`
                + (typeof plane2.opens_coverage === "number"
                   ? `, opens ${(plane2.opens_coverage * 100).toFixed(0)}%` : ""),
                "plane2_coverage.processes"]);
@@ -906,8 +908,7 @@ export function renderEvidence(payload) {
   fold.setAttribute("data-rows", String(rows.length));
   const summary = document.createElement("summary");
   summary.textContent =
-    `The numbers behind that · 1 level, ${rows.length} `
-    + `row${rows.length === 1 ? "" : "s"}`;
+    `The numbers behind that · 1 level, ${plural(rows.length, "row")}`;
   fold.append(summary);
 
   const list = document.createElement("dl");
@@ -947,7 +948,7 @@ export function statusLine(payload) {
   }
   const plane2 = payload?.plane2_coverage;
   parts.push(plane2 && typeof plane2.processes === "number"
-    ? `Plane 2: ${plane2.processes} processes`
+    ? `Plane 2: ${tally(plane2.processes)} processes`
     : PLANE2_NOT_CAPTURED);
   return parts.join(" \u00b7 ");
 }

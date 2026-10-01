@@ -204,7 +204,7 @@ export function shapeOf(value) {
 /** `shapeOf` as the sentence a summary carries. */
 export function depthSentence(value) {
   const { levels, rows } = shapeOf(value);
-  const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
+  const plural = (n, word) => `${n.toLocaleString("en-US")} ${word}${n === 1 ? "" : "s"}`;
   return `${plural(levels, "level")}, ${plural(rows, "row")}`;
 }
 
@@ -251,7 +251,7 @@ export function distributionStrip(table, specs, total, few = false, rows) {
 
   const name = spec.title ?? title(spec.key, spec.quantity);
   const drawn = columnStrip(raw, {
-    grade: GRADE_ANNOTATION, name,
+    grade: GRADE_ANNOTATION, name, table,
     names: cells.map((td) => td.closest?.("tr")).map((tr) =>
       tr?.getAttribute("data-element") ?? tr?.cells?.[0]?.textContent),
     format: (n) => quantity(n, spec.quantity),

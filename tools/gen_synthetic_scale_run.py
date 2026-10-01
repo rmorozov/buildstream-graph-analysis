@@ -367,17 +367,44 @@ def _plane2_records(placement, durations, started, rng):
     return "".join(lines)
 
 
+def workload_plan(rng, building, heavy, spans=(WORKLOAD_HEAVY_BINARIES, WORKLOAD_LIGHT_BINARIES), calls=(1, 3)):
+    """`UX-1205`: `{uid: [(binary, [(wall, at, rss), ...])]}` - the binaries each element execs.
+
+    `wall` is the distribution's raw draw, `at` a 0-1 offset; drawn in the
+    order `_workload_records` always drew them, so its bytes are unchanged.
+    """
+    names = list(DISTRIBUTIONS)
+    pool = [names[i % len(names)] for i in range(WORKLOAD_POOL)]
+    plan = {}
+    for uid in building:
+        span = spans[0] if uid in heavy else spans[1]
+        plan[uid] = []
+        for binary_index in sorted(rng.sample(range(WORKLOAD_POOL), rng.randint(*span))):
+            distribution = pool[binary_index]
+            draws = []
+            for _call in range(rng.randint(*calls)):
+                wall = DISTRIBUTIONS[distribution](rng)
+                at = rng.random()
+                draws.append((wall, at, rng.randrange(1024, 65536)))
+            plan[uid].append((f"{distribution}-{binary_index:03d}", draws))
+    return plan
+
+
+def workload_calls(plan):
+    """`{uid: {binary: calls}}` - what a capture of `plan` must count."""
+    return {uid: {binary: len(draws) for binary, draws in binaries} for uid, binaries in plan.items()}
+
+
 def _workload_records(placement, durations, started, elements, rng):
-    """`UX-1182`: a make per building element exec'ing fake binaries.
+    """`UX-1182`: a make per building element exec'ing `workload_plan`'s binaries.
 
     The 8 longest elements run 200-500 distinct binaries, the rest 3-10,
     each 1-3 times; a binary sleeps or burns for its distribution's draw,
     clamped inside the element's window. `rng` is its own, so `cc` is untouched.
     """
-    names = list(DISTRIBUTIONS)
-    pool = [names[i % len(names)] for i in range(WORKLOAD_POOL)]
     building = sorted(e["uid"] for e in elements if e["element_kind"] not in ("import", "stack"))
     heavy = set(sorted(building, key=lambda uid: (-durations[uid], uid))[:WORKLOAD_HEAVY])
+    plan = workload_plan(rng, building, heavy)
     epoch = started.timestamp()
     lines, pid = [], 1000
     for uid in building:
@@ -387,21 +414,19 @@ def _workload_records(placement, durations, started, elements, rng):
         root = pid
         tail = f"element={uid} inv=inv-{root} src=spine"
         lines.append(f"START pid={root} ppid=1 ts={begin:.6f} {tail} cmd=/usr/bin/make -j4\n")
-        span = WORKLOAD_HEAVY_BINARIES if uid in heavy else WORKLOAD_LIGHT_BINARIES
-        for binary_index in sorted(rng.sample(range(WORKLOAD_POOL), rng.randint(*span))):
-            distribution = pool[binary_index]
-            binary = f"{distribution}-{binary_index:03d}"
-            burn = binary_index % 2 == 1
-            for _call in range(rng.randint(1, 3)):
-                wall = min(DISTRIBUTIONS[distribution](rng), window * 0.9)
-                at = begin + rng.uniform(0, window - wall)
+        for binary, draws in plan[uid]:
+            burn = int(binary[-3:]) % 2 == 1
+            for draw, offset, rss in draws:
+                wall = min(draw, window * 0.9)
+                # `rng.uniform(0, x)` is `0 + x * rng.random()`: the same float.
+                at = begin + (window - wall) * offset
                 pid += 1
                 cmd = f"/opt/fakebin/{binary} --{'burn' if burn else 'sleep'} {wall:.6f}"
                 utime = wall * 0.95 if burn else 0.001
                 lines.append(f"START pid={pid} ppid={root} ts={at:.6f} {tail} cmd={cmd}\n")
                 lines.append(
                     f"END pid={pid} ppid={root} ts={at + wall:.6f} {tail} exit=0 utime={utime:.3f} "
-                    f"stime={utime / 10:.3f} maxrss_kb={rng.randrange(1024, 65536)} cmd={cmd}\n"
+                    f"stime={utime / 10:.3f} maxrss_kb={rss} cmd={cmd}\n"
                 )
         lines.append(
             f"END pid={root} ppid=1 ts={begin + window:.6f} {tail} exit=0 utime=0.010 stime=0.005 "

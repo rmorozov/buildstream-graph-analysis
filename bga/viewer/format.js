@@ -127,6 +127,8 @@ export const KEYED_BY_TASK_UID = "task_uid";
 // `UX-1186`: a list's `KEYED_BY` names these columns.
 export const KEYED_BY_ELEMENT = "element";
 export const KEYED_BY_BINARY = "binary";
+// `UX-1199`: a list column of element uids that keys its row.
+export const KEYED_BY_ELEMENTS = "elements";
 
 /**
  * What a map's key should *show*, given the map's own declaration.
@@ -178,8 +180,14 @@ const INSTANT = "bga:instant";
 
 // ---------------------------------------------------------------- format
 
+/** `UX-1213`: the one way a count reads - `1,202`, never `1202`. */
+export const tally = (value) => Number.isInteger(value) ? value.toLocaleString("en-US")
+  : String(Math.round(value * 100) / 100);
+
 export function duration(microseconds) {
   if (microseconds === null || microseconds === undefined) return ABSENT;
+  // `UX-1201`: a negative that rounds to nothing prints as nothing, never "-0 ms".
+  if (microseconds < 0) return (shown => (/^0 /.test(shown) ? shown : `-${shown}`))(duration(-microseconds));
   const s = microseconds / 1e6;
   if (s < 1) return `${Math.round(microseconds / 1000)} ms`;
   if (s < 90) return `${s.toFixed(1)} s`;
@@ -235,9 +243,8 @@ export function quantity(value, kind) {
     // UX-275: a count is usually whole and renders as itself. The
     // first fractional one published - `cores_busy`, an average over
     // the run - arrived as "1.603977885512677" on the page, fifteen
-    // digits of a number measured to two. Whole counts are untouched.
-    case "count": return Number.isInteger(value) ? String(value)
-      : String(Math.round(value * 100) / 100);
+    // digits of a number measured to two.
+    case "count": return tally(value);
     default:
       return typeof value === "number"
         ? String(Math.round(value * 1000) / 1000) : String(value);
@@ -344,6 +351,14 @@ export const READER_LABELS = {
   "Resource.PROCESS": "Builders",
   "Resource.DOWNLOAD": "Fetchers",
   "Resource.UPLOAD": "Pushers",
+  both: "both runs",
+  appeared: "the candidate only",
+  disappeared: "the baseline only",
+  improved: "Improved",
+  regressed: "Regressed",
+  no_significant_change: "No significant change",
+  within_observed_range: "Within observed range",
+  not_comparable: "Not comparable",
 };
 
 /** A published value as the reader's phrase; unmapped values pass. */

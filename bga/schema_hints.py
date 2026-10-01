@@ -215,6 +215,8 @@ KEYED_BY_TASK_UID = "task_uid"
 #: its key columns; each marks its rows for Inspect, Focus and the jump box.
 KEYED_BY_ELEMENT = "element"
 KEYED_BY_BINARY = "binary"
+#: `UX-1199`: a list column of element uids keys its row; Focus reads it, there is no one uid to Inspect.
+KEYED_BY_ELEMENTS = "elements"
 
 #: `UX-390`: **the run's own advice about this map's keys lives there.**
 #:

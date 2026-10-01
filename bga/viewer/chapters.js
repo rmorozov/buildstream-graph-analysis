@@ -146,7 +146,7 @@ export const CHAPTERS = [
     sections: ["attribution", "attribution_hints",
                "critical_path_detail", "critical-path-drawn", "horizon",
                "optimization_horizon", "latent_heavies", "joint_saving",
-               "cache", "fetch_build_overlap", "wall_clock_share_us",
+               "cache", "fetch_build_overlap", "wall_clock_share_us", "task_durations_us",
                // `UX-414`: where the time went *inside* an element -
                // one call count per binary, which is this chapter's
                // question at the program level rather than the
@@ -811,10 +811,21 @@ export function revealAndLand(node, behavior, at) {
   const box = revealChapter(node);
   // `UX-1177`: a fold an anchor names is opened, with every fold around it.
   for (let fold = node?.closest?.("details"); fold; fold = fold.parentElement?.closest?.("details")) fold.open = true;
+  // `UX-1196`: and a head-and-tail fold whose middle holds it, through the fold's own control.
+  const middle = node?.closest?.("tr[data-fold-middle]");
+  if (middle?.hidden) {
+    [...(middle.parentNode?.children ?? [])].find((tr) => tr.className === "fold-row")?.querySelector?.("button")?.click?.();
+  }
   const view = node?.ownerDocument?.defaultView ?? globalThis;
   let landed = null;
   let landedAt = null;
-  const margin = () => at ?? (parseFloat(view.getComputedStyle?.(node)?.scrollMarginTop) || 0);
+  // A row lands below its table's sticky tools, which would otherwise cover it.
+  const tools = node?.tagName === "TR" ? node.closest?.("table")?.parentNode?.querySelector?.(":scope > .table-tools") : null;
+  const clear = () => {
+    const style = tools && view.getComputedStyle?.(tools);
+    return style?.position === "sticky" ? (parseFloat(style.top) || 0) + tools.offsetHeight : 0;
+  };
+  const margin = () => Math.max(at ?? (parseFloat(view.getComputedStyle?.(node)?.scrollMarginTop) || 0), clear());
   const land = () => {
     if (!node?.getBoundingClientRect) return;
     const top = (view.scrollY ?? 0) + node.getBoundingClientRect().top - margin();

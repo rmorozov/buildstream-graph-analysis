@@ -482,6 +482,31 @@
   {
     "exception": null,
     "role": "button",
+    "text": "Element"
+  },
+  {
+    "exception": null,
+    "role": "button",
+    "text": "Kind"
+  },
+  {
+    "exception": null,
+    "role": "button",
+    "text": "Duration"
+  },
+  {
+    "exception": null,
+    "role": "button",
+    "text": "Share of path"
+  },
+  {
+    "exception": null,
+    "role": "button",
+    "text": "Realizable"
+  },
+  {
+    "exception": null,
+    "role": "button",
     "text": "Copy # row"
   },
   {
@@ -558,11 +583,6 @@
     "exception": null,
     "role": "summary",
     "text": "Serialized pairs \u00b7 # levels, # rows"
-  },
-  {
-    "exception": null,
-    "role": "summary",
-    "text": "Leaves detail \u00b7 # levels, # rows"
   },
   {
     "exception": null,
@@ -927,26 +947,6 @@
   {
     "exception": null,
     "role": "th",
-    "text": "Kind"
-  },
-  {
-    "exception": null,
-    "role": "th",
-    "text": "Duration"
-  },
-  {
-    "exception": null,
-    "role": "th",
-    "text": "Share of path"
-  },
-  {
-    "exception": null,
-    "role": "th",
-    "text": "Realizable"
-  },
-  {
-    "exception": null,
-    "role": "th",
     "text": "Saving"
   },
   {
@@ -958,6 +958,11 @@
     "exception": null,
     "role": "th",
     "text": "Cumulative"
+  },
+  {
+    "exception": null,
+    "role": "th",
+    "text": "Duration"
   },
   {
     "exception": null,
@@ -1017,12 +1022,12 @@
   {
     "exception": null,
     "role": "th",
-    "text": "Length"
+    "text": "Total"
   },
   {
     "exception": null,
     "role": "th",
-    "text": "Total"
+    "text": "Length"
   },
   {
     "exception": null,
@@ -1068,31 +1073,6 @@
     "exception": null,
     "role": "th",
     "text": "Ran after it"
-  },
-  {
-    "exception": null,
-    "role": "th",
-    "text": "Key"
-  },
-  {
-    "exception": null,
-    "role": "th",
-    "text": "Element kind"
-  },
-  {
-    "exception": null,
-    "role": "th",
-    "text": "Is structural kind"
-  },
-  {
-    "exception": null,
-    "role": "th",
-    "text": "Is potentially deferrable"
-  },
-  {
-    "exception": null,
-    "role": "th",
-    "text": "Deferral risk"
   },
   {
     "exception": null,
@@ -1177,7 +1157,7 @@
   {
     "exception": null,
     "role": "option",
-    "text": "Top # by Contracts"
+    "text": "Top # rows"
   },
   {
     "exception": null,
@@ -1327,17 +1307,7 @@
   {
     "exception": null,
     "role": "button",
-    "text": "Element"
-  },
-  {
-    "exception": null,
-    "role": "button",
     "text": "Binary"
-  },
-  {
-    "exception": null,
-    "role": "button",
-    "text": "Calls"
   },
   {
     "exception": "acronym",
@@ -1352,12 +1322,17 @@
   {
     "exception": null,
     "role": "button",
+    "text": "Calls"
+  },
+  {
+    "exception": null,
+    "role": "button",
     "text": "Wall"
   },
   {
     "exception": null,
     "role": "button",
-    "text": "Count"
+    "text": "Calls in run"
   },
   {
     "exception": null,
@@ -1448,11 +1423,6 @@
     "exception": "product name",
     "role": "summary",
     "text": "core.bst runs its own build system at # job because its variables set notparallel, while the rest of this build runs at # and it is the longest kind of task\u2026 moreless"
-  },
-  {
-    "exception": null,
-    "role": "summary",
-    "text": "Leaves detail \u00b7 # levels, # row"
   },
   {
     "exception": null,
@@ -1817,72 +1787,12 @@
   {
     "exception": null,
     "role": "option",
-    "text": "Top # by Wall-clock share"
-  },
-  {
-    "exception": null,
-    "role": "option",
-    "text": "Top # by Calls"
-  },
-  {
-    "exception": "acronym",
-    "role": "option",
-    "text": "Top # by CPU"
-  },
-  {
-    "exception": "acronym",
-    "role": "option",
-    "text": "Top # by Share of CPU"
-  },
-  {
-    "exception": null,
-    "role": "option",
-    "text": "Top # by Wall"
-  },
-  {
-    "exception": null,
-    "role": "option",
-    "text": "Top # by By binary"
-  },
-  {
-    "exception": null,
-    "role": "option",
     "text": "Choke points (#)"
   },
   {
     "exception": null,
     "role": "option",
     "text": "Plane # (sandbox) (#)"
-  },
-  {
-    "exception": null,
-    "role": "option",
-    "text": "Top # by Element durations"
-  },
-  {
-    "exception": null,
-    "role": "option",
-    "text": "Top # by Downstream count"
-  },
-  {
-    "exception": null,
-    "role": "option",
-    "text": "Top # by Unweighted depth"
-  },
-  {
-    "exception": null,
-    "role": "option",
-    "text": "Top # by Rank"
-  },
-  {
-    "exception": null,
-    "role": "option",
-    "text": "Top # by Total"
-  },
-  {
-    "exception": null,
-    "role": "option",
-    "text": "Top # by Of longest path"
   },
   {
     "exception": "product name",
@@ -1893,26 +1803,6 @@
     "exception": null,
     "role": "heading",
     "text": "Which durations could this run not express?"
-  },
-  {
-    "exception": null,
-    "role": "button",
-    "text": "Kind"
-  },
-  {
-    "exception": null,
-    "role": "button",
-    "text": "Duration"
-  },
-  {
-    "exception": null,
-    "role": "button",
-    "text": "Share of path"
-  },
-  {
-    "exception": null,
-    "role": "button",
-    "text": "Realizable"
   },
   {
     "exception": null,
@@ -1958,26 +1848,6 @@
     "exception": null,
     "role": "button",
     "text": "Always consumed by"
-  },
-  {
-    "exception": null,
-    "role": "button",
-    "text": "Key"
-  },
-  {
-    "exception": null,
-    "role": "button",
-    "text": "Is structural kind"
-  },
-  {
-    "exception": null,
-    "role": "button",
-    "text": "Is potentially deferrable"
-  },
-  {
-    "exception": null,
-    "role": "button",
-    "text": "Deferral risk"
   },
   {
     "exception": null,
@@ -2038,36 +1908,6 @@
     "exception": "product name",
     "role": "option",
     "text": "layer#/mod#.bst"
-  },
-  {
-    "exception": null,
-    "role": "option",
-    "text": "Top # by Duration"
-  },
-  {
-    "exception": null,
-    "role": "option",
-    "text": "Top # by Share of path"
-  },
-  {
-    "exception": null,
-    "role": "option",
-    "text": "Top # by Realizable"
-  },
-  {
-    "exception": null,
-    "role": "option",
-    "text": "Top # by Level"
-  },
-  {
-    "exception": null,
-    "role": "option",
-    "text": "Top # by Elements here"
-  },
-  {
-    "exception": null,
-    "role": "option",
-    "text": "First # rows"
   },
   {
     "exception": null,

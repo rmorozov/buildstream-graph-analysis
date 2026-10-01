@@ -354,7 +354,7 @@ class TestItReachesEveryElementAtScale:
         assert out["population"] == at_scale["population"], (
             f"the picker reaches {out['population']} of {at_scale['population']} elements"
         )
-        assert str(at_scale["population"]) in out["note"], (
+        assert f"{at_scale['population']:,}" in out["note"], (
             f"the sentence beside the control does not say the count it searches: {out['note']!r}"
         )
         assert FOREIGN not in out["body"]

@@ -115,6 +115,12 @@ SHAPES = {
         "so a drawn bar per key is unbounded by construction, which "
         "is the volume `UX-360`'s budget exists to prevent.",
     ),
+    "task_durations_us": (
+        None,
+        "`UX-1194`: never a section of its own - it is the Duration column of "
+        "the task table beside `wall_clock_share_us`, and that table's strip "
+        "is drawn over it, so its shape is on the page already.",
+    ),
 }
 
 

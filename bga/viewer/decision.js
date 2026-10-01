@@ -94,8 +94,7 @@ export function renderProvenance(provenance, options = {}) {
   // depth and count alone, so an unlabeled fold names its content too.
   const named = `${options.label || "The rule"} · `;
   summary.textContent =
-    `${named}1 level, ${evidence.length} `
-    + `row${evidence.length === 1 ? "" : "s"}`;
+    `${named}1 level, ${plural(evidence.length, "row")}`;
   details.append(summary);
 
   const why = document.createElement("p");
@@ -323,8 +322,7 @@ function renderSaidOnce(common) {
   // `UX-357` (§3a.1): one level, the findings are its rows.
   box.setAttribute("data-levels", "1");
   box.setAttribute("data-rows", String(common.length));
-  summary.textContent = `What they share \u00b7 1 level, ${common.length} `
-    + `row${common.length === 1 ? "" : "s"}`;
+  summary.textContent = `What they share \u00b7 1 level, ${plural(common.length, "row")}`;
   box.append(summary);
   for (const { finding, ranks } of common) {
     const line = document.createElement("p");
@@ -465,7 +463,9 @@ function investigationEvidence(payload, uid, options) {
     // this row cannot honour.
     rows.push({
       label, source: path, present: found !== undefined,
-      text: found === undefined ? "not in this document" : "yes",
+      text: found !== undefined ? "yes"
+        : resolvePath(payload, path.slice(0, path.indexOf("["))) !== undefined
+          ? "section present, this element not in it" : "not in this document",
     });
   }
   const named = (payload.findings ?? []).filter(
@@ -499,15 +499,21 @@ function investigationRelations(payload, uid) {
     const at = chain.indexOf(uid);
     const cite = (i) => `critical_path_detail[${i}].element_uid`;
     if (at > 0) {
-      rows.push({ label: "Waits on (chain)", path: cite(at - 1),
+      rows.push({ label: "Before it on the critical path", path: cite(at - 1),
                   raw: chain[at - 1], text: chain[at - 1],
                   href: `#${elementAnchor(chain[at - 1])}` });
     }
     if (at !== -1 && at < chain.length - 1) {
-      rows.push({ label: "Blocks (chain)", path: cite(at + 1),
+      rows.push({ label: "After it on the critical path", path: cite(at + 1),
                   raw: chain[at + 1], text: chain[at + 1],
                   href: `#${elementAnchor(chain[at + 1])}` });
     }
+  }
+  // UX-1200: "Blocks" is the card's count, one figure wherever it is drawn.
+  const blocks = resolvePath(payload, `elements.fan_in[${uid}].dependent_count`);
+  if (typeof blocks === "number") {
+    rows.push({ label: "Blocks", path: `elements.fan_in[${uid}].dependent_count`,
+                raw: blocks, text: plural(blocks, "element") });
   }
   const downstream = resolvePath(
     payload, `elements.blast_radius[${uid}].downstream_count`);

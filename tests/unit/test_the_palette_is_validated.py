@@ -296,11 +296,11 @@ class TestStatusToneIsNeverAlone:
         # `UX-451`: the hand-off's refusal. The tone is the warn rule
         # down its left edge; the channels are that the element does
         # not render at all in any other state - a block appears where
-        # there was none - and that it is `role="status"`, so it is
+        # there was none - and that it is `role="alert"` (UX-1202), so it is
         # announced rather than only seen. The sentence inside it says
         # what was refused and what to do instead, which is the same
         # kind of channel `.band[data-disputed]` above relies on.
-        ".handoff-refusal": "role=status, and the sentence it carries - the element is hidden in every other state",
+        ".handoff-refusal": "role=alert, and the sentence it carries - the element is hidden in every other state",
     }
 
     def _toned(self):

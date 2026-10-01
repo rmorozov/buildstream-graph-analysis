@@ -8,7 +8,8 @@ control heights at 14/23/40/58px, before this item.
 a class rule's own smaller `width`/`height` (the door's `1.1em`) still
 clamps up rather than fighting this one. WCAG 2.2 2.5.8's own
 exception, a link inline in a sentence (`p a`), is the one control this
-file does not require it of. Boots the golden export, once with a fine
+file does not require it of; a checkbox inside its `<label>` is measured
+by the label's box, which is its target (`UX-1209`). Boots the golden export, once with a fine
 pointer and once under touch emulation (`UX-1022`'s `Browser.measure
 coarse=True`).
 """
@@ -40,7 +41,8 @@ _SCAN = """
   const inSentence = (n) => n.tagName === "A" && !!n.closest("p");
   const out = [];
   document.querySelectorAll(sel).forEach((n) => {
-    const r = n.getBoundingClientRect();
+    const wrap = n.tagName === "INPUT" ? n.closest("label") : null;
+    const r = (wrap ?? n).getBoundingClientRect();
     if (r.width > 0 && r.height > 0) {
       out.push({tag: n.tagName, cls: n.className,
                  w: r.width, h: r.height, sentence: inSentence(n)});

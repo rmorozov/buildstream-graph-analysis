@@ -9,8 +9,8 @@ folds the rail; the hash's state is one opaque token, an untouched
 page writes none, a readable hash from before still loads, and a
 chapter's own fold and `All rows` survive a reload.
 UX-1170: a threshold empties the tools as the text box does, a filter to
-two rows draws no strip, a bound under a filter reads `K of N matched, of
-M`, a cleared filter under `All rows` hides the badge again, and the Ask
+two rows draws no strip, a bound under a filter reads `K of N matched`
+(one population, `UX-1195`), a cleared filter under `All rows` hides the badge again, and the Ask
 and Jump boxes say when nothing matches.
 Chromium (`tests/browser.py`) on `golden`, `macro_micro` and the
 two-plane review page.
@@ -369,7 +369,7 @@ class TestAFilterSaysWhatItKept:
             out = seen[label][width]
             shown, matched = out["wide"]["shown"], out["wide"]["matched"]
             assert shown < matched < out["total"], (label, width, out)
-            assert out["wide"]["badge"] == f"{shown:,} of {matched:,} matched, of {out['total']:,}", (label, out)
+            assert out["wide"]["badge"] == f"{shown:,} of {matched:,} matched", (label, out)
 
     def test_a_cleared_filter_hides_the_badge_again(self, seen):
         """`UX-1163`'s M3b: under `All rows` the badge is empty, a filter fills it, clearing empties it."""

@@ -147,7 +147,12 @@ class TestEveryControlAndDrawingNamesWhatItShows:
         short = [
             (n["name"], n["attrs"]["data-ax-n"], n["attrs"]["data-ax-details"][:60])
             for n in strips
-            if len(n["attrs"]["data-ax-details"].split(", ")) != int(n["attrs"]["data-ax-n"])
+            # UX-1202: past 600 chars the route states its count and shape instead.
+            if not (
+                n["attrs"]["data-ax-details"].startswith(f"{int(n['attrs']['data-ax-n']):,} values: ")
+                and "p95 " in n["attrs"]["data-ax-details"]
+            )
+            and len(n["attrs"]["data-ax-details"].split(", ")) != int(n["attrs"]["data-ax-n"])
         ]
         assert short == [], (label, short)
 

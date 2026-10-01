@@ -4,6 +4,13 @@
 //
 //   node cdp.mjs <port> <url> <width> <height> [--observe] [--coarse] [--media=print] [--scheme=dark] [--ax]  < expression
 //
+// Every drive starts on a fresh history and empty localStorage (`UX-1203`,
+// `UX-1215`, `UX-1217`): `Page.resetNavigationHistory` before the load, and
+// a one-shot `localStorage.clear()` on the new document, removed after the
+// settle so a journey's own reloads keep their storage. At the shared tab's
+// 50-entry cap, gesture-less pushes prune the document's own older
+// entries: a second Back leaves the page.
+//
 // `--coarse` (`UX-1022`): touch emulation plus `Emulation.setEmulatedMedia`
 // forcing `pointer: coarse`/`hover: none`, so `@media (pointer: coarse)`
 // matches the way it would on a touch device - the media query a fine
@@ -176,6 +183,10 @@ if (features.length || media) {
 // navigation this run is about.
 if (observing) await new Promise((resolve) => setTimeout(resolve, 300));
 recording = true;
+await send("Page.resetNavigationHistory");
+const wipe = await send("Page.addScriptToEvaluateOnNewDocument", {
+  source: "try { localStorage.clear(); } catch (e) {}",
+});
 await send("Page.navigate", { url });
 // `UX-482`: this was a fixed 1,200ms settle, on the reasoning that the
 // page is one file with inlined payloads and no network. That is a
@@ -247,6 +258,7 @@ const SETTLE_CEILING_MS = 20000;
     previous = now;
   }
 }
+await send("Page.removeScriptToEvaluateOnNewDocument", { identifier: wipe.identifier });
 
 // `UX-1016`: `key`/`code`/`windowsVirtualKeyCode` per name CDP wants -
 // only the three this project's keyboard journey ever presses.

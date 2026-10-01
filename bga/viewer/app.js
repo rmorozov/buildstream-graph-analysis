@@ -48,7 +48,7 @@ import { jsonToggles } from "./rawjson.js";
 import { contained } from "./controls.js";
 import { applyView, joinHash, splitHash, viewLink,
          wireViewState, copyFormatBox } from "./viewstate.js";
-import { applyFocus, applyMarks, clearFocus, focusedElement, readMarks,
+import { applyFocus, applyMarks, clearFocus, driveFilters, focusedElement, readMarks,
          renderFocusBar, renderMarkSummary } from "./focus.js";
 import { renderQuestions } from "./questions.js";
 import { copy } from "./tables.js";
@@ -194,6 +194,7 @@ export function foldOnNarrow(nav, doc) {
     title.disabled = !isNarrow;
   };
   settle(Boolean(narrow?.matches));
+  nav._fold = apply; // `UX-1208`: Back folds the rail as its entry found it.
   title.addEventListener?.("click", () => {
     apply(nav.getAttribute("data-folded") !== "true");
   });
@@ -284,6 +285,7 @@ export function wireJumpBox(nav, root, payload, context = {}) {
   const act = (action) => {
     if (action.focus) {
       applyFocus(root, action.element);
+      root.querySelector?.("[data-role=focus-bar]")?.scrollIntoView?.();
       root.dispatchEvent?.(new Event("change", { bubbles: true }));
       return;
     }
@@ -483,12 +485,15 @@ export function announceHandoff(status, text, { refused = false } = {}) {
     status.textContent = text;
     return;
   }
+  // UX-1202: an alert while it holds a refusal, no live region at rest.
   if (refused) {
     banner.textContent = text;
+    banner.setAttribute("role", "alert");
     banner.hidden = false;
     status.textContent = "";
   } else {
     banner.textContent = "";
+    banner.removeAttribute("role");
     banner.hidden = true;
     status.textContent = text;
   }
@@ -1145,33 +1150,98 @@ async function boot() {
     };
     const fragment = (event) => event?.target?.closest?.("a[href^=\"#\"]")
       ?.getAttribute?.("href");
+    // UX-1171: the folds and where the anchor sat, since a scrollY is stale once the folds' estimates settle.
+    const here = () => ({ scrollY: window.scrollY, rail: document.querySelector(".toc")?.getAttribute("data-folded"),
+      at: document.getElementById(splitHash(location.hash).anchor)?.getBoundingClientRect().top });
+    // `UX-1208`: where the reader last stopped below the narrow rail, which they climb to the top to open.
+    let read = null;
+    let end = 0;
+    let stop = null;
+    window.addEventListener?.("scrollend", () => {
+      // A stop above the last one under the same hash is the climb to the rail, which keeps the place read.
+      const climbing = read?.[0] === location.hash && window.scrollY < end;
+      end = window.scrollY;
+      const place = [location.hash, here(), Date.now()];
+      if (document.querySelector(".toc")?.getBoundingClientRect().bottom < 0) [stop, read] = climbing ? [place, read] : [null, place];
+    });
+    // ...unless the reader dwelt there: a wheel's notches lull 600 ms, a reread lasts seconds.
+    window.addEventListener?.("scroll", () => {
+      if (Date.now() - stop?.[2] > 1000) read = stop;
+      stop = null;
+    });
+    const keepPlace = (railed) => {
+      // `UX-1203` follow-up: with no such place, an opened rail's reader is at the anchor.
+      const place = !railed ? here() : read?.[0] === location.hash ? read[1] : { scrollY: window.scrollY, at: null };
+      window.history.replaceState({ ...window.history.state, folds: foldSnapshot(root), ...place }, "");
+    };
+    // `UX-1203` follow-up: Chrome fires popstate inside a followed fragment link's click; that is no traversal.
+    let following = false;
     // UX-1056: capture phase, so the snapshot precedes nav.js's own reveal.
     // UX-1158: a rail chapter press is navigation too, with an entry of its own.
     document.addEventListener?.("click", (event) => {
       const chapter = event.target?.closest?.("[data-toc-chapter]")?.dataset.tocChapter;
-      if (fragment(event)?.length > 1 || chapter) {
+      const all = event.target?.closest?.("[data-all]");
+      if (fragment(event)?.length > 1) {
+        following = true;
+        setTimeout(() => { following = false; }, 0);
+      }
+      if (fragment(event)?.length > 1 || chapter || all) {
         // Chrome's own restore lands after popstate and overrides it.
         window.history.scrollRestoration = "manual";
-        // UX-1171: and where the anchor sat, since a scrollY is stale once the folds' estimates settle.
-        const at = document.getElementById(splitHash(location.hash).anchor);
-        window.history.replaceState({ ...window.history.state,
-          folds: foldSnapshot(root),
-          scrollY: window.scrollY, at: at?.getBoundingClientRect().top }, "");
+        const rail = event.target?.closest?.(".toc");
+        keepPlace(rail?.getAttribute("data-folded") === "false"
+          && rail.querySelector(".toc-title")?.disabled === false);
         if (chapter) {
           const next = joinHash(`chapter-${chapter}`, splitHash(location.hash).query);
           // UX-1178: a press on the entry already current is no new entry.
           window.history[next === location.hash ? "replaceState" : "pushState"](null, "", next);
         }
+        // `UX-1203`: Expand all and Collapse all are one step Back, and Forward restores the entry they made.
+        if (all) {
+          window.history.pushState(null, "", location.href);
+          setTimeout(() => keepPlace(false), 0);
+        }
       }
     }, true);
     document.addEventListener?.("click", (event) => {
       const href = fragment(event);
+      // `UX-1196`: a card's "Also in" link lands its element's row there, a folded one included.
+      const uid = event.target?.closest?.("a[data-where]")?.closest?.("[data-element]")?.getAttribute("data-element");
+      const box = uid && href ? document.getElementById(href.slice(1)) : null;
+      box?._hydrate?.();
+      const row = box?.querySelector?.(`tr[data-element="${CSS?.escape?.(uid) ?? uid}"]`);
+      if (row) {
+        event.preventDefault();
+        window.history.pushState(null, "", joinHash(href.slice(1), splitHash(location.hash).query));
+        // At the section's own margin, so the sticky header does not cover the row.
+        revealAndLand(row, undefined, parseFloat(getComputedStyle(box).scrollMarginTop) || 0);
+        return;
+      }
       if (href && href.length > 1) revealAnchor(href.slice(1));
     });
     window.addEventListener?.("popstate", (event) => {
+      if (following) { following = false; return; }
       const saved = event.state;
+      // `UX-1203`: the entry's view, and no filter it lacks.
+      const query = splitHash(location.hash).query;
+      const kept = new URLSearchParams(query ?? "");
+      // `UX-1198`: and no focus it lacks, handing the driven boxes back first.
+      if (focusedElement(root) && !kept.get("focus")) clearFocus(root);
+      // `UX-1214` follow-up: an entry naming no View is at the opening one.
+      for (const view of root.querySelectorAll?.("select.preset-view") ?? []) {
+        if (view.selectedIndex && !kept.has(`v.${view.dataset.table}`)) { view.selectedIndex = 0; view.dispatchEvent(new Event("change")); }
+      }
+      for (const table of root.querySelectorAll?.("table[data-table]") ?? []) {
+        const box = table.parentNode?.querySelector?.(".table-tools input.table-filter");
+        if (box?.value && !kept.has(`f.${table.getAttribute("data-table")}`)) {
+          box.value = "";
+          box.dispatchEvent(new Event("input", { bubbles: true }));
+        }
+      }
+      applyView(root, query);
       if (!Array.isArray(saved?.folds)) return;
       applyFolds(root, saved.folds);
+      if (saved.rail) document.querySelector(".toc")?._fold?.(saved.rail === "true");
       window.scrollTo?.(0, saved.scrollY ?? 0);
       const at = document.getElementById(splitHash(location.hash).anchor);
       if (saved.at !== undefined && at && !at.closest("[hidden]")) revealAndLand(at, undefined, saved.at);
@@ -1254,7 +1324,7 @@ if (typeof document !== "undefined" && document.getElementById?.("report")) {
  * export and the anchors honest.
  */
 export function wireFocusAndMarks(root, doc, options = {}) {
-  const refresh = ({ reveal = false } = {}) => {
+  const refresh = () => {
     // UX-228 added a third transient node, and it joins the same
     // removal set on purpose: everything focus adds is keyed by
     // `data-role`, so unfocusing leaves the document byte-identical to
@@ -1276,7 +1346,7 @@ export function wireFocusAndMarks(root, doc, options = {}) {
     let bar = null;
     if (uid) {
       bar = renderFocusBar(uid, { onClear: () => {
-        clearFocus(root); refresh(); notify();
+        clearFocus(root); notify();
       }});
       root.prepend?.(bar);
     }
@@ -1297,12 +1367,12 @@ export function wireFocusAndMarks(root, doc, options = {}) {
         String(marks[button.getAttribute("data-mark-element")]
                === button.getAttribute("data-mark-value")));
     }
-    // The answer is 25,501 px from the button on a card at 26,550 px,
-    // and nothing moved. Reveal it only on the click - a page restoring
-    // focus from its url has not asked to be scrolled.
-    if (reveal) (bar ?? investigation)?.scrollIntoView?.();
     return investigation;
   };
+  // The answer is 25,501 px from the button on a card at 26,550 px,
+  // and nothing moved. Reveal it only on the click - a page restoring
+  // focus from its url has not asked to be scrolled.
+  const reveal = () => root.querySelector?.("[data-role=focus-bar]")?.scrollIntoView?.();
   // The fragment listens for these already; firing one event rather
   // than writing the hash here keeps UX-211 the only writer.
   const notify = () => root.dispatchEvent?.(
@@ -1314,7 +1384,7 @@ export function wireFocusAndMarks(root, doc, options = {}) {
     const focusUid = node.getAttribute("data-focus-element");
     if (focusUid) {
       applyFocus(root, focusedElement(root) === focusUid ? null : focusUid);
-      refresh({ reveal: true });
+      reveal();
       notify();
       return;
     }
@@ -1334,8 +1404,12 @@ export function wireFocusAndMarks(root, doc, options = {}) {
     if (event.key !== "Escape") return;
     if (!focusedElement(root)) return;
     clearFocus(root);
-    refresh();
     notify();
+  });
+  // `UX-1198`: applyFocus and clearFocus announce themselves, so the bar, the investigation and the keyed filters answer every caller.
+  root.addEventListener?.("bga:focus", () => {
+    driveFilters(root, focusedElement(root));
+    refresh();
   });
   return refresh;
 }

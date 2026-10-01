@@ -139,12 +139,14 @@ const button = all(section, (n) =>
 const shown = () => trs.filter((r) => r.hidden !== true)
   .filter((r) => !r.attrs["data-fold-rows"]).length;
 const before = shown();
+// At rest: once pressed the stub is hidden, and where a hidden row sits is nobody's reading order.
+const foldedAt = trs.findIndex((r) => r.attrs["data-fold-rows"]);
 if (button) button.click();
 console.log(JSON.stringify({
   head: PATH_HEAD, tail: PATH_TAIL,
   rows: trs.filter((r) => !r.attrs["data-fold-rows"]).length,
   shownBefore: before, shownAfter: shown(),
-  foldedAt: trs.findIndex((r) => r.attrs["data-fold-rows"]),
+  foldedAt,
   folded: button ? Number(button.attrs["data-folded"]) : null,
   label: button ? text(button) : null,
   title: button ? button.attrs.title : null,

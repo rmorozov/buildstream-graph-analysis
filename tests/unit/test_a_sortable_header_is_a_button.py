@@ -51,7 +51,7 @@ _READ = r"""
     if (column) {
       const th = own(table).find((h) => h.getAttribute("data-column") === column);
       out.openings.push({ key, column, sort: th?.getAttribute("aria-sort"),
-                          glyph: th ? getComputedStyle(th, "::after").content : null });
+                          glyph: th ? getComputedStyle(th.querySelector("button.th-sort"), "::after").content : null });
     }
     // One press on a quantity the table is not already ranked by.
     const th = own(table).find((h) => h.getAttribute("data-quantity") && !h.getAttribute("aria-sort")

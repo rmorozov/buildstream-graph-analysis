@@ -369,6 +369,11 @@ def path_elements_by_duration(result) -> list[dict]:
     return sorted(real, key=lambda d: -d['duration_us'])
 
 
+def _downstream(blast_radius, uid):
+    """`UX-1213`: `toolchain.bst (1,201 downstream)` - a count carries its comma."""
+    return f"{uid} ({(blast_radius.get(uid) or {}).get('downstream_count') or 0:,} downstream)"
+
+
 def _finding(
     id: str,
     severity: str,
@@ -981,9 +986,9 @@ def _graph_shape_findings(result: AnalysisResult) -> list[dict]:
         _finding(
             'graph-width',
             SEVERITY_INFO,
-            f"The graph is {len(depth)} elements in {stages} dependency "
-            f"stages, and its widest stage holds {widest} — so no more than "
-            f"{widest} can ever be building at once, whatever the capacity",
+            f"The graph is {len(depth):,} elements in {stages:,} dependency "
+            f"stages, and its widest stage holds {widest:,} — so no more than "
+            f"{widest:,} can ever be building at once, whatever the capacity",
             evidence={'element_count': len(depth), 'dependency_stages': stages, 'widest_stage': widest},
         )
     ]
@@ -1793,10 +1798,7 @@ def _ranking_findings(result: AnalysisResult, chain_bound: bool) -> list[dict]:
     # ranking above, so `shown` is a subset of it and `not shown` still
     # separates the two arms exactly.
     if reaching and not shown:
-        named = ", ".join(
-            f"{u} ({(blast_radius.get(u) or {}).get('downstream_count')} downstream)"
-            for u in reaching[:BLAST_RADIUS_SHOWN]
-        )
+        named = ", ".join(_downstream(blast_radius, u) for u in reaching[:BLAST_RADIUS_SHOWN])
         findings.append(
             _finding(
                 'blast-radius-reach',
@@ -1810,10 +1812,7 @@ def _ranking_findings(result: AnalysisResult, chain_bound: bool) -> list[dict]:
 
     if structural:
         # Reported, with the number, as the graph's shape.
-        named = ", ".join(
-            f"{u} ({(blast_radius.get(u) or {}).get('downstream_count', 0)} downstream)"
-            for u in structural[:BLAST_RADIUS_SHOWN]
-        )
+        named = ", ".join(_downstream(blast_radius, u) for u in structural[:BLAST_RADIUS_SHOWN])
         findings.append(
             _finding(
                 'blast-radius-structural',
@@ -1831,10 +1830,7 @@ def _ranking_findings(result: AnalysisResult, chain_bound: bool) -> list[dict]:
         # the declaration rather than the graph. Drawing this tier on
         # the page is a later track, not here (brief named UX-678/739;
         # neither file is this tier - see the implementer's report).
-        named = ", ".join(
-            f"{u} ({(blast_radius.get(u) or {}).get('downstream_count', 0)} downstream)"
-            for u in foundation[:BLAST_RADIUS_SHOWN]
-        )
+        named = ", ".join(_downstream(blast_radius, u) for u in foundation[:BLAST_RADIUS_SHOWN])
         findings.append(
             _finding(
                 'blast-radius-foundation',
@@ -1877,9 +1873,7 @@ def _foundation_candidates(blast_radius: dict, distribution: Optional[dict], ord
     )
     if not candidates:
         return []
-    named = ", ".join(
-        f"{u} ({blast_radius[u]['downstream_count']} downstream)" for u in candidates[:BLAST_RADIUS_SHOWN]
-    )
+    named = ", ".join(_downstream(blast_radius, u) for u in candidates[:BLAST_RADIUS_SHOWN])
     return [
         _finding(
             'foundation-candidates',
@@ -2037,9 +2031,9 @@ def _density_sentence(distribution, verb="reach"):
     if median is None or ninety is None:
         return ""
     return (
-        f"Shape: half of this run's {distribution['n']} elements "
-        f"{verb} {median} or fewer, the top tenth {verb} {ninety} or "
-        f"more (max {distribution['max']})"
+        f"Shape: half of this run's {distribution['n']:,} elements "
+        f"{verb} {median:,} or fewer, the top tenth {verb} {ninety:,} or "
+        f"more (max {distribution['max']:,})"
     )
 
 
@@ -2389,10 +2383,10 @@ def _graph_shape(result) -> Optional[str]:
     biggest = shape['max']
 
     def reach(count):
-        return "nothing" if not count else f"{count} others"
+        return "nothing" if not count else f"{count:,} others"
 
-    half = f"Half of this graph's {shape['n']} elements reach {reach(median)}" + ("" if not median else " or fewer")
-    tenth = f"the top tenth reach {reach(top)}" + ("" if not top else " or more") + f", up to {biggest}"
+    half = f"Half of this graph's {shape['n']:,} elements reach {reach(median)}" + ("" if not median else " or fewer")
+    tenth = f"the top tenth reach {reach(top)}" + ("" if not top else " or more") + f", up to {biggest:,}"
     # Concentration is `max` against the top decile, not the top decile
     # against the median: in a star-shaped graph both of those are zero
     # and the first draft of this sentence called the most concentrated

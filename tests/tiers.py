@@ -641,13 +641,30 @@ LARGE = (
     # reference reader as the uninterned arm. Alone in one process: 21.57 / 20.97s.
     "tests/unit/test_the_open_paths_are_interned.py",  #   21.0s
     # `UX-1178`, round 158's merged tree with its follow-up clause: eighteen
-    # Chromium loads at 390/320/1440. Alone in one process: 23.84 / 24.01 / 23.96s.
-    "tests/unit/test_the_narrow_page_keeps_its_place.py",  #   24.0s
+    # Chromium loads at 390/320/1440. Alone in one process: 23.84 / 24.01 / 23.96s;
+    # round 160's merged tree (UX-1208): 51.65 / 51.61s, base 24.89s on the same machine;
+    # its residue (27 rail cases, two notched climbs of 9,000 px): 171.11 / 171.19s.
+    "tests/unit/test_the_narrow_page_keeps_its_place.py",  #  171.1s
+    # `UX-1203`: a two-plane run built, then 16 Chromium loads. Alone in one process: 37.09 / 37.69s;
+    # round 159's merged tree with its residue: 54.24 / 54.36s.
+    "tests/unit/test_the_rail_tools_and_the_pager_read_as_one_set.py",  #   54.3s
+    # `UX-1186`, `UX-1199`'s 1,202-element page; round 159's merged tree with its residue,
+    # alone in one process: 27.20 / 26.86s.
+    "tests/unit/test_a_population_key_is_declared.py",  #   27.0s
+    # `UX-1179`, `UX-1196`; round 159's merged tree builds one more page, alone in one
+    # process: 30.58 / 30.93s; round 160's merged tree: 38.85 / 38.21s, base 31.11s.
+    "tests/unit/test_print_and_find_reach_the_content.py",  #   38.5s
+    # Round 160's merged tree, alone in one process (base ec816233 on the same machine):
+    # UX-1213: 23.17 / 23.32s (base 12.75s).
+    "tests/unit/test_a_value_is_what_it_names.py",  #   23.2s
+    # UX-1206: 16.28 / 16.56s (base 13.78s).
+    "tests/unit/test_a_key_column_matches_exactly.py",  #   16.4s
+    # UX-1214 follow-up: 24.75 / 24.77s (base 16.46s).
+    "tests/unit/test_an_element_view_answers_whole.py",  #   24.8s
 )
 
 MEDIUM = (
     "tests/unit/test_a_broken_pipe_is_not_an_error.py",  # 1.6s
-    "tests/unit/test_a_value_is_what_it_names.py",  # 11.6s
     # `UX-665`, tiered on landing: one Chromium, three boots (golden,
     # macro_micro, the built shared-resource fixture). 1.77/1.78/1.82s
     # single-process.
@@ -929,6 +946,8 @@ MEDIUM = (
     # `UX-465`: two real `bst build` runs where bst is installed,
     # and the spec/YAML half everywhere.
     "tests/unit/test_a_generated_project_builds.py",  #    6.5s
+    # `UX-1205`: one subprocess runs the written project's fake binaries.
+    "tests/unit/test_a_captured_workload_matches_its_plan.py",  #    1.2s
     "tests/unit/test_the_printed_sentences_are_contracts.py",  #    1.6s
     "tests/unit/test_a_capture_that_cannot_start.py",  #    1.5s
     "tests/unit/test_the_handoff_does_not_carry_the_trace.py",  #    1.3s
@@ -1117,21 +1136,18 @@ MEDIUM = (
     "tests/unit/test_a_sortable_header_is_a_button.py",  #  8.3s
     # `UX-1189`: 8.48s.
     "tests/unit/test_copy_takes_the_matched_population.py",  #  8.5s
+    "tests/unit/test_copy_follows_the_order_on_screen.py",  # 12.7s
     # `UX-1184`: 6.85 / 7.18s.
     "tests/unit/test_a_column_is_named_for_its_field.py",  #  7.0s
-    # `UX-1186`: 5.21 / 5.08s.
-    "tests/unit/test_a_population_key_is_declared.py",  #  5.2s
-    # `UX-1192`: 8.38 / 8.49 / 9.43s.
-    "tests/unit/test_a_mark_says_its_value.py",  #  8.5s
-    # `UX-1191`: 7.44 / 6.86s.
-    "tests/unit/test_a_key_column_matches_exactly.py",  #  7.2s
+    # `UX-1192`: 8.38 / 8.49 / 9.43s; round 159's merged tree: 11.20 / 11.32s;
+    # round 160's merged tree (UX-1216): 15.11 / 14.35 / 13.96s, base 11.53s on the same machine.
+    "tests/unit/test_a_mark_says_its_value.py",  # 14.4s
+    # `UX-1194`: 6.87 / 6.46s; round 159's merged tree: 6.80 / 7.17s.
+    "tests/unit/test_op_and_duration_meet_on_durations.py",  #  7.0s
     # `UX-1176`: 7.23 / 7.51s.
     "tests/unit/test_a_status_is_announced.py",  #  7.4s
     # `UX-1177`: 2.63 / 2.70s; its Jump-lands residue, merged tree: 9.75 / 9.70 / 9.73s.
     "tests/unit/test_jump_finds_what_the_rail_lists.py",  #  9.7s
-    # `UX-1179`: 11.51 / 11.84 / 11.68s, the 1,202-element page built in it;
-    # its card-Jump residue, merged tree: 13.57 / 13.57 / 13.38s.
-    "tests/unit/test_print_and_find_reach_the_content.py",  # 13.5s
     # Round 147, tiered on the merged tree: three single-process runs
     # alone each (setup+call+teardown).
     # `UX-1083`: 4.17 / 4.08 / 4.23s.
@@ -1156,9 +1172,12 @@ MEDIUM = (
     "tests/unit/test_one_name_one_population.py",  #  5.6s
     # UX-1183's heavy page, its export and two Chromium reads 4.14s.
     "tests/unit/test_a_traced_elements_binaries_reach_the_page.py",  #  4.1s
-    # UX-1187's 1,202-element export and Chromium reads, merged tree: 14.92 / 14.78 / 14.69s.
-    "tests/unit/test_an_element_view_answers_whole.py",  # 14.8s
     # UX-1182's three gen-synthetic stores, merged tree: 2.06 / 2.05 / 2.07s.
     # UX-1181's test_a_page_half_is_read_once.py, 0.56 / 0.53 / 0.53s, stays small.
     "tests/unit/test_the_synthetic_workload_runs_hundreds_of_binaries.py",  #  4.2s
+    # `UX-1215`, `UX-1217`: two fixtures, eight Chromium drives; alone in one process: 4.06 / 4.42 / 4.33s.
+    "tests/unit/test_a_browser_drive_starts_clean.py",  #  4.3s
+    # UX-1214 follow-up: three exports, five Chromium reads, pytest wall 5.45 / 4.94 / 4.51s;
+    # with the Back/Forward journey (round 160 residue), alone in one process: 6.71 / 6.58s.
+    "tests/unit/test_a_card_s_more_reaches_every_dependency_both_ways.py",  #  6.6s
 )

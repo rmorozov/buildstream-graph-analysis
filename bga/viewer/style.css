@@ -1,4 +1,6 @@
 /* UX-193. Plain CSS, no preprocessor, no framework. */
+/* UX-1210: `hidden` hides whatever a class's `display` says; zero specificity, so a print reveal wins. */
+:where([hidden]:not([hidden="until-found"])) { display: none !important; }
 
 /* UX-304: **dark first**, and two grades of token.
  *
@@ -373,6 +375,9 @@ button, summary, input, select, textarea, a:not(p a) {
   min-height: var(--hit-min); min-width: var(--hit-min);
 }
 a:not(p a) { display: inline-flex; align-items: center; justify-content: center; }
+/* `UX-1209`: the wrapping label is the checkbox's 24px target (WCAG 2.5.8); the box keeps the line's size. */
+label.copy-as { display: inline-flex; align-items: center; gap: var(--space-1); min-height: var(--hit-min); }
+label.copy-as > input { min-width: 0; min-height: 0; margin: 0; }
 
 .verdict {
   border-left: 4px solid var(--line); background: var(--panel);
@@ -413,6 +418,8 @@ a:not(p a) { display: inline-flex; align-items: center; justify-content: center;
 }
 /* A card's two Plane 2 folds share one line while closed. */
 .join-evidence, details[data-fold="binaries"] { display: inline-block; vertical-align: top; margin: 0 var(--space-4) 0 0; }
+/* `UX-1203`: an opened one sits under its sibling. */
+.join-evidence[open], details[data-fold="binaries"][open] { display: block; }
 .join-evidence > p { margin: var(--space-2) 0 var(--space-1); }
 
 .finding .title { font-weight: 600; }
@@ -429,8 +436,9 @@ th, td {
 }
 th { cursor: pointer; user-select: none; white-space: nowrap; }
 th::after { content: ""; }
-th[aria-sort="ascending"]::after { content: " ▲"; }
-th[aria-sort="descending"]::after { content: " ▼"; }
+/* `UX-1203`: the glyph inside the button it names. */
+th[aria-sort="ascending"] > button.th-sort::after { content: " ▲"; }
+th[aria-sort="descending"] > button.th-sort::after { content: " ▼"; }
 td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 
 /* UX-305 (styleguide §4.4): **text wears ink, never status tone.**
@@ -572,7 +580,9 @@ p.empty-population { margin: var(--space-1) 0 0; color: var(--muted); max-width:
 button.toc-chapter-open[aria-current="location"],
 .toc a[data-current] { font-weight: 600; color: var(--fg); }
 .toc a[data-current]::before { content: "\25b8\00a0"; }
-.toc-controls { margin: var(--space-2) 0 0; display: flex; gap: var(--space-2); }
+/* `UX-1203`: the rail's tools at one size, each on one line. */
+.toc-controls { margin: var(--space-2) 0 0; display: flex; flex-wrap: wrap; align-items: center;
+                gap: var(--space-2); font-size: var(--font-small); }
 .toc-controls button { background: transparent; color: var(--muted); }
 /* `UX-436`: it had `border: none`, which is the same "no resting
    appearance" this item is about, one scale down - a control inside a
@@ -683,9 +693,14 @@ button.chapter-open:hover, button.chapter-open[aria-expanded="true"] {
   /* `UX-1154`/`UX-1161`: paper has no click - every fold prints open with no marker, no control or its label prints, code wraps, every description prints; a fold count stays, it says what is not printed. */
   ::details-content { content-visibility: visible; }
   summary::before { content: none !important; }
-  button:not(.fold-more), input, select, label { display: none !important; }
+  button:not(.fold-more):not(.th-sort), input, select, label { display: none !important; }
+  /* A sortable header's label is its button's text: the box goes, the text prints plain, no glyph. */
+  button.th-sort { display: contents !important; }
+  button.th-sort::after { content: none !important; }
   pre, code { white-space: pre-wrap !important; }
   body, td, th { overflow-wrap: anywhere; }
+  /* A narrow table's header breaks between words (`anywhere` gave "Duratio/n" at 390); a wide one's must fit the sheet. */
+  table:not(:has(> thead > tr > th:nth-child(4))) > thead th { overflow-wrap: break-word; }
   .description { display: block !important; }
   /* An exhibit's twin prints open, so its values reach paper (§2b: hover is never the only door). */
   table.twin-table { display: table !important; }
@@ -693,6 +708,11 @@ button.chapter-open:hover, button.chapter-open[aria-expanded="true"] {
   details.long-text > summary, pre.query[hidden] { display: none !important; }
   button.fold-more { font-size: 0; border: 0; background: none; padding: 0; min-height: 0; }
   button.fold-more::after { content: attr(data-folded) " more " attr(data-noun) ", not printed"; font-size: var(--font-small); }
+  /* `UX-1196`: a head-and-tail fold's middle is in the document, so it prints and its stub does not. */
+  tr[data-fold-middle] { display: table-row !important; }
+  tr.fold-row { display: none !important; }
+  /* `UX-1210`: the chain's folded boxes print; its More button does not. */
+  .path-box[hidden] { display: flex !important; }
 }
 
 /* Collapsed sections keep their heading; everything below it goes.
@@ -786,7 +806,9 @@ input.table-filter { max-width: 100%; }
 .investigate { margin: var(--space-2) 0 var(--space-1); }
 .investigate button:hover { border-color: var(--accent); }
 .investigate .handoff { margin-left: var(--space-2); font-size: var(--font-small); }
-.investigate .query { margin: var(--space-2) 0 0; font-size: var(--font-small); }
+.investigate .query { margin: var(--space-2) 0 0; font-size: var(--font-small);
+                     /* UX-1204: a paste wraps in its column; the reader copies it whole. */
+                     white-space: pre-wrap; overflow-wrap: anywhere; }
 h3.category { letter-spacing: .04em;
               color: var(--muted); font-size: var(--font-small); margin-top: var(--space-5); }
 
@@ -804,6 +826,8 @@ h3.category { letter-spacing: .04em;
                    report stops scrolling sideways. */
                 min-width: min(12rem, 100%); max-width: 100%; }
 .table-tools .badge { font-size: var(--font-small); color: var(--muted); }
+/* `UX-1203`: Prev and Next apart, at the tools' size. */
+.table-pager { display: inline-flex; gap: var(--space-1); font-size: var(--font-small); }
 /* UX-1055 (styleguide §3l): `top-n` and `copy-rows` follow a variable
    run of siblings (the badge, the preset, the pager - `structured.js`)
    whose presence and text length depend on the table, so their offset
@@ -920,6 +944,8 @@ section[data-promoted] { border-left: 3px solid var(--accent); }
                  align-items: baseline; flex-wrap: wrap; }
 .query-element > label { font-size: var(--font-small); color: var(--muted); }
 .query-element > p { flex-basis: 100%; margin: var(--space-1) 0 0; }
+/* UX-1204: wide enough for its placeholder in its own font, never past its column. */
+.query-element > input { min-width: min(32ch, 100%); }
 .top-n { font: inherit; font-size: var(--font-small); background: var(--panel);
          color: inherit; border: 1px solid var(--line); border-radius: 3px;
          max-width: 100%; }
@@ -1108,19 +1134,6 @@ button.describe:hover, button.describe[aria-expanded="true"] { color: var(--fg);
   /* Room: the sentence sits to the right of the value on the same line. */
   .description { display: inline; margin: 0 0 0 var(--space-2); }
 }
-/* UX-346: **and the door has to close.** Both rules above set
-   `display`, which beats the `hidden` attribute's UA `display: none` -
-   so every sentence rendered on every load and the `?` toggled a
-   `hidden` property with no visual effect. Measured in Chrome at
-   1440px on the golden export: `hidden: true`, `display: "inline"`,
-   box 458x15. `UX-317`'s affordance has been decorative since it
-   landed, and 43% of the golden page's words - 37% of macro_micro's -
-   were the schema's glossary printed in full.
-
-   `.description[hidden]` is (0,2,0) against those (0,1,0), so it wins
-   in both blocks wherever it sits in the file. Paper has no door, so
-   print shows every sentence (`UX-1161`). */
-.description[hidden] { display: none; }
 
 /* UX-318 (styleguide §3a.2/§3a.3): **table focus.** One table takes the
    content column, the rest of the report stands behind it, and the

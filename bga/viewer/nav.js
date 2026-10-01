@@ -700,8 +700,12 @@ export function stepper(root, nav, { document: doc, window: win } = {}) {
     const all = links();
     if (!all.length) return null;
     const marked = at();
+    // `UX-1203`: a short section still where the step landed it is not the reader scrolling past it.
+    const top = owner.getElementById?.(all[cursor]?.getAttribute?.("href")?.slice(1))
+      ?.getBoundingClientRect?.().top;
+    const landed = top >= 0 && top < (view?.innerHeight ?? 0) / 2;
     const behind = cursor >= 0 && marked >= 0
-      && marked === lastMark && marked !== cursor;
+      && (marked === lastMark || landed) && marked !== cursor;
     if (!behind && marked >= 0) cursor = marked;
     lastMark = marked;
     // From nowhere, `next` is the first and `previous` is the last:
@@ -715,6 +719,13 @@ export function stepper(root, nav, { document: doc, window: win } = {}) {
     all[bounded].click?.();
     return all[bounded];
   };
+  // A pressed rail entry is a landing too, so the cursor starts from it, not from the mark.
+  nav.addEventListener?.("click", (event) => {
+    const link = event.target?.closest?.("[data-toc]");
+    if (!link) return;
+    cursor = links().indexOf(link);
+    lastMark = at();
+  });
 
   const bar = owner.createElement("p");
   bar.className = "toc-steps";

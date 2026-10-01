@@ -275,7 +275,7 @@ class TestNoSectionGrowsWithoutBound:
         # The one line that writes it, named rather than located: the
         # concatenated modules hold several `const refresh`, and the
         # first draft of this clause split on the wrong one.
-        assert "badgeText(applyFilters(table, state), total, state.filtered)" in code, (
+        assert "badgeText(applyFilters(table, state), total, state.filtered, view())" in code, (
             "the badge is no longer written from the filtered count and the total in one place"
         )
 

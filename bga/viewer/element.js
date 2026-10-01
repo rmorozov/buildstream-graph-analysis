@@ -19,11 +19,11 @@ import { COLUMNS, READER_LABELS, TERMS, childNode, el, findingLink, hintsOf, tit
 import { buildTable, filterSection } from "./structured.js";
 import { joinHash } from "./viewstate.js";
 import {
-  SVG, svg, seconds, mib, bar, OVERVIEW_SHOWN, elementAnchor,
+  SVG, svg, seconds, mib, bar, OVERVIEW_SHOWN, elementAnchor, plainValue,
 } from "./primitives.js";
 import {
   SCALE, GRADE_ANNOTATION, GRADE_EXHIBIT, exhibitAxis, exhibitTwin,
-  nameDrawing, valueRoute,
+  nameDrawing, titled, valueRoute,
 } from "./drawings.js";
 // The three the derivation named, and the whole of what this chapter
 // takes from the one above it. `UX-650` adds the fourth: the tag a
@@ -288,7 +288,7 @@ const ELEMENT_MAPS = [
   ["elements.blast_radius", "weighted_duration_us", "Blast radius", "duration_us"],
   ["elements.blast_radius", "risk_score", "Risk score", "count"],
   ["elements.blast_radius", "element_kind", "Kind", null],
-  ["elements.blast_radius", "is_leaf", "Is a leaf", null],
+  ["elements.blast_radius", "is_leaf", "Is leaf", null],
   ["elements.criticality_probability", "probability", "On the path", "share"],
   ["elements.criticality_probability", "observed_critical", "Observed critical", null],
   ["elements.duration_variability", "coefficient_of_variation",
@@ -307,6 +307,7 @@ const ELEMENT_LIST_MAPS = [
   // UX-1187: its mirror, and the count past the 40 names.
   ["elements.fan_in", "dependents", "Blocks", "dependent_count"],
 ];
+const FAN_IN_LISTS = new Set(ELEMENT_LIST_MAPS.map(([, field]) => field));
 
 /**
  * One element's record, whether or not the report's ranking reached it.
@@ -316,6 +317,20 @@ const ELEMENT_LIST_MAPS = [
  * element", and the section built from it says so rather than being
  * absent.
  */
+// `lists` plus each `ELEMENT_LIST_MAPS` list it does not hold; a new array, so a cached record is untouched.
+function listsFor(payload, uid, lists) {
+  const out = [...lists], held = new Set(lists.map((l) => l.key));
+  for (const [path, field, label, count] of ELEMENT_LIST_MAPS) {
+    const map = path.split(".").reduce((node, key) => node?.[key], payload);
+    // `UX-1214`: `direct` is whole; a card names 40.
+    const items = map?.[uid]?.[field]?.slice?.(0, 40);
+    if (!Array.isArray(items) || !items.length || held.has(field)) continue;
+    held.add(field);
+    out.push({ key: field, label, items: items.map(String), more: (map[uid][count] ?? 0) - items.length });
+  }
+  return out;
+}
+
 /**
  * `UX-369`: every element uid this payload knows, sorted.
  *
@@ -393,14 +408,7 @@ export function elementFactsFor(payload, uid) {
       path: `${path}[${uid}]${field === null ? "" : `.${field}`}`,
     });
   }
-  const heldLists = new Set(record.lists.map((l) => l.key));
-  for (const [path, field, label, count] of ELEMENT_LIST_MAPS) {
-    const map = path.split(".").reduce((node, key) => node?.[key], payload);
-    const items = map?.[uid]?.[field];
-    if (!Array.isArray(items) || !items.length || heldLists.has(field)) continue;
-    heldLists.add(field);
-    record.lists.push({ key: field, label, items: items.map(String), more: (map[uid][count] ?? 0) - items.length });
-  }
+  record.lists = listsFor(payload, uid, record.lists);
   if (known) return record;
   for (const finding of payload?.findings ?? []) {
     if ((finding.elements ?? []).includes(uid)) record.findings.push(finding);
@@ -579,7 +587,9 @@ export function renderElementSections(payload, root, options = {}) {
   const sections = [];
   const all = [...facts.values()];
   for (const record of all.slice(0, ELEMENTS_SHOWN)) {
-    sections.push(elementSection(record, places.get(record.element),
+    // UX-1200: a ranked card lists what it blocks and depends on, as the on-demand card does.
+    sections.push(elementSection({ ...record, lists: listsFor(payload, record.element, record.lists) },
+                                 places.get(record.element),
                                  investigate, format, bounded));
   }
   if (all.length > ELEMENTS_SHOWN) {
@@ -591,12 +601,13 @@ export function renderElementSections(payload, root, options = {}) {
     note.textContent =
       `${all.length - ELEMENTS_SHOWN} more elements are named in the tables `
       + `above and do not have their own section.`;
-    sections.push(note);
+    // `UX-1203`: under the last section, which `chapters()` moves; a loose node stayed atop the report.
+    sections.at(-1).append(note);
   }
   return sections;
 }
 
-const shown = (row, format) => (typeof row.value === "number" ? format(row.value, row.kind) : String(row.value));
+const shown = (row, format) => (typeof row.value === "number" ? format(row.value, row.kind) : plainValue(row.value));
 // An element's rows as one `dl.pairs`; a Plane 2 row carries its `data-path`.
 const pairList = (rows, format) => el("dl", { class: "pairs" }, rows.flatMap((row) => [
   el("dt", {}, row.label),
@@ -691,8 +702,7 @@ function elementSection(record, places, investigate, format, bounded = null) {
     fold.setAttribute("data-rows", String(evidenceRows));
     const summary = document.createElement("summary");
     summary.textContent =
-      `What Plane 2 saw · 1 level, ${evidenceRows} `
-      + `row${evidenceRows === 1 ? "" : "s"}`;
+      `What Plane 2 saw · 1 level, ${plural(evidenceRows, "row")}`;
     fold.append(summary);
     for (const block of blocks) {
       if (!block.key.split(" ").every((key) => claims.has(CLAIMED_BY[key]))) {
@@ -724,10 +734,25 @@ function elementSection(record, places, investigate, format, bounded = null) {
     const folded = bounded?.(named.key, named.items);
     section.append(line);
     if (folded) section.append(folded);
-    // `UX-1159`: a Plane 2 flag reads as its phrase; a name stays copyable.
-    else line.append(...named.items.flatMap((item) => [", ",
-      el(READER_LABELS[item] ? "span" : "code", { "data-raw": item }, READER_LABELS[item] ?? item)]).slice(1));
-    if (named.more > 0) line.append(el("span", { "data-more": named.more }, `, +${named.more.toLocaleString("en-US")} more`));
+    // `UX-1159`: a Plane 2 flag reads as its phrase; a name stays copyable; UX-1200: a fan_in uid is a link.
+    else line.append(...named.items.flatMap((item) => [", ", FAN_IN_LISTS.has(named.key)
+      ? el("a", { href: `#${elementAnchor(item)}`, "data-raw": item }, item)
+      : el(READER_LABELS[item] ? "span" : "code", { "data-raw": item }, READER_LABELS[item] ?? item)]).slice(1));
+    if (!(named.more > 0)) continue;
+    // `UX-1214`: the rest, each one, is the element table filtered.
+    const up = named.key === "direct";
+    const query = `${up ? "blocks" : "depends_on"}:${uid}`;
+    const text = `+${named.more.toLocaleString("en-US")} more`;
+    const rest = el("a", { href: joinHash("elements", new URLSearchParams({ "f.elements": query }).toString()),
+      "data-more": named.more, "aria-label": `${text}: all ${(named.more + named.items.length).toLocaleString("en-US")} `
+        + `${uid} ${up ? "depends on" : "blocks"}, in Elements` }, text);
+    rest.addEventListener?.("click", () => {
+      const view = document.querySelector?.('select.preset-view[data-table="elements"]');
+      if (view?.selectedIndex) { view.selectedIndex = 0; view.dispatchEvent(new Event("change")); }
+      // Focus follows the reader to the box that holds the filter just written.
+      filterSection(document, "elements", query)?.focus({ preventScroll: true });
+    });
+    line.append(", ", rest);
   }
 
   if (record.entering.length) {
@@ -1225,7 +1250,8 @@ export function renderElementHistory(store, uid, schema = null) {
         ? size.width / 2 : (i / (series.length - 1)) * size.width;
       const y = (size.spark - inset)
                 - (point.duration_us / high) * (size.spark - inset * 2);
-      line.append(svg("circle", {
+      // UX-1204 (§6e.9): every point says its run and value on hover.
+      line.append(titled(svg("circle", {
         cx: x.toFixed(2), cy: y.toFixed(2), r: 1.6,
         class: "spark-point",
         // UX-212's closed shape vocabulary, so a snapshot's verdict
@@ -1240,7 +1266,7 @@ export function renderElementHistory(store, uid, schema = null) {
         "data-stamp": point.stamp,
         "data-value": String(point.duration_us),
         "data-on-path": String(point.on_critical_path),
-      }));
+      }), `${point.stamp} ${seconds(point.duration_us)}`));
     });
     block.append(line);
   }
@@ -1275,8 +1301,7 @@ export function renderElementHistory(store, uid, schema = null) {
   if (line) {
     const route = valueRoute(document,
       series.filter((point) => typeof point.duration_us === "number")
-        .map((point) => `${point.stamp} ${seconds(point.duration_us)}`)
-        .join(", ") + ".");
+        .map((point) => [point.stamp, point.duration_us]), { format: seconds });
     block.append(route);
     nameDrawing(line, sentence.textContent, route);
   }

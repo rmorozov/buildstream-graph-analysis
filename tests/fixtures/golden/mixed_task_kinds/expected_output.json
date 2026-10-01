@@ -680,6 +680,12 @@
         "lib.bst|BUILD|BUILD|0": 5000.0,
         "app.bst|BUILD|BUILD|0": 3000.0
     },
+    "task_durations_us": {
+        "base.bst|BUILD|BUILD|0": 6000,
+        "extra.bst|FETCH|FETCH|0": 4000,
+        "lib.bst|BUILD|BUILD|0": 5000,
+        "app.bst|BUILD|BUILD|0": 3000
+    },
     "ready_queue": {
         "average_depth": 0.0,
         "peak_depth": 0,
@@ -1282,10 +1288,10 @@
         }
     ],
     "document_shape": {
-        "leaves": 861,
+        "leaves": 865,
         "deepest_depth": 7,
         "deepest_path": "findings.[].evidence.steps.[].entering.[]",
         "deeper_than_three": 450,
-        "deeper_than_three_share": 0.5226480836236934
+        "deeper_than_three_share": 0.5202312138728323
     }
 }

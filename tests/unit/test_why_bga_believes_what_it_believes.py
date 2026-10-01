@@ -368,7 +368,7 @@ class TestBothRenderersReadTheSameObject:
 
     def test_the_chain_appears_under_the_claim_it_explains(self):
         explained = _bga(["analyze", GOLDEN, "--explain"]).splitlines()
-        titles = [i for i, line in enumerate(explained) if line.startswith("  Confidence: ")]
+        titles = [i for i, line in enumerate(explained) if line.startswith("  ") and "% confidence (" in line]
         assert titles, explained[:40]
         assert explained[titles[0] + 1].strip().startswith("why:")
 

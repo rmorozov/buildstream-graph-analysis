@@ -37,7 +37,7 @@ def _resource_wait_result(plane2_capacity=None):
 
 
 def _hint(result):
-    return findings_by_id(compute_findings(result))['wait-category']['evidence']['hint']
+    return findings_by_id(compute_findings(result))['wait-category']['step']['text']
 
 
 # --- the summary Plane 2 supplies --------------------------------------

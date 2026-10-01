@@ -17,6 +17,7 @@ Two layers, matching tests/unit/test_bst_show_to_graph.py's convention:
 """
 
 import json
+import re
 import shutil
 import subprocess
 from pathlib import Path
@@ -152,7 +153,7 @@ def test_blast_radius_signal_carries_kind_and_structural_flag(analyzed_result):
 # not in the ranking, and named in the report.
 def _ranked_rows(text):
     lines = text.split("\n")
-    start = next(i for i, line in enumerate(lines) if line.lstrip().startswith("Where the time is"))
+    start = next(i for i, line in enumerate(lines) if re.search(r" critical path is \d+ element", line))
     rows = []
     for line in lines[start + 1 :]:
         if not line.startswith("    "):
@@ -177,14 +178,15 @@ def test_key_findings_tags_structural_top_element_but_not_real_work_one(analyzed
     # a structural element is never presented as a thing to go and make
     # faster. Previously that was satisfied by tagging `root.bst`; now it
     # is satisfied by not ranking it at all.
-    assert "Where the time is:" in key_findings
+    assert re.search(r" critical path is \d+ element", key_findings)
     assert "manual.bst" in key_findings
     ranked = _ranked_rows(key_findings)
     assert "manual.bst" in ranked
     assert "root.bst" not in ranked
     # `UX-258`'s other half, asserted rather than left to the absence
     # above: it is *reported*, with its reach, as the graph's shape.
-    assert "Reaching most of the graph by design: root.bst (2 downstream)" in key_findings
+    assert "reaches most of the graph by design" in key_findings
+    assert "root.bst (2 downstream) —" in key_findings
     # Wherever any line does mention these elements, a structural tag
     # must never be attached to the one that does real work.
     assert "manual.bst [structural" not in key_findings

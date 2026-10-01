@@ -7,19 +7,19 @@
         {
             "id": "wait-category",
             "severity": "high",
-            "title": "Biggest wait category: 5.9% of wall-clock time is untracked head (2.7 s)",
-            "detail": [
-                "    -> real time before the tracked-task window started (BuildStream startup, cache query, sandbox staging) \u2014 see Pipeline Overhead, not a scheduling issue"
-            ],
+            "title": "5.9% of wall-clock time is untracked head (2.7 s) \u2014 the biggest wait category",
+            "detail": [],
             "elements": [],
             "evidence": {
                 "category": "untracked_head_us",
                 "category_us": 2717000,
-                "share": 0.058894934211952396,
-                "hint": "real time before the tracked-task window started (BuildStream startup, cache query, sandbox staging) \u2014 see Pipeline Overhead, not a scheduling issue"
+                "share": 0.058894934211952396
+            },
+            "step": {
+                "text": "real time before the tracked-task window started (BuildStream startup, cache query, sandbox staging) \u2014 see Pipeline Overhead, not a scheduling issue"
             },
             "reader": "local-optimizer",
-            "copy_text": "BGA finding: Biggest wait category: 5.9% of wall-clock time is untracked head (2.7 s)\n      -> real time before the tracked-task window started (BuildStream startup, cache query, sandbox staging) \u2014 see Pipeline Overhead, not a scheduling issue\n  category untracked_head_us\n  category_us 2.7 s\n  share 5.9%\n  hint real time before the tracked-task window started (BuildStream startup, cache query, sandbox staging) \u2014 see Pipeline Overhead, not a scheduling issue\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
+            "copy_text": "BGA finding: 5.9% of wall-clock time is untracked head (2.7 s) \u2014 the biggest wait category\n  category untracked_head_us\n  category_us 2.7 s\n  share 5.9%\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
             "trace_query": "resource-queues",
             "trace_queries": [
                 "resource-queues",
@@ -29,7 +29,7 @@
         {
             "id": "time-concentration",
             "severity": "high",
-            "title": "Where the time is: 4 elements are 71.9% of the 43.2 s critical path \u2014 this build is chain-bound, not scheduler-bound",
+            "title": "71.9% of the 43.2 s critical path is 4 elements \u2014 chain-bound, not scheduler-bound",
             "detail": [
                 "    core.bst     19.1 s ( 44.1% of path)  -> fixing it saves 12.1 s (26.1% of the build)",
                 "    lib-b.bst     4.0 s (  9.3% of path)  -> fixing it saves 4.0 s (8.7% of the build)",
@@ -73,30 +73,38 @@
                     }
                 ]
             },
+            "step": {
+                "text": "Make these elements faster, or take them off the chain: the critical path is made of them."
+            },
             "reader": "local-optimizer",
-            "copy_text": "BGA finding: Where the time is: 4 elements are 71.9% of the 43.2 s critical path \u2014 this build is chain-bound, not scheduler-bound\n      core.bst     19.1 s ( 44.1% of path)  -> fixing it saves 12.1 s (26.1% of the build)\n      lib-b.bst     4.0 s (  9.3% of path)  -> fixing it saves 4.0 s (8.7% of the build)\n      lib-d.bst     4.0 s (  9.3% of path)  -> fixing it saves 4.0 s (8.7% of the build)\n      lib-f.bst     4.0 s (  9.3% of path)  -> fixing it saves 4.0 s (8.7% of the build)\n  path_us 43.2 s\n  share_of_path 71.9%\n  chain_bound True\n  Elements: core.bst, lib-b.bst, lib-d.bst, lib-f.bst\n  Next: bga blast core.bst <fixture>/run\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
+            "copy_text": "BGA finding: 71.9% of the 43.2 s critical path is 4 elements \u2014 chain-bound, not scheduler-bound\n      core.bst     19.1 s ( 44.1% of path)  -> fixing it saves 12.1 s (26.1% of the build)\n      lib-b.bst     4.0 s (  9.3% of path)  -> fixing it saves 4.0 s (8.7% of the build)\n      lib-d.bst     4.0 s (  9.3% of path)  -> fixing it saves 4.0 s (8.7% of the build)\n      lib-f.bst     4.0 s (  9.3% of path)  -> fixing it saves 4.0 s (8.7% of the build)\n  path_us 43.2 s\n  share_of_path 71.9%\n  chain_bound True\n  Elements: core.bst, lib-b.bst, lib-d.bst, lib-f.bst\n  Next: bga blast core.bst <fixture>/run\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
             "trace_query": "cost-by-executable"
         },
         {
             "id": "chain-graph",
             "severity": "info",
-            "title": "Note: 90.9% of elements have zero slack, all on the critical path \u2014 no second chain of equal length, so a saving on any of them is worth its own duration",
+            "title": "90.9% of elements have zero slack, all on the critical path \u2014 a saving is worth its own duration",
             "detail": [],
             "elements": [],
             "evidence": {
                 "zero_slack_share": 0.9090909090909091,
                 "zero_slack_off_path": 0
             },
+            "step": {
+                "why_none": "how far a saving reaches, not a defect"
+            },
             "indent": "    ",
             "reader": "graph-owner",
-            "copy_text": "BGA finding: Note: 90.9% of elements have zero slack, all on the critical path \u2014 no second chain of equal length, so a saving on any of them is worth its own duration\n  zero_slack_share 90.9%\n  zero_slack_off_path 0\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
+            "copy_text": "BGA finding: 90.9% of elements have zero slack, all on the critical path \u2014 a saving is worth its own duration\n  zero_slack_share 90.9%\n  zero_slack_off_path 0\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
             "trace_query": "graph-levels"
         },
         {
             "id": "joint-saving",
             "severity": "high",
-            "title": "Together, the top 3 are worth 23.1 s (50.0% of the build) \u2014 more than the 16.1 s alone: codegen.bst pays off after core.bst",
-            "detail": [],
+            "title": "23.1 s (50.0% of the build) is what the top 3 are worth together",
+            "detail": [
+                "    That is more than the 16.1 s alone: codegen.bst pays off after core.bst"
+            ],
             "elements": [
                 "core.bst",
                 "codegen.bst",
@@ -108,15 +116,20 @@
                 "savings_add": false,
                 "relation": "compound"
             },
+            "step": {
+                "text": "Start with core.bst, then the rest.",
+                "command": "bga blast core.bst <fixture>/run"
+            },
             "reader": "local-optimizer",
-            "copy_text": "BGA finding: Together, the top 3 are worth 23.1 s (50.0% of the build) \u2014 more than the 16.1 s alone: codegen.bst pays off after core.bst\n  joint_saving_us 23.1 s\n  sum_of_individual_us 16.1 s\n  savings_add False\n  relation compound\n  Elements: core.bst, codegen.bst, lib-b.bst\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
+            "copy_text": "BGA finding: 23.1 s (50.0% of the build) is what the top 3 are worth together\n      That is more than the 16.1 s alone: codegen.bst pays off after core.bst\n  joint_saving_us 23.1 s\n  sum_of_individual_us 16.1 s\n  savings_add False\n  relation compound\n  Elements: core.bst, codegen.bst, lib-b.bst\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
             "trace_query": "waited-on-flow"
         },
         {
             "id": "optimization-horizon",
             "severity": "high",
-            "title": "Work them in this order (by what a fix is worth, not by size), with what the build drops to: core.bst (31.1 s) -> codegen.bst (24.1 s) -> lib-b.bst (20.1 s)",
+            "title": "3 fixes, in order of what each is worth, take the build to 20.1 s",
             "detail": [
+                "    In this order: core.bst (31.1 s) -> codegen.bst (24.1 s) -> lib-b.bst (20.1 s)",
                 "    The last of those leaves 50.0% of the build removed, projected from this run without building again"
             ],
             "elements": [
@@ -151,30 +164,41 @@
                     }
                 ]
             },
+            "step": {
+                "text": "Start with core.bst.",
+                "command": "bga blast core.bst <fixture>/run"
+            },
             "reader": "local-optimizer",
-            "copy_text": "BGA finding: Work them in this order (by what a fix is worth, not by size), with what the build drops to: core.bst (31.1 s) -> codegen.bst (24.1 s) -> lib-b.bst (20.1 s)\n      The last of those leaves 50.0% of the build removed, projected from this run without building again\n  Elements: core.bst, codegen.bst, lib-b.bst\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
+            "copy_text": "BGA finding: 3 fixes, in order of what each is worth, take the build to 20.1 s\n      In this order: core.bst (31.1 s) -> codegen.bst (24.1 s) -> lib-b.bst (20.1 s)\n      The last of those leaves 50.0% of the build removed, projected from this run without building again\n  Elements: core.bst, codegen.bst, lib-b.bst\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
             "trace_query": "time-by-kind"
         },
         {
             "id": "blast-radius-reach",
             "severity": "medium",
-            "title": "What a change to these rebuilds: core.bst (8 downstream), codegen.bst (8 downstream), lib-a.bst (7 downstream) \u2014 the cost of touching them is not their own duration but everything downstream that has to be built again",
-            "detail": [],
+            "title": "8 downstream elements rebuild on a change to the widest-reaching element",
+            "detail": [
+                "    core.bst (8 downstream), codegen.bst (8 downstream), lib-a.bst (7 downstream) \u2014 the cost of touching them is not their own duration but everything downstream that has to be built again"
+            ],
             "elements": [
                 "core.bst",
                 "codegen.bst",
                 "lib-a.bst"
             ],
             "evidence": {},
+            "step": {
+                "text": "See what a change to core.bst rebuilds before touching it.",
+                "command": "bga blast core.bst <fixture>/run"
+            },
             "reader": "recipe-author",
-            "copy_text": "BGA finding: What a change to these rebuilds: core.bst (8 downstream), codegen.bst (8 downstream), lib-a.bst (7 downstream) \u2014 the cost of touching them is not their own duration but everything downstream that has to be built again\n  Elements: core.bst, codegen.bst, lib-a.bst\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
+            "copy_text": "BGA finding: 8 downstream elements rebuild on a change to the widest-reaching element\n      core.bst (8 downstream), codegen.bst (8 downstream), lib-a.bst (7 downstream) \u2014 the cost of touching them is not their own duration but everything downstream that has to be built again\n  Elements: core.bst, codegen.bst, lib-a.bst\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
             "trace_query": "dependency-wait"
         },
         {
             "id": "latent-heavies",
             "severity": "medium",
-            "title": "Waiting off the critical path, worth nothing to fix today: codegen.bst (7.0 s) \u2014 they bound how far shortening the chain can go",
+            "title": "1 element off the critical path, worth nothing to fix today",
             "detail": [
+                "    codegen.bst (7.0 s) \u2014 they bound how far shortening the chain can go",
                 "    (structural projections over this run's measured durations, where \"fixed\" means the element becomes instant \u2014 a re-capture is still the ground truth)"
             ],
             "elements": [
@@ -188,8 +212,11 @@
                     }
                 ]
             },
+            "step": {
+                "text": "Shorten the chain first: these wait off it."
+            },
             "reader": "recipe-author",
-            "copy_text": "BGA finding: Waiting off the critical path, worth nothing to fix today: codegen.bst (7.0 s) \u2014 they bound how far shortening the chain can go\n      (structural projections over this run's measured durations, where \"fixed\" means the element becomes instant \u2014 a re-capture is still the ground truth)\n  Elements: codegen.bst\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
+            "copy_text": "BGA finding: 1 element off the critical path, worth nothing to fix today\n      codegen.bst (7.0 s) \u2014 they bound how far shortening the chain can go\n      (structural projections over this run's measured durations, where \"fixed\" means the element becomes instant \u2014 a re-capture is still the ground truth)\n  Elements: codegen.bst\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
             "trace_query": "element-commands",
             "trace_queries": [
                 "element-commands",
@@ -199,14 +226,19 @@
         {
             "id": "blast-radius-structural",
             "severity": "info",
-            "title": "Reaching most of the graph by design: toolchain.bst (10 downstream) \u2014 structural elements (import) whose dependents are the graph's shape, not a task",
-            "detail": [],
+            "title": "1 structural element reaches most of the graph by design",
+            "detail": [
+                "    toolchain.bst (10 downstream) \u2014 import, whose dependents are the graph's shape, not a task"
+            ],
             "elements": [
                 "toolchain.bst"
             ],
             "evidence": {},
+            "step": {
+                "why_none": "structural elements: their reach is the graph's shape"
+            },
             "reader": "recipe-author",
-            "copy_text": "BGA finding: Reaching most of the graph by design: toolchain.bst (10 downstream) \u2014 structural elements (import) whose dependents are the graph's shape, not a task\n  Elements: toolchain.bst\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
+            "copy_text": "BGA finding: 1 structural element reaches most of the graph by design\n      toolchain.bst (10 downstream) \u2014 import, whose dependents are the graph's shape, not a task\n  Elements: toolchain.bst\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
             "trace_query": "dependency-wait"
         },
         {
@@ -246,6 +278,9 @@
                     "is_flat": false
                 }
             },
+            "step": {
+                "why_none": "a ranking of what each element pulls in, not a defect"
+            },
             "reader": "graph-owner",
             "copy_text": "BGA finding: Elements that pull in the most, by upstream closure\n      1. app.bst (9 upstream, 8 named directly, at or above p90 of this run)\n      2. lib-f.bst (8 upstream, 4 named directly, at or above p80 of this run)\n      3. lib-e.bst (7 upstream, 4 named directly, at or above p70 of this run)\n      Shape: half of this run's 11 elements pull in 5 or fewer, the top tenth pull in 9 or more (max 10)\n  Elements: app.bst, lib-f.bst, lib-e.bst\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
             "trace_query": "dependency-wait"
@@ -253,20 +288,25 @@
         {
             "id": "fan-in-structural",
             "severity": "info",
-            "title": "Pulling in most of the graph by design: all.bst (10 upstream) \u2014 structural elements (stack) whose dependencies are the graph's shape, not a task",
-            "detail": [],
+            "title": "1 structural element pulls in most of the graph by design",
+            "detail": [
+                "    all.bst (10 upstream) \u2014 stack, whose dependencies are the graph's shape, not a task"
+            ],
             "elements": [
                 "all.bst"
             ],
             "evidence": {},
+            "step": {
+                "why_none": "structural elements: their dependencies are the graph's shape"
+            },
             "reader": "recipe-author",
-            "copy_text": "BGA finding: Pulling in most of the graph by design: all.bst (10 upstream) \u2014 structural elements (stack) whose dependencies are the graph's shape, not a task\n  Elements: all.bst\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
+            "copy_text": "BGA finding: 1 structural element pulls in most of the graph by design\n      all.bst (10 upstream) \u2014 stack, whose dependencies are the graph's shape, not a task\n  Elements: all.bst\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
             "trace_query": "dependency-wait"
         },
         {
             "id": "graph-width",
             "severity": "info",
-            "title": "The graph is 11 elements in 10 dependency stages, and its widest stage holds 2 \u2014 so no more than 2 can ever be building at once, whatever the capacity",
+            "title": "2 elements at most can ever build at once \u2014 the widest of 10 dependency stages",
             "detail": [],
             "elements": [],
             "evidence": {
@@ -274,15 +314,19 @@
                 "dependency_stages": 10,
                 "widest_stage": 2
             },
+            "step": {
+                "why_none": "a ceiling the dependency graph sets; only its dependencies move it"
+            },
             "reader": "graph-owner",
-            "copy_text": "BGA finding: The graph is 11 elements in 10 dependency stages, and its widest stage holds 2 \u2014 so no more than 2 can ever be building at once, whatever the capacity\n  element_count 11\n  dependency_stages 10\n  widest_stage 2\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
+            "copy_text": "BGA finding: 2 elements at most can ever build at once \u2014 the widest of 10 dependency stages\n  element_count 11\n  dependency_stages 10\n  widest_stage 2\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
             "trace_query": "graph-levels"
         },
         {
             "id": "cache-hit-ratio",
             "severity": "info",
-            "title": "Caches off: all 11 elements built from source, none reused \u2014 this is the nightly scenario, so a 0.0% hit ratio is the intent rather than a finding",
+            "title": "0.0% cache hits \u2014 caches off: all 11 elements built from source, none reused",
             "detail": [
+                "    This is the nightly scenario, so a 0% hit ratio is the intent rather than a finding",
                 "    -> for all.bst's own closure it is 0.0% (0 of 11 elements cached)"
             ],
             "elements": [],
@@ -292,14 +336,17 @@
                 "cached_elements": 0,
                 "run_mode": "full"
             },
+            "step": {
+                "why_none": "a caches-off run reuses nothing by design"
+            },
             "reader": "ci-gatekeeper",
-            "copy_text": "BGA finding: Caches off: all 11 elements built from source, none reused \u2014 this is the nightly scenario, so a 0.0% hit ratio is the intent rather than a finding\n      -> for all.bst's own closure it is 0.0% (0 of 11 elements cached)\n  hit_share 0.0%\n  built_elements 11\n  cached_elements 0\n  run_mode full\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
+            "copy_text": "BGA finding: 0.0% cache hits \u2014 caches off: all 11 elements built from source, none reused\n      This is the nightly scenario, so a 0% hit ratio is the intent rather than a finding\n      -> for all.bst's own closure it is 0.0% (0 of 11 elements cached)\n  hit_share 0.0%\n  built_elements 11\n  cached_elements 0\n  run_mode full\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
             "trace_query": null
         },
         {
             "id": "confidence",
             "severity": "info",
-            "title": "Confidence: 96.8% (high)",
+            "title": "96.8% confidence (high)",
             "detail": [],
             "elements": [],
             "evidence": {
@@ -307,14 +354,17 @@
                 "band": "high",
                 "violation_count": 0
             },
+            "step": {
+                "why_none": "high confidence: nothing to correct"
+            },
             "reader": "ci-gatekeeper",
-            "copy_text": "BGA finding: Confidence: 96.8% (high)\n  primary 96.8%\n  band high\n  violation_count 0\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
+            "copy_text": "BGA finding: 96.8% confidence (high)\n  primary 96.8%\n  band high\n  violation_count 0\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
             "trace_query": null
         },
         {
             "id": "remote-execution-whatif",
             "severity": "info",
-            "title": "Remote execution (builder cap only, no Plane 2 per-binary cost): unbounded builders 43.2 s -> 43.2 s",
+            "title": "43.2 s with unbounded builders, from 43.2 s \u2014 remote execution, no per-binary cost",
             "detail": [
                 "    Unbounded builders (REAPI moves whole sandboxes): 43.2 s -> 43.2 s (0 ms); assumes staging and wait per element unchanged, workers never queue"
             ],
@@ -330,22 +380,28 @@
                     "assumption": "staging and wait per element unchanged, workers never queue"
                 }
             },
+            "step": {
+                "why_none": "a projection of two purchases, not a defect in this run"
+            },
             "reader": "ci-gatekeeper",
-            "copy_text": "BGA finding: Remote execution (builder cap only, no Plane 2 per-binary cost): unbounded builders 43.2 s -> 43.2 s\n      Unbounded builders (REAPI moves whole sandboxes): 43.2 s -> 43.2 s (0 ms); assumes staging and wait per element unchanged, workers never queue\n  additive False\n  why_not_additive Not additive: both remove the same critical-path seconds, so buying both is not buying their sum.\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
+            "copy_text": "BGA finding: 43.2 s with unbounded builders, from 43.2 s \u2014 remote execution, no per-binary cost\n      Unbounded builders (REAPI moves whole sandboxes): 43.2 s -> 43.2 s (0 ms); assumes staging and wait per element unchanged, workers never queue\n  additive False\n  why_not_additive Not additive: both remove the same critical-path seconds, so buying both is not buying their sum.\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
             "trace_query": null
         },
         {
             "id": "efficiency-score",
             "severity": "info",
-            "title": "Efficiency score: 100.0% (scheduling is near the certified floor for this graph \u2014 further gains need the graph or the work itself to change, not the scheduler (see Dispatch Occupancy and Critical Path))",
+            "title": "100.0% efficiency score \u2014 scheduling is near the certified floor",
             "detail": [],
             "elements": [],
             "evidence": {
                 "efficiency_score": 1.0,
                 "low_confidence": false
             },
+            "step": {
+                "text": "Change the graph or the work itself, not the scheduler."
+            },
             "reader": "ci-gatekeeper",
-            "copy_text": "BGA finding: Efficiency score: 100.0% (scheduling is near the certified floor for this graph \u2014 further gains need the graph or the work itself to change, not the scheduler (see Dispatch Occupancy and Critical Path))\n  efficiency_score 100.0%\n  low_confidence False\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
+            "copy_text": "BGA finding: 100.0% efficiency score \u2014 scheduling is near the certified floor\n  efficiency_score 100.0%\n  low_confidence False\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
             "trace_query": "cpu-versus-wall"
         }
     ],
@@ -2362,10 +2418,10 @@
         }
     ],
     "document_shape": {
-        "leaves": 1595,
+        "leaves": 1618,
         "deepest_depth": 7,
         "deepest_path": "findings.[].evidence.steps.[].entering.[]",
-        "deeper_than_three": 963,
-        "deeper_than_three_share": 0.6037617554858934
+        "deeper_than_three": 986,
+        "deeper_than_three_share": 0.6093943139678616
     }
 }

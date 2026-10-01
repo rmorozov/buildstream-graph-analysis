@@ -28,7 +28,7 @@ def _priced(edges, durations, steps=None):
 def _sentence(joint):
     result = SimpleNamespace(signals={"joint_saving": joint}, total_duration_us=1_000_000_000)
     (finding,) = [f for f in _outlook_findings(result) if f["id"] == "joint-saving"]
-    return finding["title"]
+    return finding["title"] + " " + finding["detail"][0]
 
 
 def test_an_element_worth_nothing_alone_compounds_and_names_the_order():

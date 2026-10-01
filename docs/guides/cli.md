@@ -1151,7 +1151,7 @@ the blocks a reader meets first, and `certified_headroom`, the number
 Key Findings leads with, had never been in the population at all. It was
 302 such keys when that was filed and 305 when it landed. One level and
 no further: `blast_radius_distribution.deciles` is in the population and
-its own nine buckets are not. The surface is **609 keys** today, and
+its own nine buckets are not. The surface is **611 keys** today, and
 that figure is derived from the walk rather than typed here.
 
 So the statement of coverage, which is now a statement and not a
@@ -2050,11 +2050,11 @@ clone has, advising a `compare` that store refused with exit 6.
 ```text
 Next:
   layer02/mod001.bst is the longest thing on the critical path at 14.4s, 54% of it - the build cannot finish sooner than this chain.
-    bga blast layer02/mod001.bst /tmp/bga-demo/.bga/runs/20260303T091500Z/run
+    bga blast layer02/mod001.bst @20260303T091500Z
   layer02/mod001.bst is the first thing to fix, worth 6.6s - this is what changing it rebuilds.
-    bga blast layer02/mod001.bst /tmp/bga-demo/.bga/runs/20260303T091500Z/run
-  Make the change, then capture it the same way.
-    bga snapshot --project /tmp/bga-demo -- bst build all.bst
+    bga blast layer02/mod001.bst @20260303T091500Z
+  Make the change, then capture it the same way - run it in /tmp/bga-demo.
+    bga snapshot -- bst build all.bst
   Whether it helped, judged against this store's noise - run it in /tmp/bga-demo.
     bga compare @prev @last
 ```

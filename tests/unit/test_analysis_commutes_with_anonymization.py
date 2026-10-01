@@ -14,7 +14,7 @@ import shutil
 
 import pytest
 
-from bga import anonymize, bundle, run_store
+from bga import anonymize, bundle, findings, run_store
 from bga.analyzer import analyze_run
 from bga.report import format_json
 from tests.fixtures import topologies
@@ -115,7 +115,9 @@ class _Case:
     def placed(self, side: str, value: str) -> str:
         """Where `bga analyze` was pointed is not the capture: both sides' paths neutral."""
         run, root = self.places[side]
-        return value.replace(str(run), "<run>").replace(str(root), "<project>")
+        value = value.replace(str(run), "<run>")
+        token = findings.run_token(str(run))
+        return (value.replace(token, "<run>") if token != str(run) else value).replace(str(root), "<project>")
 
     def translate(self, value: str) -> str:
         """`anon` of one output string: a name or task key through the map, prose marked."""

@@ -1,4 +1,4 @@
-"""UX-1214 follow-up: a card's "+N more", Blocks and Depends on, filters the element table to every one it counts.
+"""UX-1214 follow-up: a card's "+N more", Blocks and Depends on, filters the element table to every one it counts. (styleguide §3d)
 
 Measured before, on `_wide` (each layer01 element names 51 dependencies): `depends_on:layer00/mod049.bst`
 matched 0 of its 50 dependents (each one's published `direct` stopped at 40); Depends on's rest was a span.

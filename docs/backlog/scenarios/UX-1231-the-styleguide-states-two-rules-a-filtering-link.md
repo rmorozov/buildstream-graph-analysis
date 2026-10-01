@@ -2,7 +2,7 @@
 
 **Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-160 residue pass, track W3 (2026-10-01) | **Serves:** R1 | **Topic:** docs | **Area:** unassigned | **Shape:** mechanical | **Reading:** container
 
-**Guard:** none — open, no guard named yet
+**Guard:** `tests/unit/test_the_styleguide_names_its_guards.py` (holds the §3d row naming `test_a_card_s_more_reaches_every_dependency_both_ways.py`)
 
 ## Motivation
 
@@ -41,4 +41,18 @@ Question:  none. Default: one guard holds both rules; if a history track adds a 
 
 ## Outcome
 
-Open.
+**Gap measured.** Before: `grep -n "UX-1231\|moves focus to its box" docs/design/styleguide.md` found neither rule; §7's §3d row did not name `test_a_card_s_more_reaches_every_dependency_both_ways.py`, which held N4 (focus in the box) and N3 (Back/Forward) uncited.
+
+**Close measured.** Styleguide §3d states both rules (index row, new bullet) and §7's §3d row names the guard; that guard's docstring line 1 cites `(styleguide §3d)`. Rule 2 names this guard: the history track's Back/Forward guard is not on this base. `test_the_styleguide_names_its_guards.py` + `test_the_register_is_terse.py`: 1427 passed; `make lint` clean.
+
+**Mutation table.**
+
+| Mutation | Red | Count |
+|---|---|---|
+| remove the guard's name from §7's §3d row | `test_no_guard_cites_a_section_the_table_omits` ("§3d is cited by [...], and its row does not name them") | 1 failed, 13 passed |
+| remove `(styleguide §3d)` from the guard's docstring | `test_every_named_guard_exists_and_cites_its_section` and `test_no_guard_cites_a_section_the_table_omits` | 2 failed, 12 passed |
+
+Both reverted from copies; rerun green.
+
+**Deviation.** None. The Acceptance Test's guard file is unchanged: its two existing tests already hold the new row.
+

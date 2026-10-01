@@ -403,7 +403,9 @@ export function renderPairs(key, object, hint = {}, node = undefined,
                               joined.hint, node, payload);
     // `UX-829` (styleguide §1b): `fan_in[uid].direct` draws no column; the lead names the filter keys that read it.
     const help = joined.hint[COLUMNS].find((spec) => spec.help)?.help;
-    const leadText = `One row per element, joined from ${joined.merged.length} signals${help ? `; ${help}` : ""}.`;
+    // A filter token is typed as written: drawn as itself, not a label.
+    const leadText = [`One row per element, joined from ${joined.merged.length} signals`, help ? "; " : "",
+      ...(help ?? "").split(/(\w+:X)/).map((part, i) => (i % 2 ? el("code", { "data-raw": part }, part) : part)), "."];
     if (views) {
       parts.push(el("div", { class: "map-table", "data-bounded": "map",
                              "data-joined": joined.merged.join(",") },

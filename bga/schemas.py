@@ -3444,13 +3444,14 @@ _BLAST_COUNTS = {
 
 #: `resource_blast`'s rows: `_BLAST_COUNTS`' quantities, said of a shared resource.
 _RESOURCE_COUNTS = {
-    k: {QUANTITY: _BLAST_COUNTS[k][QUANTITY], "description": v}
+    k: {QUANTITY: _BLAST_COUNTS.get(k, {QUANTITY: "count"})[QUANTITY], "description": v}
     for k, v in {
         "direct_count": "Elements that source this resource themselves.",
         "blast_count": "Everything a change to this resource rebuilds: its elements and all they reach.",
         "building_count": "Of those, the ones that do real build work.",
         "assembling_count": "Of those, the ones that only gather what is below them.",
         "measured_us": "Recorded build time across that set, measured elements only, so a lower bound.",
+        "measured_elements": "Of those, the ones with a recorded build time; the rest are counted, never estimated.",
     }.items()
 }
 
@@ -3549,7 +3550,6 @@ _ANALYZE_HINTS = {
                     "type": "object",
                     "properties": {
                         **_RESOURCE_COUNTS,
-                        "measured_elements": {QUANTITY: "count"},
                         "by_element_kind": {"additionalProperties": {QUANTITY: "count"}},
                         "direct_elements": {
                             GROWS: "elements directly sourcing that resource (subset, no cap)",

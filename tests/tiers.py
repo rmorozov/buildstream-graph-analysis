@@ -642,8 +642,9 @@ LARGE = (
     "tests/unit/test_the_open_paths_are_interned.py",  #   16.0s
     # `UX-1178`, round 158's merged tree with its follow-up clause: eighteen
     # Chromium loads at 390/320/1440. Alone in one process: 23.84 / 24.01 / 23.96s;
-    # round 160's merged tree (UX-1208): 51.65 / 51.61s, base 24.89s on the same machine.
-    "tests/unit/test_the_narrow_page_keeps_its_place.py",  #   51.6s
+    # round 160's merged tree (UX-1208): 51.65 / 51.61s, base 24.89s on the same machine;
+    # its residue (27 rail cases, two notched climbs of 9,000 px): 171.11 / 171.19s.
+    "tests/unit/test_the_narrow_page_keeps_its_place.py",  #  171.1s
     # `UX-1203`: a two-plane run built, then 16 Chromium loads. Alone in one process: 37.09 / 37.69s;
     # round 159's merged tree with its residue: 54.24 / 54.36s.
     "tests/unit/test_the_rail_tools_and_the_pager_read_as_one_set.py",  #   54.3s
@@ -1173,6 +1174,7 @@ MEDIUM = (
     "tests/unit/test_the_synthetic_workload_runs_hundreds_of_binaries.py",  #  4.2s
     # `UX-1215`, `UX-1217`: two fixtures, eight Chromium drives; alone in one process: 4.06 / 4.42 / 4.33s.
     "tests/unit/test_a_browser_drive_starts_clean.py",  #  4.3s
-    # UX-1214 follow-up: three exports, five Chromium reads, pytest wall 5.45 / 4.94 / 4.51s.
-    "tests/unit/test_a_card_s_more_reaches_every_dependency_both_ways.py",  #  4.9s
+    # UX-1214 follow-up: three exports, five Chromium reads, pytest wall 5.45 / 4.94 / 4.51s;
+    # with the Back/Forward journey (round 160 residue), alone in one process: 6.71 / 6.58s.
+    "tests/unit/test_a_card_s_more_reaches_every_dependency_both_ways.py",  #  6.6s
 )

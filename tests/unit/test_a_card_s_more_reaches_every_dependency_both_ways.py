@@ -70,10 +70,8 @@ def _journey(anchor, uid):
             "read": f"(() => {{ const v = {_VIEW}; v.value = 'Leaves'; v.dispatchEvent(new Event('change', {{bubbles: true}})); }})()"
         },
         {"wait": 200},
-        {
-            "read": f"(() => {{ const a = Object.assign(document.createElement('a'), {{href: '#{anchor}'}});"
-            " document.body.append(a); a.click(); a.remove(); })()"
-        },
+        # The page's own inspect link to the card, followed as a reader follows it.
+        {"read": f"document.querySelector('a.inspect[href=\"#{anchor}\"]').click()"},
         {"wait": 300},
         {"read": f"(() => {{ {more}.focus(); return {more}.getAttribute('aria-label'); }})()"},
         {"key": "Enter"},

@@ -236,6 +236,10 @@ OPPORTUNITY_FLOOR_PCT = 1.0
 # "how long do I take".
 CHAIN_BOUND_RATIO = 0.9
 
+# UX-1253: at or above this share of wall-clock the resource floor LB is the
+# wall, so the run is bound by its capacity rather than by its schedule.
+CAPACITY_BOUND_SHARE = 0.95
+
 # UX-70: at or above this share of zero-slack elements the graph is a
 # mesh of near-equal chains rather than one chain, and "optimize the top
 # element" stops being meaningful advice on its own. Named by UX-229,

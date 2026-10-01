@@ -3931,7 +3931,8 @@ _ANALYZE_HINTS = {
     "violations": {
         QUESTION: 'What did not add up?',
         RAIL: 'prove',
-        GROWS: "ordering/clamp violations, one per offending dependency edge or resource check (no cap observed)",
+        GROWS: "ordering/clamp violations, one per offending dependency edge or resource check (no cap observed), "
+        "and at most one verdict_disagreement per bga.consistency.PAIRS row",
         "items": {"type": "object"},
     },
     # `UX-344`: every claim's chain, once, beside the claims.

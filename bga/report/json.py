@@ -4,6 +4,7 @@ import json as _json
 from typing import Optional
 
 from .. import producer, provenance, schemas
+from ..consistency import verdict_violations
 from ..findings import compute_findings, compute_headline, compute_next_steps, finding_copy_text, reader_index
 from ..ingest.models import AnalysisResult
 from ._shared import (
@@ -429,7 +430,9 @@ def _add_violations(data, result, section, by_kind):
     if section is None and hasattr(result, 'violations'):
         # Always include, even when empty - an empty list means "checked,
         # none found", which is different from the key being absent.
-        data['violations'] = result.violations
+        # UX-1253: plus the verdicts that contradict each other, a copy so
+        # `result.violations` stays the analyzer's.
+        data['violations'] = list(result.violations or []) + verdict_violations(result, data.get('headline'))
 
 
 def _add_model(data, result, section, by_kind):

@@ -281,6 +281,18 @@ export function applyFilters(table, options = {}) {
   const needle = String(text).trim().toLowerCase();
   const body = ownBody(table);
   const rows = everyRow(body);
+  // `UX-1190`: a header's sort ranks the population, before any bound slices it;
+  // `UX-1211`: every row, so the order held - Copy's - is the order shown.
+  if (sort?.column) rows.sort(byColumn(sort.column, sort.direction));
+  else if (top?.column && Number.isFinite(Number(top.n))) {
+    const value = (tr) => {
+      const cell = [...tr.children].find(
+        (td) => td.getAttribute("data-column") === top.column);
+      const raw = Number(cell ? cell.getAttribute("data-raw") : NaN);
+      return Number.isFinite(raw) ? raw : -Infinity;
+    };
+    rows.sort((a, b) => value(b) - value(a));
+  }
   const kept = [];
   const stated = STATED.get(table) ?? {};
   const statedText = Object.values(stated).map((said) => said.shown).join(" ").toLowerCase();
@@ -324,18 +336,7 @@ export function applyFilters(table, options = {}) {
   // else about it is the same pass, so the badge, the filter and the
   // copy control cannot tell the two apart.
   let shown = kept;
-  // `UX-1190`: a header's sort ranks the population, before any bound slices it.
-  if (sort?.column) kept.sort(byColumn(sort.column, sort.direction));
   if (top && Number.isFinite(Number(top.n))) {
-    if (top.column && !sort?.column) {
-      const value = (tr) => {
-        const cell = [...tr.children].find(
-          (td) => td.getAttribute("data-column") === top.column);
-        const raw = Number(cell ? cell.getAttribute("data-raw") : NaN);
-        return Number.isFinite(raw) ? raw : -Infinity;
-      };
-      kept.sort((a, b) => value(b) - value(a));
-    }
     // `UX-1028`: an optional window past the first `n`, for the paging
     // step - the same slice, offset rather than always from zero, so
     // paging and Top-N share one mechanism and one bound.

@@ -1125,6 +1125,7 @@ MEDIUM = (
     "tests/unit/test_a_sortable_header_is_a_button.py",  #  8.3s
     # `UX-1189`: 8.48s.
     "tests/unit/test_copy_takes_the_matched_population.py",  #  8.5s
+    "tests/unit/test_copy_follows_the_order_on_screen.py",  # 12.7s
     # `UX-1184`: 6.85 / 7.18s.
     "tests/unit/test_a_column_is_named_for_its_field.py",  #  7.0s
     # `UX-1192`: 8.38 / 8.49 / 9.43s; round 159's merged tree: 11.20 / 11.32s.

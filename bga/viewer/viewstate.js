@@ -26,7 +26,7 @@ export const SEPARATOR = "~";
 // UX-222 and UX-225 are view state too, and the same rule applies: the
 // fragment carries them, so "here is the report, focused on the element
 // I want you to look at" and "here is where I got to" are both links.
-import { applyFocus, applyMarks, captureFocusAndMarks, clearFocus,
+import { applyFocus, applyMarks, captureFocusAndMarks, clearFocus, DRIVEN,
          parseMarks } from "./focus.js";
 // UX-318: table focus is view state by the same argument - "look at
 // this table, all of it" is a link somebody pastes into an issue.
@@ -104,8 +104,10 @@ export function captureView(root) {
     const key = table.getAttribute("data-table");
     const tools = table.parentNode?.querySelector?.(".table-tools");
     const filter = tools?.querySelector?.("input.table-filter");
+    // `UX-1198`: a box focus drove says what the reader had; `focus` re-drives it.
+    const own = filter && DRIVEN.get(filter)?.drove === filter.value ? DRIVEN.get(filter) : null;
     // `UX-1191`: the thresholds are the box's own text now, so `f.` carries them.
-    if (filter?.value) params.set(`f.${key}`, filter.value);
+    if (own ? own.value : filter?.value) params.set(`f.${key}`, own ? own.value : filter.value);
     const preset = tools?.querySelector?.("select.top-n");
     // UX-1165: `All rows` too, where the table opened bounded.
     if (preset?.selectedIndex > -1 && preset.value !== (preset.opening ?? "")) params.set(`n.${key}`, preset.value);
@@ -116,7 +118,7 @@ export function captureView(root) {
       if (th.hasAttribute("aria-sort") && sorted !== ranked) params.set(`s.${key}`, sorted);
     }
     // `UX-1185`: where the pager stands, after the filter it is measured against.
-    const at = tools?.querySelector?.(".table-pager")?.getAttribute?.("data-offset");
+    const at = own ? own.offset : tools?.querySelector?.(".table-pager")?.getAttribute?.("data-offset");
     if (at) params.set(`p.${key}`, at);
   }
 
@@ -227,8 +229,12 @@ export function applyView(root, query, { dispatch } = {}) {
     // the row cap, so no table on either fixture had one.
     const preset = params.get(`n.${key}`);
     const select = tools?.querySelector?.("select.top-n");
+    // `UX-1197`: an old `Top 10 by <column>` is the bound `Top 10` and that column's sort.
+    const [bound, ranked] = (preset ?? "").split(":");
+    const offered = [...(select?.children ?? [])].find((option) => option.value === preset)
+      ?? [...(select?.children ?? [])].find((option) => bound && option.value.split(":")[0] === bound);
     if (preset !== null && select) {
-      select.value = preset;
+      select.value = offered?.value ?? preset;
       fire(select, "change");
       applied.push(`n:${key}`);
     }
@@ -238,7 +244,7 @@ export function applyView(root, query, { dispatch } = {}) {
     const filter = [params.get(`f.${key}`), ...legacy].filter(Boolean).join(" ");
     const box = tools?.querySelector?.("input.table-filter");
     if (filter && box) { box.value = filter; fire(box, "input"); applied.push(`f:${key}`); }
-    const sort = params.get(`s.${key}`);
+    const sort = params.get(`s.${key}`) ?? (ranked && offered && offered.value !== preset ? `${ranked}:descending` : null);
     if (sort) {
       const [column, direction] = sort.split(":");
       for (const th of table.querySelectorAll?.("th") ?? []) {

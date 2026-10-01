@@ -81,6 +81,9 @@ UNDECLARABLE = {
     "the finding computes rather than publishes, so no path names the "
     "unit. Rules that do have one carry `threshold_quantity`.",
     "provenance.[].rule.threshold.[]": "The banded form of the same rule - two thresholds, same reason.",
+    # `UX-1199`: declared a `count`, the page offered it as a Top-N quantity and Top 10 read ranks 40-31.
+    "bottleneck.serial_chains.[].rank": "An ordinal, not a measure: the chain's place in the "
+    "ranking by its total, which the Total column carries in its own unit.",
 }
 
 _CENSUS = r"""

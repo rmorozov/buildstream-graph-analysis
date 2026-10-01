@@ -1,8 +1,8 @@
 """UX-1184 (styleguide §6e.2): a column named for a quantity is that quantity.
 
 No two table columns drawn from different source fields share a title,
-and the task table's share of the window reads "Wall-clock share" with a
-lead linking the element table. A column's field is its `data-column`
+and the task table's share of the window reads "Wall-clock share", marked
+`data-share`, beside the task's own Duration (`UX-1194` retired the lead). A column's field is its `data-column`
 (`element_uid` is `element`), a map's value column is the map itself;
 a map's key column names its population, not a field, and is skipped.
 Chromium on the 1,202-element two-plane page and `macro_micro`, at 1440.
@@ -40,6 +40,8 @@ _LOOK = r"""
   return {
     heads,
     shareHead: share?.querySelector('thead th[data-column="value"]')?.textContent.trim() ?? null,
+    shareMarked: share?.querySelector('thead th[data-column="value"]')?.hasAttribute("data-share") ?? null,
+    columns: [...(share?.querySelectorAll("thead th") ?? [])].map((th) => th.getAttribute("data-column")),
     lead: lead?.textContent ?? null,
     leadLink: lead?.querySelector("a")?.getAttribute("href") ?? null,
   };
@@ -74,5 +76,5 @@ class TestAColumnIsNamedForItsField:
     def test_the_share_says_it_is_a_share(self, looked):
         for label, out in looked.items():
             assert out["shareHead"] == "Wall-clock share", (label, out["shareHead"])
-            assert "not a duration" in (out["lead"] or ""), (label, out["lead"])
-            assert out["leadLink"] == "#elements", (label, out["leadLink"])
+            assert out["shareMarked"] and out["columns"] == ["key", "duration_us", "value"], (label, out)
+            assert out["lead"] is None and out["leadLink"] is None, (label, out["lead"])

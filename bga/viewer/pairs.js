@@ -5,10 +5,10 @@
  * points back.
  */
 import { plainValue, served } from "./primitives.js";
-import { COLUMNS, DIRECTION, QUESTION, PRESETS, INLINE, KEYED_BY, KEYED_BY_ELEMENT, KEY_PATH, LEAD, attachBlockDoor,
-         childNode, dataKeyed, describedTerm, el, guessQuantity, heading,
+import { COLUMNS, DIRECTION, QUESTION, PRESETS, INLINE, KEYED_BY, KEYED_BY_ELEMENT, KEYED_BY_TASK_UID, KEY_PATH, LEAD,
+         attachBlockDoor, childNode, dataKeyed, describedTerm, el, guessQuantity, heading,
          hintsOf, adviceFor, keyAsShown, pathTrail, quantity, quantityFor, sectionHead,
-         title } from "./format.js";
+         tally, title } from "./format.js";
 import { identify, labelFor } from "./controls.js";
 import { applyPreset, boundPairs, sortable } from "./tables.js";
 import { TABLE_OPENS_BOUNDED_ABOVE, buildTable, oneRecord, renderStructured,
@@ -136,7 +136,35 @@ export function elementSignalTable(elements, node, join = null,
     [QUESTION]: "Which element should I look at?",
     [KEYED_BY]: KEYED_BY_ELEMENT,
   };
+  // `UX-1214`: undrawn, so `depends_on:<uid>` lists what <uid> blocks and `blocks:<uid>` what it depends on.
+  const direct = elements.fan_in;
+  const help = "depends_on:X lists every element X blocks, blocks:X every one X depends on";
+  if (direct && typeof direct === "object") {
+    const blocks = {};
+    for (const [uid, fan] of Object.entries(direct)) for (const name of fan?.direct ?? []) (blocks[name] ??= []).push(uid);
+    for (const row of rows) Object.assign(row, { depends_on: direct[row.element]?.direct ?? [], blocks: blocks[row.element] ?? [] });
+    hint[COLUMNS].push({ key: "depends_on", title: "Depends on", drawn: false, help },
+                       { key: "blocks", title: "Blocks", drawn: false });
+  }
   return { rows, hint, merged: present, joined: joinedIn };
+}
+
+//: `UX-1194`: each task's own duration, drawn as a column of the task table it is keyed like.
+export const TASK_DURATIONS = "task_durations_us";
+
+/**
+ * `UX-1194`: the task-keyed sibling of `elementSignalTable`.
+ *
+ * Writes each task's own duration onto its `{key, value}` row and returns
+ * the column, so `op:BUILD > 60s` reads a duration rather than a share of
+ * the window; `null` where the run publishes none or the map is not task-keyed.
+ */
+export function taskSignalTable(rows, hint, payload, root) {
+  const durations = payload?.[TASK_DURATIONS];
+  if (hint[KEYED_BY] !== KEYED_BY_TASK_UID || !durations || typeof durations !== "object") return null;
+  for (const row of rows) row.duration_us = durations[row.key] ?? null;
+  return { key: "duration_us", title: "Duration",
+           quantity: quantityFor(childNode(root, TASK_DURATIONS), TASK_DURATIONS) };
 }
 
 /**
@@ -195,7 +223,7 @@ export function presetTable(key, rows, presets, hint, node, payload) {
   identify(select, `view-${key}`);
   for (const { preset, view } of usable) {
     select.append(el("option", { value: preset.name, title: preset.question ?? null },
-                     `${preset.name} (${view.total})`));
+                     `${preset.name} (${tally(view.total)})`));
   }
   const body = el("div", { class: "preset-body" });
 
@@ -211,7 +239,7 @@ export function presetTable(key, rows, presets, hint, node, payload) {
     const viewHint = {
       ...hint,
       [COLUMNS]: (hint[COLUMNS] ?? []).filter(
-        (spec) => columns.includes(typeof spec === "string" ? spec : spec.key)),
+        (spec) => spec.drawn === false || columns.includes(typeof spec === "string" ? spec : spec.key)),
       [QUESTION]: preset.question ?? hint[QUESTION],
     };
     const built = buildTable("elements", view.shown, viewHint, node);
@@ -226,8 +254,8 @@ export function presetTable(key, rows, presets, hint, node, payload) {
          // UX-1173: the view whose question is the section's heading does not say it again.
          preset.question && preset.question !== hint[QUESTION] ? `${preset.question} ` : "",
          view.total >= rows.length
-           ? `all ${rows.length} elements`
-           : `${view.total} of ${rows.length} elements`),
+           ? `all ${tally(rows.length)} elements`
+           : `${tally(view.total)} of ${tally(rows.length)} elements`),
       built.tools, built.table);
   };
   select.addEventListener("change", () => draw(select.value));
@@ -248,8 +276,11 @@ export function renderPairs(key, object, hint = {}, node = undefined,
   const doors = [];
   // UX-268: the element-keyed signals leave the pair list and become
   // one table, so they are drawn once rather than six times.
+  // `UX-1199`: and `leaves_detail`'s fields, which the Leaves view shows.
+  const leaves = Object.entries(payload?.leaf_analysis?.leaves_detail ?? {})
+    .map(([element, detail]) => ({ ...detail, element }));
   const joined = key === "elements"
-    ? elementSignalTable(object, node, payload?.element_join,
+    ? elementSignalTable(object, node, [...(payload?.element_join ?? []), ...leaves],
                          childNode(root, "element_join"))
     : null;
   const merged = new Set(joined?.merged ?? []);
@@ -370,14 +401,11 @@ export function renderPairs(key, object, hint = {}, node = undefined,
     // being the only thing on offer.
     const views = presetTable("elements", joined.rows, hint[PRESETS],
                               joined.hint, node, payload);
-    // `UX-829` (styleguide §1b): `fan_in[uid].direct` is a joined field
-    // this table deliberately does not draw a column for - a capped
-    // name list is a card fact, not a cell (§3c) - so the lead names
-    // where it went, the same clause `DRAWN_ELSEWHERE` states for a
-    // whole section.
-    const leadText = `One row per element, joined from `
-      + `${joined.merged.length} signals. Each element's direct `
-      + `dependencies are listed on its own card, not here.`;
+    // `UX-829` (styleguide §1b): `fan_in[uid].direct` draws no column; the lead names the filter keys that read it.
+    const help = joined.hint[COLUMNS].find((spec) => spec.help)?.help;
+    // A filter token is typed as written: drawn as itself, not a label.
+    const leadText = [`One row per element, joined from ${joined.merged.length} signals`, help ? "; " : "",
+      ...(help ?? "").split(/(\w+:X)/).map((part, i) => (i % 2 ? el("code", { "data-raw": part }, part) : part)), "."];
     if (views) {
       parts.push(el("div", { class: "map-table", "data-bounded": "map",
                              "data-joined": joined.merged.join(",") },

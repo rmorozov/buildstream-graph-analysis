@@ -460,11 +460,11 @@ def _width_rule(claim, document):
     stages = evidence.get("dependency_stages")
     widest = evidence.get("widest_stage")
     count = evidence.get("element_count")
-    if not isinstance(stages, int) or not isinstance(widest, int):
+    if not all(isinstance(n, int) for n in (count, stages, widest)):
         return _unconditional("Published for any graph whose elements do not all sit in one dependency stage.")
     return _unconditional(
-        f"{count} elements group into {stages} dependency stages by their "
-        f"dependencies alone; the widest holds {widest}, and nothing in a "
+        f"{count:,} elements group into {stages:,} dependency stages by their "
+        f"dependencies alone; the widest holds {widest:,}, and nothing in a "
         f"stage can start before the stage above it finishes. Published "
         f"whenever there is more than one stage — with one, the widest "
         f"stage is the whole graph and the shape forbids nothing."

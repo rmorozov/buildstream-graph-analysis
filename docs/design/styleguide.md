@@ -609,14 +609,31 @@ the placeholder `> 10`.
   threshold (a bare `> 1s` reads the first quantity column), and any
   other word is a substring. A threshold the box cannot read says so
   on the page and filters nothing; a task table whose every row is
-  one op says it once ("Every row: op BUILD."), not per row.
-  `test_a_key_column_matches_exactly.py`.
+  one op says it once ("Every row: op BUILD."), not per row. The
+  grammar reads what the page shows (`UX-1195`): a column said once
+  above the table still answers (`binary:cc`, `calls = 1`), a clause
+  matches the published value or the word the cell shows
+  (`is_leaf:yes`), a column answers to its name's singular
+  (`duration > 5s`) and `binary: make` reads as `binary:make`; a word
+  naming no column applies nothing and names the columns there are.
+  A column's whole shown name, of any number of words, is that column
+  (`wall-clock share > 2s`); a name no column has takes the words
+  before it, so nothing of a clause said back as not applied filters;
+  a bare threshold on a table whose one quantity is a share says so
+  (`UX-1206`); words of a column's name before one word of it
+  (`is a leaf:yes`) are said back too, and a field reads one title on
+  its card and over its column (`Is leaf`).
+  `test_a_key_column_matches_exactly.py`,
+  `test_op_and_duration_meet_on_durations.py`.
 - **A table's tools say its count once** (`UX-1163`): `Copy N rows` at
   rest, the badge only as `N of M`, the one-value sentence as "Every
   row:", and a short table left one column draws no header. At two rows
   or fewer no self-built strip is drawn: the rows are the values —
   filtered to them too (`UX-1170`). A bound over a filter reads
-  `25 of 112 matched, of 114`; a threshold that empties the table hides
+  `25 of 112 matched`, one population (`UX-1195`), and a filter keeping no
+  more than the window `10 matched` (`UX-1213`), one keeping every row `10 of 1,202 matched`
+  or `all 12 matched`, never the unfiltered text (`test_a_value_is_what_it_names.py`); a
+  threshold that empties the table hides
   the copy tools as the text box does. A name that stands alone in the
   rail or the accessibility tree may repeat its cell's label (`UX-1177`).
 
@@ -746,7 +763,7 @@ column re-read in round 73:
                  elements   landed   opened    words   controls    nodes
 golden                  4    3,800   15,618    7,144        427    2,498
 macro_micro            11    5,965   31,804   12,002        750    5,686
-budget, to 50 elts             7,600   38,400   13,200        800    7,900
+budget, to 50 elts             7,600   39,188   13,200        868    7,900
 
 scale               1,202    4,763   26,242   36,542      1,941   24,294
 budget, to 4,000 elts          7,000   32,000   41,000      2,300   27,500
@@ -773,7 +790,7 @@ in it hidden, and the class is bounded at both ends:
                  elements   landed   opened    words   controls    nodes
 scale               1,202    5,007   26,584    8,259        787    4,732
 xl                  4,002    4,937   27,230    8,275        812    4,960
-budget, to 4,100 elts          7,600   44,629   13,200      1,020    7,500
+budget, to 4,100 elts          7,600   46,822   13,200      1,192    7,500
 ```
 
 Height does not move at all — a bounded row costs no pixels, which is
@@ -898,6 +915,13 @@ D1's unrolls on `xl_both` (+1,129 px, `consolidation_candidates` 40 ->
 75 rows; 43,158 px without them), and its controls 900 -> 1,020: one
 page-wide Markdown box (`UX-1189`), then the measured 1,006 plus 10,
 rounded up - the owner's "consolidate + raise".
+
+`UX-1200` (the owner's 05:49 decision) gave every ranked card its Blocks
+and Depends on lists, open, as links. The bounds they push over moved by
+exactly the measured delta: the small class's height 38,400 -> 39,188 and
+controls 800 -> 868 (`macro_micro` +788, +68); the 4,100 class's height
+44,629 -> 46,822 and controls 1,020 -> 1,192 (`xl_both` +2,193, +172);
+its nodes bound stays 7,500 - the merged round reads 7,284.
 
 `UX-1152`'s card links read section titles, not ids; alone they took
 `macro_micro` to 38,201 px and 13,441 words. Round 154's merged tree,
@@ -1426,10 +1450,10 @@ distinct margin/padding/gap lengths                23 in style.css
 | 5 | **One primary action** | a fifth control grade, `primary` (accent fill), worn by at most one control **per chapter**; a chapter with no runnable next step has none | §6a's row, never decided | 3 | the scope, below |
 | 6 | **Harmony** | spacing comes from a scale on a 4px grid (`--space-1` 4px to `--space-8` 32px); no bare length in `margin`, `padding` or `gap` | 23 distinct lengths | 3 | source: every spacing value is a token |
 | 7 | **Accessibility: targets** | every control's hit area is at least 24x24 CSS px with a fine pointer and 44x44 with a coarse one — stricter than WCAG 2.2 AA, below; a small glyph takes padding, not a bigger glyph | door 14x14px | 2 | both pointers, links included, below |
-| 8 | **Accessibility: keyboard** | one focus ring, 2px accent, on every focusable element; Tab follows reading order; Escape leaves table focus; a sortable header is a button that shows its resting direction, sorts a quantity largest first on its first press, and ranks the whole population before any bound (`UX-1190`) | a designed ring on `button` only | 1 | the keyboard journey, below |
+| 8 | **Accessibility: keyboard** | one focus ring, 2px accent, on every focusable element; Tab follows reading order; Escape leaves table focus; a sortable header is a button that shows its resting direction, sorts a quantity largest first on its first press, and ranks the whole population before any bound (`UX-1190`); a table of 10 rows or fewer has no sort, save a listing whose order is a claim - the critical path - which sorts at any length (`UX-1196`) | a designed ring on `button` only | 1 | the keyboard journey, below |
 | 9 | **Charts** | a drawing's accessible name is its sentence (§6), and every drawing shape has an accessible route to its labelled values | 20 of 23 unnamed | 1 | the name and the route, below |
 | 10 | **Adaptivity** | two size classes, regular (≥ 60rem) and compact; the budgets (§3c, §3e) are measured in both, and compact draws no empty chrome; in compact a term stacks above its value, a chip is one line, and only the header sticks (`UX-1145`) | budgets at 1440x900 only; an empty band under "Sections" at 390px | 2 | the volume guard gains a compact column |
-| 11 | **Search** | find-in-page reaches folded content: a folded chapter's sections are `hidden="until-found"`, and the reveal goes through the same state setter as the chapter's control; a twin table and an SQL paste are `until-found` too, and a row a bound detaches is reachable through Jump, which indexes every element the payload has, as the bounded table's filter placeholder says (`UX-1179`) | 5 of 6 chapters are `display: none` to Ctrl+F | 1 | find, fragments, controls and print, below; `test_print_and_find_reach_the_content.py` |
+| 11 | **Search** | find-in-page reaches folded content: a folded chapter's sections are `hidden="until-found"`, and the reveal goes through the same state setter as the chapter's control; a twin table and an SQL paste are `until-found` too, and a row a bound detaches is reachable through Jump, which indexes every element the payload has, as the bounded table's filter placeholder says (`UX-1179`); a head-and-tail fold's middle rows print and copy and its stub does neither, and a link to a folded row opens the fold first - Ctrl+F does not reach one, since a `tr` ignores `until-found` (`UX-1196`) | 5 of 6 chapters are `display: none` to Ctrl+F | 1 | find, fragments, controls and print, below; `test_print_and_find_reach_the_content.py` |
 | 12 | **Clarity** | an absence is one sentence: what is missing, why, and the command that fills it; no punctuation around an empty value | the header's orphan "—" with the reader "anyone" | 2 | booted: no separator beside an empty node |
 | 13 | **Progressive disclosure** | one glyph pair, ▸ closed and ▾ open, at the start of the label; the label names the content and its count first; a nested fold then adds §3a.1's depth after it ("inputs: 2 rows, 1 level"), never the depth alone; a fold name two rows share takes its row ("Elements · Level 3"), since the rail, the tree and Jump read it alone - it may repeat its cell's label (`UX-1177`) | "1 level, 2 rows" | 2 | booted: one glyph pair; no label is depth and count alone (`test_one_disclosure_glyph_pair.py`); level folds read apart (`test_jump_finds_what_the_rail_lists.py`) |
 
@@ -1551,13 +1575,19 @@ the spacing rule assumes. The guard measures every visible `button`,
 `a`, `input`, `select` and `summary` outside running prose, once with a
 fine pointer and once under touch emulation (`hasTouch`,
 `pointer: coarse`).
+A checkbox inside its wrapping `<label>` is measured by the label's box,
+which activates it and is its target, so the box keeps its text's size
+(`UX-1209`, `tests/unit/test_controls_meet_the_target_size.py`).
 
 **Rule 9, the name and the route.** A sentence names the image; it does
 not make its marks, values or threshold readable. A sentence that is only
 a range and a count ("0 ms → 8.1 min across 6 rows") names no image, so
 a column strip's name leads with its column ("Buckets: 0 ms → …", `UX-1155`),
 a published strip's with its key, and a column strip's route is every row
-value it plots, never a range (`UX-1162`). Each drawing shape
+value it plots, never a range (`UX-1162`) - up to 600 characters; past
+that a route states its count, min, p50, p90, p95, max and far outlier,
+and its `aria-details` names the table (`UX-1202`,
+`test_a_status_is_announced.py`). Each drawing shape
 names its route: the density strip, decomposition and interval draw
 their table twin (§2a, §2f) behind a control in the same figure, and an
 annotation-grade drawing points at the table or values it sits beside
@@ -2190,7 +2220,12 @@ named constant, and its label states what lies beyond it (§3a.1). **The
 step past a bound is bounded too:** it advances by the same bound with
 the position shown ("rows 26-50 of 4,002"), **in the order the view
 opened on** — a pager continues the ranking, and its position travels
-in the fragment (`UX-1185`) — opens table focus, or
+in the fragment (`UX-1185`). **The bound is the page size, and the
+rank is the header's sort** (`UX-1197`): the Rows-shown select offers
+bounds only (`Top 10 rows`, `Top 25 rows`) and keeps its choice through Next, a
+sort and the link; the window and a pressed sort are said in the
+table's one live region, and every pager and sort button's name ends
+with its table's (`test_a_pager_continues_the_view.py`) — opens table focus, or
 narrows (filter, preset, Top-N); no control draws a population whose
 size grows with the run in one step. **Paging replaces the mounted
 window; it never appends**: after any number of presses a table mounts

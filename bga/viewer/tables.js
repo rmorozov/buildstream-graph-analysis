@@ -11,11 +11,11 @@
 // `UX-201`'s column metadata says which columns are quantities and in
 // what unit, which is what makes `> 5s` parseable at all.
 
-import { el } from "./format.js";
+import { el, tally } from "./format.js";
 
 /** How many microseconds/bytes/… one suffix is worth, per quantity. */
 const UNITS = {
-  duration_us: { us: 1, ms: 1e3, s: 1e6, m: 60e6, h: 3600e6 },
+  duration_us: { us: 1, ms: 1e3, s: 1e6, m: 60e6, min: 60e6, h: 3600e6 },
   // UX-341: one unit per dimension. `seconds`, `megabytes`,
   // `kilobytes` and `percent` were retired from the vocabulary, so a
   // column can no longer be declared in them and these tables no
@@ -24,6 +24,9 @@ const UNITS = {
            gb: 1024 ** 3, g: 1024 ** 3 },
   share: { "%": 0.01 },
 };
+// `UX-1206`: a number, a space and one unit is one value - `> 60 s` is `> 60s`.
+const UNIT_WORDS = [...new Set(Object.values(UNITS).flatMap(Object.keys))].sort((a, b) => b.length - a.length).join("|");
+const CLAUSE = new RegExp(`(^|\\s)(?:([a-z_][\\w-]*):\\s*(\\S+)|(?:([a-z_][\\w-]*)\\s*)?(>=|<=|>|<|=)\\s*(-?[\\d.]+\\s+(?:${UNIT_WORDS})(?=\\s|$)|\\S*))`, "gi");
 
 /**
  * `"> 5s"` -> `{op: ">", value: 5000000}` for a `duration_us` column.
@@ -65,8 +68,15 @@ function columnNames(specs, labels = {}) {
     }
   }
   for (const [word, spec] of words) if (spec && !names.has(word)) names.set(word, spec);
+  // `UX-1195`: a plural name reads in the singular too - `duration` for Element durations.
+  for (const [name, spec] of [...names]) {
+    if (/\w{3}s$/.test(name) && !names.has(name.slice(0, -1))) names.set(name.slice(0, -1), spec);
+  }
   return names;
 }
+
+// `UX-1195`: a column the page says once above the table - `{column: {raw, shown, spec}}` - still answers the box.
+export const STATED = new WeakMap();
 
 /**
  * `UX-1191`: the one filter box's grammar. `binary:ld` is exact on a key
@@ -76,36 +86,65 @@ function columnNames(specs, labels = {}) {
  */
 export function parseQuery(text, specs = [], labels = {}) {
   const names = columnNames(specs, labels);
-  const primary = specs.find((spec) => spec?.quantity && spec.numeric !== false);
+  // `UX-1194`: a bare threshold never reads a share column, nor one stated above the table.
+  const primary = specs.find((spec) => spec?.quantity && spec.numeric !== false && !spec.share && !spec.stated);
   const exact = [];
   const thresholds = {};
   const unread = [];
-  let rest = String(text ?? "").replace(/(^|\s)([a-z_][\w-]*):(\S+)/gi, (whole, lead, name, value) => {
-    const spec = names.get(slug(name));
-    if (!spec) return whole;
-    const part = spec.role !== "task_uid" ? null : slug(name) === "op" ? 1 : slug(name) === "element" ? 0 : null;
-    const prefix = value.endsWith("*");
-    exact.push({ column: spec.key, part, prefix, value: (prefix ? value.slice(0, -1) : value).toLowerCase() });
-    return lead;
-  });
-  rest = rest.replace(/(^|\s)(?:([a-z_][\w-]*)\s*)?(>=|<=|>|<|=)\s*(\S*)/gi, (whole, lead, name, op, value) => {
-    // A word that names no column is a word: it stays a substring, and the threshold is the primary's.
-    const spec = (name && names.get(slug(name))) || primary;
-    const word = name && !names.has(slug(name)) ? `${name} ` : "";
-    const parsed = spec?.quantity ? parseThreshold(`${op} ${value}`, spec.quantity) : null;
+  // `UX-1206`: a column's whole displayed name, of any number of words, reads as that column.
+  const phrases = [...names.keys()].filter((name) => name.includes("_")).sort((a, b) => b.length - a.length);
+  const said = String(text ?? "").replace(new RegExp(`(^|\\s)(${phrases.map((name) => name.split("_")
+    .join("[\\s_-]+")).join("|") || "(?!)"})(?=\\s*[:<>=])`, "gi"), (whole, lead, name) => lead + slug(name));
+  let rest = "";
+  let from = 0;
+  for (const found of said.matchAll(CLAUSE)) {
+    const [whole, lead, key, value, name, op, bound] = found;
+    const clause = whole.slice(lead.length);
+    const before = said.slice(from, found.index);
+    from = found.index + whole.length;
+    // `UX-1195`, `UX-1206`: a name no column has is said back with the words before it, and none of it applies.
+    if ((key ?? name) && !names.has(slug(key ?? name))) {
+      const run = before.trim() ? `${before.trim()} ` : "";
+      unread.push({ clause: run + clause, column: run + (key ?? name) });
+      rest += " ";
+      continue;
+    }
+    const spec = key ?? name ? names.get(slug(key ?? name)) : primary;
+    // `UX-1206` follow-up: words of the column's own name before one word of it ("is a leaf") name no column.
+    const own = (key ?? name ? [spec.key, spec.role, spec.title, labels[spec.key]].map(slug).filter(Boolean) : [])
+      .join("_").split("_").filter((word) => word && (names.get(word) ?? spec) === spec);
+    const run = own.length ? before.match(new RegExp(`(?:^|\\s)((?:${own.join("|")})\\b.*)$`, "i")) : null;
+    if (run) {
+      unread.push({ clause: `${run[1].trim()} ${clause}`, column: `${run[1].trim()} ${key ?? name}` });
+      rest += `${before.slice(0, run.index)} `;
+      continue;
+    }
+    rest += before + lead;
+    if (key) {
+      const part = spec.role !== "task_uid" ? null : slug(key) === "op" ? 1 : slug(key) === "element" ? 0 : null;
+      const prefix = value.endsWith("*");
+      exact.push({ column: spec.key, part, prefix, value: (prefix ? value.slice(0, -1) : value).toLowerCase() });
+      continue;
+    }
+    const parsed = spec?.quantity ? parseThreshold(`${op} ${bound}`, spec.quantity) : null;
     if (parsed) thresholds[spec.key] = parsed;
-    else unread.push(whole.slice(lead.length + word.length));
-    return lead + word;
-  });
+    else unread.push({ clause, column: null, share: name || primary ? null : specs.find((s) => s?.share)?.key ?? null });
+  }
+  rest += said.slice(from);
   return { text: rest.replace(/\s+/g, " ").trim(), exact, thresholds, unread };
 }
 
-/** Does a row's key cell equal (or start with) the clause's value? */
-function matchesKey(tr, clause) {
+/** Does a row's key cell - its published value or the word it shows - equal (or start with) the clause's value? */
+function matchesKey(tr, clause, stated = {}) {
   const cell = [...tr.children].find((td) => td.getAttribute("data-column") === clause.column);
-  const raw = String(cell?.getAttribute("data-raw") ?? "");
-  const got = (clause.part === null ? raw : raw.split("|")[clause.part] ?? "").toLowerCase();
-  return clause.prefix ? got.startsWith(clause.value) : got === clause.value;
+  const said = cell ? { raw: cell.getAttribute("data-raw"), shown: cell.textContent } : stated[clause.column];
+  const raw = String(said?.raw ?? "");
+  // `UX-1214`: an undrawn list column matches any one of its members.
+  const listed = tr.getAttribute(`data-list-${clause.column}`);
+  const got = listed !== null ? listed.split(" ") : [clause.part === null ? raw : raw.split("|")[clause.part] ?? ""];
+  if (listed === null && clause.part === null) got.push(String(said?.shown ?? "").replace("⌕", "").trim());
+  return got.some((value) => (clause.prefix ? value.toLowerCase().startsWith(clause.value)
+    : value.toLowerCase() === clause.value));
 }
 
 /** Does one published number pass a parsed threshold? */
@@ -180,7 +219,8 @@ const HELD = new WeakMap();
 export function everyRow(body) {
   const state = HELD.get(body);
   if (state?.out.size) return state.order;
-  const order = childrenNamed(body, "tr");
+  // `UX-1210`: a head-and-tail fold's stub is no row - never sorted, bounded, counted or copied.
+  const order = childrenNamed(body, "tr").filter((tr) => tr.className !== "fold-row");
   if (body) HELD.set(body, { order, out: new Set() });
   return order;
 }
@@ -196,6 +236,8 @@ function showOnly(body, order, shown) {
     out.add(tr);
   }
   for (const tr of shown) { tr.hidden = false; body.append?.(tr); }
+  // `UX-1210`: a filtered, bounded or sorted table has left the listing order its fold was drawn on.
+  for (const tr of childrenNamed(body, "tr")) if (tr.className === "fold-row") tr.hidden = true;
   HELD.set(body, { order, out });
 }
 
@@ -253,9 +295,24 @@ export function applyFilters(table, options = {}) {
   const needle = String(text).trim().toLowerCase();
   const body = ownBody(table);
   const rows = everyRow(body);
+  // `UX-1190`: a header's sort ranks the population, before any bound slices it;
+  // `UX-1211`: every row, so the order held - Copy's - is the order shown.
+  if (sort?.column) rows.sort(byColumn(sort.column, sort.direction));
+  else if (top?.column && Number.isFinite(Number(top.n))) {
+    const value = (tr) => {
+      const cell = [...tr.children].find(
+        (td) => td.getAttribute("data-column") === top.column);
+      const raw = Number(cell ? cell.getAttribute("data-raw") : NaN);
+      return Number.isFinite(raw) ? raw : -Infinity;
+    };
+    rows.sort((a, b) => value(b) - value(a));
+  }
   const kept = [];
+  const stated = STATED.get(table) ?? {};
+  const statedText = Object.values(stated).map((said) => said.shown).join(" ").toLowerCase();
   for (const tr of rows) {
-    let keep = (!needle || rowText(tr).includes(needle)) && exact.every((clause) => matchesKey(tr, clause));
+    let keep = (!needle || rowText(tr).includes(needle) || statedText.includes(needle))
+      && exact.every((clause) => matchesKey(tr, clause, stated));
     if (keep) {
       // Over the *thresholds*, not over the row's cells: walking the
       // cells means a threshold naming a column this row does not carry
@@ -264,7 +321,7 @@ export function applyFilters(table, options = {}) {
       for (const [column, threshold] of Object.entries(thresholds)) {
         const cell = [...tr.children].find(
           (td) => td.getAttribute("data-column") === column);
-        if (!passes(cell ? cell.getAttribute("data-raw") : null, threshold)) {
+        if (!passes(cell ? cell.getAttribute("data-raw") : stated[column]?.raw ?? null, threshold)) {
           keep = false;
           break;
         }
@@ -293,18 +350,7 @@ export function applyFilters(table, options = {}) {
   // else about it is the same pass, so the badge, the filter and the
   // copy control cannot tell the two apart.
   let shown = kept;
-  // `UX-1190`: a header's sort ranks the population, before any bound slices it.
-  if (sort?.column) kept.sort(byColumn(sort.column, sort.direction));
   if (top && Number.isFinite(Number(top.n))) {
-    if (top.column && !sort?.column) {
-      const value = (tr) => {
-        const cell = [...tr.children].find(
-          (td) => td.getAttribute("data-column") === top.column);
-        const raw = Number(cell ? cell.getAttribute("data-raw") : NaN);
-        return Number.isFinite(raw) ? raw : -Infinity;
-      };
-      kept.sort((a, b) => value(b) - value(a));
-    }
     // `UX-1028`: an optional window past the first `n`, for the paging
     // step - the same slice, offset rather than always from zero, so
     // paging and Top-N share one mechanism and one bound.
@@ -375,20 +421,25 @@ export function openingBound(presets, total, bound) {
  * appeared: a sentence written for a population and read over one row.
  */
 export function plural(count, noun) {
-  return `${count.toLocaleString("en-US")} ${noun}${count === 1 ? "" : "s"}`;
+  return `${tally(count)} ${noun}${count === 1 ? "" : "s"}`;
 }
 
 /** `12 of 1,202` - and just the total when nothing is filtered. */
-export function badgeText(shown, total, matched = total) {
-  const n = (value) => value.toLocaleString("en-US");
+export function badgeText(shown, total, matched = total, { offset = 0, sorted = "", narrowed = false } = {}) {
+  const n = tally;
   // The `N of M` form needs no agreement: a denominator is always a
   // population, and `1 of 12` is right as it stands.
   // UX-1158: an emptied table says why beside the box that emptied it.
-  // `UX-1170`: a bound over a filter says both denominators.
-  return shown === total ? plural(total, "row")
+  // `UX-1195`: a bound over a filter states one population, the matched one.
+  // `UX-1213`: a filter that keeps every row still says it matched.
+  const hit = narrowed || matched < total;
+  const of = hit ? `${n(matched)} matched` : n(total);
+  // `UX-1197`: a page past the first says its window; a sort pressed says itself.
+  const said = shown === total && !hit ? plural(total, "row")
     : !shown ? `none of ${n(total)} match`
-      : shown < matched && matched < total ? `${n(shown)} of ${n(matched)} matched, of ${n(total)}`
-        : `${n(shown)} of ${n(total)}`;
+      : offset ? `rows ${n(offset + 1)}-${n(offset + shown)} of ${of}`
+        : shown === matched && hit ? (matched < total ? of : `all ${of}`) : `${n(shown)} of ${of}`;
+  return sorted ? `${said}, sorted by ${sorted}` : said;
 }
 
 /**
@@ -483,7 +534,7 @@ export function boundPairs(list, bound, noun = "row") {
 
 /** What "copy row" puts on the clipboard: the published values, keyed
  *  by column - so it pastes into an issue as JSON that parses. */
-export function rowJson(tr, columns) {
+export function rowJson(tr, columns, names = {}) {
   const out = {};
   for (const td of tr.children) {
     const column = td.getAttribute("data-column");
@@ -494,10 +545,16 @@ export function rowJson(tr, columns) {
     // as one.
     const number = Number(raw);
     // `UX-1189`: and a boolean as one.
-    out[column] = raw === "true" || raw === "false" ? raw === "true"
+    out[names[column] ?? column] = raw === "true" || raw === "false" ? raw === "true"
       : raw !== "" && !Number.isNaN(number) ? number : raw;
   }
   return JSON.stringify(out);
+}
+
+/** `UX-1207`: a map's `key`/`value` columns copy as JSON under the header's own words, never "key"/"value". */
+export function jsonNames(specs) {
+  return Object.fromEntries(specs.filter((spec) => spec.key === "key" || spec.key === "value")
+    .map((spec) => [spec.key, slug(spec.title) || spec.key]));
 }
 
 /** What "copy cell" puts on the clipboard: the published value. */
@@ -684,10 +741,12 @@ export function showSort(table, sort) {
 // table's *behaviour* - filters, bounds, presets, copy - and sorting
 // is behaviour. It was in the DOM builder only because that is where
 // it was first written.
-export function sortable(table, specs = []) {
+export function sortable(table, specs = [], { always = false } = {}) {
   const body = ownBody(table);
-  if (everyRow(body).length <= SORTABLE_ABOVE) return;
+  // `UX-1196`: `always` - a listing whose order is a claim sorts at any length; a head already sortable is left.
+  if (everyRow(body).length <= SORTABLE_ABOVE && !always) return;
   ownHeads(table).forEach((th, index) => {
+    if (th.querySelector?.("button.th-sort")) return;
     // UX-201: a column the schema declares unsortable stays unsortable,
     // whatever its values happen to look like.
     if (specs[index] && specs[index].sortable === false) return;

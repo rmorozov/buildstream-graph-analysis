@@ -37,6 +37,7 @@ rendering.
 """
 
 import base64
+import contextlib
 import json
 import os
 import pathlib
@@ -203,8 +204,8 @@ def xl_run(into) -> pathlib.Path:
 #: `UX-1050`: both planes at scale - the mode the tool recommends. The
 #: store's newest snapshot, with `capture report --json` of its own
 #: `plane2.log.gz` written beside `run/` where `sibling_plane2` finds it.
-def two_plane_run(into, shape=(), name="both") -> pathlib.Path:
-    """`gen-synthetic --seed 1 --store --runs 2 <shape>`, plus Plane 2's
+def two_plane_run(into, shape=(), name="both", runs=2) -> pathlib.Path:
+    """`gen-synthetic --seed 1 --store --runs <runs> <shape>`, plus Plane 2's
     report. The newest snapshot's run directory."""
     import gzip
     import subprocess
@@ -224,7 +225,7 @@ def two_plane_run(into, shape=(), name="both") -> pathlib.Path:
             "1",
             "--store",
             "--runs",
-            "2",
+            str(runs),
             *shape,
         ],
         check=True,
@@ -325,6 +326,32 @@ def scale_two_plane_snapshot(into, per_element=12, programs=("cc",)) -> pathlib.
 #: with one pair for all sixty, `statedOnce` reads `blast_elements` as a
 #: column stated once and removes it, and the fixture has no nested
 #: table left to be wrong about.
+#: `UX-1216`: the store's drawings (trend, band, element history) exist only
+#: where a server holds a store, never in an export. `gen-synthetic` writes no
+#: per-element slice, so the real writer runs over each snapshot.
+@contextlib.contextmanager
+def served_store_page(into, runs=4):
+    """The URL of a served 4-run two-plane page; the server closes on exit."""
+    import threading
+    import time
+
+    from bga import run_store
+    from tools.bga_snapshot import write_element_slice
+    from tools.bga_view import serve
+
+    newest = two_plane_run(into, name="store", runs=runs)
+    for snapshot in run_store.list_runs(str(pathlib.Path(into) / "store")):
+        write_element_slice(str(snapshot), str(pathlib.Path(snapshot) / run_store.RUN_SUBDIR))
+    httpd, url = serve(str(newest), port=0)
+    threading.Thread(target=httpd.serve_forever, daemon=True).start()
+    time.sleep(0.3)
+    try:
+        yield url
+    finally:
+        httpd.shutdown()
+        httpd.server_close()
+
+
 def shared_resource_run(into, resources=60) -> pathlib.Path:
     """`macro_micro`, given `resources` shared repositories. The run."""
     from bga import sources

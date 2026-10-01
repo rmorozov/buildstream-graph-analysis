@@ -234,7 +234,7 @@ const payload = { critical_path_detail:
     share_of_path: 0.01, duration_us: 1000 })) };
 const nodes = views.renderElementSections(payload, make("div"), {});
 const sections = nodes.filter((n) => n.tagName === "section");
-const note = nodes.find((n) => n.attrs["data-elided"]);
+const note = nodes.at(-1).children.find((n) => n.attrs["data-elided"]);
 console.log(JSON.stringify({ total, shown: views.ELEMENTS_SHOWN,
   sections: sections.length, elided: Number(note?.attrs["data-elided"] ?? 0),
   note: note?.textContent ?? "" }));

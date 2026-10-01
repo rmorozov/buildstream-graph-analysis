@@ -2333,6 +2333,8 @@ class BuildEfficiencyAnalyzer:
             # printed "2043333333.0%". Found by the guard this item
             # asked for, on its first run.
             signals['wall_clock_share_us'] = {s.task_key: s.wall_clock_share_us for s in diag_result.wall_clock_shares}
+            # UX-1194: each task's own duration, so a duration threshold beside the share reads a duration.
+            signals['task_durations_us'] = {str(t.task_key): t.dur_us for t in self.normalized_tasks}
 
         # Ready queue (Part 21)
         if diag_result.ready_queue:

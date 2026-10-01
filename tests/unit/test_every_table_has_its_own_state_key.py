@@ -87,20 +87,21 @@ def _long_enough_to_filter(document):
 
     Padded here rather than in the fixture: the fixture is a real
     `bga analyze` output and this is the guard's own apparatus. The
-    padding goes into `leaf_analysis.leaves_detail`, which is a nested
-    map that renders as a nested table with a dotted key - the shape
-    this guard is about - and the rows are the shape it already had.
+    padding goes into `utilisation.buckets`, a nested map that renders
+    as a nested table with a dotted key - the shape this guard is about
+    - and the rows are the shape it already had: one duration a name.
+    (`UX-1199` moved it off `leaf_analysis.leaves_detail`, now the
+    element table's Leaves view.)
     """
-    leaves = (document.get("leaf_analysis") or {}).get("leaves_detail")
-    assert isinstance(leaves, dict) and leaves, (
-        "the run no longer publishes leaf_analysis.leaves_detail, which is "
+    buckets = (document.get("utilisation") or {}).get("buckets")
+    assert isinstance(buckets, dict) and buckets, (
+        "the run no longer publishes utilisation.buckets, which is "
         "the nested table this guard pads to reach the filter row"
     )
-    sample = next(iter(leaves.values()))
-    padded = dict(leaves)
+    padded = dict(buckets)
     for index in range(_row_cap() + 5 - len(padded)):
-        padded[f"padding-{index}.bst"] = dict(sample) if isinstance(sample, dict) else sample
-    document["leaf_analysis"]["leaves_detail"] = padded
+        padded[f"padding_{index}"] = 0
+    document["utilisation"]["buckets"] = padded
     return document
 
 

@@ -274,9 +274,10 @@ KNOWN_SKIP_REASONS = {
         "generated project stages, as examples/stage_runtimes.sh does",
         2,
     ),
+    # `UX-1205`'s captured workload is the seventh; `bst-tests` runs it.
     "bst/bwrap/cc not all found on PATH - see docs/spec/ingestion-pipeline.md": (
         "the full-capture arm; `installed-capture` is where it runs",
-        6,
+        7,
     ),
     "bwrap not on PATH": ("the sandbox arm; the bst-* CI jobs provide bwrap and run it", 5),
     "bwrap/cc not both on PATH": ("the sandbox arm; the bst-* CI jobs provide bwrap and run it", 8),

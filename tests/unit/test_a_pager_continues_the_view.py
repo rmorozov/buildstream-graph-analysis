@@ -9,6 +9,9 @@ step returns to the first rows, with `p.` gone from the link. On `golden` and `m
 of at most `UNROLL_AT` (80) rows opens whole - `macro_micro`'s 71-row
 `binary_cost` among them. The heavy-binary page (`UX-1182`) is left to
 the next wave.
+UX-1197: Top 10, a filter, Next and a sort keep 10-row pages with the
+select reading Top 10, and so does the copied link reloaded; each step
+changes the live text; no two pager or sort buttons share a name.
 """
 
 import pathlib
@@ -40,8 +43,7 @@ _WALK = (
     const tools = table.parentNode.querySelector(".table-tools");
     const pager = tools && tools.querySelector(".table-pager");
     if (!pager) continue;
-    const preset = tools.querySelector(".top-n");
-    const column = (preset.opening || "").split(":")[1];
+    const column = table.querySelector("thead th[aria-sort]")?.getAttribute("data-column");
     const mounted = () => [...table.querySelector("tbody").children].filter((tr) => tr.tagName === "TR" && !tr.hidden);
     const value = (tr) => Number([...tr.children].find((td) => td.getAttribute("data-column") === column)
       ?.getAttribute("data-raw"));
@@ -56,7 +58,7 @@ _WALK = (
       if (hash === null && pagesSeen.length === 3) {
         await new Promise((done) => setTimeout(done, 50));
         hash = { key: table.getAttribute("data-table"), hash: location.hash,
-                 position: tools.querySelector(".page-position").textContent, first: pagesSeen[2][0] };
+                 position: tools.querySelector(".badge").textContent, first: pagesSeen[2][0] };
       }
     }
     out.push({ key: table.getAttribute("data-table"), column, badge: tools.querySelector(".badge").textContent,
@@ -76,7 +78,7 @@ _RELOADED = (
   const out = {};
   for (const table of document.querySelectorAll("table[data-table]")) {
     const tools = table.parentNode.querySelector(".table-tools");
-    const position = tools && tools.querySelector(".page-position");
+    const position = tools && tools.querySelector(".table-pager") && tools.querySelector(".badge");
     if (position) out[table.getAttribute("data-table")] = position.textContent;
   }
   return out;
@@ -173,8 +175,7 @@ _EDITED = (
   const box = tools.querySelector("input.table-filter");
   const read = async () => {
     await turn();
-    return { position: tools.querySelector(".page-position").textContent,
-             badge: tools.querySelector(".badge").textContent, hash: location.hash };
+    return { badge: tools.querySelector(".badge").textContent, hash: location.hash };
   };
   const type = (text) => { box.value = text; box.dispatchEvent(new Event("input", { bubbles: true })); };
   type("layer1");
@@ -196,12 +197,108 @@ def edited(browser, big):
 
 @needs_browser
 def test_a_filter_edit_returns_the_pager_to_its_first_rows(edited):
-    assert edited["stepped"]["position"].startswith("rows 26-50 of "), edited["stepped"]
+    # `UX-1197`: the badge, the one live region, carries the window.
+    assert edited["stepped"]["badge"].startswith("rows 26-50 of "), edited["stepped"]
     assert "p." in pages.view_query(edited["stepped"]["hash"]), edited["stepped"]
-    for step, of in (("edited", "60"), ("cleared", "1,202")):
-        assert edited[step]["position"] == f"rows 1-25 of {of}", (step, edited[step])
+    for step, said in (("edited", "25 of 60 matched"), ("cleared", "25 of 1,202")):
+        assert edited[step]["badge"] == said, (step, edited[step])
         assert "p." not in pages.view_query(edited[step]["hash"]), (step, edited[step])
-    assert edited["edited"]["badge"].startswith("25 of 60 matched"), edited["edited"]
+
+
+#: `UX-1197`: Top 10, a filter, Next, a sort and Next again - the rows, the select and the live text at each step.
+_CONTINUED = (
+    r"""
+(async () => {
+  """
+    + _OPEN
+    + r"""
+  const turn = () => new Promise((done) => setTimeout(done, 80));
+  const table = document.querySelector('table[data-table="elements"]');
+  const tools = table.parentNode.querySelector(".table-tools");
+  const select = tools.querySelector("select.top-n");
+  const read = () => ({ rows: [...table.querySelector("tbody").children].filter((tr) => !tr.hidden).length,
+                        select: select.selectedIndex < 0 ? null : select.options[select.selectedIndex].textContent,
+                        status: tools.querySelector("[role=status].badge").textContent, hash: location.hash });
+  const out = { options: [...select.options].map((o) => o.textContent) };
+  select.value = [...select.options].find((o) => o.textContent === "Top 10 rows").value;
+  select.dispatchEvent(new Event("change", { bubbles: true }));
+  const box = tools.querySelector("input.table-filter");
+  box.value = "layer12/";
+  box.dispatchEvent(new Event("input", { bubbles: true }));
+  out.top = read();
+  tools.querySelector(".page-next").click();
+  out.next = read();
+  table.querySelector('th[data-column="downstream_count"] button').click();
+  out.sorted = read();
+  tools.querySelector(".page-next").click();
+  await turn();
+  out.again = read();
+  return out;
+})()
+"""
+)
+
+_RELOAD_READ = r"""
+(() => {
+  const table = document.querySelector('table[data-table="elements"]');
+  const select = table.parentNode.querySelector(".table-tools select.top-n");
+  return { rows: [...table.querySelector("tbody").children].filter((tr) => !tr.hidden).length,
+           select: select.selectedIndex < 0 ? null : select.options[select.selectedIndex].textContent,
+           sort: table.querySelector("thead th[aria-sort]")?.getAttribute("data-column") };
+})()
+"""
+
+#: Every pager and sort button's accessible name, over every chapter opened.
+_NAMES = (
+    r"""
+(() => {
+  """
+    + _OPEN
+    + r"""
+  const name = (b) => b.getAttribute("aria-label") || b.textContent.trim();
+  return [...document.querySelectorAll(".table-pager button, button.th-sort")].map(name);
+})()
+"""
+)
+
+
+@pytest.fixture(scope="module")
+def continued(browser, big):
+    out = browser.measure(big, _CONTINUED, 1440, 900)
+    out["reloaded"] = browser.measure(big + "?reload" + out["again"]["hash"], _RELOAD_READ, 1440, 900)
+    out["names"] = browser.measure(big, _NAMES, 1440, 900)
+    out["old"] = browser.measure(big + "?old#elements~n.elements=10:downstream_count", _RELOAD_READ, 1440, 900)
+    return out
+
+
+@needs_browser
+def test_the_bound_is_every_page_s_size_and_the_select_keeps_it(continued):
+    assert "Top 10 rows" in continued["options"] and not any(" by " in o for o in continued["options"]), continued
+    for step in ("top", "next", "sorted", "again"):
+        assert continued[step]["rows"] == 10 and continued[step]["select"] == "Top 10 rows", (step, continued[step])
+
+
+@needs_browser
+def test_the_link_carries_the_bound_the_filter_and_the_sort(continued):
+    assert continued["reloaded"] == {"rows": 10, "select": "Top 10 rows", "sort": "downstream_count"}, continued
+    # A link from before the bound-only select: `Top 10 by Downstream count` is Top 10 and that sort.
+    assert continued["old"] == {"rows": 10, "select": "Top 10 rows", "sort": "downstream_count"}, continued["old"]
+
+
+@needs_browser
+def test_a_step_and_a_sort_change_the_live_text(continued):
+    said = [continued[step]["status"] for step in ("top", "next", "sorted", "again")]
+    assert len(set(said)) == 4, said
+    assert said[1].startswith("rows 11-20 of 60") and "Downstream count" in said[2], said
+
+
+@needs_browser
+def test_no_two_pager_or_sort_buttons_share_a_name(continued):
+    names = continued["names"]
+    twice = {name for name in names if names.count(name) > 1}
+    assert len(names) > 20 and not twice, sorted(twice)
+    # `UX-1197` follow-up: the task table's tools are named for its tasks, never for its share column.
+    assert "Duration, sort: Tasks" in names and not [n for n in names if n.endswith(": Wall-clock share")], names
 
 
 @pytest.fixture(scope="module")

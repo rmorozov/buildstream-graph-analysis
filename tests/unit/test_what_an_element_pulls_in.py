@@ -288,7 +288,7 @@ class TestTheDirectListIsCappedAndNamed:
     def test_the_cap_class(self):
         """A synthetic graph one element cannot produce: 1,004
         predecessors of one successor. `direct_count` keeps the true
-        population; `direct` stops at the cap."""
+        population; `direct` names all of it, the cap's 40 first (UX-1214)."""
         from bga.graph.fan_in import DIRECT_NAMES_CAP, compute_fan_in
         from bga.ingest.models import DependencyEdge, Element, Graph
 
@@ -300,8 +300,8 @@ class TestTheDirectListIsCappedAndNamed:
         rows = compute_fan_in(graph, {}, set())
         row = rows["successor.bst"]
         assert row["direct_count"] == 1004
-        assert len(row["direct"]) == DIRECT_NAMES_CAP == 40
-        assert row["direct"] == sorted(names)[:40]
+        assert len(row["direct"]) == 1004 and DIRECT_NAMES_CAP == 40
+        assert row["direct"] == sorted(names)
 
 
 if __name__ == "__main__":  # pragma: no cover

@@ -109,7 +109,7 @@ def seen(uris):
 def test_a_filter_copies_what_it_matched_and_says_so(seen):
     got = seen["filtered"]["layer19"]
     rows = json.loads(got["copied"])
-    assert got["badge"] == "25 of 60 matched, of 1,202" and got["mounted"] == 25, got
+    assert got["badge"] == "25 of 60 matched" and got["mounted"] == 25, got
     assert got["label"] == "Copy 60 matched rows", got["label"]
     assert len(rows) == 60 and all("layer19" in row["element"] for row in rows), len(rows)
 
@@ -117,7 +117,7 @@ def test_a_filter_copies_what_it_matched_and_says_so(seen):
 @needs_browser
 def test_past_the_ceiling_the_label_states_it(seen):
     got = seen["filtered"]["layer1"]
-    assert got["badge"] == "25 of 600 matched, of 1,202", got["badge"]
+    assert got["badge"] == "25 of 600 matched", got["badge"]
     assert got["label"] == "Copy first 200 of 600 matched rows", got["label"]
     assert len(json.loads(got["copied"])) == 200
 

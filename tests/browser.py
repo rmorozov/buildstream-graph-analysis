@@ -357,6 +357,8 @@ class Browser:
         (pointer: coarse)` matches. `media` (`UX-1015`), e.g. `"print"`,
         sets `Emulation.setEmulatedMedia`'s actual media type, so a print
         rule is exercised the way a browser's own print preview would.
+        Every drive resets the shared tab's history first (`UX-1215`), so
+        a guard that walks Back is not pruned at the 50-entry cap.
         """
         extra = list(("--coarse",) if coarse else ())
         if media:

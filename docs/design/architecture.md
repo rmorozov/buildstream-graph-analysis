@@ -504,6 +504,14 @@ with the tables above destroys the one thing the entry is for
 (`UX-653`). The newest entry is the exception: every round that
 re-grounds the document rewrites it.
 
+Updated 2026-10-01 (after `UX-1218`), covering no change to this
+document in round 159. `analyze/v6` gains `task_durations_us`, the
+task table's Duration column (`UX-1194`); no contract moved. The
+figures are re-grounded in `bga analyze --schema`
+(`analyze/v6`: **64 top-level properties**) and in `python3 -m pytest
+$(grep -ln "architecture.md" tests/unit/*.py) -q`, run at this commit:
+**27 emitted ids**.
+
 Updated 2026-09-29 (after `UX-1133`), covering two changes to this
 document in round 152. The command table and the contract registry gain
 `bga junction-cost` and `junction-cost/v1` (`UX-904`); the unprintable

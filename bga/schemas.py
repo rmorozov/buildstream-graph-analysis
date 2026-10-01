@@ -58,6 +58,7 @@ from .schema_hints import (
     KEYED_BY,
     KEYED_BY_BINARY,
     KEYED_BY_ELEMENT,
+    KEYED_BY_ELEMENTS,
     KEYED_BY_TASK_UID,
     LEAD,
     MARKERS,
@@ -315,6 +316,7 @@ _ANALYZE_OPTIONAL = {
     "optimization_horizon": "array",
     "latent_heavies": "array",
     "wall_clock_share_us": "object",
+    "task_durations_us": "object",
     "cache": "object",
     "ready_queue": "object",
     "fetch_build_overlap": "object",
@@ -1095,6 +1097,7 @@ ANALYZE_FULL_KEYS = (
     "optimization_horizon",
     "latent_heavies",
     "wall_clock_share_us",
+    "task_durations_us",
     "ready_queue",
     "joint_saving",
     "leaf_analysis",
@@ -1997,6 +2000,8 @@ _ELEMENT_PRESETS = [
             "downstream_count",
             "element_kind",
             "is_structural_kind",
+            "is_potentially_deferrable",
+            "deferral_risk",
         ],
         "sort": {"column": "element_durations", "direction": "desc"},
     },
@@ -2195,9 +2200,9 @@ _STRUCTURAL_TABLES = {
             # synthetic run.
             "levels": {
                 GROWS: "graph depth (levels), each level's own membership grows with elements",
-                "description": "One row per level of the graph, from "
-                "the roots down: how wide it is and "
+                "description": "One row per level of the graph, from the roots down: how wide it is and "
                 "which elements sit on it.",
+                KEYED_BY: KEYED_BY_ELEMENTS,
                 COLUMNS: [
                     {
                         "key": "level",
@@ -2281,13 +2286,11 @@ _STRUCTURAL_TABLES = {
             "serial_chains": {
                 GROWS: False,
                 "maxItems": 40,  # `SERIAL_CHAINS_MAX`
-                "description": "Every maximal non-branching run of "
-                "elements, ranked by how much of the "
-                "build's duration it accounts for — "
-                "capped the same as any other table.",
+                "description": "Every maximal non-branching run of elements, ranked by how much of the "
+                "build's duration it accounts for — capped the same as any other table.",
                 QUESTION: "Which chain should I split first?",
                 COLUMNS: [
-                    {"key": "rank", "title": "Rank", "quantity": "count", "sortable": True},
+                    {"key": "rank", "title": "Rank", "sortable": True},
                     {
                         "key": "best_split",
                         "title": "Split this first",
@@ -2297,7 +2300,6 @@ _STRUCTURAL_TABLES = {
                         "largest — splitting it shortens "
                         "this chain the most.",
                     },
-                    {"key": "length", "title": "Length", "quantity": "count", "sortable": True},
                     {
                         "key": "weighted_duration_us",
                         "title": "Total",
@@ -2305,6 +2307,7 @@ _STRUCTURAL_TABLES = {
                         "sortable": True,
                         "description": "The members' durations, summed.",
                     },
+                    {"key": "length", "title": "Length", "quantity": "count", "sortable": True},
                     {
                         "key": "wall_share",
                         "title": "Of longest path",
@@ -2325,7 +2328,7 @@ _STRUCTURAL_TABLES = {
                     # `rank`/`length`/`weighted_duration_us`/`wall_share`
                     # still resolve now that `members` needs `properties`.
                     COLUMNS: [
-                        {"key": "rank", "title": "Rank", "quantity": "count", "sortable": True},
+                        {"key": "rank", "title": "Rank", "sortable": True},
                         {"key": "length", "title": "Length", "quantity": "count", "sortable": True},
                         {
                             "key": "weighted_duration_us",
@@ -2567,9 +2570,9 @@ _STRUCTURAL_TABLES = {
         GROWS: "element groups sharing consumers (real grower, no cap "
         "in the payload; structured.js's table bound applies on "
         "the page)",
-        "description": "Elements that are always consumed together and "
-        "could be one element. Structural: read from the "
-        "graph's own edges, never from a timing estimate.",
+        "description": "Elements that are always consumed together and could be one element. "
+        "Structural: read from the graph's own edges, never from a timing estimate.",
+        KEYED_BY: KEYED_BY_ELEMENTS,
         COLUMNS: [
             {"key": "elements", "title": "Could be one element"},
             {"key": "shared_consumers", "title": "Always consumed by"},
@@ -2704,9 +2707,7 @@ _SIGNALS_TABLES = {
             QUANTITY: "duration_us",
             "description": "How long this element took in this run, restore or build.",
         },
-        "description": "Each element's own duration, keyed by "
-        "uid. A cached element contributes its "
-        "restore, not its build.",
+        "description": "Each element's own duration, keyed by uid. A cached element contributes its restore, not its build.",
     },
     "slack": {
         QUANTITY: "duration_us",
@@ -2715,9 +2716,7 @@ _SIGNALS_TABLES = {
             QUANTITY: "duration_us",
             "description": "How long this element could have been delayed without moving the makespan.",
         },
-        "description": "How long each element could have been "
-        "delayed without moving the makespan. "
-        "Zero is on the chain.",
+        "description": "How long each element could have been delayed without moving the makespan. Zero is on the chain.",
     },
     "downstream_count": {
         QUANTITY: "count",
@@ -2729,9 +2728,8 @@ _SIGNALS_TABLES = {
         QUANTITY: "count",
         GROWS: "elements",
         "additionalProperties": {QUANTITY: "count", "description": "Edges from this element to the root."},
-        "description": "Edges from each element to the root, "
-        "ignoring duration. The graph's shape "
-        "rather than this run's timings.",
+        "description": "Edges from each element to the root, ignoring duration. "
+        "The graph's shape rather than this run's timings.",
     },
     "wall_clock_share_us": {
         INLINE: "name",
@@ -2743,16 +2741,18 @@ _SIGNALS_TABLES = {
         GROWS: "tasks",
         "additionalProperties": {
             QUANTITY: "duration_us",
-            "description": "The wall-clock this task alone is "
-            "responsible for — its marginal share of "
-            "the active window, as time rather than "
-            "as a fraction.",
+            "description": "The wall-clock this task alone is responsible for — its marginal share of "
+            "the active window, as time rather than as a fraction.",
         },
-        "description": "How much of the active window each task "
-        "alone accounts for, in microseconds. Keyed "
-        "by the task's own identity, not by element, "
-        "because one element can run more than one "
-        "task.",
+        "description": "How much of the active window each task alone accounts for, in microseconds. "
+        "Keyed by the task's own identity, not by element, because one element can run more than one task.",
+    },
+    "task_durations_us": {
+        QUANTITY: "duration_us",
+        KEYED_BY: KEYED_BY_TASK_UID,
+        GROWS: "tasks",
+        "additionalProperties": {QUANTITY: "duration_us", "description": "How long this task ran, start to finish."},
+        "description": "How long each task ran, keyed like the share beside it, so a duration threshold reads a duration.",
     },
     "criticality_probability": {
         GROWS: "elements",
@@ -2842,13 +2842,12 @@ _SIGNALS_TABLES = {
                     "description": "Dependencies this element names itself. The same number the bottleneck's "
                     "high fan-in list ranks the top five of, over every element rather than five.",
                 },
-                # `UX-829`: capped at `DIRECT_NAMES_CAP`, `direct_count`'s population; card only (§3c).
+                # `UX-829`, `UX-1214`: `direct_count`'s whole population; the card shows 40 (§3c).
                 "direct": {
-                    GROWS: False,
-                    "maxItems": 40,
+                    GROWS: "elements",
                     "items": {"type": "string", "description": "element uid"},
-                    "description": "This element's direct dependencies by name, sorted, capped at 40. "
-                    "The direct count is the count whether or not it hit the cap.",
+                    "description": "Every direct dependency of this element by name: the 40 earliest in graph "
+                    "order first, sorted, then the rest, sorted. The card shows the first 40.",
                 },
                 # UX-1187: the mirror of the two above - what names this one.
                 "dependent_count": {
@@ -3191,16 +3190,12 @@ _SIGNALS_TABLES = {
                     "properties": {
                         "element_kind": {"description": "The kind BuildStream gives this element."},
                         "is_structural_kind": {
-                            "description": "Whether its dependents are "
-                            "the graph's shape rather "
-                            "than a task — a `stack` or "
-                            "an `import`."
+                            "description": "Whether its dependents are the graph's shape rather than a task — "
+                            "a `stack` or an `import`."
                         },
                         "is_potentially_deferrable": {
-                            "description": "Whether nothing in this run "
-                            "waited on it, so building it "
-                            "later would have cost the "
-                            "makespan nothing."
+                            "description": "Whether nothing in this run waited on it, so building it later "
+                            "would have cost the makespan nothing."
                         },
                         "deferral_risk": {"description": "How safe deferring it looks: `low`, `medium` or `high`."},
                     }
@@ -3449,13 +3444,14 @@ _BLAST_COUNTS = {
 
 #: `resource_blast`'s rows: `_BLAST_COUNTS`' quantities, said of a shared resource.
 _RESOURCE_COUNTS = {
-    k: {QUANTITY: _BLAST_COUNTS[k][QUANTITY], "description": v}
+    k: {QUANTITY: _BLAST_COUNTS.get(k, {QUANTITY: "count"})[QUANTITY], "description": v}
     for k, v in {
         "direct_count": "Elements that source this resource themselves.",
         "blast_count": "Everything a change to this resource rebuilds: its elements and all they reach.",
         "building_count": "Of those, the ones that do real build work.",
         "assembling_count": "Of those, the ones that only gather what is below them.",
         "measured_us": "Recorded build time across that set, measured elements only, so a lower bound.",
+        "measured_elements": "Of those, the ones with a recorded build time; the rest are counted, never estimated.",
     }.items()
 }
 
@@ -3554,6 +3550,7 @@ _ANALYZE_HINTS = {
                     "type": "object",
                     "properties": {
                         **_RESOURCE_COUNTS,
+                        "by_element_kind": {"additionalProperties": {QUANTITY: "count"}},
                         "direct_elements": {
                             GROWS: "elements directly sourcing that resource (subset, no cap)",
                             "items": {"type": "string", "description": "element uid"},
@@ -4822,7 +4819,7 @@ _ANALYZE_HINTS = {
         "times the whole run ran it. The frequency half "
         "of the question; binary cost is the time "
         "half, per element.",
-        "additionalProperties": {QUANTITY: "count"},
+        "additionalProperties": {QUANTITY: "count", "title": "Calls in run"},
     },
     "binary_cost": {
         QUESTION: 'Which binaries cost this build its time?',
@@ -4834,9 +4831,9 @@ _ANALYZE_HINTS = {
         COLUMNS: [
             "element",
             "binary",
-            "calls",
             {"key": "cpu_us", "title": "CPU"},
             {"key": "cpu_share", "title": "Share of CPU"},
+            "calls",
             {"key": "wall_us", "title": "Wall"},
         ],
         "description": "One row per element and binary Plane 2 saw it "
@@ -5288,6 +5285,7 @@ _LIFTED_HINTS = {
     "cache": ('act', 'How much of this run came from the cache?'),
     "fetch_build_overlap": ('act', 'Did fetching wait for building?'),
     "wall_clock_share_us": ('prove', 'How much of the run did each task hold?'),
+    "task_durations_us": ('prove', 'How long did each task run?'),
     "ready_queue": ('prove', 'How much work was waiting to start?'),
     "leaf_analysis": ('investigate', 'Which elements does nothing wait on?'),
     "element_duration_distribution": ('investigate', "How are this run's element durations spread?"),
@@ -5721,7 +5719,7 @@ _COMPARE_HINTS = {
                     },
                     {"key": "baseline_us", "title": "Before", "quantity": "duration_us", "sortable": True},
                     {"key": "candidate_us", "title": "After", "quantity": "duration_us", "sortable": True},
-                    {"key": "presence", "title": "Presence", "sortable": True},
+                    {"key": "presence", "title": "In", "sortable": True},
                     {"key": "verdict_kind", "title": "Verdict", "sortable": True},
                 ],
                 DIRECTION: "lower_is_better",

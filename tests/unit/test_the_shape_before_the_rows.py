@@ -452,6 +452,11 @@ console.log(JSON.stringify({ present: Boolean(select), ns }));
         assert all(n < 15 for n in out["ns"]), out
         assert out["ns"] == [10], out
 
+    def test_a_bound_that_hides_one_row_is_not_offered(self):
+        """`UX-1196`: `Top 10` of 11 hides one row - no control; of 12, two, and it is offered."""
+        assert self._select(11) == {"present": False, "ns": []}
+        assert self._select(12) == {"present": True, "ns": [10]}
+
     def test_under_the_smallest_preset_gets_no_control(self):
         out = self._select(3)
         assert not out["present"], (

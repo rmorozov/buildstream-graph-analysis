@@ -670,6 +670,51 @@ pairing for every merged row from round 103 on.
 | 158 | walker | sonnet | walker: 17 new findings, 6 pre-existing, task walk 3 yes 1 half 1 wrong | — | — | — | see round-158 | cost: walk158-findings.md; op:BUILD > 60s answers from the share table |
 | 158 | implementer | opus | residue pass: UX-1179 UX-1177 UX-1185 UX-1183, head b710be58 | — | — | — | see round-158 | cost: 474f4eb3 1901e8a7 c0c4c2c2 b710be58; push-check green; test_jump_finds_what_the_rail_lists.py 2.7 s to 10 s |
 | 158 | closer | opus | closer: UX-1176..UX-1193, UX-1194..UX-1205 filed | — | — | — | see round-158 | cost: filing 12 rows from the walk; tiers re-timed (jump 9.7 s, print 13.5 s, pager 10.3 s) |
+| 159 | architect | opus | architect: A, UX-1194 1195 1196 1197 1199 1203 | — | — | — | see round-159 | cost: tracks T1 T2 T3; trades macro_micro Top-N selects (-3), share lead link (-1); page half est 156.1 KB (arch159/A.md) |
+| 159 | architect | opus | architect: B, UX-1198 1200 1201 1202 1204 1205 | — | — | — | see round-159 | cost: tracks B1-B5; Q1 ranked-card Blocks +2,193 px/+172 controls, Q2 UX-1205 gate, both to the owner (arch159/B.md) |
+| 159 | implementer | opus | implementer: T1 UX-1195 UX-1197 UX-1196 | — | — | — | see round-159 | cost: +1,250 B; mm controls 790, h 38,389; app.js revealAndLand near T3 popstate |
+| 159 | implementer | opus | implementer: T2 UX-1194 UX-1199 | — | — | — | see round-159 | cost: +772 B; task_durations_us; leaves_detail to the Leaves view; mm controls 796/800; parseQuery data-share skip owed by T1 |
+| 159 | implementer | opus | implementer: T3 UX-1203 rail tools and pager | — | — | — | see round-159 | cost: +499 B; tier LARGE; sortable headers print blank (pre-existing, fixed 31b5971b); guard red under full-suite load (fixed c31ada8b) |
+| 159 | implementer | opus | implementer: B1 UX-1198 Focus filters each keyed table | — | — | — | see round-159 | cost: +604 B; base T2 UX-1199 + T1 UX-1195; 7 mutations red |
+| 159 | implementer | opus | implementer: B2 UX-1200 Blocks lists as links | — | — | — | see round-159 | cost: +204 B; bounds raised on the owner's 05:49 decision; dev_sizes --adopt failed (pylint exited 32) |
+| 159 | implementer | sonnet | implementer: B3 UX-1201 compare table words and negatives | ~45k | — | ~15m | see round-159 | cost: ~+0.2 KB; 2 mutations red; -0 ms residue |
+| 159 | implementer | opus | implementer: B4 UX-1202 UX-1204 bounded values, 390 fit | — | — | — | see round-159 | cost: +706 B; longest aria-label 12,170 to 283; 390 pastes 17/17 to 0 |
+| 159 | implementer | opus | implementer: B5 UX-1205 a real capture under the hook | ~100k | — | ~35m | see round-159 | cost: ci.yml pin 53 to 54; bst half unrun here, CI is evidence; conftest skip count 6 to 7 |
+| 159 | integrator | opus | integrator: wave 1 merged, head ff46bf6b | — | — | — | see round-159 | cost: suite 11,519 p / 2 f / 211 s; verification-log entry credits UX-1194 (re-grounded at the close) |
+| 159 | integrator | opus | integrator: B1 and T3 picked, head 31b5971b | — | — | — | see round-159 | cost: print th-sort display:contents; push-check red 4 (verif-log anchor, UX-1203 guard under load x3) |
+| 159 | integrator | opus | integrator: residue picked, pass 3, head afd84bdc | — | — | — | see round-159 | cost: analyze.json regen, tiers re-timed; holds: sizes, jump guard, print th at 390, copy-fold JSONDecodeError; suite 11,548 p / 6 f / 211 s |
+| 159 | verifier | sonnet | verifier: A UX-1194 1195 1196 1197 1198 1199, 6 PASS | — | — | — | see round-159 | cost: residue: older payload share head not marked data-share |
+| 159 | verifier | sonnet | verifier: B UX-1200..1205, 6 PASS | — | — | — | see round-159 | cost: residue: rail Next after toc, -0 ms, nodes bound 7,720 unneeded; drawings on no built page |
+| 159 | walker | sonnet | walker: 5/5 tasks answered, N1-N10 new, P1-P9 pre-existing | — | — | — | see round-159 | cost: walk159-findings.md; in-page links cleared every filter (N1) |
+| 159 | implementer | opus | fixer: UX-1203 guard, Chrome's 50-entry history cap | — | — | — | see round-159 | cost: c31ada8b, --fresh-history opt-in; other Back guards exposed (filed) |
+| 159 | implementer | opus | residue H: N1 N2 N3 history and focus | — | — | — | see round-159 | cost: app.js +922 B; 390 rail-link Back and Expand all scrollY 24,872 left (filed) |
+| 159 | implementer | opus | residue T: old payload, N4 share sweep, N6 N7 N8, -0 ms | — | — | — | see round-159 | cost: analyzer bug, a 0 ms task held share to the run's end; UX-1192 guard re-based; other maps still Name (filed) |
+| 159 | implementer | opus | residue M: N5 sticky tools, rail Next toc, nodes 7,500 | — | — | — | see round-159 | cost: test_print_and_find tiers row 13.5 s vs 30.9 s |
+| 159 | implementer | opus | holds fixer: sizes, jump guard, print th, copy-format leak, head 911b36d7 | — | — | — | see round-159 | cost: localStorage shared across files in one Chrome per worker (filed) |
+| 159 | closer | opus | closer: UX-1194..UX-1205, UX-1206..UX-1217 filed | — | — | — | see round-159 | cost: filing 12 rows from the walk and verifiers; verification-log re-ground row last |
+| 160 | architect | opus | architect: A, UX-1206 1207 1210 1211 1213 1214 | 169k | 86 | 10.3 m | see round-160 | cost: tracks T-A T-B T-C T-D; page half est +2,148 upper; Q UX-1214 dependents (arch160/A.md) |
+| 160 | architect | opus | architect: B, UX-1208 1209 1212 1215 1216 1217 | 158k | 66 | 18.8 m | see round-160 | cost: tracks H M C P F; label-as-target Q, default a wrapping label counts (arch160/B.md) |
+| 160 | implementer | opus | implementer: T-A UX-1206 UX-1214 | 178k | 127 | 26.8 m | see round-160 | cost: +900 B; filter link, depends_on hidden list column; residue: no-column sentence lists hidden Depends on |
+| 160 | implementer | sonnet | implementer: T-C UX-1207 | 61k | 32 | 6.9 m | see round-160 | cost: -380 B; mapTitles, relabelHead gone |
+| 160 | implementer | sonnet | implementer: T-D UX-1213 | 80k | 64 | 15.6 m | see round-160 | cost: +88 B; residue: fold summaries print unseparated counts (decision.js element.js sections.js views.js) |
+| 160 | implementer | opus | implementer: T-B UX-1211 UX-1210 | 418k | 117 | 37.7 m | see round-160 | cost: +63 B; re-based chain fold guard |
+| 160 | implementer | sonnet | implementer: H UX-1215 UX-1217 | 250k | 64 | 41.8 m | see round-160 | cost: driver resets history and clears localStorage; fresh_history kept as no-op; stale comment test_a_control_acts_on_what_it_names.py |
+| 160 | implementer | sonnet | implementer: M UX-1216 | 55k | 44 | 6.1 m | see round-160 | cost: 0 B; node harness retired; test_a_mark_says_its_value 14.96 s, tier check |
+| 160 | implementer | sonnet | implementer: C UX-1209 | 38k | 31 | 7.3 m | see round-160 | cost: +278 B CSS; make lint not run |
+| 160 | implementer | sonnet | implementer: F UX-1212 | 60k | 34 | 8.7 m | see round-160 | cost: +130 B; (a) not reproduced; residue: palette first ArrowDown lands on row 1 |
+| 160 | implementer | opus | implementer: P UX-1208 and its follow-up | 164k | 76 | 55.2 m | see round-160 | cost: +108 B then +48 B; verifier B wheel-climb FAIL fixed by e5933525 |
+| 160 | implementer | opus | implementer: E UX-1214 follow-up, publish all | 157k | 127 | 25.3 m | see round-160 | cost: page +72 B, data +89 B big, +717 B xl_both; downstream: dropped, +236 B |
+| 160 | integrator | opus | integrator: ten picks, T-B and E, head fa4ddf9e | 326k | 63 | 66.2 m | see round-160 | cost: suite 11,624 p / 2 f fixed; page half 158,149/160,000; fresh_history removed, tiers 3 to LARGE |
+| 160 | verifier | sonnet | verifier: A UX-1206 1207 1210 1211 1213 1216, 6 PASS | 228k | 112 | 35.6 m | see round-160 | cost: residue: 15 unseparated counts, all-rows badge, Is a leaf vs Is leaf |
+| 160 | verifier | sonnet | verifier: B UX-1208 1209 1212 1215 1217, 4 PASS 1 FAIL | 74k | 81 | 12 m | see round-160 | cost: UX-1208 wheel-notch climb FAIL (fixed a69d1d88); 1212(a) F5 not reproduced |
+| 160 | walker | opus | walker: 5/5 tasks answered, N1-N8 new, P1-P10 pre-existing | 234k | 166 | 35.6 m | see round-160 | cost: walk160-findings.md |
+| 160 | implementer | opus | implementer: residue R counts, all-matched badge, Is leaf | 207k | 190 | 37.2 m | see round-160 | cost: 773b5201 b3a1822a 12ba7342; page half +243 B; two arms unguarded (filed) |
+| 160 | implementer | sonnet | implementer: residue W2 spaced unit (P1 N7) | 39k | 28 | 5.1 m | see round-160 | cost: cefdb790; 2 failed under mutation |
+| 160 | implementer | sonnet | implementer: residue W1 print chain, JSON Copy names (N1 N6) | 68k | 31 | 10.2 m | see round-160 | cost: 885af833 cec1339d; 4 failed under mutation |
+| 160 | implementer | opus | implementer: residue W3 +N more View, focus, keys (N3-N5) | 274k | 96 | 28.4 m | see round-160 | cost: 21cf393b +288 B; gap block moved to Motivation for the 80-line cap; touch keyboard at 390 unmeasured |
+| 160 | implementer | opus | implementer: residue W4 390 Back place (N2 N8) | 237k | 69 | 35 m | see round-160 | cost: ecaab997 +140 B; guard 12 to 27 cases, 15 red on a69d1d88; tiers narrow 51.6 to 171.1 s |
+| 160 | integrator | opus | integrator: residue picked, head c14ba043 | 384k | 107 | 43.6 m | see round-160 | cost: make test 11,654 p / 0 f / 211 s; page half 159,146/160,000; hang test intermittent (filed) |
+| 160 | closer | sonnet | closer: UX-1206..UX-1217, UX-1219..UX-1232 filed | 129k | 55 | 7 m | see round-160 | cost: filing 14 rows from the walk and residue; P7 census on HEAD read 0; budgets measured with the volume guard's own instrument |
 
 Round 101's four tracks are **not** here: this session could not
 identify their transcripts with certainty after a context rebuild, and
@@ -682,7 +727,7 @@ committed cleanly once told to run in the foreground. Three of the five
 left a derived figure or a §6 context-map row behind - the same class
 the round itself was about, arriving in the tracks' own work.
 
-What the six hundred and fifty-three rows already say: a researcher that reads a document
+What the six hundred and ninety-eight rows already say: a researcher that reads a document
 whole costs 100-180k; a walker that drives every control costs 336k;
 the two cuts cost a re-run each. The `walk` and `design-review`
 skills fix the report shape so the next rows are smaller, and the

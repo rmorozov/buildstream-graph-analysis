@@ -16,10 +16,10 @@
 import { plainValue, served } from "./primitives.js";
 import { COPY_FORMAT_MIRROR, readCopyFormat } from "./viewstate.js";
 import { BARE_KEY, COMMAND, QUANTITY, COLUMNS, SERIES, DISTRIBUTION, KEYED_BY,
-         KEYED_BY_BINARY, KEYED_BY_TASK_UID, bytes,
+         KEYED_BY_BINARY, KEYED_BY_ELEMENTS, KEYED_BY_TASK_UID, bytes,
          childNode, cssId, dataKeyed, el, elementColumn, guessQuantity, heading,
          hintsOf, itemsAsShown, keyAsShown, quantity, quantityFor, readerLabel,
-         sectionHead, taskUid, title } from "./format.js";
+         sectionHead, tally, taskUid, title } from "./format.js";
 import { commandLine, identify, say } from "./controls.js";
 // UX-303: §2's two drawings. They import nothing and take their
 // formatter, so the quantity table stays here and the geometry stays
@@ -34,9 +34,9 @@ import { CONTROLS, UNMAPPED, classify, noteUnmapped, depthSentence,
          distributionStrip, shapeOf } from "./shapes.js";
 import { enterTableFocus, focusedTable, leaveTableFocus, registerFocusTarget }
   from "./tablefocus.js";
-import { parseQuery, applyFilters, badgeText, rowJson, cellText,
+import { parseQuery, applyFilters, badgeText, rowJson, jsonNames, cellText,
          copy, presetColumns, openingBound, plural, sortable, ownRows,
-         ownBody, showAlso, columnCells, rowsMarkdown, showSort, ALL_ROWS_CEILING }
+         ownBody, showAlso, columnCells, rowsMarkdown, showSort, ownHeads, STATED, ALL_ROWS_CEILING }
   from "./tables.js";
 import { PATH_HEAD, PATH_TAIL } from "./views.js";
 
@@ -144,7 +144,7 @@ function inlineObject(value, node) {
  * top-level section needs lives there, beside that one call, so this
  * function's body is unchanged from its cell-only years.
  */
-export function mapTable(key, rows, hint, node, nested, depth = 0, path = key, list = false) {
+export function mapTable(key, rows, hint, node, nested, depth = 0, path = key, list = false, beside = [], titles = null) {
   let declared = hint;
   if (!nested) {
     // A `{name: number}` map's value column has to *declare* a
@@ -167,8 +167,9 @@ export function mapTable(key, rows, hint, node, nested, depth = 0, path = key, l
       ?? (record ? null : "count");
     // UX-1173: a list's index is not a name, so a list draws its items alone.
     declared = { ...hint, [COLUMNS]: [
-      ...(list ? [] : [{ key: "key", title: "Name" }]),
-      { key: "value", title: title(key, measure), quantity: measure }] };
+      // `UX-1207`: a top-level map's `titles` name both columns once, for th, cell labels and Copy.
+      ...(list ? [] : [{ key: "key", title: titles?.key ?? "Name" }]), ...beside,
+      { key: "value", title: titles?.value ?? node?.additionalProperties?.title ?? title(key, measure), quantity: measure }] };
   }
   const { table, tools } = buildTable(path, rows, declared, node, depth);
   // `UX-1163`'s rule: a list left one column says its name in its fold, not a header.
@@ -231,7 +232,7 @@ function boundedList(value, noun, item = null) {
     more.title = `Show the next ${Math.min(REVEAL_STEP, remaining)} ${noun} `
       + `of the ${remaining} still between the first ${head.length} and `
       + `the last ${tail.length}`;
-    more.textContent = `+${remaining} More ${noun} (${items.length} in all)`;
+    more.textContent = `+${tally(remaining)} More ${noun} (${tally(items.length)} in all)`;
     position.textContent = page < 0 ? "" : `${noun} ${start + 1}-`
       + `${start + chunk.length} of ${middle.length} (page ${page + 1} of `
       + `${pages})`;
@@ -579,12 +580,17 @@ export function buildTable(key, rows, hint = {}, node = undefined,
                            depth = 0, options = {}) {
   // `UX-1186`: a list's key columns, or a map's `key`.
   const keyed = [hint[KEYED_BY] ?? []].flat();
-  const specs = columnSpecs(hint, rows, node).map((spec) => {
+  const declared = columnSpecs(hint, rows, node).map((spec) => {
     const kind = keyed.includes(spec.key) ? spec.key
       : spec.key === "key" && keyed.length === 1 ? keyed[0] : null;
     return kind && !spec.role ? { ...spec, role: kind } : spec;
   });
+  // `UX-1214`: an undrawn list column has no head, cell or Copy column; the box reads it off the row.
+  const specs = declared.filter((spec) => spec.drawn !== false);
+  const undrawn = declared.filter((spec) => spec.drawn === false);
   const columns = specs.map((s) => s.key);
+  // `UX-1199`: a keyed list column names every element its row holds, for Focus.
+  const listed = specs.find((spec) => spec.role === KEYED_BY_ELEMENTS)?.key;
   // `UX-526`: how many rows the table *has*. The DOM used to answer
   // that and no longer does - a row past the bound leaves it - so the
   // population is published where a reader and a guard can both read it.
@@ -684,6 +690,8 @@ export function buildTable(key, rows, hint = {}, node = undefined,
           : typeof raw === "string" ? renderText(column, raw, memberTitle(column, raw, node))
           : plainValue(raw)));
     }
+    if (Array.isArray(row?.[listed])) tr.setAttribute("data-elements", row[listed].join(" "));
+    for (const spec of undrawn) if (Array.isArray(row?.[spec.key])) tr.setAttribute(`data-list-${spec.key}`, row[spec.key].join(" "));
     body.append(tr);
   }
   table.append(body);
@@ -745,7 +753,7 @@ export function buildTable(key, rows, hint = {}, node = undefined,
   const { note: uniform, gone } = statedOnce(table, specs, rows.length);
   // `UX-1151`: a column said once above the table ranks nothing - no preset over it.
   const tools = interrogable(table, specs.filter((spec) => !gone.has(spec.key)),
-                             rows.length, depth);
+                             rows.length, depth, undrawn);
   // `UX-1055`: after `copy-rows`, not before it - a plain `prepend`
   // put this note ahead of `copy-rows`, undoing its guaranteed first
   // place in the row (styleguide §3l).
@@ -799,6 +807,7 @@ function statedOnce(table, specs, total) {
   const gone = new Set();
   if (total <= SERIES_MIN_POINTS) return { note: null, gone };
   const said = [];
+  const stash = {};
   for (const spec of specs) {
     if (!spec || spec.role === "element" || spec.key === elementColumn(specs)) {
       continue;
@@ -816,6 +825,9 @@ function statedOnce(table, specs, total) {
     if (new Set(raw).size !== 1) continue;
     said.push([spec.title ?? title(spec.key, spec.quantity),
                cells[0].textContent]);
+    // `UX-1195`: the box still reads it - a threshold only where the value is a number.
+    stash[spec.key] = { raw: raw[0], shown: cells[0].textContent, spec: { ...spec, stated: true,
+      quantity: Number.isFinite(Number(raw[0])) && raw[0] !== "" ? spec.quantity : null } };
     gone.add(spec.key);
     for (const cell of cells) cell.remove?.();
     const head = [...table.querySelectorAll("th")].find(
@@ -823,6 +835,7 @@ function statedOnce(table, specs, total) {
     head?.remove?.();
   }
   if (!said.length) return { note: null, gone };
+  STATED.set(table, stash);
   // `UX-1163`: a short table left one column is a list, with no header.
   const head = table.children[0];
   if (total <= TABLE_OPENS_BOUNDED_ABOVE && head.children[0].children.length < 2) head.remove();
@@ -848,7 +861,8 @@ function foldTheMiddle(table, total, { head, tail, noun = "rows" }) {
   const all = ownRows(table);
   const middle = all.slice(head, all.length - tail);
   if (!middle.length) return null;
-  for (const row of middle) row.hidden = true;
+  // `UX-1196`: marked, so print shows them, Copy takes them and a landing opens the fold.
+  for (const row of middle) { row.hidden = true; row.setAttribute("data-fold-middle", ""); }
   const cells = all[0]?.children?.length ?? 1;
   const more = el("button", {
     type: "button", class: "fold-more", "data-folded": String(middle.length),
@@ -856,7 +870,7 @@ function foldTheMiddle(table, total, { head, tail, noun = "rows" }) {
     // is behind it rather than promising "more".
     title: `Show the ${middle.length} ${noun} between the first ${head} `
            + `and the last ${tail}`,
-  }, `+${middle.length} More ${noun} (${total} in all)`);
+  }, `+${tally(middle.length)} More ${noun} (${tally(total)} in all)`);
   const row = el("tr", { class: "fold-row", "data-fold-rows": String(middle.length) },
                  el("td", { colspan: String(cells) }, more));
   more.addEventListener?.("click", () => {
@@ -881,6 +895,7 @@ export function filterSection(doc, id, query) {
   if (!box) return;
   box.value = query;
   box.dispatchEvent(new Event("input", { bubbles: true }));
+  return box;
 }
 
 /** One table as its own view: `buildTable`, in a section. */
@@ -901,7 +916,7 @@ export function renderTable(key, rows, hint = {}, node = undefined,
  * metadata is what makes `> 5s` parseable: the column declares that it
  * is a `duration_us`, so the suffix has a meaning.
  */
-export function interrogable(table, specs, total, depth = 0) {
+export function interrogable(table, specs, total, depth = 0, undrawn = []) {
   const state = { text: "", thresholds: {}, exact: [], top: null, sort: null };
   const narrowed = () => Boolean(state.text.trim() || Object.keys(state.thresholds).length || state.exact.length);
   // UX-334: what these controls are called. The table key is the name
@@ -911,7 +926,8 @@ export function interrogable(table, specs, total, depth = 0) {
   // `UX-1162`: each tool's accessible name ends with its table's.
   // `UX-1177`: a phrase - "levels.1.elements" reads "Level 1 elements"; a published name keeps its case.
   const parts = key.split(".");
-  const named = parts.map((part, i) => {
+  // `UX-1197`: the task table's tools are named for its tasks, not for the share it also holds.
+  const named = parts.length === 1 && specs.some((spec) => spec?.role === KEYED_BY_TASK_UID) ? "Tasks" : parts.map((part, i) => {
     const said = title(part, guessQuantity(part));
     const word = i && said !== part ? said.toLowerCase() : said;
     return /^\d+$/.test(parts[i + 1] ?? "") ? word.replace(/s$/, "") : word;
@@ -929,16 +945,26 @@ export function interrogable(table, specs, total, depth = 0) {
   let restart = null;
   let rewind = null;
   let shape = null;
+  let rank = null;
+  let resting = null;
   const few = total <= FEW_ROWS;
+  // `UX-1197`: the window and a sort other than the opening rank are said in the one live region.
+  const view = () => {
+    const sort = state.sort && (state.sort.column !== rank || state.sort.direction !== "descending") ? state.sort : null;
+    const head = sort && ownHeads(table).find((th) => th.getAttribute("data-column") === sort.column);
+    return { offset: state.top?.offset ?? 0, sorted: sort ? `${head?.textContent.trim() || sort.column}, ${sort.direction}` : "",
+             narrowed: narrowed() };
+  };
   const refresh = () => {
     // `applyFilters` also writes `state.filtered` and `state.kept` - the pre-`top` population.
-    const said = badgeText(applyFilters(table, state), total, state.filtered);
+    const said = badgeText(applyFilters(table, state), total, state.filtered, view());
     badge.textContent = said === rest ? "" : said;
     pagerRefresh?.();
     relabel?.();
     // UX-1158: the strip draws, and counts, the rows the filter kept; `UX-1170`: none at two or fewer.
-    shape?.replaceWith?.(shape = distributionStrip(table, specs, total, few || state.filtered <= FEW_ROWS,
-                                                   state.kept) ?? el("span"));
+    // `UX-1198`: an emptied box gets the strip it opened with back, its route id unchanged.
+    shape?.replaceWith?.(shape = (narrowed() ? distributionStrip(table, specs, total, few || state.filtered <= FEW_ROWS,
+                                                                 state.kept) : resting) ?? el("span"));
   };
 
   // `UX-349`: **filters appear when the table is long enough to need
@@ -964,8 +990,10 @@ export function interrogable(table, specs, total, depth = 0) {
     // `UX-1179`: Jump reaches the rows a bound detaches, in the key hint's place so it fits at 390.
     placeholder: ["filter", !jumps && keyed && `${keyed.role === "task_uid" ? "op" : keyed.role}:\u2026`,
                   primary && (PLACEHOLDER[primary.quantity] ?? "> 0"), jumps && "or Jump\u2026"].filter(Boolean).join(", "),
-    "aria-label": `Filter rows: ${named}`,
-    title: "a word matches any cell; column:value that column exactly (value* its start); column > 5s, or a bare > 5s, a threshold",
+    // `UX-1198`: born with the state an input writes, so a focus that drives the box and hands it back changes nothing.
+    "aria-label": `Filter rows: ${named}`, "aria-invalid": "false",
+    title: ["a word matches any cell; column:value that column exactly (value* its start); column > 5s, or a bare > 5s, a threshold",
+            ...undrawn.map((spec) => spec.help)].filter(Boolean).join("; "),
   }) : null;
   // `UX-1191`: an unreadable threshold is said on the page, and applies nothing.
   const unread = el("span", { class: "filter-unread", role: "status", hidden: true });
@@ -974,14 +1002,26 @@ export function interrogable(table, specs, total, depth = 0) {
     box.addEventListener("input", () => {
       const labels = Object.fromEntries([...table.querySelectorAll("th")].map(
         (th) => [th.getAttribute("data-column"), th.textContent]));
-      const query = parseQuery(box.value, filterable, labels);
+      const share = new Set(ownHeads(table).filter((th) => th.hasAttribute?.("data-share"))
+        .map((th) => th.getAttribute("data-column")));
+      // `UX-1214`: an undrawn column is read, never named in the sentence below.
+      const columns = [...filterable, ...Object.values(STATED.get(table) ?? {}).map((said) => said.spec)];
+      const query = parseQuery(box.value, [...columns, ...undrawn].map((spec) => (share.has(spec?.key) ? { ...spec, share: true } : spec)),
+                               labels);
       Object.assign(state, { text: query.text, exact: query.exact, thresholds: query.thresholds });
       const bad = query.unread.length > 0;
       box.classList?.toggle?.("unparsed", bad);
       box.setAttribute("aria-invalid", String(bad));
       unread.hidden = !bad;
-      unread.textContent = bad ? `${query.unread.map((c) => `\u201c${c}\u201d`).join(", ")} `
-        + "is not a threshold this table can read, so it is not applied." : "";
+      const heads = [...columns.map((spec) => labels[spec?.key] ?? spec?.title), ...undrawn.map((spec) => `${spec.key}:\u2026`)]
+        .filter(Boolean).join(", ");
+      // `UX-1206`: a bare threshold on a table whose only quantity is a share says so, and how to name it.
+      const shareOf = (key) => labels[key] ?? columns.find((spec) => spec?.key === key)?.title ?? key;
+      unread.textContent = query.unread.map(({ clause, column, share }) => (column
+        ? `\u201c${clause}\u201d: no column here is called \u201c${column}\u201d (${heads}), so it is not applied.`
+        : share ? `\u201c${clause}\u201d is not applied: ${shareOf(share)} is a share, not a duration - name it, `
+          + `as in \u201c${shareOf(share).toLowerCase()} ${clause}\u201d.`
+          : `\u201c${clause}\u201d is not a threshold this table can read, so it is not applied.`)).join(" ");
       if (bad && !unread.parentNode) box.after?.(unread);
       rewind?.();
       refresh();
@@ -1002,13 +1042,15 @@ export function interrogable(table, specs, total, depth = 0) {
   // `openingBound` carries why, and a table with nothing to rank by
   // used to get no control and therefore no bound at all.
   const opening = openingBound(presets, total, TABLE_OPENS_BOUNDED_ABOVE);
+  rank = presets[0] ?? null;
   // UX-673: a preset that cannot shrink the table is apparatus without
   // effect - skip any `n >= total`, and offer no control at all once
   // even the smallest preset fails that test.
+  // `UX-1196`: nor one that hides a single row - `Top 10` of 11 is apparatus too.
   // `UX-1028`: the step past the "All rows" ceiling - built once, set
   // here, appended into `tools` below.
   let pager = null;
-  if ((presets.length && total > 10) || opening) {
+  if ((presets.length && total > 11) || opening) {
     const preset = el("select", { class: "top-n", "aria-label": `Rows shown: ${named}` });
     identify(preset, `top-${key}`);
     // `UX-1028` (styleguide §3k): "All rows" mounts the whole table in
@@ -1018,12 +1060,9 @@ export function interrogable(table, specs, total, depth = 0) {
     if (total <= ALL_ROWS_CEILING) {
       preset.append(el("option", { value: "" }, "All rows"));
     }
-    for (const column of presets) {
-      for (const n of [10, 25]) {
-        if (n >= total) continue;
-        preset.append(el("option", { value: `${n}:${column}` },
-                         `Top ${n} by ${specs.find((s) => s.key === column)?.title ?? title(column)}`));
-      }
+    // `UX-1197`: bounds only - the rank is the header's sort, the first quantity's at opening.
+    for (const n of presets.length ? [10, 25] : []) {
+      if (n < total - 1) preset.append(el("option", { value: `${n}:${rank}` }, `Top ${n} rows`));
     }
     if (!presets.length) {
       preset.append(el("option", { value: `${TABLE_OPENS_BOUNDED_ABOVE}:` },
@@ -1039,15 +1078,14 @@ export function interrogable(table, specs, total, depth = 0) {
     // selected while paging showed a plain offset window).
     let offset = 0;
     let paging = false;
-    // `UX-1185` (D4): the pager steps the ranking the table opened on, one page the opening bound's size.
-    const size = opening?.top.n ?? TABLE_OPENS_BOUNDED_ABOVE;
+    // `UX-1197`: a page is the chosen bound's size, in the table's current sort.
+    const size = () => state.top?.n ?? opening?.top.n ?? TABLE_OPENS_BOUNDED_ABOVE;
     let ranking = opening?.top.column ?? null;
     const canPage = total > ALL_ROWS_CEILING;
-    const position = canPage ? el("span", { class: "page-position" }, "") : null;
     const prev = canPage ? el("button", { type: "button", class: "page-prev",
-                              "aria-label": "previous rows" }, "‹ Prev") : null;
+                              "aria-label": `previous rows: ${named}` }, "‹ Prev") : null;
     const next = canPage ? el("button", { type: "button", class: "page-next",
-                              "aria-label": "next rows" }, "Next ›") : null;
+                              "aria-label": `next rows: ${named}` }, "Next ›") : null;
     // Runs from `refresh` itself, so a filter or threshold narrowing
     // the population while paging keeps the position and the buttons'
     // bounds measured against `state.filtered` - the text/threshold
@@ -1055,21 +1093,19 @@ export function interrogable(table, specs, total, depth = 0) {
     // of the unfiltered `total` (Review #295, `UX-1028`).
     if (canPage) {
       pagerRefresh = () => {
-        if (!paging) { position.textContent = ""; pager?.removeAttribute?.("data-offset"); return; }
+        if (!paging) { pager?.removeAttribute?.("data-offset"); return; }
         const denom = state.filtered ?? total;
-        const lastStart = denom === 0 ? 0 : Math.floor((denom - 1) / size) * size;
+        const lastStart = denom === 0 ? 0 : Math.floor((denom - 1) / size()) * size();
         // The filtered population can shrink under the current window
         // (typing a filter mid-page) - clamp back onto its last real
         // page rather than claim a range past what is now filtered.
         if (offset > lastStart) {
           offset = lastStart;
-          state.top = { n: size, column: ranking, offset };
-          const said = badgeText(applyFilters(table, state), total, state.filtered);
+          state.top = { n: size(), column: ranking, offset };
+          const said = badgeText(applyFilters(table, state), total, state.filtered, view());
           badge.textContent = said === rest ? "" : said;
         }
-        const end = Math.min(offset + size, denom);
-        position.textContent = denom === 0 ? "no rows match"
-          : `rows ${offset + 1}-${end} of ${denom.toLocaleString("en-US")}`;
+        const end = Math.min(offset + size(), denom);
         prev.disabled = offset <= 0;
         next.disabled = end >= denom;
         // `UX-1185`: the fragment's `p.` - `viewstate.js` reads it here and writes it back through `bga:page`; none on the first rows.
@@ -1078,20 +1114,17 @@ export function interrogable(table, specs, total, depth = 0) {
       };
       const step = () => {
         paging = true;
-        state.top = { n: size, column: ranking, offset };
-        // The preset no longer describes what is on the page - paging
-        // replaces its claim rather than leaving it beside a window it
-        // did not choose (Review #295).
-        preset.selectedIndex = -1;
+        // `UX-1197`: the select keeps its bound - it is every page's size.
+        state.top = { n: size(), column: ranking, offset };
         refresh();
       };
       prev.addEventListener("click", () => {
-        offset = Math.max(0, offset - size);
+        offset = Math.max(0, offset - size());
         step();
       });
       next.addEventListener("click", () => {
-        // From the end of what is shown, so `Top 10` then Next is rows 11-35; `pagerRefresh` clamps it.
-        offset = paging ? offset + size : (state.top?.n ?? size);
+        // `Top 10` then Next is rows 11-20; `pagerRefresh` clamps it.
+        offset = paging ? offset + size() : size();
         step();
       });
       // `UX-1185`: a filter edit names a new population, so the pager starts at its front.
@@ -1099,7 +1132,7 @@ export function interrogable(table, specs, total, depth = 0) {
         offset = 0;
         if (state.top) state.top = { ...state.top, offset: 0 };
       };
-      pager = el("span", { class: "table-pager" }, prev, position, next);
+      pager = el("span", { class: "table-pager" }, prev, next);
       pager.addEventListener?.("bga:page", () => {
         offset = Math.max(0, Number(pager.getAttribute("data-offset")) || 0);
         step();
@@ -1121,10 +1154,9 @@ export function interrogable(table, specs, total, depth = 0) {
       // "unbounded" the way `state.top = null` would.
       state.top = preset.value ? { n: Number(n), column: column || null }
         : preset.selectedIndex === -1 ? (opening?.top ?? null) : null;
-      // `UX-1190`: a ranked preset is a sort, shown on its header.
-      if (state.top?.column) showSort(table, state.sort = { column: state.top.column, direction: "descending" });
+      // `UX-1197`: a bound keeps the table's sort; with none yet it ranks by the first quantity, shown on its header.
+      if (state.top?.column && !state.sort) showSort(table, state.sort = { column: state.top.column, direction: "descending" });
       offset = 0;
-      ranking = state.top?.column ?? opening?.top.column ?? null;
       paging = false;
       refresh();
     });
@@ -1146,21 +1178,22 @@ export function interrogable(table, specs, total, depth = 0) {
     // Not paged at build time: at rest the table opens on `opening`'s
     // own bound, and the paging step only takes over once pressed.
     if (prev) prev.disabled = true;
-    // `UX-1190`: a header's sort starts the bound at the front, and a preset it contradicts steps aside.
+    // `UX-1190`: a header's sort starts the bound at the front; `UX-1197`: the bound stays chosen.
     restart = (sort) => {
       offset = 0;
       ranking = sort.column;
       if (state.top) state.top = { ...state.top, offset: 0 };
-      if (preset.value && (preset.value.split(":")[1] !== sort.column || sort.direction !== "descending")) {
-        preset.selectedIndex = -1;
-      }
     };
   }
   table.addEventListener?.("bga:sort", (event) => {
     state.sort = event.detail;
     restart?.(state.sort);
-    // Unbounded and unfiltered, `sortable` reorders every row itself.
-    if (!state.top && !narrowed()) return;
+    // Unbounded and unfiltered, `sortable` reorders every row itself; the live region still says the sort.
+    if (!state.top && !narrowed()) {
+      const said = badgeText(total, total, total, view());
+      badge.textContent = said === rest ? "" : said;
+      return;
+    }
     event.preventDefault?.();
     refresh();
   });
@@ -1178,7 +1211,9 @@ export function interrogable(table, specs, total, depth = 0) {
   // should choose once - `localStorage`, which is where this page
   // already remembers per-reader preferences, and which failing is not
   // allowed to take the report down with it.
-  const shownRows = () => ownRows(table).filter((tr) => !tr.hidden);
+  // `UX-1196`: a head-and-tail fold's held middle is shown rows too; its stub is none.
+  const shownRows = () => ownRows(table).filter((tr) => !tr.hidden
+    || (tr.hasAttribute?.("data-fold-middle") && tr.parentNode));
   // `UX-1189` (§4c): a filter names a population, and copy takes it - up to `ALL_ROWS_CEILING` - not the page.
   const filtered = narrowed;
   const copied = () => (filtered() ? (state.kept ?? []).slice(0, ALL_ROWS_CEILING) : shownRows());
@@ -1194,7 +1229,7 @@ export function interrogable(table, specs, total, depth = 0) {
     // beside it agree with the count in one place rather than two.
     const matched = state.filtered ?? 0;
     const rows = !filtered() ? plural(n, "row")
-      : n < matched ? `first ${n} of ${plural(matched, "matched row")}` : plural(n, "matched row");
+      : n < matched ? `first ${tally(n)} of ${plural(matched, "matched row")}` : plural(n, "matched row");
     // `UX-1165`: nothing shown, nothing to copy or to say of the rows.
     for (const node of [copyRows, copyRows.parentNode?.querySelector?.(".uniform-columns")]) {
       if (node) node.hidden = !n;
@@ -1210,7 +1245,7 @@ export function interrogable(table, specs, total, depth = 0) {
     const rows = copied();
     copy(markdown()
       ? rowsMarkdown(rows, specs)
-      : `[${rows.map((tr) => rowJson(tr, specs.map((s) => s.key))).join(",")}]`);
+      : `[${rows.map((tr) => rowJson(tr, specs.map((s) => s.key), jsonNames(specs))).join(",")}]`);
     // `UX-355` (styleguide §4c): and it says so. A clipboard write is
     // invisible by construction, so the control acknowledges the press
     // itself - the same shape `copy-step`, `copy-sql` and `copy-view`
@@ -1245,7 +1280,7 @@ export function interrogable(table, specs, total, depth = 0) {
   // count of rows; the p50 and p95 ticks are positions and nothing
   // else. A percentile worth printing enters the payload first.
   // `UX-1152` (styleguide §3d): at two rows or fewer `Copy N rows` is the one count.
-  shape = distributionStrip(table, specs, total, few);
+  shape = resting = distributionStrip(table, specs, total, few);
 
   // `UX-318` (§3a.3): **every capped or nested table offers focus.** A
   // table that opened bounded is hiding rows behind a Top-N; a nested
@@ -1265,6 +1300,12 @@ export function interrogable(table, specs, total, depth = 0) {
   // of its own and the same cramped table one level nearer the top. The
   // rule is unchanged - a table inside a cell offers the way out - and
   // the number it is spelled with followed the document.
+  // `UX-1197`: a sort button's name ends with its table's, once the section has relabelled its heads.
+  globalThis.queueMicrotask?.(() => {
+    for (const sort of ownHeads(table).map((th) => th.querySelector?.("button.th-sort")).filter(Boolean)) {
+      sort.setAttribute("aria-label", `${sort.textContent.trim()}, sort: ${named}`);
+    }
+  });
   const nested = depth > 0;
   const expand = served() && (nested || total > TABLE_OPENS_BOUNDED_ABOVE)
     ? expandTableControl(table, depth) : null;
@@ -1306,9 +1347,16 @@ export function liftedCriticalPath(document, node) {
   // `UX-319`: the chain's listing, folded by the chain's own numbers -
   // the same `PATH_HEAD`/`PATH_TAIL` the drawing uses, so the two
   // surfaces show the same chain rather than two elisions of it.
-  return renderTable(LIFTED_SECTION, rows, hintsOf(child), child,
-                     { fold: { head: PATH_HEAD, tail: PATH_TAIL,
-                               noun: "elements" } });
+  const section = renderTable(LIFTED_SECTION, rows, hintsOf(child), child,
+                              { fold: { head: PATH_HEAD, tail: PATH_TAIL,
+                                        noun: "elements" } });
+  // `UX-1196`: the listing's order is a claim, so its header sorts at any length.
+  const table = section.querySelector?.("table");
+  if (table) {
+    sortable(table, ownHeads(table).map((th) => ({ sortable: th.getAttribute("data-sortable") !== "false",
+                                                  quantity: th.getAttribute("data-quantity") })), { always: true });
+  }
+  return section;
 }
 
 // UX-269: a long value is truncated; a long *sentence* is not.

@@ -108,6 +108,8 @@ def reads(tmp_path_factory):
     packed = re.search(r'id="bga-report-gz">([^<]*)</script>', text)
     report = json.loads(gzip.decompress(base64.b64decode(packed.group(1))))
     del report["task_durations_us"]
+    # The outlier is planted: the analyzer's 4.9 min share for a 0 ms task was a defect (`UX-1194` follow-up).
+    report["wall_clock_share_us"]["toolchain.bst|BUILD|BUILD|0"] = 291_775_000
     repacked = base64.b64encode(gzip.compress(json.dumps(report).encode())).decode()
     shares = pathlib.Path(into) / "shares.html"
     shares.write_text(text[: packed.start(1)] + repacked + text[packed.end(1) :], encoding="utf-8")
@@ -143,7 +145,8 @@ def test_a_strip_names_its_outlier_and_scales_the_rest(reads):
     assert edge["title"].startswith("toolchain.bst 4.9 min"), edge
     inside = [t for t in share["ticks"] if t["mark"] != "max"]
     assert all(t["x"] <= 90 for t in inside), inside
-    assert max(t["x"] for t in inside) > 50, f"the rest still flattened: {inside}"
+    # Scaled to the cut, the rest spreads 10x wider than on the outlier's one scale (where the cut sits at 100*cut/max).
+    assert max(t["x"] for t in inside) > 10 * 100 * share["cut"] / share["max"], f"the rest still flattened: {inside}"
     # No outlier: no break, and the max sits at the edge on the one scale.
     durations = reads["two_plane"]["durations"]
     assert durations["cut"] is None, durations

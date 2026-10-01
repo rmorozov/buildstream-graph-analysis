@@ -79,8 +79,6 @@ def _build_over(report, seconds):
 @needs_browser
 def test_op_build_over_60s_is_the_build_tasks_over_60s(seen):
     report, got = seen["walk"]["report"], seen["walk"]["page"]["q"]
-    # The defect's row is in the payload: toolchain.bst's share is over 60 s.
-    assert report["wall_clock_share_us"]["toolchain.bst|BUILD|BUILD|0"] > 60e6
     assert got["op:BUILD > 60s"]["matched"] == len(_build_over(report, 60)) == 0, got["op:BUILD > 60s"]
     assert "toolchain.bst|BUILD|BUILD|0" not in {row["key"] for row in got["op:BUILD > 60s"]["rows"]}
 
@@ -88,6 +86,10 @@ def test_op_build_over_60s_is_the_build_tasks_over_60s(seen):
 @needs_browser
 def test_a_threshold_that_matches_reads_the_duration(seen):
     report, got = seen["walk"]["report"], seen["walk"]["page"]["q"]["op:BUILD > 5s"]
+    # Not vacuous: read off the share, the same query keeps a different count.
+    assert sum(v > 5e6 for k, v in report["wall_clock_share_us"].items() if "|BUILD|" in k) != len(
+        _build_over(report, 5)
+    )
     assert got["matched"] == len(_build_over(report, 5)) > 0, got["matched"]
     assert {row["key"] for row in got["rows"]} <= _build_over(report, 5)
 
@@ -115,3 +117,18 @@ def test_without_the_key_the_share_table_is_as_it_was(seen):
     got = seen["older"]["page"]
     assert got["heads"] == [["key", False], ["value", False]], got["heads"]
     assert "not a duration" in (got["lead"] or ""), got["lead"]
+
+
+@needs_browser
+@pytest.mark.parametrize("label", ["walk", "golden", "macro_micro"])
+def test_no_task_holds_more_of_the_window_than_it_ran(seen, label):
+    # `UX-1194` follow-up: a zero-length task's end sorted before its own start, so it held the window to the end.
+    report = seen[label]["report"]
+    over = {
+        k: (report["task_durations_us"][k], v)
+        for k, v in report["wall_clock_share_us"].items()
+        if v > report["task_durations_us"][k]
+    }
+    assert not over, over
+    if label == "walk":
+        assert report["task_durations_us"]["toolchain.bst|BUILD|BUILD|0"] == 0

@@ -452,6 +452,10 @@ class DiagnosticsAnalyzer:
             task_key = str(task.task_key)
             events.append((task.start_us, 1, task_key))
             events.append((task.finish_us, -1, task_key))
+        # A zero-length task executes nothing; its end would sort before its own start and never leave the set.
+        starts = {(at, key) for at, delta, key in events if delta > 0}
+        empty = {key for at, delta, key in events if delta < 0 and (at, key) in starts}
+        events = [event for event in events if event[2] not in empty]
 
         # Sort by timestamp, ends before starts at same time
         events.sort(key=lambda x: (x[0], x[1]))

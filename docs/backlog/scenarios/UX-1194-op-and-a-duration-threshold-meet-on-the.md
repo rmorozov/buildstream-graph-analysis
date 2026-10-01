@@ -108,3 +108,8 @@ volume, opened, 1440x900 (27f21d10 -> this commit):
 Reverted from the saved copy each time: 7 passed.
 
 Re-based in this commit: `test_a_column_is_named_for_its_field.py` (the lead and its link retire beside a Duration column; the share is marked), `test_a_key_column_matches_exactly.py` (a bare `> 1s` in the task table counts `task_durations_us`), `test_a_mark_says_its_value.py` (the outlier strip read on the share-only payload), `test_a_shapeable_population_is_drawn.py` (`task_durations_us` answered as the task table's column), `docs/guides/cli.md` 606 -> 607 keys.
+
+**Deviation (round 159 walk, N4).** toolchain.bst read Duration 0 ms beside a 4.9 min share: an analyzer bug, not a real share. The sweep sorts ends before starts, so a zero-length task's end preceded its own start and it stayed active to the run's end. Such a task now enters no events (Part 20: share is the integral over its own execution).
+Shares over their own duration: walk 1 (toolchain.bst 0 us, share 291,775,000) -> 0; macro_micro 1 (20,433,333) -> 0; the sum is unchanged (1,447,950,000; 43,200,000). The 60 s premise goes; `op:BUILD > 5s` holds the non-vacuity (share count differs).
+`test_a_mark_says_its_value.py` re-based: its outlier was this defect, so the fixture plants 291,775,000 and the rest's spread is read against the cut (p95 at x 40, bound 10 x 100 x cut/max = 16.5).
+Mutation: the zero-length filter keeping every event gives `test_no_task_holds_more_of_the_window_than_it_ran[walk, macro_micro]` 2 failed, 11 passed.

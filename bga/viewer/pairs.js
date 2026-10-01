@@ -138,11 +138,13 @@ export function elementSignalTable(elements, node, join = null,
   };
   // `UX-1214`: undrawn, so `depends_on:<uid>` lists what <uid> blocks and `blocks:<uid>` what it depends on.
   const direct = elements.fan_in;
+  const help = "depends_on:X lists every element X blocks, blocks:X every one X depends on";
   if (direct && typeof direct === "object") {
     const blocks = {};
     for (const [uid, fan] of Object.entries(direct)) for (const name of fan?.direct ?? []) (blocks[name] ??= []).push(uid);
     for (const row of rows) Object.assign(row, { depends_on: direct[row.element]?.direct ?? [], blocks: blocks[row.element] ?? [] });
-    hint[COLUMNS].push({ key: "depends_on", title: "Depends on", drawn: false }, { key: "blocks", title: "Blocks", drawn: false });
+    hint[COLUMNS].push({ key: "depends_on", title: "Depends on", drawn: false, help },
+                       { key: "blocks", title: "Blocks", drawn: false });
   }
   return { rows, hint, merged: present, joined: joinedIn };
 }
@@ -399,14 +401,9 @@ export function renderPairs(key, object, hint = {}, node = undefined,
     // being the only thing on offer.
     const views = presetTable("elements", joined.rows, hint[PRESETS],
                               joined.hint, node, payload);
-    // `UX-829` (styleguide §1b): `fan_in[uid].direct` is a joined field
-    // this table deliberately does not draw a column for - a capped
-    // name list is a card fact, not a cell (§3c) - so the lead names
-    // where it went, the same clause `DRAWN_ELSEWHERE` states for a
-    // whole section.
-    const leadText = `One row per element, joined from `
-      + `${joined.merged.length} signals. Each element's direct `
-      + `dependencies are listed on its own card, not here.`;
+    // `UX-829` (styleguide §1b): `fan_in[uid].direct` draws no column; the lead names the filter keys that read it.
+    const help = joined.hint[COLUMNS].find((spec) => spec.help)?.help;
+    const leadText = `One row per element, joined from ${joined.merged.length} signals${help ? `; ${help}` : ""}.`;
     if (views) {
       parts.push(el("div", { class: "map-table", "data-bounded": "map",
                              "data-joined": joined.merged.join(",") },

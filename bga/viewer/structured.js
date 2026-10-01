@@ -895,6 +895,7 @@ export function filterSection(doc, id, query) {
   if (!box) return;
   box.value = query;
   box.dispatchEvent(new Event("input", { bubbles: true }));
+  return box;
 }
 
 /** One table as its own view: `buildTable`, in a section. */
@@ -991,7 +992,8 @@ export function interrogable(table, specs, total, depth = 0, undrawn = []) {
                   primary && (PLACEHOLDER[primary.quantity] ?? "> 0"), jumps && "or Jump\u2026"].filter(Boolean).join(", "),
     // `UX-1198`: born with the state an input writes, so a focus that drives the box and hands it back changes nothing.
     "aria-label": `Filter rows: ${named}`, "aria-invalid": "false",
-    title: "a word matches any cell; column:value that column exactly (value* its start); column > 5s, or a bare > 5s, a threshold",
+    title: ["a word matches any cell; column:value that column exactly (value* its start); column > 5s, or a bare > 5s, a threshold",
+            ...undrawn.map((spec) => spec.help)].filter(Boolean).join("; "),
   }) : null;
   // `UX-1191`: an unreadable threshold is said on the page, and applies nothing.
   const unread = el("span", { class: "filter-unread", role: "status", hidden: true });
@@ -1011,7 +1013,8 @@ export function interrogable(table, specs, total, depth = 0, undrawn = []) {
       box.classList?.toggle?.("unparsed", bad);
       box.setAttribute("aria-invalid", String(bad));
       unread.hidden = !bad;
-      const heads = columns.map((spec) => labels[spec?.key] ?? spec?.title).filter(Boolean).join(", ");
+      const heads = [...columns.map((spec) => labels[spec?.key] ?? spec?.title), ...undrawn.map((spec) => `${spec.key}:\u2026`)]
+        .filter(Boolean).join(", ");
       // `UX-1206`: a bare threshold on a table whose only quantity is a share says so, and how to name it.
       const shareOf = (key) => labels[key] ?? columns.find((spec) => spec?.key === key)?.title ?? key;
       unread.textContent = query.unread.map(({ clause, column, share }) => (column

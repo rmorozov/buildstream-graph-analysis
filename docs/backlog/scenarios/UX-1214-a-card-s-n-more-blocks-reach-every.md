@@ -10,6 +10,18 @@ Page: the round-159 walk and verification of the 1,202-element two-plane page (`
 
 Walk P8 (pre-existing): the toolchain card's "Blocks:" lists 40 links then "+1,160 more" as a plain span; the rest is unreachable from the card.
 
+Follow-up 2, the round-160 walk's N3-N5 at `a69d1d88`: the link drops the reader's View and Forward does not
+return the link's; focus stays on the off-screen card link; `depends_on` is named nowhere on the page. The guard's
+reads on `wide_run`, Chromium 1440x900 (`gap.py`: View Leaves, the card's "+10 more" by a real Enter, Tab, Back,
+Forward):
+
+```text
+name "+10 more" (no aria-label); after Enter focus not in the box, Tab scrolls back to y 21,646
+Enter All elements 50 matched; Back Leaves; Forward Leaves, matched -1 (the filter dropped)
+lead "... joined from 7 signals. Each element's direct dependencies are listed on its own card, not here."
+title "a word matches any cell; ... a threshold"; sentence "(Element, ..., Observed critical)": no key
+```
+
 ## Decomposition
 
 Input classes: the 1,202-element two-plane page and its `--workload binaries` variant, at 1440 and 390.
@@ -63,20 +75,13 @@ cards' "+N more" link there. The not-applied sentence names drawn and stated col
 
 ## Outcome
 
-The gap measured, at `7d0c5ddd` (UX-1206 landed), the 1,202-element two-plane page (`pages.two_plane_run
---layers 20 --width 60`), Chromium 1440x900: toolchain.bst's card ends its 40 Blocks links in
-`span[data-more]` ", +1,160 more" (no link; `p[data-list] > span[data-more]` = 1 on the page), and the box
-has no way to ask for the rest:
+The gap -> the close, at `7d0c5ddd` (UX-1206 landed), the 1,202-element page (`pages.two_plane_run --layers 20
+--width 60`), Chromium 1440x900: toolchain.bst's 40 Blocks links ended in `span[data-more]` ", +1,160 more" (no
+link), now `a[data-more]` "+1,160 more" to `#elements`, `f.elements = depends_on:toolchain.bst`; pressed from
+Leaves it selects All elements; the href alone on a fresh load lands the same:
 
 ```text
 depends_on:toolchain.bst @elements  25 of 1,202 | "depends_on:toolchain.bst": no column here is called "depends_on" ...
-```
-
-The close measured, same page: the rest is `a[data-more]` "+1,160 more" to `#elements` with `f.elements =
-depends_on:toolchain.bst`; pressed from the Leaves view it selects All elements and filters; the href alone on a
-fresh load lands the same:
-
-```text
 depends_on:toolchain.bst @elements        25 of 1,200 matched | Copy first 200 of 1,200 matched rows
 depends_on:toolchain.bst @Leaves          25 of 149 matched
 guard, big:  followed {tag: A, view: All elements, matched: 1200}; landed {matched: 1200, view: All elements}
@@ -97,27 +102,14 @@ the four modules: 511 passed, 5 skipped, `test_the_page_has_a_volume_budget.py` 
 | a press keeps the reader's view (`element.js`) | `..._reach_every_element_it_counts[big]` | 1 failed, 9 passed |
 | reverted | | 10 passed |
 
-Re-based: `test_an_element_view_answers_whole.py`'s `_line` and the past-the-cap clause read "+N more" for
-dependents (the link's text; the ", " is the list's separator now), ", +N more" still for direct.
-
-Follow-up gap, at `ffa8bcb1`, the guard's `wide_run` (layer01 elements name 51 each), Chromium 1440x900:
+Follow-up gap -> close, `ffa8bcb1` -> the change, the guard's `wide_run` (layer01 elements name 51 each), 1440x900:
 
 ```text
-published: layer00/mod049.bst dependent_count 50 | layer01/mod000.bst direct_count 51 len(direct) 40
-depends_on:layer00/mod049.bst    matched 0; 'nosuch:x' sentence names Depends on/Blocks: True
-blocks:layer01/mod000.bst        matched -1 (no such column)
-layer00/mod049.bst dependents: {'text': '+10 more', 'view': 'All elements', 'matched': 0}
-layer01/mod000.bst direct: {'text': ', +11 more', 'href': None, 'view': 'Leaves', 'matched': -1}
-```
-
-The close, same page and probe:
-
-```text
-published: layer00/mod049.bst dependent_count 50 | layer01/mod000.bst direct_count 51 len(direct) 51
-depends_on:layer00/mod049.bst    matched 50; 'nosuch:x' sentence names Depends on/Blocks: False
-blocks:layer01/mod000.bst        matched 51; 'nosuch:x' sentence names Depends on/Blocks: False
-layer00/mod049.bst dependents: {'text': '+10 more', 'view': 'All elements', 'matched': 50}
-layer01/mod000.bst direct: {'text': '+11 more', 'view': 'All elements', 'matched': 51}
+published: layer00/mod049.bst dependent_count 50 | layer01/mod000.bst direct_count 51 len(direct) 40 -> 51
+depends_on:layer00/mod049.bst    matched 0 -> 50; 'nosuch:x' sentence names Depends on/Blocks: True -> False
+blocks:layer01/mod000.bst        matched -1 (no such column) -> 51; the sentence names Depends on/Blocks: False
+layer00/mod049.bst dependents: {'text': '+10 more', 'view': 'All elements', 'matched': 0 -> 50}
+layer01/mod000.bst direct: {'text': ', +11 more' -> '+11 more', 'href': None, 'view': 'Leaves' -> 'All elements', 'matched': -1 -> 51}
 ```
 
 Cost, `view.export` page/data bytes ffa8bcb1 -> this: page half 157,667 -> 157,739 B (+72) on golden and
@@ -135,9 +127,29 @@ the touched modules, the volume and data-half guards among them: 1059 passed, 3 
 | the card shows the whole list (`element.js`) | `[wide]` | 1 failed, 2 passed |
 | reverted | | 3 passed |
 
-Deviation (follow-up, owner's call): Ruslan, 2026-10-01 12:31 - "i like publish all option but maybe there
-compromise ... point user there to traverse full list of dependencies as well as full list of dependents". Route:
-`fan_in[*].direct` published uncapped (`GROWS: "elements"`, the card slices 40), dependents derived in the page by
-inverting it; `depends_on:<uid>` and the new `blocks:<uid>` are exact, and both "+N more" link to them. The
-transitive `downstream:<uid>` clause was dropped: its matcher alone measured +236 B page half against a budget the
-round's other rows hold. Re-based: `test_what_an_element_pulls_in.py`'s cap class, `_line` in the UX-1200 guard.
+Deviation (follow-up, owner's call, 2026-10-01 12:31): the route and the dropped `downstream:<uid>` (+236 B) are
+the Decision's last paragraph. Re-based: `test_what_an_element_pulls_in.py`'s cap class; the UX-1200 guard's `_line`
+and past-the-cap clause read "+N more" for dependents (the link's text, ", " the list's separator), ", +N more" for direct.
+
+Follow-up 2 close (walk N3-N5), the same reads as the Motivation's gap on this tree:
+
+```text
+name "+10 more: all 50 layer00/mod049.bst blocks, in Elements"; after Enter focus in the box
+"depends_on:layer00/mod049.bst", Tab to the table's own tools (y 4,963); Back Leaves; Forward All elements, 50 matched
+lead and title end "; depends_on:X lists every element X blocks, blocks:X every one X depends on"; the sentence "(..., depends_on:…, blocks:…)"
+```
+
+Page half +288 B (158,192 -> 158,480) on all three pages; at rest unmoved; 50 files naming the modules: 795 passed.
+
+| mutation | reddened | run printed |
+|---|---|---|
+| popstate keeps a View the entry does not name (`app.js`) | `[wide]` | 1 failed, 2 passed |
+| no focus after the filter (`element.js`) | `[wide]` | 1 failed, 2 passed |
+| no `aria-label`; no key in the title; none in the sentence | `[wide]`, each run alone | 1 failed, 2 passed, each |
+| the old lead (`pairs.js`) | `[golden]`, `[macro_micro]`, `[wide]` | 3 failed |
+| reverted | | 3 passed |
+
+Deviation (follow-up 2): N3 - Back restored a View the hash named (the walk's script fired a non-bubbling `change`,
+so its hash had none); Forward did not. Popstate sets a View the entry does not name to the opening one, as it clears
+a filter (a bare-hash navigation too); a `history.state` record goes stale. N4 - `filterSection` returns the box, the
+link focuses it. N5 - the sentence names the keys, not the titles the follow-up kept out; lead and title share a string.

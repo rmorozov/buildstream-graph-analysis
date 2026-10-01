@@ -34,7 +34,8 @@ _TYPED = """(() => {
   };
   const matched = read("__CLAUSE__");
   read("nosuch:x");
-  return { listed, matched, said: tools?.querySelector(".filter-unread")?.textContent ?? null,
+  return { listed, matched, said: tools?.querySelector(".filter-unread")?.textContent ?? null, help: box?.title ?? null,
+           lead: t.closest(".map-table")?.querySelector(":scope > p")?.textContent ?? null,
            drawn: [...t.querySelectorAll("th, td")].filter((c) => ["depends_on", "blocks"].includes(c.dataset.column)).length };
 })()"""
 
@@ -50,6 +51,41 @@ _FOLLOW = """(() => {
   return { text: more?.textContent ?? null, href: more?.getAttribute("href") ?? null, view: view.value,
            matched: Number((/([\\d,]+) matched row/.exec(copy) ?? [0, "-1"])[1].replace(/,/g, "")) };
 })()"""
+
+
+# N3/N4: from a View the reader chose, Enter on the card's "+N more", Back, Forward; real keys, one session.
+_VIEW = 'document.querySelector(\'select.preset-view[data-table="elements"]\')'
+_READ = (
+    f"({{view: {_VIEW}.value, box: document.activeElement?.matches('input.table-filter') ?"
+    " document.activeElement.value : null, matched: Number((/([\\d,]+) matched row/.exec(document.querySelector("
+    "'table[data-table=\"elements\"]').parentNode.querySelector('.table-tools .copy-rows')?.textContent ?? '')"
+    " ?? [0, '-1'])[1].replace(/,/g, ''))})"
+)
+
+
+def _journey(anchor, uid):
+    more = f"document.querySelector('section[data-element=\"{uid}\"] [data-list=\"dependents\"] a[data-more]')"
+    return [
+        {
+            "read": f"(() => {{ const v = {_VIEW}; v.value = 'Leaves'; v.dispatchEvent(new Event('change', {{bubbles: true}})); }})()"
+        },
+        {"wait": 200},
+        {
+            "read": f"(() => {{ const a = Object.assign(document.createElement('a'), {{href: '#{anchor}'}});"
+            " document.body.append(a); a.click(); a.remove(); })()"
+        },
+        {"wait": 300},
+        {"read": f"(() => {{ {more}.focus(); return {more}.getAttribute('aria-label'); }})()"},
+        {"key": "Enter"},
+        {"wait": 500},
+        {"read": _READ},
+        {"read": "history.back()"},
+        {"wait": 600},
+        {"read": _READ},
+        {"read": "history.forward()"},
+        {"wait": 600},
+        {"read": _READ},
+    ]
 
 
 def wide_run(into):
@@ -115,13 +151,25 @@ def test_a_card_s_more_reaches_every_dependency_both_ways(label, request, tmp_pa
                 )
                 for uid, key in ((blocker, "dependents"), (needer, "direct"))
             ]
+            named, *went = [r for r in browser.journey(uri, _journey(_anchor(blocker), blocker)) if r is not None]
     for typed, count in ((down, fan_in[blocker]["dependent_count"]), (up, fan_in[needer]["direct_count"])):
         got = typed["listed"] if typed["matched"] is None else typed["matched"]
         assert count > 0 and typed["drawn"] == 0 and got == count, (label, count, typed)
         assert typed["said"] is None or not re.search(r"Depends on|Blocks", typed["said"]), typed["said"]
+        # N5: the filter's help, the lead and the not-applied sentence name both keys; the lead no longer says "not here".
+        for said in (typed["lead"], *((typed["help"], typed["said"]) if typed["matched"] is not None else ())):
+            assert "depends_on:" in said and "blocks:" in said and "not here" not in said, (label, typed)
     if label != "wide":
         return
     assert [(f["text"], f["view"], f["matched"]) for f in follow] == [
         ("+10 more", "All elements", 50),
         ("+11 more", "All elements", 51),
     ], follow
+    # N5: the link's name says what it opens, all 50; N4: Enter leaves focus in the box holding the filter;
+    # N3: Back returns the reader's View, Forward the link's.
+    assert named == f"+10 more: all 50 {blocker} blocks, in Elements", named
+    assert went == [
+        {"view": "All elements", "box": f"depends_on:{blocker}", "matched": 50},
+        {"view": "Leaves", "box": None, "matched": -1},
+        {"view": "All elements", "box": None, "matched": 50},
+    ], went

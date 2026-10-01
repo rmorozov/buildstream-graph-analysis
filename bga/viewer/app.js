@@ -1219,6 +1219,10 @@ async function boot() {
       const kept = new URLSearchParams(query ?? "");
       // `UX-1198`: and no focus it lacks, handing the driven boxes back first.
       if (focusedElement(root) && !kept.get("focus")) clearFocus(root);
+      // `UX-1214` follow-up: an entry naming no View is at the opening one.
+      for (const view of root.querySelectorAll?.("select.preset-view") ?? []) {
+        if (view.selectedIndex && !kept.has(`v.${view.dataset.table}`)) { view.selectedIndex = 0; view.dispatchEvent(new Event("change")); }
+      }
       for (const table of root.querySelectorAll?.("table[data-table]") ?? []) {
         const box = table.parentNode?.querySelector?.(".table-tools input.table-filter");
         if (box?.value && !kept.has(`f.${table.getAttribute("data-table")}`)) {

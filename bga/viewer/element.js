@@ -740,13 +740,17 @@ function elementSection(record, places, investigate, format, bounded = null) {
       : el(READER_LABELS[item] ? "span" : "code", { "data-raw": item }, READER_LABELS[item] ?? item)]).slice(1));
     if (!(named.more > 0)) continue;
     // `UX-1214`: the rest, each one, is the element table filtered.
-    const query = `${named.key === "direct" ? "blocks" : "depends_on"}:${uid}`;
+    const up = named.key === "direct";
+    const query = `${up ? "blocks" : "depends_on"}:${uid}`;
+    const text = `+${named.more.toLocaleString("en-US")} more`;
     const rest = el("a", { href: joinHash("elements", new URLSearchParams({ "f.elements": query }).toString()),
-      "data-more": named.more }, `+${named.more.toLocaleString("en-US")} more`);
+      "data-more": named.more, "aria-label": `${text}: all ${(named.more + named.items.length).toLocaleString("en-US")} `
+        + `${uid} ${up ? "depends on" : "blocks"}, in Elements` }, text);
     rest.addEventListener?.("click", () => {
       const view = document.querySelector?.('select.preset-view[data-table="elements"]');
       if (view?.selectedIndex) { view.selectedIndex = 0; view.dispatchEvent(new Event("change")); }
-      filterSection(document, "elements", query);
+      // Focus follows the reader to the box that holds the filter just written.
+      filterSection(document, "elements", query)?.focus({ preventScroll: true });
     });
     line.append(", ", rest);
   }

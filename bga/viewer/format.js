@@ -306,7 +306,7 @@ export const TERMS = {
   // `UX-1184`: a task's share of the window, never its duration.
   wall_clock_share_us: "Wall-clock share",
   // `UX-1234`: the reader's word for two columns a card shares.
-  probability: "On the path", element_durations: "Duration",
+  probability: "On the path", element_durations: "Element duration",
 };
 
 /**

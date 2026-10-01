@@ -1,4 +1,4 @@
-"""UX-1234: the critical-path probability column and its card field read "On the path"; Element durations reads "Duration".
+"""UX-1234: the critical-path probability column and its card field read "On the path"; Element durations reads "Element duration" (one title per field: `duration_us` holds "Duration").
 
 Read on the 1,202-element two-plane page (`gen-synthetic --seed 1 --store
 --layers 20 --width 60`), Critical path view: column head and card label of
@@ -65,7 +65,7 @@ def test_the_column_and_the_card_read_on_the_path_and_duration(tmp_path):
     with Browser(chrome) as browser:
         got = browser.measure(page.as_uri(), _READ, 1440, 900)
     assert got["heads"]["probability"] == got["card"]["probability"] == "On the path", got
-    assert got["heads"]["element_durations"] == got["card"]["duration_us"] == "Duration", got
+    assert (got["heads"]["element_durations"], got["card"]["duration_us"]) == ("Element duration", "Duration"), got
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="node is not installed")

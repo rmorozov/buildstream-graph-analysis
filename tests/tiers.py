@@ -661,6 +661,19 @@ LARGE = (
     "tests/unit/test_a_key_column_matches_exactly.py",  #   16.4s
     # UX-1214 follow-up: 24.75 / 24.77s (base 16.46s).
     "tests/unit/test_an_element_view_answers_whole.py",  #   24.8s
+    # Round 161's merged tree, alone in one process (setup+call+teardown).
+    # `UX-1226`.
+    "tests/unit/test_a_card_label_is_its_column_title.py",  #   18.1s
+    # `UX-1225`.
+    "tests/unit/test_a_jump_to_a_binary_lands_on_it.py",  #   15.1s
+    # `UX-1221`.
+    "tests/unit/test_back_after_a_card_link_restores_the_card_offset.py",  #   28.5s
+    # `UX-1219`.
+    "tests/unit/test_back_after_collapse_all_reopens_what_it_folded.py",  #   24.7s
+    # `UX-1222`.
+    "tests/unit/test_focus_is_one_step_back.py",  #   15.9s
+    # `UX-1220`.
+    "tests/unit/test_the_narrow_rail_jump_box_keeps_the_place_read.py",  #   20.3s
 )
 
 MEDIUM = (
@@ -1177,4 +1190,17 @@ MEDIUM = (
     # UX-1214 follow-up: three exports, five Chromium reads, pytest wall 5.45 / 4.94 / 4.51s;
     # with the Back/Forward journey (round 160 residue), alone in one process: 6.71 / 6.58s.
     "tests/unit/test_a_card_s_more_reaches_every_dependency_both_ways.py",  #  6.6s
+    # Round 161's merged tree, alone in one process (setup+call+teardown).
+    # `UX-1228`.
+    "tests/unit/test_a_downstream_clause_follows_the_closure.py",  #    6.3s
+    # `UX-1229`.
+    "tests/unit/test_a_press_at_390_opens_no_keyboard.py",  #    3.3s
+    # `UX-1224`.
+    "tests/unit/test_a_printed_filtered_table_states_its_filter.py",  #   11.2s
+    # `UX-1234`.
+    "tests/unit/test_a_shared_title_is_the_reader_s_word.py",  #    8.4s
+    # `UX-1223`.
+    "tests/unit/test_all_rows_after_top_10_keeps_the_chain_order.py",  #    7.7s
+    # `UX-1227`.
+    "tests/unit/test_the_palette_arrows_start_at_the_ends.py",  #    0.9s
 )

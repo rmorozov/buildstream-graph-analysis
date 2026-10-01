@@ -57,3 +57,5 @@ card-title, names-it-was-given and key-column guards: 42 passed, 1 skipped; comp
 | `element_durations: "Element durations"` | head/card test | 1 failed, 1 passed |
 
 After revert: 2 passed.
+
+**Deviation** (the merged tree): "Duration" for `element_durations` redded `test_a_column_is_named_for_its_field.py::test_no_two_fields_share_a_title` on macro_micro (`{'Duration': ['duration_us', 'element_durations']}`). The column reads "Element duration" (singular, one value), and the card's field, `duration_us`, keeps "Duration" — the reader's word the owner asked for. The guard asserts both; 2 passed.

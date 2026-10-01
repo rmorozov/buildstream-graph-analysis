@@ -1108,8 +1108,8 @@ MEDIUM = (
     # `UX-1173`: 4.57 / 3.32s.
     "tests/unit/test_the_page_ids_are_unique.py",  #  4.6s
     # Round 158, tiered on the track: one single-process run alone.
-    # `UX-1185`: 9.60s.
-    "tests/unit/test_a_pager_continues_the_view.py",  #  9.6s
+    # `UX-1185`: 9.60s; its pager-reset residue, merged tree: 10.29 / 10.33 / 10.39s.
+    "tests/unit/test_a_pager_continues_the_view.py",  # 10.3s
     # `UX-1190`: 8.31s.
     "tests/unit/test_a_sortable_header_is_a_button.py",  #  8.3s
     # `UX-1189`: 8.48s.
@@ -1124,10 +1124,11 @@ MEDIUM = (
     "tests/unit/test_a_key_column_matches_exactly.py",  #  7.2s
     # `UX-1176`: 7.23 / 7.51s.
     "tests/unit/test_a_status_is_announced.py",  #  7.4s
-    # `UX-1177`: 2.63 / 2.70s.
-    "tests/unit/test_jump_finds_what_the_rail_lists.py",  #  2.7s
-    # `UX-1179`: 11.51 / 11.84 / 11.68s, the 1,202-element page built in it.
-    "tests/unit/test_print_and_find_reach_the_content.py",  # 11.7s
+    # `UX-1177`: 2.63 / 2.70s; its Jump-lands residue, merged tree: 9.75 / 9.70 / 9.73s.
+    "tests/unit/test_jump_finds_what_the_rail_lists.py",  #  9.7s
+    # `UX-1179`: 11.51 / 11.84 / 11.68s, the 1,202-element page built in it;
+    # its card-Jump residue, merged tree: 13.57 / 13.57 / 13.38s.
+    "tests/unit/test_print_and_find_reach_the_content.py",  # 13.5s
     # Round 147, tiered on the merged tree: three single-process runs
     # alone each (setup+call+teardown).
     # `UX-1083`: 4.17 / 4.08 / 4.23s.

@@ -646,6 +646,30 @@ pairing for every merged row from round 103 on.
 | 157 | verifier | sonnet | verifier: pass 2, 7 of 7 PASS on UX-1169..UX-1175 | — | — | ~15m | see round-157 | cost: resumed for 1169..1175; residue cli.py:1416 spaced hyphen and "1.5s" in the marginal gate message, the drawing-values clip rule unguarded (129 tests green without it) |
 | 157 | walker | sonnet | walker: 5 new defects, 9 pre-existing | ~190k | — | ~35m | see round-157 | cost: sandbox refused # and brace blocks; UX-1175 layout diff zero style differences (walk157-findings.md) |
 | 157 | closer | sonnet | closer: UX-1169..UX-1175, UX-1176..UX-1181 filed | — | — | — | see round-157 | — |
+| 158 | filer | opus | filer: the data-exploration review filed as UX-1182..UX-1193 | — | — | — | see round-158 | cost: owner decisions D1-D4 recorded as Decisions; 8a531cbb |
+| 158 | architect | opus | architect: group A, UX-1181 UX-1182 UX-1183 | — | — | — | see round-158 | cost: shaped at 8a531cbb, read only (arch158/A.md) |
+| 158 | architect | opus | architect: group B, UX-1184 1185 1186 1189 1190 1191 | — | — | — | see round-158 | cost: shaped at 8a531cbb, read only (arch158/B.md) |
+| 158 | architect | opus | architect: group C, UX-1176..1180 1187 1188 1192 1193 | — | — | — | see round-158 | cost: shaped at 8a531cbb, read only (arch158/C.md) |
+| 158 | implementer | sonnet | implementer: A2 UX-1181 one page-half instrument | — | — | ~12m | see round-158 | cost: page net 0; test_a_page_half_is_read_once.py stays small; 4 mutations red; _halves re-based in test_the_exports_data_half_has_a_budget.py |
+| 158 | implementer | opus | implementer: A1 UX-1182 gen-synthetic --workload binaries | ~100k | — | ~35m | see round-158 | cost: tests.pages.heavy_binary_run; 112 elements, top-8 200-500 binaries; tiers row owed; 8 mutations red |
+| 158 | implementer | sonnet | implementer: C4 UX-1178 the narrow page keeps its place | ~100k | — | ~45m | see round-158 | cost: +234 B; re-based test_focus_keeps_the_reading_position.py with a 600 ms wait; the Expand-all landing pulled a scrolling reader back (fixed at integration, bbac8143) |
+| 158 | implementer | opus | implementer: C2 UX-1188 the compare chapter is one table | ~150k | — | ~60m | see round-158 | cost: xl_both +27 controls (913), +818 px (42,855), +28 B; Change cells lack a + sign; guard fixture 12.6 s |
+| 158 | implementer | sonnet | implementer: C5 UX-1180 values and console | — | — | — | see round-158 | cost: +~430 B; test_a_value_is_what_it_names.py MEDIUM; console guard gained an 8th boot; bga:instant hint; 5 mutations red |
+| 158 | implementer | opus | implementer: C3 UX-1192 a mark says its value | ~185k | — | ~75m | see round-158 | cost: +732 B; titles 115/50/132; UNRESOLVABLE 80 to 81; views.js/element.js drawings untitled (residue); dev_sizes --adopt failed pylint |
+| 158 | implementer | opus | implementer: B2 UX-1184 UX-1186 share column and keyed tables | ~230k | — | ~2h | see round-158 | cost: +848 B; xl_both controls +79 (965), height +171; UNRESOLVABLE 80 to 82; serial_chains Duration to Total; rendered strings regenerated |
+| 158 | implementer | opus | implementer: B1 UX-1185 UX-1190 UX-1189 pager, sort, copy | ~270k | — | 2h40m | see round-158 | cost: +1,167 B; controls 895 after consolidation; height +1,037 (consolidation_candidates unrolled by D1); small bound 38,200 to 38,400 (D1) |
+| 158 | implementer | opus | implementer: A3 UX-1193 UX-1183 UX-1187 (partial) | ~310k | — | 2.5h | see round-158 | cost: +420 B; Blocks list held, golden deep-leaf share 0.5193 to 0.5226 over 0.52; card paging of binaries dropped (words over) |
+| 158 | integrator | opus | integrator: waves 1-2 merged, head 79aa4520 | — | — | — | see round-158 | cost: container restart mid-integration, resumed at df55fc8b; holds A1 lint, B1 label, C3 print golden, C5 vocabulary, styleguide rows, A3 factory; xl_both controls 1,006/1,020, height 43,706/44,629 |
+| 158 | integrator | opus | integrator: fix pass, head 9e9ef410 | — | — | — | see round-158 | cost: push-check green; page 148,380 B; xl_both 43,730/44,629 px, 1,007/1,020 controls |
+| 158 | implementer | opus | implementer: D2 UX-1187 Blocks list | ~110k | — | 1.2h | see round-158 | cost: +96 B; depth bound 0.52 to 0.53 default taken; test_an_element_view_answers_whole.py 4.5 s to 16 s; +N more never drawn on a real page (residue) |
+| 158 | implementer | opus | implementer: D1 UX-1191 a key column matches exactly | ~215k | — | 1h50m | see round-158 | cost: +1,283 B; controls -9; retired test_a_capped_table_filters_what_it_sorts.py; element-view uid box overflows at 390 (residue) |
+| 158 | implementer | opus | implementer: D3 UX-1176 UX-1177 UX-1179 | ~300k | — | 3.5h | see round-158 | cost: +1,717 B; edited OPEN_EVERY_DOOR_JS; opened SQL paste overflows .investigate at 390 (residue); real Ctrl+F unguarded |
+| 158 | verifier | sonnet | verifier: VERIFY-2 UX-1176..1181 1191..1193, 8 PASS 1 FAIL | — | — | — | see round-158 | cost: UX-1179 FAIL, Jump on an unmounted element lands ~700 px past a height-0 card; #handoff-refusal empty status; badge of 4,057; binary: make no hint |
+| 158 | verifier | sonnet | verifier: VERIFY-1 UX-1182..1190, 9 PASS | — | — | — | see round-158 | cost: by_binary title; serial_chains Top 10 by Rank; <=10-row tables unsortable after UX-1190; binary_cost strip label 4,057 values |
+| 158 | session | opus | session: mutation check, 18 of 18 red | — | — | — | see round-158 | cost: UX-1193 by hand, the scripted undo partial (mut158.log) |
+| 158 | walker | sonnet | walker: 17 new findings, 6 pre-existing, task walk 3 yes 1 half 1 wrong | — | — | — | see round-158 | cost: walk158-findings.md; op:BUILD > 60s answers from the share table |
+| 158 | implementer | opus | residue pass: UX-1179 UX-1177 UX-1185 UX-1183, head b710be58 | — | — | — | see round-158 | cost: 474f4eb3 1901e8a7 c0c4c2c2 b710be58; push-check green; test_jump_finds_what_the_rail_lists.py 2.7 s to 10 s |
+| 158 | closer | opus | closer: UX-1176..UX-1193, UX-1194..UX-1205 filed | — | — | — | see round-158 | cost: filing 12 rows from the walk; tiers re-timed (jump 9.7 s, print 13.5 s, pager 10.3 s) |
 
 Round 101's four tracks are **not** here: this session could not
 identify their transcripts with certainty after a context rebuild, and
@@ -658,7 +682,7 @@ committed cleanly once told to run in the foreground. Three of the five
 left a derived figure or a §6 context-map row behind - the same class
 the round itself was about, arriving in the tracks' own work.
 
-What the six hundred and twenty-nine rows already say: a researcher that reads a document
+What the six hundred and fifty-three rows already say: a researcher that reads a document
 whole costs 100-180k; a walker that drives every control costs 336k;
 the two cuts cost a re-run each. The `walk` and `design-review`
 skills fix the report shape so the next rows are smaller, and the

@@ -2109,6 +2109,7 @@ lives in `agent-runs.md`'s rows, counted per round from there.
 | [155](../audits/round-155.md) | the round-154 walk's seven rows fixed - `UX-1154`-`UX-1160`, seven tracks merged (34 B over the page budget recovered to 255 B under, 6 reds fixed), one verifier hold recorded; the walk's residue filed as `UX-1161`-`UX-1167`, the last asking the owner about the 150,000 B budget |
 | [156](../audits/round-156.md) | the round-155 walk's seven rows fixed - `UX-1161`-`UX-1167`, seven tracks merged, the page budget raised to 160,000 B on the owner's call, one suite flake traced and fixed as `UX-1168`; the walk's residue filed as `UX-1169`-`UX-1175` |
 | [157](../audits/round-157.md) | the round-156 walk's seven rows fixed - `UX-1169`-`UX-1175`, seven tracks merged (8 merged-tree reds fixed in a four-commit pass, the page half 151,228 B to 144,196 B), a chapter-row press at 390 keeps the rail open for J2; the walk's residue filed as `UX-1176`-`UX-1181` |
+| [158](../audits/round-158.md) | the data-exploration review and round 157's residue - `UX-1176`-`UX-1193`, eighteen rows in three waves (a container restart mid-integration, a verifier FAIL on `UX-1179` fixed in a residue pass, 18 of 18 guards red on undo); the review's five tasks now 3 answered, 1 half, 1 wrong; the walk's residue filed as `UX-1194`-`UX-1205` |
 
 ## Verification Log
 

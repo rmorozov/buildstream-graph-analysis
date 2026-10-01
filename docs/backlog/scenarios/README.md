@@ -30,24 +30,18 @@ task file, which is the only place it ever lived twice.
 | UX-1014 | [the "safe cap plus auto" default is measured on more shapes and hosts before it is anyone's default](UX-1014-the-builders-and-auto-default-is-measured-on-more-shapes-and-hosts.md) | capture | High | R4, R5 | 🔴 Not Started |
 | UX-1134 | [`--jobserver auto` with no plan widens a memory-bound giant into the OOM killer](UX-1134-auto-oom-kills-a-memory-bound-giant-with-no-plan.md) | capture | High | R4, R5 | 🔴 Not Started |
 | UX-1040 | [a paired reading decides whether implementers move to opus at low effort](UX-1040-a-paired-reading-decides-the-implementers-model.md) | guards | Medium | every round's implementer spend | 🔴 Not Started |
-| UX-1176 | [announcements after UX-1169 and UX-1170 do not reach a screen reader](UX-1176-announcements-after-ux-1169-and-ux-1170-do.md) | viewer | Low | R1 | 🔴 Not Started |
-| UX-1177 | [Jump and the rail disagree about what a level fold and a preset are, after UX-1173](UX-1177-jump-and-the-rail-disagree-about-what-a.md) | viewer | Low | R1 | 🔴 Not Started |
-| UX-1178 | [layout and history residue at 390 and after Expand all](UX-1178-layout-and-history-residue-at-390-and-after.md) | viewer | Low | R1 | 🔴 Not Started |
-| UX-1179 | [print and find-in-page lose content the page has](UX-1179-print-and-find-in-page-lose-content-the.md) | viewer | Low | R1 | 🔴 Not Started |
-| UX-1180 | [values and console: a zero-length ratio, an epoch as hours, a tooltip-only explanation, a spaced hyphen, seven warnings](UX-1180-values-and-console-a-zero-length-ratio-an.md) | viewer | Low | R1 | 🔴 Not Started |
-| UX-1181 | [two page-half instruments disagree by 169 B, and two tests still count characters](UX-1181-two-page-half-instruments-disagree-by-169-b.md) | guards | Medium | R1 | 🔴 Not Started |
-| UX-1182 | [a synthetic example runs hundreds of fake binaries per element, drawn from named distributions](UX-1182-a-synthetic-example-runs-hundreds-of-fake-binaries.md) | capture | High | R1 | 🔴 Not Started |
-| UX-1183 | [a traced element's binaries reach the page whole or counted](UX-1183-a-traced-element-s-binaries-reach-the-page.md) | capture | High | R1 | 🔴 Not Started |
-| UX-1184 | [the task table's share column says it is a share, not a duration](UX-1184-the-task-table-s-share-column-says-it.md) | viewer | High | R1 | 🔴 Not Started |
-| UX-1185 | [paging continues the ranking, and the copy label follows the page](UX-1185-paging-continues-the-ranking-and-the-copy-label.md) | viewer | High | R1 | 🔴 Not Started |
-| UX-1186 | [the element, task and binary tables join Focus, Inspect and the jump box](UX-1186-the-element-task-and-binary-tables-join-focus.md) | viewer | High | R1 | 🔴 Not Started |
-| UX-1187 | [every element view carries duration and level, and the card lists what an element blocks, bounded](UX-1187-every-element-view-carries-duration-and-level-and.md) | viewer | High | R1 | 🔴 Not Started |
-| UX-1188 | [the compare chapter states how many elements moved and offers them as a bounded, filterable table](UX-1188-the-compare-chapter-states-how-many-elements-moved.md) | viewer | Medium | R1 | 🔴 Not Started |
-| UX-1189 | [Copy exports the filtered population, not the page](UX-1189-copy-exports-the-filtered-population-not-the-page.md) | viewer | Medium | R1 | 🔴 Not Started |
-| UX-1190 | [table sort is keyboard-reachable, shows its state, and ranks the whole population](UX-1190-table-sort-is-keyboard-reachable-shows-its-state.md) | viewer | Medium | R1 | 🔴 Not Started |
-| UX-1191 | [a key column matches exactly, and a one-op task table says its op once](UX-1191-a-key-column-matches-exactly-and-a-one.md) | viewer | Medium | R1 | 🔴 Not Started |
-| UX-1192 | [table strips and the level profile say their values on hover and survive an outlier](UX-1192-table-strips-and-the-level-profile-say-their.md) | viewer | Low | R1 | 🔴 Not Started |
-| UX-1193 | [the element preset and the latent-heavies section use one population or two names](UX-1193-the-element-preset-and-the-latent-heavies-section.md) | viewer | Low | R1 | 🔴 Not Started |
+| UX-1194 | [op: and a duration threshold meet on the table that holds durations](UX-1194-op-and-a-duration-threshold-meet-on-the.md) | viewer | High | R1 | 🔴 Not Started |
+| UX-1195 | [the filter grammar matches what the page shows: a constant column, the displayed word, the column's name](UX-1195-the-filter-grammar-matches-what-the-page-shows.md) | viewer | High | R1 | 🔴 Not Started |
+| UX-1196 | [a head-and-tail fold prints, copies and jumps to every row it holds, and a short table keeps its sort](UX-1196-a-head-and-tail-fold-prints-copies-and.md) | viewer | High | R1 | 🔴 Not Started |
+| UX-1197 | [the Rows-shown bound holds across Next, sort and the link, and a page step and a sort are announced and named](UX-1197-the-rows-shown-bound-holds-across-next-sort.md) | viewer | Medium | R1 | 🔴 Not Started |
+| UX-1198 | [Focus shows the focused element's row in each keyed table, and a focus link restores the bar](UX-1198-focus-shows-the-focused-element-s-row-in.md) | viewer | Medium | R1 | 🔴 Not Started |
+| UX-1199 | [the element-keyed tables declare their key, and by_binary, binary_cost and serial_chains rank and name their quantity](UX-1199-the-element-keyed-tables-declare-their-key-and.md) | viewer | Medium | R1 | 🔴 Not Started |
+| UX-1200 | [every element card lists what it blocks, as links, with one count](UX-1200-every-element-card-lists-what-it-blocks-as.md) | viewer | Medium | R1 | 🔴 Not Started |
+| UX-1201 | [the compare table says 'both' in words and scales negative durations](UX-1201-the-compare-table-says-both-in-words-and.md) | viewer | Low | R1 | 🔴 Not Started |
+| UX-1202 | [plotted values reach a reader as bounded text, and an empty status is not mounted at rest](UX-1202-plotted-values-reach-a-reader-as-bounded-text.md) | viewer | Low | R1 | 🔴 Not Started |
+| UX-1203 | [the rail's tools and the pager read as one set, and rail Next, Back and the card folds keep their order](UX-1203-the-rail-s-tools-and-the-pager-read.md) | viewer | Low | R1 | 🔴 Not Started |
+| UX-1204 | [the element-view uid box and an opened SQL paste fit at 390, and views.js and element.js drawings carry titles](UX-1204-the-element-view-uid-box-and-an-opened.md) | viewer | Low | R1 | 🔴 Not Started |
+| UX-1205 | [a real capture of fake sleeping binaries under the LD_PRELOAD hook](UX-1205-a-real-capture-of-fake-sleeping-binaries-under.md) | capture | Low | R1 | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

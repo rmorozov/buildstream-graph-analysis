@@ -1,6 +1,6 @@
 # UX-1180: values and console: a zero-length ratio, an epoch as hours, a tooltip-only explanation, a spaced hyphen, seven warnings
 
-**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-157 walk (2026-09-30) | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer, bga/cli.py, bga/structural | **Shape:** mechanical | **Reading:** container
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the round-157 walk (2026-09-30) | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer, bga/cli.py, bga/structural | **Shape:** mechanical | **Reading:** container
 
 **Guard:** `tests/unit/test_a_value_is_what_it_names.py`, `tests/unit/test_the_console_stays_clean.py::test_no_number_renders_from_a_guess`
 

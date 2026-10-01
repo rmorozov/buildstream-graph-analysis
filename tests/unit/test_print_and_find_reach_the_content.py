@@ -137,6 +137,9 @@ _FOLD = r"""
                 rows: rows.filter((tr) => tr.hasAttribute("data-element") && shown(tr)).length,
                 stubs: rows.filter((tr) => tr.classList.contains("fold-row") && shown(tr)).length,
                 buttons: table.querySelectorAll("thead button.th-sort").length };
+  const boxes = [...document.querySelectorAll(".path-box")];
+  out.chain = { total: boxes.length, printed: boxes.filter(shown).length,
+                said: [...document.querySelectorAll("button.path-more")].filter(shown).map((b) => getComputedStyle(b, "::after").content) };
   if (!MEDIA_SCREEN) return out;
   const copy = table.parentNode.querySelector(".table-tools .copy-rows");
   out.label = copy.textContent;
@@ -339,6 +342,13 @@ class TestPrintAndFindReachTheContent:
         for media in ("print", "narrow"):
             got = seen["fold"][media]
             assert got["total"] == 22 and got["rows"] == 22 and got["stubs"] == 0, (media, got)
+
+    def test_print_draws_every_chain_box_or_says_how_many_it_leaves_out(self, seen):
+        # `UX-1210` follow-up: paper printed 9 of 22 boxes under display:none and said nothing.
+        for media in ("print", "narrow"):
+            chain = seen["fold"][media]["chain"]
+            assert chain["total"] == 22, (media, chain)
+            assert chain["printed"] == 22 or any("13" in said for said in chain["said"]), (media, chain)
 
     def test_copy_takes_every_row_the_fold_holds_and_never_the_stub(self, seen):
         got = seen["fold"]["screen"]

@@ -711,6 +711,8 @@ button.chapter-open:hover, button.chapter-open[aria-expanded="true"] {
   /* `UX-1196`: a head-and-tail fold's middle is in the document, so it prints and its stub does not. */
   tr[data-fold-middle] { display: table-row !important; }
   tr.fold-row { display: none !important; }
+  /* `UX-1210`: the chain's folded boxes print; its More button does not. */
+  .path-box[hidden] { display: flex !important; }
 }
 
 /* Collapsed sections keep their heading; everything below it goes.

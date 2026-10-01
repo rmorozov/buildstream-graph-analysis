@@ -2,7 +2,7 @@
 
 **Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-159 walk and verification (2026-10-01) | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical | **Reading:** container
 
-**Guard:** `tests/unit/test_print_and_find_reach_the_content.py` (`test_the_stub_never_sorts_bounds_or_counts`, `test_the_chain_draws_no_more_once_every_box_is_drawn`, `test_no_hidden_node_is_drawn`)
+**Guard:** `tests/unit/test_print_and_find_reach_the_content.py` (`test_the_stub_never_sorts_bounds_or_counts`, `test_the_chain_draws_no_more_once_every_box_is_drawn`, `test_no_hidden_node_is_drawn`, `test_print_draws_every_chain_box_or_says_how_many_it_leaves_out`)
 
 ## Motivation
 
@@ -50,6 +50,8 @@ Deviation to record: the Acceptance's "22 of 22" cannot read so - badgeText prin
 Measured (`hid.py`): elements hidden-but-drawn at rest: macro_micro 0; walk 13, xl_both 13, all `a.path-box`; the :where rule takes each to 0. Height: walk 44,272 -> 44,176 (-96) at 1440, 67,672 -> 67,286 (-386) at 390; xl_both 45,866 -> 45,770 (-96); macro_micro unmoved (a 10-step chain does not fold). Words, controls, nodes unmoved (hidden nodes stay in the document).
 Budget: frees 96 px on xl_both; 0 elsewhere. Code half +160 B.
 
+Follow-up decision (round-160 walk N1): paper printed 9 of 22 chain boxes, the 13 under `:where([hidden])` and More hidden in print. Route: `.path-box[hidden] { display: flex !important; }` in the print block (specificity beats the zero-specificity rule), so paper prints every box; the screen rule is untouched. Rejected: a "13 more, not printed" count on `button.path-more` (paper can hold the whole chain).
+
 ## Outcome
 
 The gap measured, at `50ae5f42` (UX-1211 landed), the 1,202-element two-plane page (`pages.two_plane_run
@@ -89,3 +91,7 @@ The third row's golden and `macro_micro` reds are the retired `.description[hidd
 Re-based: `test_the_chain_folds_and_clicks_are_counted.py::test_the_fold_sits_between_the_two_ends` read the
 stub's index after pressing it; `showAlso` re-appends the held order, which no longer holds the stub, so a pressed
 (hidden) stub now sits first. The claim is about the fold at rest, so `foldedAt` is read before the press (6).
+
+Follow-up (round-160 walk N1), print on the 1,202-element page, A4 794 and 390 px: before, 9 of 22 `.path-box` drawn and no
+note; after, 22 of 22. Mutation: delete the print rule -> `test_print_draws_every_chain_box_or_says_how_many_it_leaves_out`
+red (`9 == 22`), 1 failed, 23 passed; restored, 24 passed. Deviation: none.

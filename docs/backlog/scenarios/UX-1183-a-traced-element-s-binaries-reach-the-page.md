@@ -111,6 +111,11 @@ volume, opened, 1440x900 (after UX-1193 -> after this):
 | M4 | schemas.py: `wall_us` dropped from `binary_cost` COLUMNS | `..._and_the_table_draws_it`, 1 failed |
 | M5 | json.py: `binaries` ignored, rows from the rankings | 5 failed |
 | M6 | element.js: the card shows the five cheapest | `..._card_the_element`, 1 failed |
+| M7 | (round-158 residue) element.js as at `43397b70`: `href="#binary_cost"`, no filter | `test_the_more_link_lands_on_binary_cost_filtered_to_the_element`, 1 failed, 6 passed |
+| M8 | (residue) the link's click handler dropped | the same, 1 failed, 6 passed |
+| M9 | (residue) the href without its `f.binary_cost` | the same (opened fresh), 1 failed, 6 passed |
 
 Reverted from the saved copies: 6 passed. A first M6, "rank the card by calls", passed. It is
 equivalent on this page, because the five costliest all ran 3 calls, the most any binary ran.
+
+**Residue (round 158, walk N1).** The card's "+494 more" was `href="#binary_cost"`: on the heavy 1,202 page `layer16/mod006`'s link landed on `25 of 11,683`, filter empty, first row `layer00/mod000.bst`. The link now carries `f.binary_cost=element:<uid>` in its fragment and a press types the same filter into the table: `25 of 499 matched, of 11,683`, every mounted row `layer16/mod006.bst`, section top 60. The new clause presses the link on the widest element's card and opens its href fresh, reading the filter, the matched count against the report's rows for that element, the mounted rows' elements and the landed top: `7 passed in 6.05s`.

@@ -16,7 +16,8 @@
 import { identify, labelFor } from "./controls.js";
 import { plural } from "./tables.js";
 import { COLUMNS, READER_LABELS, TERMS, childNode, el, findingLink, hintsOf, title } from "./format.js";
-import { buildTable } from "./structured.js";
+import { buildTable, filterSection } from "./structured.js";
+import { joinHash } from "./viewstate.js";
 import {
   SVG, svg, seconds, mib, bar, OVERVIEW_SHOWN, elementAnchor,
 } from "./primitives.js";
@@ -702,16 +703,18 @@ function elementSection(record, places, investigate, format, bounded = null) {
     section.append(fold);
   }
 
-  // UX-1183: its five costliest binaries; `binary_cost` holds the rest, counted here.
+  // UX-1183: its five costliest binaries; the rest is `binary_cost` filtered to it, in the link and on a press.
   const ran = record.binaries ?? [], top = ran.slice(0, 5), more = ran.length - 5;
+  const only = new URLSearchParams({ "f.binary_cost": `element:${uid}` });
+  const rest = more > 0 ? el("a", { href: joinHash("binary_cost", only.toString()) }, `+${more} more`) : null;
+  rest?.addEventListener?.("click", () => filterSection(document, "binary_cost", only.get("f.binary_cost")));
   if (ran.length > 1) {
     const { table, tools } = buildTable("binaries", top, { [COLUMNS]: ["binary",
       { key: "calls", title: "Calls", quantity: "count" }, { key: "cpu_us", title: "CPU", quantity: "duration_us" },
       { key: "wall_us", title: "Wall", quantity: "duration_us" }] });
     section.append(el("details", { "data-fold": "binaries", "data-levels": "1", "data-rows": top.length },
       el("summary", {}, `Binaries · 1 level, ${plural(top.length, "row")}`), tools, table,
-      more > 0 ? el("p", { class: "muted", "data-more": more },
-        el("a", { href: "#binary_cost" }, `+${more} more`)) : null));
+      rest && el("p", { class: "muted", "data-more": more }, rest)));
   }
 
   // `UX-302`'s mapping: a short scalar array is an inline list, not a

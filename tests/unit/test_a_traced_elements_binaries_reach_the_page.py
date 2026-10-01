@@ -3,7 +3,8 @@
 Measured before, on `pages.heavy_binary_run` (112 elements, 8 of them
 exec'ing 214-499 distinct binaries): `binary_cost` kept the top 5 by CPU
 and the top 5 by count, at most 10 rows per element, so `layer02/mod006`
-showed 5 of its 499 binaries.
+showed 5 of its 499 binaries. The card's "+N more" lands on
+`binary_cost` filtered to the element, pressed and opened fresh.
 """
 
 import base64
@@ -100,6 +101,41 @@ def test_the_page_counts_the_capture_and_the_card_the_element(heavy):
         (row for row in heavy["report"]["binary_cost"] if row["element"] == widest), key=lambda r: r["cpu_us"]
     )
     assert (seen["shown"], seen["more"], seen["first"]) == (5, str(whole - 5), costliest["binary"]), seen
+
+
+#: The card's "+N more" pressed: what `binary_cost` then holds, and where it sits.
+_FOLLOW = """(async () => {
+  const fold = document.querySelector('section[data-element="%s"] details[data-fold="binaries"]');
+  fold.open = true;
+  const link = fold.querySelector(':scope > p[data-more] a');
+  link.click();
+  await new Promise((done) => setTimeout(done, 1200));
+  return { href: link.getAttribute('href'), ...%s };
+})()"""
+
+_TABLE = """(() => {
+  const section = document.getElementById('binary_cost');
+  const rows = [...section.querySelectorAll('table[data-table="binary_cost"] > tbody > tr')].filter((tr) => !tr.hidden);
+  return { filter: section.querySelector('input.table-filter')?.value ?? null,
+           badge: section.querySelector('.badge')?.textContent ?? '',
+           elements: [...new Set(rows.map((tr) => tr.getAttribute('data-element')))], rows: rows.length,
+           top: Math.round(section.getBoundingClientRect().top), hash: location.hash };
+})()"""
+
+
+@pytest.mark.skipif(find_chrome() is None, reason=NO_BROWSER)
+def test_the_more_link_lands_on_binary_cost_filtered_to_the_element(heavy):
+    widest = max(heavy["log"], key=lambda uid: len(heavy["log"][uid]))
+    held = sum(row["element"] == widest for row in heavy["report"]["binary_cost"])
+    anchor = "element-" + re.sub(r"[^\w-]+", "-", widest)
+    with Browser(find_chrome()) as browser:
+        pressed = browser.measure(f"{heavy['uri']}#{anchor}", _FOLLOW % (widest, _TABLE), 1440, 900)
+        # The link itself, opened fresh: a query string makes it a new document.
+        fresh = browser.measure(f"{heavy['uri']}?fresh{pressed['href']}", _TABLE, 1440, 900)
+    for seen in (pressed, fresh):
+        assert seen["filter"] == f"element:{widest}" and seen["elements"] == [widest], seen
+        assert seen["badge"].startswith(f"25 of {held:,} matched"), (seen["badge"], held)
+    assert pressed["hash"].startswith("#binary_cost") and abs(pressed["top"] - 60) <= 8, pressed
 
 
 @pytest.mark.skipif(find_chrome() is None, reason=NO_BROWSER)

@@ -94,6 +94,8 @@ touching files   47 files naming structured/tables/viewstate + budget + compress
 | `relabel = label` removed | the copy label counts the mounted rows (last page, 2 rows) | 1 failed, 4 passed |
 | `UNROLL_AT = 40` | eighty rows or fewer open whole | 1 failed, 4 passed |
 | all reverted | - | 5 passed |
+| (round-158 residue) the filter's `rewind?.()` call removed | a filter edit returns the pager to its first rows | 1 failed, 5 passed |
+| (round-158 residue) `data-offset` written at offset 0 | a filter edit returns the pager to its first rows (`p.` in the link) | 1 failed, 5 passed |
 
 Re-based: the small class's opened bound 38,200 -> 38,400 (D1, styleguide §3e);
 `test_the_max_jobs_advice_is_one_level.py` 45 -> 85 rows and
@@ -104,3 +106,5 @@ badge and no longer needs macro_micro to open bounded;
 `test_the_report_has_two_panes.py` reads the new `openingBound` line.
 xl_both is not 0 px as the architect priced: `consolidation_candidates`
 (75 rows) unrolls, +1,129 px, 334 px of the 43,500 left.
+
+**Residue (round 158, walk N3).** A filter edit kept the pager offset. Against `1901e8a7` the new clause reads `rows 26-50 of 60` after `layer1`, Next, `layer12/` on the 1,202 page's `elements` (`1 failed, 5 passed`); on the heavy 1,202 page `binary:lognormal*`, Next, `binary:lognormal-308` read `rows 26-31 of 31`, `6 of 31 matched`, and clearing read `rows 26-50 of 11,683` with `p.binary_cost=25`. Any input on the box now rewinds the pager to offset 0, and offset 0 writes no `p.`: `rows 1-25 of 31`, first row `lognormal-308`; cleared, `rows 1-25 of 11,683`; neither link holds `p.`. Paging stays on, so `test_a_filter_is_a_property_of_a_table.py`'s `rows 1-1 of 1` and its disabled Next hold. `6 passed`, and the two files together `17 passed in 21.94s`.

@@ -927,6 +927,7 @@ export function interrogable(table, specs, total, depth = 0) {
   let pagerRefresh = null;
   let relabel = null;
   let restart = null;
+  let rewind = null;
   let shape = null;
   const few = total <= FEW_ROWS;
   const refresh = () => {
@@ -982,6 +983,7 @@ export function interrogable(table, specs, total, depth = 0) {
       unread.textContent = bad ? `${query.unread.map((c) => `\u201c${c}\u201d`).join(", ")} `
         + "is not a threshold this table can read, so it is not applied." : "";
       if (bad && !unread.parentNode) box.after?.(unread);
+      rewind?.();
       refresh();
     });
     // The density strip's click (`shapes.js`) writes its threshold here, replacing a bare one.
@@ -1070,8 +1072,9 @@ export function interrogable(table, specs, total, depth = 0) {
           : `rows ${offset + 1}-${end} of ${denom.toLocaleString("en-US")}`;
         prev.disabled = offset <= 0;
         next.disabled = end >= denom;
-        // `UX-1185`: the fragment's `p.` - `viewstate.js` reads it here and writes it back through `bga:page`.
-        pager?.setAttribute?.("data-offset", String(offset));
+        // `UX-1185`: the fragment's `p.` - `viewstate.js` reads it here and writes it back through `bga:page`; none on the first rows.
+        if (offset) pager?.setAttribute?.("data-offset", String(offset));
+        else pager?.removeAttribute?.("data-offset");
       };
       const step = () => {
         paging = true;
@@ -1091,6 +1094,11 @@ export function interrogable(table, specs, total, depth = 0) {
         offset = paging ? offset + size : (state.top?.n ?? size);
         step();
       });
+      // `UX-1185`: a filter edit names a new population, so the pager starts at its front.
+      rewind = () => {
+        offset = 0;
+        if (state.top) state.top = { ...state.top, offset: 0 };
+      };
       pager = el("span", { class: "table-pager" }, prev, position, next);
       pager.addEventListener?.("bga:page", () => {
         offset = Math.max(0, Number(pager.getAttribute("data-offset")) || 0);

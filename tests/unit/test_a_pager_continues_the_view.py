@@ -4,7 +4,8 @@ On the 1,202-element two-plane page, every paged table's pages walk its
 opening ranking: page 2's first row is rank 26 of the opening sort, the
 rows over all pages are the whole population in that order, the copy
 label counts the mounted rows at every step, and a reload with the
-fragment lands on the same page. On `golden` and `macro_micro` a table
+fragment lands on the same page. Editing or clearing the filter after a
+step returns to the first rows, with `p.` gone from the link. On `golden` and `macro_micro` a table
 of at most `UNROLL_AT` (80) rows opens whole - `macro_micro`'s 71-row
 `binary_cost` among them. The heavy-binary page (`UX-1182`) is left to
 the next wave.
@@ -158,6 +159,49 @@ def test_a_reload_with_the_fragment_keeps_the_page(browser, big, walked):
     # A query string makes it a new document; a hash alone is a same-document navigation.
     reloaded = browser.measure(big + "?reload" + moved["hash"], _RELOADED, 1440, 900)
     assert reloaded[moved["key"]] == moved["position"], reloaded
+
+
+#: A filter, Next, then the filter edited and cleared: the pager position, the badge and the link each time.
+_EDITED = (
+    r"""
+(async () => {
+  """
+    + _OPEN
+    + r"""
+  const turn = () => new Promise((done) => setTimeout(done, 50));
+  const tools = document.querySelector('table[data-table="elements"]').parentNode.querySelector(".table-tools");
+  const box = tools.querySelector("input.table-filter");
+  const read = async () => {
+    await turn();
+    return { position: tools.querySelector(".page-position").textContent,
+             badge: tools.querySelector(".badge").textContent, hash: location.hash };
+  };
+  const type = (text) => { box.value = text; box.dispatchEvent(new Event("input", { bubbles: true })); };
+  type("layer1");
+  tools.querySelector(".page-next").click();
+  const stepped = await read();
+  type("layer12/");
+  const edited = await read();
+  type("");
+  return { stepped, edited, cleared: await read() };
+})()
+"""
+)
+
+
+@pytest.fixture(scope="module")
+def edited(browser, big):
+    return browser.measure(big, _EDITED, 1440, 900)
+
+
+@needs_browser
+def test_a_filter_edit_returns_the_pager_to_its_first_rows(edited):
+    assert edited["stepped"]["position"].startswith("rows 26-50 of "), edited["stepped"]
+    assert "p." in pages.view_query(edited["stepped"]["hash"]), edited["stepped"]
+    for step, of in (("edited", "60"), ("cleared", "1,202")):
+        assert edited[step]["position"] == f"rows 1-25 of {of}", (step, edited[step])
+        assert "p." not in pages.view_query(edited[step]["hash"]), (step, edited[step])
+    assert edited["edited"]["badge"].startswith("25 of 60 matched"), edited["edited"]
 
 
 @pytest.fixture(scope="module")

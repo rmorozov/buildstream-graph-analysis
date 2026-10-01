@@ -13,6 +13,8 @@
 // exported report opened from `file://` may get none at all. A link is
 // the thing a reader already pastes into an issue.
 
+import { ownRows } from "./tables.js";
+
 export const MARKS = ["working", "done", "aside"];
 export const MARK_LABELS = {
   working: "working", done: "done", aside: "set aside",
@@ -33,16 +35,7 @@ const elementNodes = (root) => [...(root.querySelectorAll?.("[data-element]") ??
 export function applyFocus(root, uid) {
   if (!uid) return clearFocus(root);
   root.setAttribute?.("data-focus", uid);
-  for (const node of elementNodes(root)) {
-    const mine = node.getAttribute("data-element") === uid;
-    if (mine) node.removeAttribute?.("data-dimmed");
-    else node.setAttribute("data-dimmed", "true");
-  }
-  // `UX-1199`: a row keyed by a list of elements is the uid's when the list holds it.
-  for (const node of root.querySelectorAll?.("[data-elements]") ?? []) {
-    if (node.getAttribute("data-elements").split(" ").includes(uid)) node.removeAttribute?.("data-dimmed");
-    else node.setAttribute("data-dimmed", "true");
-  }
+  dimTo(root, uid);
   for (const section of root.querySelectorAll?.("section[data-section]") ?? []) {
     // `UX-1186`: a declared population dims, never folds.
     const mentions = section.getAttribute("data-element") === uid
@@ -52,18 +45,60 @@ export function applyFocus(root, uid) {
     if (mentions) section.removeAttribute?.("data-unfocused");
     else section.setAttribute("data-unfocused", "true");
   }
+  // `UX-1198`: every way in (button, palette, link, Escape) is answered by one listener.
+  root.dispatchEvent?.(new Event("bga:focus"));
   return uid;
 }
 
 export function clearFocus(root) {
   root.removeAttribute?.("data-focus");
-  for (const node of root.querySelectorAll?.("[data-element], [data-elements]") ?? []) {
-    node.removeAttribute?.("data-dimmed");
-  }
+  dimTo(root, null);
   for (const section of root.querySelectorAll?.("section[data-section]") ?? []) {
     section.removeAttribute?.("data-unfocused");
   }
+  root.dispatchEvent?.(new Event("bga:focus"));
   return null;
+}
+
+/** Dim every node in `scope` that is not `uid`'s; `null` undims them all. */
+function dimTo(scope, uid) {
+  for (const node of scope.querySelectorAll?.("[data-element], [data-elements]") ?? []) {
+    const one = node.getAttribute("data-element");
+    // `UX-1199`: a row keyed by a list of elements is the uid's when the list holds it.
+    const mine = !uid || (one ? one === uid : String(node.getAttribute("data-elements")).split(" ").includes(uid));
+    if (mine) node.removeAttribute?.("data-dimmed");
+    else node.setAttribute("data-dimmed", "true");
+  }
+}
+
+/** `UX-1198`: each filter box focus drove, to the reader's text and pager offset it replaced. */
+export const DRIVEN = new WeakMap();
+
+/** `UX-1198`: each element- or task-keyed table holding `uid` filters to its row; `null` hands each box back. */
+export function driveFilters(root, uid) {
+  for (const table of root.querySelectorAll?.("table[data-keyed-by]") ?? []) {
+    const tools = table.parentNode?.querySelector?.(".table-tools");
+    const box = tools?.querySelector?.("input.table-filter");
+    if (!box) continue;
+    const kinds = table.getAttribute("data-keyed-by").split(" ");
+    const holds = Boolean(uid) && (kinds.includes("element") || kinds.includes("task_uid"))
+      && ownRows(table).some((tr) => tr.getAttribute("data-element") === uid);
+    let held = DRIVEN.get(box);
+    // A reader who typed over the driven text owns the box again.
+    if (held && box.value !== held.drove) { DRIVEN.delete(box); held = null; }
+    if (!holds && !held) continue;
+    const pager = tools.querySelector?.(".table-pager");
+    const drove = `element:${uid}`;
+    if (holds) DRIVEN.set(box, { ...(held ?? { value: box.value, offset: pager?.getAttribute("data-offset") ?? null }), drove });
+    else DRIVEN.delete(box);
+    box.value = holds ? drove : held.value;
+    box.dispatchEvent(new Event("input", { bubbles: true }));
+    if (!holds && held.offset && pager) {
+      pager.setAttribute("data-offset", held.offset);
+      pager.dispatchEvent(new Event("bga:page"));
+    }
+    dimTo(table, uid);
+  }
 }
 
 export function focusedElement(root) {

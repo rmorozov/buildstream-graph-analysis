@@ -199,12 +199,18 @@ def _report_in(page):
 
 
 @pytest.fixture(scope="module")
-def ranked(tmp_path_factory, heavy):
+def walk(tmp_path_factory):
+    """The walk's 1,202-element two-plane page."""
     import tools.bga_view as view
 
     into = tmp_path_factory.mktemp("ux1199")
-    walk = into / "walk.html"
-    view.export(str(pages.two_plane_run(into / "walk", ("--layers", "20", "--width", "60"), name="walk")), str(walk))
+    page = into / "walk.html"
+    view.export(str(pages.two_plane_run(into / "walk", ("--layers", "20", "--width", "60"), name="walk")), str(page))
+    return page
+
+
+@pytest.fixture(scope="module")
+def ranked(heavy, walk):
     out = {}
     with Browser(find_chrome()) as browser:
         for label, page in {"walk": walk, "heavy": heavy[1]}.items():
@@ -250,3 +256,113 @@ class TestAListKeyedTableAndARankAreDeclared:
             assert len(chains) > 10, (label, len(chains))
             assert got["page"]["rankQuantity"] is None, label
             assert sorted(got["page"]["top10"]) == list(range(1, 11)), (label, got["page"]["top10"])
+
+
+# `UX-1198`: Focus filters each keyed table to the uid's row, by every way in, and unfocus hands it back.
+_KEYS = ["elements", "wall_clock_share_us", "binary_cost"]
+_FOCUSED = r"""
+(async () => {
+  const turn = () => new Promise((done) => setTimeout(done, 120));
+  const table = (key) => document.querySelector(`table[data-table="${key}"]`);
+  const tools = (key) => table(key)?.parentNode.querySelector(".table-tools");
+  const own = (key) => [...(table(key)?.querySelectorAll(":scope > tbody > tr[data-element]") ?? [])];
+  const uid = __UID__ ?? (own("binary_cost")[0] ?? own("elements").at(-1)).dataset.element;
+  const read = () => ({
+    bars: document.querySelectorAll("[data-role=focus-bar]").length,
+    investigations: document.querySelectorAll("[data-role=focus-investigation]").length,
+    tables: Object.fromEntries(__KEYS__.filter(table).map((key) => [key, {
+      mine: own(key).filter((tr) => tr.dataset.element === uid && tr.dataset.dimmed !== "true").length,
+      others: own(key).filter((tr) => tr.dataset.element !== uid && tr.dataset.dimmed !== "true").length,
+      box: tools(key)?.querySelector("input.table-filter")?.value ?? null,
+      offset: tools(key)?.querySelector(".table-pager")?.getAttribute("data-offset") ?? null,
+    }])),
+    query: [...new URLSearchParams(atob(location.hash.split("~")[1] ?? ""))],
+  });
+  if (__RELOAD__) return read();
+  const next = tools("elements")?.querySelector(".page-next");
+  next?.click();
+  await turn();
+  const report = document.getElementById("report");
+  const pristine = report.innerHTML;
+  const rest = read();
+  const atRest = Object.fromEntries(__KEYS__.filter(table).map((key) => [key,
+    own(key).some((tr) => tr.dataset.element === uid)]));
+  const box = document.getElementById("jump");
+  box.value = uid;
+  box.dispatchEvent(new Event("input", { bubbles: true }));
+  await turn();
+  document.querySelector('.jump-hits button[data-action="focus"]')?.click();
+  await turn();
+  const focused = read();
+  const hash = location.hash;
+  document.querySelector("[data-role=focus-bar] button.focus-clear")?.click();
+  await turn();
+  return { uid, paged: Boolean(next), atRest, rest, focused, hash, cleared: read(), restored: report.innerHTML === pristine };
+})()
+"""
+
+
+def _past_the_first_page(page):
+    """An element `binary_cost` holds, last by duration, so `elements` does not mount it at rest."""
+    report = _report_in(page)
+    durations = report["elements"]["element_durations"]
+    costed = {row["element"] for row in report["binary_cost"]}
+    return min(costed, key=lambda uid: (durations.get(uid, 0), uid))
+
+
+@pytest.fixture(scope="module")
+def focused(tmp_path_factory, heavy, walk):
+    uris = pages.pages(tmp_path_factory, prefix="ux1198", labels=["golden", "macro_micro"])
+    built = {"heavy": heavy[1], "walk": walk}
+    uris.update({label: page.as_uri() for label, page in built.items()})
+    out = {}
+    with Browser(find_chrome()) as browser:
+        for label, uri in uris.items():
+            script = _FOCUSED.replace("__KEYS__", json.dumps(_KEYS))
+            uid = _past_the_first_page(built[label]) if label in built else None
+            pressed = browser.measure(uri, script.replace("__UID__", json.dumps(uid)).replace("__RELOAD__", "false"))
+            again = script.replace("__UID__", json.dumps(pressed["uid"])).replace("__RELOAD__", "true")
+            # `?link`: a new document, where the bare hash would only be a same-document hashchange.
+            link = f"{uri}?link{pressed['hash']}"
+            out[label] = {"uid": pressed["uid"], "pressed": pressed, "reloaded": browser.measure(link, again)}
+    return out
+
+
+@needs_browser
+class TestFocusShowsTheFocusedRow:
+    def test_the_palette_s_focus_mounts_the_row_in_each_keyed_table(self, focused):
+        for label, got in focused.items():
+            seen = got["pressed"]["focused"]
+            assert seen["bars"] == 1 and seen["investigations"] == 1, (label, seen)
+            assert {"elements", "wall_clock_share_us"} <= set(seen["tables"]), (label, seen["tables"])
+            for key, table in seen["tables"].items():
+                assert table["mine"] >= 1 and table["others"] == 0, (label, got["uid"], key, table)
+
+    def test_the_row_was_not_mounted_before(self, focused):
+        """The two big pages' uid is off `elements`' mounted rows, so the clause above is not met at rest."""
+        for label in ("heavy", "walk"):
+            assert focused[label]["pressed"]["atRest"]["elements"] is False, (
+                label,
+                focused[label]["pressed"]["atRest"],
+            )
+        assert focused["walk"]["pressed"]["paged"], "the walk page's elements table has no pager to restore"
+
+    def test_the_link_carries_the_focus_not_the_filter_it_drove(self, focused):
+        """The reader's own filter and pager offset travel; the ones focus drove do not."""
+        for label, got in focused.items():
+            rest, query = got["pressed"]["rest"]["query"], got["reloaded"]["query"]
+            own = sorted(entry for entry in rest if entry[0][:2] in ("f.", "p."))
+            assert sorted(entry for entry in query if entry[0][:2] in ("f.", "p.")) == own, (label, rest, query)
+            assert ["focus", got["uid"]] in query, (label, query)
+
+    def test_a_focus_link_draws_the_bar_and_the_row(self, focused):
+        for label, got in focused.items():
+            seen = got["reloaded"]
+            assert seen["bars"] == 1 and seen["investigations"] == 1, (label, seen)
+            assert seen["tables"]["elements"]["mine"] >= 1, (label, seen["tables"]["elements"])
+
+    def test_unfocusing_hands_each_box_back(self, focused):
+        for label, got in focused.items():
+            pressed = got["pressed"]
+            assert pressed["cleared"]["tables"] == pressed["rest"]["tables"], label
+            assert pressed["restored"], f"{label}: focus then clear left #report changed"

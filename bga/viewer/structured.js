@@ -939,6 +939,7 @@ export function interrogable(table, specs, total, depth = 0) {
   let rewind = null;
   let shape = null;
   let rank = null;
+  let resting = null;
   const few = total <= FEW_ROWS;
   // `UX-1197`: the window and a sort other than the opening rank are said in the one live region.
   const view = () => {
@@ -953,8 +954,9 @@ export function interrogable(table, specs, total, depth = 0) {
     pagerRefresh?.();
     relabel?.();
     // UX-1158: the strip draws, and counts, the rows the filter kept; `UX-1170`: none at two or fewer.
-    shape?.replaceWith?.(shape = distributionStrip(table, specs, total, few || state.filtered <= FEW_ROWS,
-                                                   state.kept) ?? el("span"));
+    // `UX-1198`: an emptied box gets the strip it opened with back, its route id unchanged.
+    shape?.replaceWith?.(shape = (narrowed() ? distributionStrip(table, specs, total, few || state.filtered <= FEW_ROWS,
+                                                                 state.kept) : resting) ?? el("span"));
   };
 
   // `UX-349`: **filters appear when the table is long enough to need
@@ -980,7 +982,8 @@ export function interrogable(table, specs, total, depth = 0) {
     // `UX-1179`: Jump reaches the rows a bound detaches, in the key hint's place so it fits at 390.
     placeholder: ["filter", !jumps && keyed && `${keyed.role === "task_uid" ? "op" : keyed.role}:\u2026`,
                   primary && (PLACEHOLDER[primary.quantity] ?? "> 0"), jumps && "or Jump\u2026"].filter(Boolean).join(", "),
-    "aria-label": `Filter rows: ${named}`,
+    // `UX-1198`: born with the state an input writes, so a focus that drives the box and hands it back changes nothing.
+    "aria-label": `Filter rows: ${named}`, "aria-invalid": "false",
     title: "a word matches any cell; column:value that column exactly (value* its start); column > 5s, or a bare > 5s, a threshold",
   }) : null;
   // `UX-1191`: an unreadable threshold is said on the page, and applies nothing.
@@ -1262,7 +1265,7 @@ export function interrogable(table, specs, total, depth = 0) {
   // count of rows; the p50 and p95 ticks are positions and nothing
   // else. A percentile worth printing enters the payload first.
   // `UX-1152` (styleguide §3d): at two rows or fewer `Copy N rows` is the one count.
-  shape = distributionStrip(table, specs, total, few);
+  shape = resting = distributionStrip(table, specs, total, few);
 
   // `UX-318` (§3a.3): **every capped or nested table offers focus.** A
   // table that opened bounded is hiding rows behind a Top-N; a nested

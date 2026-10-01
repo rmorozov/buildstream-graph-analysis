@@ -48,7 +48,7 @@ import { jsonToggles } from "./rawjson.js";
 import { contained } from "./controls.js";
 import { applyView, joinHash, splitHash, viewLink,
          wireViewState, copyFormatBox } from "./viewstate.js";
-import { applyFocus, applyMarks, clearFocus, focusedElement, readMarks,
+import { applyFocus, applyMarks, clearFocus, driveFilters, focusedElement, readMarks,
          renderFocusBar, renderMarkSummary } from "./focus.js";
 import { renderQuestions } from "./questions.js";
 import { copy } from "./tables.js";
@@ -284,6 +284,7 @@ export function wireJumpBox(nav, root, payload, context = {}) {
   const act = (action) => {
     if (action.focus) {
       applyFocus(root, action.element);
+      root.querySelector?.("[data-role=focus-bar]")?.scrollIntoView?.();
       root.dispatchEvent?.(new Event("change", { bubbles: true }));
       return;
     }
@@ -1269,7 +1270,7 @@ if (typeof document !== "undefined" && document.getElementById?.("report")) {
  * export and the anchors honest.
  */
 export function wireFocusAndMarks(root, doc, options = {}) {
-  const refresh = ({ reveal = false } = {}) => {
+  const refresh = () => {
     // UX-228 added a third transient node, and it joins the same
     // removal set on purpose: everything focus adds is keyed by
     // `data-role`, so unfocusing leaves the document byte-identical to
@@ -1291,7 +1292,7 @@ export function wireFocusAndMarks(root, doc, options = {}) {
     let bar = null;
     if (uid) {
       bar = renderFocusBar(uid, { onClear: () => {
-        clearFocus(root); refresh(); notify();
+        clearFocus(root); notify();
       }});
       root.prepend?.(bar);
     }
@@ -1312,12 +1313,12 @@ export function wireFocusAndMarks(root, doc, options = {}) {
         String(marks[button.getAttribute("data-mark-element")]
                === button.getAttribute("data-mark-value")));
     }
-    // The answer is 25,501 px from the button on a card at 26,550 px,
-    // and nothing moved. Reveal it only on the click - a page restoring
-    // focus from its url has not asked to be scrolled.
-    if (reveal) (bar ?? investigation)?.scrollIntoView?.();
     return investigation;
   };
+  // The answer is 25,501 px from the button on a card at 26,550 px,
+  // and nothing moved. Reveal it only on the click - a page restoring
+  // focus from its url has not asked to be scrolled.
+  const reveal = () => root.querySelector?.("[data-role=focus-bar]")?.scrollIntoView?.();
   // The fragment listens for these already; firing one event rather
   // than writing the hash here keeps UX-211 the only writer.
   const notify = () => root.dispatchEvent?.(
@@ -1329,7 +1330,7 @@ export function wireFocusAndMarks(root, doc, options = {}) {
     const focusUid = node.getAttribute("data-focus-element");
     if (focusUid) {
       applyFocus(root, focusedElement(root) === focusUid ? null : focusUid);
-      refresh({ reveal: true });
+      reveal();
       notify();
       return;
     }
@@ -1349,8 +1350,12 @@ export function wireFocusAndMarks(root, doc, options = {}) {
     if (event.key !== "Escape") return;
     if (!focusedElement(root)) return;
     clearFocus(root);
-    refresh();
     notify();
+  });
+  // `UX-1198`: applyFocus and clearFocus announce themselves, so the bar, the investigation and the keyed filters answer every caller.
+  root.addEventListener?.("bga:focus", () => {
+    driveFilters(root, focusedElement(root));
+    refresh();
   });
   return refresh;
 }

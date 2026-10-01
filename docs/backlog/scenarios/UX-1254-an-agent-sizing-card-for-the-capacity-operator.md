@@ -60,27 +60,34 @@ This branch, `#agent_sizing` drawn first in "Was the machine used well?":
 2,402-element page (seed 1, 40x60, binaries; 20260303T091500Z):
   Builders: 4 recommended; the graph allows 8; this run had 4 — Capacity recommendation
   Cores: 0.86 of 4 busy on average — Capacity recommendation
-  Memory: 256.0 MiB, 64.0 MiB per element × 4 builders — Peak memory
+  Memory: at most 256.0 MiB, if all 4 builders peak together at 64.0 MiB (process peak) — Peak memory
 macro_micro:
   Builders: 2 recommended; the graph allows 2; this run had 4 — Capacity recommendation
   Cores: 1.60 of 4 busy on average — Capacity recommendation
-  Memory: 307.0 MiB, 153.5 MiB per element × 2 builders — Peak memory
+  Memory: at most 307.0 MiB, if all 2 builders peak together at 153.5 MiB (memory envelope) — Peak memory
 golden (Plane 1 only):
   Builders: this run had 2
   Cores and memory need Plane 2, which this run did not capture.
 ```
 
-`bga view --export`, before -> after: page half 159,921 -> 160,529 B
-(`macro_micro`) and 159,923 -> 160,531 B (2,402 elements), +608 B against
-`PAGE_BUDGET_B` 165,000; data half +2,107 B and +1,626 B. `macro_micro`'s
+Memory is an upper bound and says so; `memory.basis` names its input:
+`envelope` (`memory_envelope`) or `process_peak` (Plane 2's per-element
+peaks, when no host RAM was recorded - the 2,402 page).
+`bga view --export`, before -> after: page half 159,921 -> 160,605 B
+(`macro_micro`) and 159,923 -> 160,607 B (2,402 elements), +684 B against
+`PAGE_BUDGET_B` 165,000; data half +2,244 B and +1,750 B. `macro_micro`'s
 opened page: 872 controls (card +6 on 866).
 
-### Mutations verified red and reverted (4)
+### Mutations verified red and reverted (8)
 
 | # | mutation | reddened |
 |---|---|---|
-| M1 | memory bytes from `memory_envelope.at_observed_builders` (the Decision's) | equals-its-source: 1 failed |
+| M1 | memory bytes from `memory_envelope.at_observed_builders` (the Decision's) | equals-its-source and both constructed cases: 3 failed |
 | M2 | Plane 1-only absence reads "were not measured" | both absence clauses: 3 failed |
 | M3 | `agent_sizing` second in the machine chapter | first-section, both pages x widths: 4 failed |
-| M4 | the source link drawn as a `span` | one-link-a-row, both widths: 2 failed |
+| M4 | the source link drawn as a `span` | one-link-a-row, both widths, constructed card: 3 failed |
+| M5 | no fallback to Plane 2's peaks without host RAM | constructed no-RAM case: 2 failed |
+| M6 | `basis` stays `envelope` on the fallback | constructed no-RAM case: 2 failed |
+| M7 | the p95 cores row never drawn | constructed host-CPU card: 1 failed |
+| M8 | "at most" dropped from the memory row | macro_micro page and constructed card: 3 failed |
 

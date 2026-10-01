@@ -3881,8 +3881,9 @@ _ANALYZE_HINTS = {
                 },
             },
             "memory": {
-                "description": "The largest per-element peak RSS times the recommended builders.",
+                "description": "At most: the largest per-element peak RSS times the builders, as if all peak at once.",
                 "properties": {
+                    "basis": {"description": "`envelope` (memory_envelope) or `process_peak` (Plane 2's peaks)."},
                     "per_element_bytes": {QUANTITY: "bytes", "description": "The largest element's peak RSS."},
                     "builders": {QUANTITY: "count", "description": "The builders it is multiplied by."},
                     "bytes": {QUANTITY: "bytes", "description": "The product."},

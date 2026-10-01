@@ -1335,15 +1335,18 @@ def compute_agent_sizing(result, builders: Optional[int] = None) -> dict:
         }
     memory = None
     # The envelope needs the host's RAM; the per-element peak does not, so a capture without it still sizes.
-    per_element = envelope.get('largest_element_peak_bytes') or (
-        resource_profile(getattr(result, 'plane2_report', None) or {}).get('peak_rss_bytes')
-    )
+    per_element, basis = envelope.get('largest_element_peak_bytes'), 'envelope'
+    if not per_element:
+        per_element = resource_profile(getattr(result, 'plane2_report', None) or {}).get('peak_rss_bytes')
+        basis = 'process_peak'
     count = recommended or observed
     if per_element and count:
+        # An upper bound: as if every builder held the largest peak at once.
         memory = {
             'per_element_bytes': per_element,
             'builders': count,
             'bytes': per_element * count,
+            'basis': basis,
             'source': 'peak_memory',
         }
     missing = [name for name, value in (('cores', cores), ('memory', memory)) if value is None]

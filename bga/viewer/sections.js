@@ -446,8 +446,8 @@ function sizingCard(value, hint) {
       of(b.observed, "this run had #")].filter(Boolean).join("; "), b.source),
     c ? row("cores", `Cores: ${c.average.toFixed(2)}${typeof c.host === "number" ? ` of ${tally(c.host)}` : ""} busy on average`, c.source) : null,
     c?.peak_source ? row("cores_peak", `Cores: ${c.peak.toFixed(2)} busy at p95`, c.peak_source) : null,
-    m ? row("memory", `Memory: ${bytes(m.bytes)}, ${bytes(m.per_element_bytes)} per element `
-      + `\u00d7 ${tally(m.builders)} builders`, m.source) : null),
+    m ? row("memory", `Memory: at most ${bytes(m.bytes)}, if all ${tally(m.builders)} builders peak together at `
+      + `${bytes(m.per_element_bytes)} (${m.basis === "envelope" ? "memory envelope" : "process peak"})`, m.source) : null),
     value.absence ? el("p", { class: "empty-population" }, value.absence) : null,
     value.caveat ? el("p", { class: "muted" }, value.caveat) : null);
 }

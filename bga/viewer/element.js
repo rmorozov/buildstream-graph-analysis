@@ -23,7 +23,7 @@ import {
 } from "./primitives.js";
 import {
   SCALE, GRADE_ANNOTATION, GRADE_EXHIBIT, exhibitAxis, exhibitTwin,
-  nameDrawing, valueRoute,
+  nameDrawing, titled, valueRoute,
 } from "./drawings.js";
 // The three the derivation named, and the whole of what this chapter
 // takes from the one above it. `UX-650` adds the fourth: the tag a
@@ -1235,7 +1235,8 @@ export function renderElementHistory(store, uid, schema = null) {
         ? size.width / 2 : (i / (series.length - 1)) * size.width;
       const y = (size.spark - inset)
                 - (point.duration_us / high) * (size.spark - inset * 2);
-      line.append(svg("circle", {
+      // UX-1204 (§6e.9): every point says its run and value on hover.
+      line.append(titled(svg("circle", {
         cx: x.toFixed(2), cy: y.toFixed(2), r: 1.6,
         class: "spark-point",
         // UX-212's closed shape vocabulary, so a snapshot's verdict
@@ -1250,7 +1251,7 @@ export function renderElementHistory(store, uid, schema = null) {
         "data-stamp": point.stamp,
         "data-value": String(point.duration_us),
         "data-on-path": String(point.on_critical_path),
-      }));
+      }), `${point.stamp} ${seconds(point.duration_us)}`));
     });
     block.append(line);
   }

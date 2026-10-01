@@ -789,7 +789,9 @@ input.table-filter { max-width: 100%; }
 .investigate { margin: var(--space-2) 0 var(--space-1); }
 .investigate button:hover { border-color: var(--accent); }
 .investigate .handoff { margin-left: var(--space-2); font-size: var(--font-small); }
-.investigate .query { margin: var(--space-2) 0 0; font-size: var(--font-small); }
+.investigate .query { margin: var(--space-2) 0 0; font-size: var(--font-small);
+                     /* UX-1204: a paste wraps in its column; the reader copies it whole. */
+                     white-space: pre-wrap; overflow-wrap: anywhere; }
 h3.category { letter-spacing: .04em;
               color: var(--muted); font-size: var(--font-small); margin-top: var(--space-5); }
 
@@ -923,6 +925,8 @@ section[data-promoted] { border-left: 3px solid var(--accent); }
                  align-items: baseline; flex-wrap: wrap; }
 .query-element > label { font-size: var(--font-small); color: var(--muted); }
 .query-element > p { flex-basis: 100%; margin: var(--space-1) 0 0; }
+/* UX-1204: wide enough for its placeholder in its own font, never past its column. */
+.query-element > input { min-width: min(32ch, 100%); }
 .top-n { font: inherit; font-size: var(--font-small); background: var(--panel);
          color: inherit; border: 1px solid var(--line); border-radius: 3px;
          max-width: 100%; }

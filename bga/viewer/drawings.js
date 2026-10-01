@@ -133,7 +133,7 @@ function box(doc, tag, attrs = {}, ...children) {
 const numeric = (v) => typeof v === "number" && Number.isFinite(v);
 
 /** UX-1192 (§6e.9): a mark says its value on hover - native, no control. */
-function titled(node, text) {
+export function titled(node, text) {
   const tip = make(node.ownerDocument ?? document, "title");
   tip.textContent = text;
   node.append(tip);

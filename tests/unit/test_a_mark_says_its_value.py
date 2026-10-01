@@ -1,6 +1,9 @@
 """UX-1192 (styleguide §6e.9): every drawn mark carries its value as a
 `<title>`, and a strip whose max exceeds 10x its p90 scales the rest to a
-break and names the outlier at its edge.
+break and names the outlier at its edge. UX-1204: the band, the store
+trend and an element's history title every mark, through the node
+harness (no built page draws them); at 390 the uid box holds its
+placeholder and every opened SQL paste fits its `.investigate`.
 
 Measured before the fix on the 1,202-element two-plane page: 16 svgs,
 0 titles; the task-share strip ran 0 ms to 4.9 min with p95 at 0.6% of it.
@@ -9,8 +12,11 @@ Measured before the fix on the 1,202-element two-plane page: 16 svgs,
 import base64
 import gzip
 import json
+import os
 import pathlib
 import re
+import shutil
+import subprocess
 import sys
 
 import pytest
@@ -23,6 +29,8 @@ from tests.browser import NO_BROWSER, Browser, find_chrome
 
 chrome = find_chrome()
 needs_browser = pytest.mark.skipif(chrome is None, reason=NO_BROWSER)
+node = shutil.which("node")
+needs_node = pytest.mark.skipif(node is None, reason="node is not installed")
 
 #: The 1,202-element two-plane page the review measured.
 SCALE_SHAPE = ("--layers", "20", "--width", "60")
@@ -66,6 +74,27 @@ _READ = (
 )
 
 
+#: UX-1204: the uid box's placeholder against its content box; every SQL paste, opened, against its block.
+_NARROW = r"""
+(async () => {
+  for (const pre of document.querySelectorAll(".investigate pre.query")) pre.removeAttribute("hidden");
+  await new Promise((done) => setTimeout(done, 100));
+  const box = document.querySelector("[data-role=query-element]");
+  const cs = box && getComputedStyle(box);
+  const ctx = document.createElement("canvas").getContext("2d");
+  if (box) ctx.font = cs.font;
+  return {
+    box: box && { need: Math.ceil(ctx.measureText(box.placeholder).width),
+                  have: box.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight) },
+    pastes: [...document.querySelectorAll(".investigate pre.query")].map((pre) => ({
+      // The block's column too: an unwrapped paste widens its `.investigate` with it.
+      wide: pre.scrollWidth, room: Math.min(pre.closest(".investigate").clientWidth,
+                                            pre.closest(".investigate").parentElement.clientWidth) })),
+  };
+})()
+"""
+
+
 @pytest.fixture(scope="module")
 def reads(tmp_path_factory):
     import tools.bga_view as view
@@ -86,12 +115,16 @@ def reads(tmp_path_factory):
     for label in ("golden", "macro_micro"):
         uris[label] = pages.export_uri(pages.FIXTURES[label], into / label)
     with Browser(chrome) as opened:
-        return {label: opened.measure(uri, _READ) for label, uri in uris.items()}
+        out = {label: opened.measure(uri, _READ) for label, uri in uris.items()}
+        out["narrow"] = opened.measure(uris["two_plane"], _NARROW, 390, 844)
+        return out
 
 
 @needs_browser
 def test_every_mark_says_its_value(reads):
     for name, read in reads.items():
+        if name == "narrow":
+            continue
         drawings = read["drawings"]
         assert drawings, f"{name}: no svg drawn"
         wrong = [d for d in drawings if d["bare"] or d["titles"] != d["marks"]]
@@ -115,3 +148,87 @@ def test_a_strip_names_its_outlier_and_scales_the_rest(reads):
     durations = reads["two_plane"]["durations"]
     assert durations["cut"] is None, durations
     assert [t["x"] for t in durations["ticks"] if t["mark"] == "max"] == [100], durations
+
+
+@needs_browser
+def test_the_uid_box_and_an_opened_sql_paste_fit_390(reads):
+    narrow = reads["narrow"]
+    assert narrow["box"]["need"] <= narrow["box"]["have"], narrow["box"]
+    assert narrow["pastes"], "no .investigate paste on the two-plane page"
+    over = [p for p in narrow["pastes"] if p["wide"] > p["room"]]
+    assert over == [], (len(narrow["pastes"]), over[:3])
+
+
+_HARNESS = r"""
+globalThis._installDocument ??= (await import(process.env.BGA_DOM_SHIM)).installDocument;
+_installDocument();
+globalThis.document.createElementNS = (ns, tag) => globalThis.document.createElement(tag);
+const all = (n, pred, out = []) => {
+  if (pred(n)) out.push(n);
+  for (const c of n.children ?? []) all(c, pred, out);
+  return out;
+};
+const text = (n) => !n ? "" : ((n.children ?? []).length
+  ? (n._text ?? "") + n.children.map(text).join("") : (n._text ?? ""));
+const mod = await import("./tests/viewer.mjs");
+const shapes = new Set(["circle", "rect", "line", "polygon", "path"]);
+const read = (block) => {
+  const svg = all(block, (n) => n.attrs?.role === "img")[0];
+  const marks = (svg.children ?? []).filter((n) => shapes.has(String(n.tagName).toLowerCase()));
+  return { marks: marks.length, bare: marks.filter((m) => !(m.children ?? []).some(
+    (c) => String(c.tagName).toLowerCase() === "title" && text(c).trim())).map((m) => m.attrs.class) };
+};
+"""
+
+_BAND = {
+    "baseline_band": {
+        "band_low_us": 100,
+        "band_high_us": 200,
+        "observed_low_us": 80,
+        "observed_high_us": 260,
+        "runs": [90, 150, 250],
+    },
+    "candidate": {"total_duration_us": 230},
+}
+_STORE = {
+    "schema": "store/v1",
+    "count": 3,
+    "snapshots": [
+        {
+            "stamp": s,
+            "bytes": 1,
+            "incomplete_reason": None,
+            "total_duration_us": d,
+            "verdict_kind": v,
+            "elements": [{"element_uid": "elt", "duration_us": d, "on_critical_path": True}],
+        }
+        for s, d, v in (("a", 1_000_000, None), ("b", 5_000_000, "regressed"), ("c", 2_000_000, None))
+    ],
+}
+_AGGREGATE = {"blended": {"mixes": 1, "duration_us": {"samples": 3, "median": 2_000_000, "p95": 5_000_000}}}
+
+
+@needs_node
+def test_the_band_the_trend_and_the_history_title_every_mark():
+    source = (
+        _HARNESS
+        + f"""
+console.log(JSON.stringify({{
+  band: read(mod.renderBand({json.dumps(_BAND)})),
+  trend: read(mod.renderTrend({json.dumps(_STORE)}, undefined, {json.dumps(_AGGREGATE)})),
+  history: read(mod.renderElementHistory({json.dumps(_STORE)}, "elt", null)),
+}}));
+"""
+    )
+    result = subprocess.run(
+        [node, "--input-type=module", "-e", source],
+        capture_output=True,
+        text=True,
+        cwd=REPO,
+        timeout=90,
+        env=dict(os.environ, BGA_DOM_SHIM=str(REPO / "tests" / "dom_shim.mjs")),
+    )
+    assert result.returncode == 0, result.stderr[-3000:]
+    out = json.loads(result.stdout)
+    assert out["band"]["marks"] == 6 and out["trend"]["marks"] == 5 and out["history"]["marks"] == 3, out
+    assert {k: v["bare"] for k, v in out.items() if v["bare"]} == {}, out

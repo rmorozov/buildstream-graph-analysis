@@ -30,13 +30,18 @@ task file, which is the only place it ever lived twice.
 | UX-1014 | [the "safe cap plus auto" default is measured on more shapes and hosts before it is anyone's default](UX-1014-the-builders-and-auto-default-is-measured-on-more-shapes-and-hosts.md) | capture | High | R4, R5 | 🔴 Not Started |
 | UX-1134 | [`--jobserver auto` with no plan widens a memory-bound giant into the OOM killer](UX-1134-auto-oom-kills-a-memory-bound-giant-with-no-plan.md) | capture | High | R4, R5 | 🔴 Not Started |
 | UX-1040 | [a paired reading decides whether implementers move to opus at low effort](UX-1040-a-paired-reading-decides-the-implementers-model.md) | guards | Medium | every round's implementer spend | 🔴 Not Started |
-| UX-1169 | [accessible names after UX-1162 still miss the drawings' values and three labels](UX-1169-accessible-names-after-ux-1162-still-miss-the.md) | viewer | Low | R1 | 🔴 Not Started |
-| UX-1170 | [filter residue after UX-1165 and UX-1163](UX-1170-filter-residue-after-ux-1165-and-ux-1163.md) | viewer | Low | R1 | 🔴 Not Started |
-| UX-1171 | [layout residue at 390 and Forward](UX-1171-layout-residue-at-390-and-forward.md) | viewer | Low | R1 | 🔴 Not Started |
-| UX-1172 | [text residue after UX-1166](UX-1172-text-residue-after-ux-1166.md) | viewer | Low | R1 | 🔴 Not Started |
-| UX-1173 | [the #parallelism structure repeats ids, labels and numbers](UX-1173-the-parallelism-structure-repeats-ids-labels-and-numbers.md) | viewer | Low | R1 | 🔴 Not Started |
-| UX-1174 | [the page-size guard subtracts the embedded data's characters, not its bytes](UX-1174-the-page-size-guard-subtracts-the-embedded-data.md) | guards | Medium | R1 | 🔴 Not Started |
-| UX-1175 | [the exported page ships indentation](UX-1175-the-exported-page-ships-indentation.md) | viewer | Low | R1 | 🔴 Not Started |
+| UX-1194 | [op: and a duration threshold meet on the table that holds durations](UX-1194-op-and-a-duration-threshold-meet-on-the.md) | viewer | High | R1 | 🔴 Not Started |
+| UX-1195 | [the filter grammar matches what the page shows: a constant column, the displayed word, the column's name](UX-1195-the-filter-grammar-matches-what-the-page-shows.md) | viewer | High | R1 | 🔴 Not Started |
+| UX-1196 | [a head-and-tail fold prints, copies and jumps to every row it holds, and a short table keeps its sort](UX-1196-a-head-and-tail-fold-prints-copies-and.md) | viewer | High | R1 | 🔴 Not Started |
+| UX-1197 | [the Rows-shown bound holds across Next, sort and the link, and a page step and a sort are announced and named](UX-1197-the-rows-shown-bound-holds-across-next-sort.md) | viewer | Medium | R1 | 🔴 Not Started |
+| UX-1198 | [Focus shows the focused element's row in each keyed table, and a focus link restores the bar](UX-1198-focus-shows-the-focused-element-s-row-in.md) | viewer | Medium | R1 | 🔴 Not Started |
+| UX-1199 | [the element-keyed tables declare their key, and by_binary, binary_cost and serial_chains rank and name their quantity](UX-1199-the-element-keyed-tables-declare-their-key-and.md) | viewer | Medium | R1 | 🔴 Not Started |
+| UX-1200 | [every element card lists what it blocks, as links, with one count](UX-1200-every-element-card-lists-what-it-blocks-as.md) | viewer | Medium | R1 | 🔴 Not Started |
+| UX-1201 | [the compare table says 'both' in words and scales negative durations](UX-1201-the-compare-table-says-both-in-words-and.md) | viewer | Low | R1 | 🔴 Not Started |
+| UX-1202 | [plotted values reach a reader as bounded text, and an empty status is not mounted at rest](UX-1202-plotted-values-reach-a-reader-as-bounded-text.md) | viewer | Low | R1 | 🔴 Not Started |
+| UX-1203 | [the rail's tools and the pager read as one set, and rail Next, Back and the card folds keep their order](UX-1203-the-rail-s-tools-and-the-pager-read.md) | viewer | Low | R1 | 🔴 Not Started |
+| UX-1204 | [the element-view uid box and an opened SQL paste fit at 390, and views.js and element.js drawings carry titles](UX-1204-the-element-view-uid-box-and-an-opened.md) | viewer | Low | R1 | 🔴 Not Started |
+| UX-1205 | [a real capture of fake sleeping binaries under the LD_PRELOAD hook](UX-1205-a-real-capture-of-fake-sleeping-binaries-under.md) | capture | Low | R1 | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

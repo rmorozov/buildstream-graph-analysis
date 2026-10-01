@@ -406,8 +406,7 @@ _SAYS = r"""
   }
   const collapse = [...document.querySelectorAll("button.collapse")];
   const boxes = [...document.querySelectorAll("input.copy-markdown")];
-  const promise = (box) => box.closest(".table-tools")
-    ?.querySelector(".copy-rows")?.title ?? "";
+  const copies = [...document.querySelectorAll("button.copy-rows")];
   const named = (b) => (b.getAttribute("aria-label") || "").trim()
     || (b.textContent || "").replace(/[\u25b8\u25be\s]/g, "");
   const state = {
@@ -424,10 +423,8 @@ _SAYS = r"""
   for (const box of boxes) box.checked = false;
   boxes[0].checked = true;
   boxes[0].dispatchEvent(new Event("change", { bubbles: true }));
-  return { ...state,
-           checkedAfterOneClick: boxes.filter((b) => b.checked).length,
-           promisingMarkdown: boxes.filter(
-             (b) => /as Markdown/.test(promise(b))).length };
+  return { ...state, copies: copies.length,
+           promisingMarkdown: copies.filter((b) => /as Markdown/.test(b.title)).length };
 })()
 """
 
@@ -467,16 +464,14 @@ class TestTheControlsSayWhatTheyDo:
         )
 
     def test_one_preference_is_one_state(self, census, label):
-        """One click on any Markdown box moves all of them - and moves
-        what the copy buttons *promise*, which is the half a reader
-        sees."""
+        """One click on the Markdown box moves what every copy button
+        *promises*, which is the half a reader sees. `UX-1189`: one
+        page-wide box, where there was one per table."""
         out = census[label]
-        assert out["boxes"] > 10, out
-        assert out["checkedAfterOneClick"] == out["boxes"], (
-            f"{label}: one click checked {out['checkedAfterOneClick']} of {out['boxes']} boxes"
-        )
-        assert out["promisingMarkdown"] == out["boxes"], (
-            f"{label}: {out['promisingMarkdown']} of {out['boxes']} copy "
+        assert out["boxes"] == 1, out
+        assert out["copies"] > 10, out
+        assert out["promisingMarkdown"] == out["copies"], (
+            f"{label}: {out['promisingMarkdown']} of {out['copies']} copy "
             f"controls promise Markdown after the box was ticked"
         )
 

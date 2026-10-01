@@ -640,10 +640,14 @@ LARGE = (
     # `UX-1076`: two 1,202-element opens passes, no browser.
     # Measured alone in one process: 15.96 / 14.91 / 16.37s.
     "tests/unit/test_the_open_paths_are_interned.py",  #   16.0s
+    # `UX-1178`, round 158's merged tree with its follow-up clause: eighteen
+    # Chromium loads at 390/320/1440. Alone in one process: 23.84 / 24.01 / 23.96s.
+    "tests/unit/test_the_narrow_page_keeps_its_place.py",  #   24.0s
 )
 
 MEDIUM = (
     "tests/unit/test_a_broken_pipe_is_not_an_error.py",  # 1.6s
+    "tests/unit/test_a_value_is_what_it_names.py",  # 11.6s
     # `UX-665`, tiered on landing: one Chromium, three boots (golden,
     # macro_micro, the built shared-resource fixture). 1.77/1.78/1.82s
     # single-process.
@@ -717,7 +721,6 @@ MEDIUM = (
     "tests/unit/test_every_control_has_a_resting_appearance.py",  #  6.7s
     "tests/unit/test_the_json_toggle_carries_the_key.py",  #  2.0s
     "tests/unit/test_the_readers_are_drawn_once.py",  #  2.3s
-    "tests/unit/test_a_capped_table_filters_what_it_sorts.py",  #  3.6s
     "tests/unit/test_a_distribution_twin_draws_every_mark.py",  #  3.5s
     "tests/unit/test_the_header_keeps_its_budget.py",  #  2.9s
     "tests/unit/test_a_reader_never_sees_the_register.py",  #  3.6s
@@ -1100,6 +1103,32 @@ MEDIUM = (
     "tests/unit/test_the_rail_and_the_jump_box_write_the_anchor.py",  #  8.7s
     # `UX-1168`: 3.93 / 3.87s.
     "tests/unit/test_the_rail_mark_follows_the_reading_line.py",  #  3.9s
+    # `UX-1175`: 1.76 / 1.69 / 1.71s.
+    "tests/unit/test_the_export_ships_no_indentation.py",  #  1.7s
+    # `UX-1173`: 4.57 / 3.32s.
+    "tests/unit/test_the_page_ids_are_unique.py",  #  4.6s
+    # Round 158, tiered on the track: one single-process run alone.
+    # `UX-1185`: 9.60s; its pager-reset residue, merged tree: 10.29 / 10.33 / 10.39s.
+    "tests/unit/test_a_pager_continues_the_view.py",  # 10.3s
+    # `UX-1190`: 8.31s.
+    "tests/unit/test_a_sortable_header_is_a_button.py",  #  8.3s
+    # `UX-1189`: 8.48s.
+    "tests/unit/test_copy_takes_the_matched_population.py",  #  8.5s
+    # `UX-1184`: 6.85 / 7.18s.
+    "tests/unit/test_a_column_is_named_for_its_field.py",  #  7.0s
+    # `UX-1186`: 5.21 / 5.08s.
+    "tests/unit/test_a_population_key_is_declared.py",  #  5.2s
+    # `UX-1192`: 8.38 / 8.49 / 9.43s.
+    "tests/unit/test_a_mark_says_its_value.py",  #  8.5s
+    # `UX-1191`: 7.44 / 6.86s.
+    "tests/unit/test_a_key_column_matches_exactly.py",  #  7.2s
+    # `UX-1176`: 7.23 / 7.51s.
+    "tests/unit/test_a_status_is_announced.py",  #  7.4s
+    # `UX-1177`: 2.63 / 2.70s; its Jump-lands residue, merged tree: 9.75 / 9.70 / 9.73s.
+    "tests/unit/test_jump_finds_what_the_rail_lists.py",  #  9.7s
+    # `UX-1179`: 11.51 / 11.84 / 11.68s, the 1,202-element page built in it;
+    # its card-Jump residue, merged tree: 13.57 / 13.57 / 13.38s.
+    "tests/unit/test_print_and_find_reach_the_content.py",  # 13.5s
     # Round 147, tiered on the merged tree: three single-process runs
     # alone each (setup+call+teardown).
     # `UX-1083`: 4.17 / 4.08 / 4.23s.
@@ -1120,4 +1149,13 @@ MEDIUM = (
     # UX-1107's two exports 1.07 / 1.06 / 1.03s. UX-1131's 0.90 / 0.98 / 1.12s stays small.
     "tests/unit/test_back_after_a_reveal_re_folds.py",  #  3.7s
     "tests/unit/test_the_export_anchor_is_seed_free.py",  #  1.1s
+    # Round 158, single process: UX-1193's three exports and Chromium reads 5.56s.
+    "tests/unit/test_one_name_one_population.py",  #  5.6s
+    # UX-1183's heavy page, its export and two Chromium reads 4.14s.
+    "tests/unit/test_a_traced_elements_binaries_reach_the_page.py",  #  4.1s
+    # UX-1187's 1,202-element export and Chromium reads, merged tree: 14.92 / 14.78 / 14.69s.
+    "tests/unit/test_an_element_view_answers_whole.py",  # 14.8s
+    # UX-1182's three gen-synthetic stores, merged tree: 2.06 / 2.05 / 2.07s.
+    # UX-1181's test_a_page_half_is_read_once.py, 0.56 / 0.53 / 0.53s, stays small.
+    "tests/unit/test_the_synthetic_workload_runs_hundreds_of_binaries.py",  #  4.2s
 )

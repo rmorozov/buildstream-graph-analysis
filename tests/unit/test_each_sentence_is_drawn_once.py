@@ -116,13 +116,17 @@ _MEASURE = (
       && t.querySelectorAll(":scope > thead th").length === 1).map((t) => t.getAttribute("data-table")),
     gatePair: [...document.querySelectorAll("#confidence dt[data-key='ordering_violations']")].filter(seen).length,
     // Not a repeat but its other half: a bounded table's `N of M` stays drawn.
-    hiddenBadge: [...document.querySelectorAll(".table-tools .badge[hidden]")].map((b) => b.textContent)
-      .filter((t) => / of /.test(t)),
+    // `UX-1176`: an empty badge is the rest state; a table showing fewer rows than it has is not at rest.
+    hiddenBadge: [...document.querySelectorAll(".table-tools .badge")].filter((b) => {
+      const table = b.closest(".table-tools").parentNode.querySelector("table[data-table]");
+      const shown = [...(table?.tBodies[0]?.rows ?? [])].filter((tr) => !tr.hidden).length;
+      return b.hidden || (!b.textContent && table && shown < Number(table.getAttribute("data-rows")));
+    }).map((b) => b.closest(".table-tools").parentNode.querySelector("table[data-table]")?.dataset.table),
   };
   const reach = { claims: document.querySelectorAll("section[data-element] [data-advice='cpu-concentration']").length,
     tools: document.querySelectorAll(".table-tools").length, ticks: document.querySelectorAll(".decomposition .draw-tick").length,
     gates: document.querySelectorAll("#confidence table").length,
-    bounded: document.querySelectorAll(".table-tools .badge:not([hidden])").length };
+    bounded: document.querySelectorAll(".table-tools .badge:not(:empty)").length };
   return { sentences: drawn.size, twice, leads, keys, restated, evidence, blocksTwice, counted, links, said, reach };
 })()
 """.replace("__WORDS__", str(WORDS))

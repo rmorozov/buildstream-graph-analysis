@@ -214,9 +214,11 @@ class TestEveryCopyControlNamesItsNoun:
 
 @needs_node
 class TestTheRowCopyOffersMarkdown:
-    def test_every_table_offers_the_choice(self, payload):
+    def test_no_table_carries_its_own_choice(self, payload):
+        """`UX-1189`: the choice is one page-wide box in the rail
+        (`test_copy_takes_the_matched_population.py`), not one per table."""
         drawn = _page(payload)
-        assert drawn["markdown_boxes"] == drawn["tables"], (
+        assert drawn["tables"] > 5 and drawn["markdown_boxes"] == 0, (
             f"{drawn['markdown_boxes']} choices for {drawn['tables']} tables"
         )
 

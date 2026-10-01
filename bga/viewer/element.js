@@ -15,7 +15,9 @@
  */
 import { identify, labelFor } from "./controls.js";
 import { plural } from "./tables.js";
-import { READER_LABELS, TERMS, el, findingLink, title } from "./format.js";
+import { COLUMNS, READER_LABELS, TERMS, childNode, el, findingLink, hintsOf, title } from "./format.js";
+import { buildTable, filterSection } from "./structured.js";
+import { joinHash } from "./viewstate.js";
 import {
   SVG, svg, seconds, mib, bar, OVERVIEW_SHOWN, elementAnchor,
 } from "./primitives.js";
@@ -218,7 +220,7 @@ export function elementFacts(payload) {
     if (!uid) return null;
     if (!facts.has(uid)) {
       facts.set(uid, { element: uid, rows: [], findings: [], entering: [],
-                       advice: [], evidence: [], lists: [] });
+                       advice: [], evidence: [], lists: [], binaries: [] });
     }
     return facts.get(uid);
   };
@@ -258,6 +260,7 @@ export function elementFacts(payload) {
       if (record) record.findings.push(finding);
     }
   }
+  for (const row of payload?.binary_cost ?? []) facts.get(row.element)?.binaries.push(row);
   return facts;
 }
 
@@ -300,7 +303,9 @@ const ELEMENT_MAPS = [
 // is capped-and-sorted names, not a scalar, so it renders through
 // `record.lists` (§3c: no table cell survives forty names).
 const ELEMENT_LIST_MAPS = [
-  ["elements.fan_in", "direct", "Depends on"],
+  ["elements.fan_in", "direct", "Depends on", "direct_count"],
+  // UX-1187: its mirror, and the count past the 40 names.
+  ["elements.fan_in", "dependents", "Blocks", "dependent_count"],
 ];
 
 /**
@@ -368,7 +373,8 @@ export function elementFactsFor(payload, uid) {
   const known = elementFacts(payload).get(uid);
   const record = known ?? { element: uid, rows: [], findings: [],
                             entering: [], advice: [], evidence: [],
-                            lists: [], onDemand: true };
+                            lists: [], onDemand: true,
+                            binaries: (payload?.binary_cost ?? []).filter((row) => row.element === uid) };
   const held = new Set(record.rows.map((row) => row.field));
   for (const [path, field, label, kind] of ELEMENT_MAPS) {
     const map = path.split(".").reduce((node, key) => node?.[key], payload);
@@ -388,12 +394,12 @@ export function elementFactsFor(payload, uid) {
     });
   }
   const heldLists = new Set(record.lists.map((l) => l.key));
-  for (const [path, field, label] of ELEMENT_LIST_MAPS) {
+  for (const [path, field, label, count] of ELEMENT_LIST_MAPS) {
     const map = path.split(".").reduce((node, key) => node?.[key], payload);
     const items = map?.[uid]?.[field];
     if (!Array.isArray(items) || !items.length || heldLists.has(field)) continue;
     heldLists.add(field);
-    record.lists.push({ key: field, label, items: items.map(String) });
+    record.lists.push({ key: field, label, items: items.map(String), more: (map[uid][count] ?? 0) - items.length });
   }
   if (known) return record;
   for (const finding of payload?.findings ?? []) {
@@ -697,6 +703,20 @@ function elementSection(record, places, investigate, format, bounded = null) {
     section.append(fold);
   }
 
+  // UX-1183: its five costliest binaries; the rest is `binary_cost` filtered to it, in the link and on a press.
+  const ran = record.binaries ?? [], top = ran.slice(0, 5), more = ran.length - 5;
+  const only = new URLSearchParams({ "f.binary_cost": `element:${uid}` });
+  const rest = more > 0 ? el("a", { href: joinHash("binary_cost", only.toString()) }, `+${more} more`) : null;
+  rest?.addEventListener?.("click", () => filterSection(document, "binary_cost", only.get("f.binary_cost")));
+  if (ran.length > 1) {
+    const { table, tools } = buildTable("binaries", top, { [COLUMNS]: ["binary",
+      { key: "calls", title: "Calls", quantity: "count" }, { key: "cpu_us", title: "CPU", quantity: "duration_us" },
+      { key: "wall_us", title: "Wall", quantity: "duration_us" }] });
+    section.append(el("details", { "data-fold": "binaries", "data-levels": "1", "data-rows": top.length },
+      el("summary", {}, `Binaries · 1 level, ${plural(top.length, "row")}`), tools, table,
+      rest && el("p", { class: "muted", "data-more": more }, rest)));
+  }
+
   // `UX-302`'s mapping: a short scalar array is an inline list, not a
   // table and not a `<pre>`.
   for (const named of record.lists ?? []) {
@@ -707,6 +727,7 @@ function elementSection(record, places, investigate, format, bounded = null) {
     // `UX-1159`: a Plane 2 flag reads as its phrase; a name stays copyable.
     else line.append(...named.items.flatMap((item) => [", ",
       el(READER_LABELS[item] ? "span" : "code", { "data-raw": item }, READER_LABELS[item] ?? item)]).slice(1));
+    if (named.more > 0) line.append(el("span", { "data-more": named.more }, `, +${named.more.toLocaleString("en-US")} more`));
   }
 
   if (record.entering.length) {
@@ -727,8 +748,10 @@ function elementSection(record, places, investigate, format, bounded = null) {
       .flatMap((finding, at) => [at ? " · " : null, findingLink(finding)])));
   }
 
-  if (places && places.size) {
-    const named = [...places].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
+  // The card's own Binaries fold is `binary_cost`'s rows for this element; "Also in" does not name it twice.
+  const where = [...(places ?? [])].filter((place) => !(ran.length > 1 && [place].flat()[0] === "binary_cost"));
+  if (where.length) {
+    const named = where.sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
     section.append(el("p", { class: "where muted" }, "Also in: ",
       named.flatMap(([key, name], at) => [el("a", { href: `#${key}`, "data-where": key }, name),
                                       at < named.length - 1 ? " · " : ""])));
@@ -740,6 +763,14 @@ function elementSection(record, places, investigate, format, bounded = null) {
   }
   return section;
 }
+
+// UX-225's vocabulary, spelled here so `views.js` keeps importing
+// nothing. A guard asserts it is the same closed set `focus.js`
+// declares, so the two cannot drift apart in silence.
+export const ELEMENT_MARKS = ["working", "done", "aside"];
+export const ELEMENT_MARK_LABELS = {
+  working: "Working", done: "Done", aside: "Set aside",
+};
 
 // UX-221: the strip that answers "because of what?".
 //
@@ -753,17 +784,7 @@ function elementSection(record, places, investigate, format, bounded = null) {
 // ranked them. A viewer sorting these itself would be a second
 // comparison, disagreeing with `bga compare` the moment either changed -
 // UX-214's failure, and the reason this was a payload item first.
-export const CULPRITS_SHOWN = 4;
-
-// UX-225's vocabulary, spelled here so `views.js` keeps importing
-// nothing. A guard asserts it is the same closed set `focus.js`
-// declares, so the two cannot drift apart in silence.
-export const ELEMENT_MARKS = ["working", "done", "aside"];
-export const ELEMENT_MARK_LABELS = {
-  working: "Working", done: "Done", aside: "Set aside",
-};
-
-export function renderCulprits(compare) {
+export function renderCulprits(compare, schema = null) {
   const deltas = compare?.element_deltas;
   const rows = deltas?.rows ?? [];
   if (!rows.length) return null;
@@ -781,37 +802,14 @@ export function renderCulprits(compare) {
   // gatekeeper's follow-up or their owner's is not a question the code
   // answers, so it is left where `UX-643` left `decision`.
 
-  // Improvements and regressions each on their own, rather than one
-  // list ordered by magnitude: a reader looking for what cost them time
-  // should not have to skip past what saved it.
-  const measurable = rows.filter((row) => row.delta_us !== null
-                                       && row.delta_us !== undefined);
-  const worse = measurable.filter((row) => row.delta_us > 0)
-                          .slice(0, CULPRITS_SHOWN);
-  const better = measurable.filter((row) => row.delta_us < 0)
-                           .slice(0, CULPRITS_SHOWN);
-  const absent = rows.filter((row) => row.presence !== "both");
-
-  for (const [label, group] of [["Cost time", worse], ["Saved time", better]]) {
-    if (!group.length) continue;
-    const list = document.createElement("ul");
-    list.className = "culprit-list";
-    list.setAttribute("data-group", label === "Cost time" ? "worse" : "better");
-    for (const row of group) list.append(culpritRow(row));
-    const title = document.createElement("h3");
-    title.textContent = label;
-    section.append(title, list);
-  }
-
-  if (absent.length) {
-    const list = document.createElement("ul");
-    list.className = "culprit-list";
-    list.setAttribute("data-group", "absent");
-    for (const row of absent.slice(0, CULPRITS_SHOWN)) list.append(culpritRow(row));
-    const title = document.createElement("h3");
-    title.textContent = "Only in one run";
-    section.append(title, list);
-  }
+  // `UX-1188`: how many moved, from `counts`; the lists are this table, opened in the payload's ranking.
+  const counts = deltas.counts ?? {};
+  section.append(el("p", { "data-role": "delta-counts" },
+    `${Object.keys(counts).filter((k) => counts[k]).map((k) => `${counts[k].toLocaleString("en-US")} ${k}`)
+      .join(", ")} of ${plural(rows.length, "element")}.`));
+  const node = childNode(childNode(schema, "element_deltas"), "rows");
+  const { table, tools } = buildTable("element_deltas", rows, hintsOf(node), node);
+  section.append(tools, table);
 
   // The honesty line. A per-element delta is not judged against a noise
   // band - there isn't one - and a strip that coloured rows without
@@ -825,30 +823,6 @@ export function renderCulprits(compare) {
       + "run as a whole is.";
   section.append(caveat);
   return section;
-}
-
-function culpritRow(row) {
-  const item = document.createElement("li");
-  item.setAttribute("data-element", row.element_uid);
-  item.setAttribute("data-verdict-kind", row.verdict_kind);
-  item.setAttribute("data-presence", row.presence);
-  if (row.delta_us !== null && row.delta_us !== undefined) {
-    item.setAttribute("data-delta-us", String(row.delta_us));
-  }
-  const name = document.createElement("a");
-  name.className = "element";
-  name.setAttribute("href", `#${elementAnchor(row.element_uid ?? "")}`);
-  name.textContent = row.element_uid;
-  const change = document.createElement("span");
-  change.className = "culprit-change";
-  // The values are the payload's. Nothing here subtracts anything: a
-  // page computing its own delta is a second comparison.
-  change.textContent = (row.delta_us === null || row.delta_us === undefined)
-    ? `${row.presence} — no delta to compare`
-    : `${row.delta_us > 0 ? "+" : ""}${seconds(row.delta_us)}`
-      + ` (${seconds(row.baseline_us)} → ${seconds(row.candidate_us)})`;
-  item.append(name, document.createTextNode(" "), change);
-  return item;
 }
 
 // UX-219: the horizon, drawn.

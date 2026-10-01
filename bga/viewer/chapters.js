@@ -609,12 +609,13 @@ export function labelFold(box) {
   if (!toggle && !rail) return;
   const held = box.querySelectorAll?.("[data-section]")?.length ?? 0;
   const title = box.getAttribute("aria-label");
-  const count = `${held} section${held === 1 ? "" : "s"}`;
   const open = isOpen(box);
   if (toggle) {
     toggle.setAttribute("aria-expanded", String(open));
-    toggle.textContent = `${glyph(open)} Sections · ${held}`;
-    toggle.setAttribute("aria-label", `${count}: ${title}`);
+    const said = `Sections · ${held}`;
+    toggle.textContent = `${glyph(open)} ${said}`;
+    // UX-1169: the name leads with the visible label (WCAG 2.5.3).
+    toggle.setAttribute("aria-label", `${said}: ${title}`);
     toggle.setAttribute("title", open
       ? `Fold "${title}" back to its answer` : `Open "${title}"`);
   }
@@ -803,28 +804,56 @@ export function revealChapter(node) {
 // `UX-800`: the settle below gives up and lands anyway past this many
 // frames, so a rect that never agrees still lands rather than hanging.
 const LAND_SETTLE_FRAME_CAP = 12;
+const LAND_AGAIN_CAP = 4;
 
-export function revealAndLand(node, behavior) {
+// `at` (`UX-1171`): the viewport top to land `node` on, in place of its scroll margin.
+export function revealAndLand(node, behavior, at) {
   const box = revealChapter(node);
+  // `UX-1177`: a fold an anchor names is opened, with every fold around it.
+  for (let fold = node?.closest?.("details"); fold; fold = fold.parentElement?.closest?.("details")) fold.open = true;
+  const view = node?.ownerDocument?.defaultView ?? globalThis;
+  let landed = null;
+  let landedAt = null;
+  const margin = () => at ?? (parseFloat(view.getComputedStyle?.(node)?.scrollMarginTop) || 0);
   const land = () => {
     if (!node?.getBoundingClientRect) return;
-    const view = node.ownerDocument?.defaultView ?? globalThis;
-    const margin = parseFloat(
-      view.getComputedStyle?.(node)?.scrollMarginTop) || 0;
-    const top = (view.scrollY ?? 0) + node.getBoundingClientRect().top - margin;
+    const top = (view.scrollY ?? 0) + node.getBoundingClientRect().top - margin();
     view.scrollTo?.(behavior ? { top, behavior } : { top });
+    landed = behavior ? null : view.scrollY;
+    landedAt = (view.scrollY ?? 0) + node.getBoundingClientRect().top;
   };
   land();
   const frame = globalThis.requestAnimationFrame;
   if (frame && node?.getBoundingClientRect) {
+    // UX-1178: a reader who wheels, touches, types or scrolls first keeps where they went.
+    let moved = false;
+    const inputs = ["wheel", "touchstart", "keydown"];
+    const yieldTo = () => { moved = true; };
+    for (const type of inputs) view.addEventListener?.(type, yieldTo, { capture: true, passive: true });
+    const release = () => {
+      for (const type of inputs) view.removeEventListener?.(type, yieldTo, { capture: true });
+    };
     let prev = null;
     let seen = 0;
+    let lands = 0;
     const settle = () => frame(() => {
       seen += 1;
       const cur = node.getBoundingClientRect().top;
-      if ((prev !== null && cur === prev) || seen >= LAND_SETTLE_FRAME_CAP) {
-        land();
+      const y = view.scrollY ?? 0;
+      // A reader's scroll leaves the node where it was in the document; a fold opening above moves it.
+      if (moved || (landed !== null && Math.abs(y - landed) > 1 && Math.abs(y + cur - landedAt) <= 1)) {
+        release();
         return;
+      }
+      if ((prev !== null && cur === prev) || seen >= LAND_SETTLE_FRAME_CAP) {
+        // `UX-1177`: a landing renders what `content-visibility` estimated near it, which can move the node again.
+        if (Math.abs(cur - margin()) <= 1 || lands >= LAND_AGAIN_CAP) {
+          release();
+          return;
+        }
+        land();
+        lands += 1;
+        seen = 0;
       }
       prev = cur;
       settle();

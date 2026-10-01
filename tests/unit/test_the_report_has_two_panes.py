@@ -239,7 +239,8 @@ class TestNoSectionGrowsWithoutBound:
         # asserted: that the caller asks, and that the answer is
         # decided on the *total*.
         assert "openingBound(presets, total, TABLE_OPENS_BOUNDED_ABOVE)" in code, code[-1500:]
-        assert "if (total <= bound) return null;" in code, code[-1500:]
+        # `UX-1185` (D1): and two pages or fewer open whole.
+        assert "if (total <= Math.max(bound, UNROLL_AT)) return null;" in code, code[-1500:]
 
     def test_the_bound_clears_the_ordinary_case(self):
         """A bound that fired on the ordinary table would train readers
@@ -274,7 +275,7 @@ class TestNoSectionGrowsWithoutBound:
         # The one line that writes it, named rather than located: the
         # concatenated modules hold several `const refresh`, and the
         # first draft of this clause split on the wrong one.
-        assert "badgeText(applyFilters(table, state), total)" in code, (
+        assert "badgeText(applyFilters(table, state), total, state.filtered)" in code, (
             "the badge is no longer written from the filtered count and the total in one place"
         )
 

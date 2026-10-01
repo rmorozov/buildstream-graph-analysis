@@ -14,11 +14,12 @@
  * comments and strings stripped and then read, rather than trusted.
  */
 import { plainValue, served } from "./primitives.js";
-import { COPY_FORMAT_MIRROR, readCopyFormat, writeCopyFormat } from "./viewstate.js";
-import { BARE_KEY, COMMAND, QUANTITY, COLUMNS, SERIES, DISTRIBUTION, bytes,
+import { COPY_FORMAT_MIRROR, readCopyFormat } from "./viewstate.js";
+import { BARE_KEY, COMMAND, QUANTITY, COLUMNS, SERIES, DISTRIBUTION, KEYED_BY,
+         KEYED_BY_BINARY, KEYED_BY_TASK_UID, bytes,
          childNode, cssId, dataKeyed, el, elementColumn, guessQuantity, heading,
          hintsOf, itemsAsShown, keyAsShown, quantity, quantityFor, readerLabel,
-         sectionHead, title } from "./format.js";
+         sectionHead, taskUid, title } from "./format.js";
 import { commandLine, identify, say } from "./controls.js";
 // UX-303: §2's two drawings. They import nothing and take their
 // formatter, so the quantity table stays here and the geometry stays
@@ -33,9 +34,9 @@ import { CONTROLS, UNMAPPED, classify, noteUnmapped, depthSentence,
          distributionStrip, shapeOf } from "./shapes.js";
 import { enterTableFocus, focusedTable, leaveTableFocus, registerFocusTarget }
   from "./tablefocus.js";
-import { parseThreshold, applyFilters, badgeText, rowJson, cellText,
+import { parseQuery, applyFilters, badgeText, rowJson, cellText,
          copy, presetColumns, openingBound, plural, sortable, ownRows,
-         ownBody, showAlso, columnCells, rowsMarkdown, ALL_ROWS_CEILING }
+         ownBody, showAlso, columnCells, rowsMarkdown, showSort, ALL_ROWS_CEILING }
   from "./tables.js";
 import { PATH_HEAD, PATH_TAIL } from "./views.js";
 
@@ -143,7 +144,7 @@ function inlineObject(value, node) {
  * top-level section needs lives there, beside that one call, so this
  * function's body is unchanged from its cell-only years.
  */
-export function mapTable(key, rows, hint, node, nested, depth = 0, path = key) {
+export function mapTable(key, rows, hint, node, nested, depth = 0, path = key, list = false) {
   let declared = hint;
   if (!nested) {
     // A `{name: number}` map's value column has to *declare* a
@@ -164,11 +165,14 @@ export function mapTable(key, rows, hint, node, nested, depth = 0, path = key) {
     const record = Boolean(node?.properties);
     const measure = hintsOf(node)[QUANTITY] ?? guessQuantity(key)
       ?? (record ? null : "count");
+    // UX-1173: a list's index is not a name, so a list draws its items alone.
     declared = { ...hint, [COLUMNS]: [
-      { key: "key", title: "Name" },
+      ...(list ? [] : [{ key: "key", title: "Name" }]),
       { key: "value", title: title(key, measure), quantity: measure }] };
   }
   const { table, tools } = buildTable(path, rows, declared, node, depth);
+  // `UX-1163`'s rule: a list left one column says its name in its fold, not a header.
+  if (list && table.children[0]?.children[0]?.children.length < 2) table.children[0].remove();
   const box = el("div", { class: "map-table", "data-bounded": "map" },
                  tools, table);
   return box;
@@ -214,7 +218,7 @@ function boundedList(value, noun, item = null) {
   const position = el("span", { class: "list-position" }, "");
   const prev = el("button", { type: "button", class: "list-prev",
                               "aria-label": `previous ${noun}` }, "‹ Prev");
-  const more = el("button", { type: "button", class: "fold-more" });
+  const more = el("button", { type: "button", class: "fold-more", "data-noun": noun });
   let page = -1;
   const render = () => {
     const start = Math.max(0, page) * REVEAL_STEP;
@@ -500,7 +504,7 @@ export function renderStructured(key, value, hint = {}, node = undefined,
       }
       const rows = shown.map((item, at) => ({ key: String(at), value: item }));
       return folded(title(key), value,
-                    mapTable(key, rows, hint, node, false, depth + 1, path),
+                    mapTable(key, rows, hint, node, false, depth + 1, path, true),
                     path);
     }
     // `UX-277`: an array of *arrays* - `[["app.bst", 8], …]` - used to
@@ -573,7 +577,13 @@ export function oneRecord(rows, hint, node) {
  */
 export function buildTable(key, rows, hint = {}, node = undefined,
                            depth = 0, options = {}) {
-  const specs = columnSpecs(hint, rows, node);
+  // `UX-1186`: a list's key columns, or a map's `key`.
+  const keyed = [hint[KEYED_BY] ?? []].flat();
+  const specs = columnSpecs(hint, rows, node).map((spec) => {
+    const kind = keyed.includes(spec.key) ? spec.key
+      : spec.key === "key" && keyed.length === 1 ? keyed[0] : null;
+    return kind && !spec.role ? { ...spec, role: kind } : spec;
+  });
   const columns = specs.map((s) => s.key);
   // `UX-526`: how many rows the table *has*. The DOM used to answer
   // that and no longer does - a row past the bound leaves it - so the
@@ -652,7 +662,7 @@ export function buildTable(key, rows, hint = {}, node = undefined,
       const kind = numeric ? (perMember ?? spec.quantity) : null;
       tr.append(el("td",
         { class: numeric ? "num" : null,
-          "data-column": column,
+          "data-column": column, "data-label": spec.title,
           "data-raw": raw === undefined || raw === null ? ""
             : structural ? JSON.stringify(raw) : String(raw) },
         structural
@@ -677,6 +687,20 @@ export function buildTable(key, rows, hint = {}, node = undefined,
     body.append(tr);
   }
   table.append(body);
+  // `UX-1177`: a fold name two record rows share takes its row, so it reads alone in the rail, the tree and Jump.
+  const shared = specs.map(() => []);
+  for (const tr of body.children) {
+    const first = tr.children[0];
+    if (!first || first.getAttribute("data-column") === "key") continue;
+    [...tr.children].forEach((td, at) => {
+      const fold = at ? [...td.children].find((node) => node.className === "map") : null;
+      const name = [...(fold?.children[0]?.children ?? [])].find((node) => node.className === "map-name");
+      if (name) shared[at].push([name, first.getAttribute("data-raw") || first.textContent]);
+    });
+  }
+  for (const [name, row] of shared.filter((names) => names.length > 1).flat()) {
+    name.textContent += ` \u00b7 ${specs[0].title} ${row}`;
+  }
   sortable(table, specs);
   // UX-205: the tools. Sorting alone cannot reduce 1,202 rows to the
   // twelve that matter, and the page renders every row of every array
@@ -685,14 +709,22 @@ export function buildTable(key, rows, hint = {}, node = undefined,
   // UX-208: a declared element column earns every row a generic
   // Inspect - one affordance, no per-table code, because the *schema*
   // says which values are element uids.
-  const uidColumn = elementColumn(specs);
+  if (keyed.length) table.setAttribute("data-keyed-by", keyed.join(" "));
+  const binaryColumn = specs.find((spec) => spec.role === KEYED_BY_BINARY)?.key;
+  const taskColumn = specs.find((spec) => spec.role === KEYED_BY_TASK_UID)?.key;
+  const uidColumn = elementColumn(specs) ?? taskColumn;
+  for (const tr of binaryColumn ? ownRows(table) : []) {
+    const cell = [...tr.children].find((td) => td.getAttribute("data-column") === binaryColumn);
+    if (cell) tr.setAttribute("data-binary", cell.getAttribute("data-raw") || cell.textContent);
+  }
   if (uidColumn) {
     table.setAttribute("data-element-column", uidColumn);
     for (const tr of ownRows(table)) {
       const cell = [...tr.children].find(
         (td) => td.getAttribute("data-column") === uidColumn);
       if (!cell) continue;
-      const uid = cell.getAttribute("data-raw") || cell.textContent;
+      const raw = cell.getAttribute("data-raw") || cell.textContent;
+      const uid = uidColumn === taskColumn ? taskUid(raw).element : raw;
       tr.setAttribute("data-element", uid);
       cell.append(el("a", { class: "inspect", href: `#${cssId(uid)}`,
                             title: `Find ${uid} elsewhere in this report`,
@@ -722,7 +754,28 @@ export function buildTable(key, rows, hint = {}, node = undefined,
     if (after) after.after(uniform);
     else tools.prepend?.(uniform);
   }
+  // `UX-1176`: named once it is placed, since its section is where the name comes from.
+  globalThis.queueMicrotask?.(() => nameTable(table));
   return { table, tools };
+}
+
+/** `UX-1176`: a table's accessible name - its section's question, then the field and the fold it sits in. */
+export function nameTable(table) {
+  if (table.getAttribute?.("aria-label") || !table.closest) return;
+  const said = (node) => (node?.textContent ?? "").replace(/[\u25b8\u25be]/g, "").trim();
+  // Children walked, not `:scope` selectors, so the shim reads what a browser does.
+  const child = (node, test) => [...(node?.children ?? [])].find(test) ?? null;
+  const tag = (name) => (node) => String(node.tagName).toLowerCase() === name;
+  const section = table.closest("section[data-section]");
+  const head = child(section, (node) => String(node.className).split(" ").includes("section-head")) ?? section;
+  const dd = table.closest("dd");
+  const fold = table.closest("details");
+  const summary = child(fold, tag("summary"));
+  const parts = [said(child(head, (node) => /^h[23]$/i.test(node.tagName))),
+    dd?.previousElementSibling && tag("dt")(dd.previousElementSibling) ? said(dd.previousElementSibling) : "",
+    fold && (!dd || fold.closest("dd") === dd) ? said(child(summary, (node) => node.className === "map-name")) : ""];
+  const name = [...new Set(parts.filter(Boolean))].join(" \u203a ");
+  if (name) table.setAttribute("aria-label", name);
 }
 
 /**
@@ -822,6 +875,14 @@ function foldTheMiddle(table, total, { head, tail, noun = "rows" }) {
   return row;
 }
 
+/** `UX-1177`: narrow section `id`'s table to `query`, as a reader typing it would. */
+export function filterSection(doc, id, query) {
+  const box = doc.getElementById(id)?.querySelector("input.table-filter");
+  if (!box) return;
+  box.value = query;
+  box.dispatchEvent(new Event("input", { bubbles: true }));
+}
+
 /** One table as its own view: `buildTable`, in a section. */
 export function renderTable(key, rows, hint = {}, node = undefined,
                             options = {}) {
@@ -832,7 +893,7 @@ export function renderTable(key, rows, hint = {}, node = undefined,
 }
 
 /**
- * The filter bar, the per-column thresholds and the copy affordances.
+ * The filter bar (one grammar: words, `column:value`, thresholds) and the copy affordances.
  *
  * Every comparison runs against `data-raw` - the published value - not
  * against the formatted cell text. Comparing "1.2s" to "5s" as strings
@@ -841,30 +902,43 @@ export function renderTable(key, rows, hint = {}, node = undefined,
  * is a `duration_us`, so the suffix has a meaning.
  */
 export function interrogable(table, specs, total, depth = 0) {
-  const state = { text: "", thresholds: {}, top: null };
+  const state = { text: "", thresholds: {}, exact: [], top: null, sort: null };
+  const narrowed = () => Boolean(state.text.trim() || Object.keys(state.thresholds).length || state.exact.length);
   // UX-334: what these controls are called. The table key is the name
   // `viewstate.js` already keys this table's url state by, so the
   // control's `name` and its bookmarked parameter say the same word.
   const key = table.getAttribute?.("data-table") ?? "table";
   // `UX-1162`: each tool's accessible name ends with its table's.
-  const named = key.split(".").map((part) => title(part, guessQuantity(part))).join(" ");
+  // `UX-1177`: a phrase - "levels.1.elements" reads "Level 1 elements"; a published name keeps its case.
+  const parts = key.split(".");
+  const named = parts.map((part, i) => {
+    const said = title(part, guessQuantity(part));
+    const word = i && said !== part ? said.toLowerCase() : said;
+    return /^\d+$/.test(parts[i + 1] ?? "") ? word.replace(/s$/, "") : word;
+  }).join(" ");
   // `UX-1163`: at rest `Copy N rows` is the count; the badge says `N of M`.
   const rest = badgeText(total, total);
-  const badge = el("span", { class: "badge", hidden: true }, rest);
+  // UX-1169: a live region, so a typist hears the count the filter leaves; `UX-1176`: mounted empty at rest.
+  const badge = el("span", { class: "badge", role: "status" });
   // Review (#295), `UX-1028`: `filtered` - the text/threshold
   // population, before `top`'s slice - is what the paging step below
   // measures its position and bounds against, not `total`, which
   // disagrees with the page the moment a filter narrows it.
   let pagerRefresh = null;
+  let relabel = null;
+  let restart = null;
+  let rewind = null;
   let shape = null;
   const few = total <= FEW_ROWS;
   const refresh = () => {
     // `applyFilters` also writes `state.filtered` and `state.kept` - the pre-`top` population.
-    badge.textContent = badgeText(applyFilters(table, state), total);
-    badge.hidden = badge.textContent === rest;
+    const said = badgeText(applyFilters(table, state), total, state.filtered);
+    badge.textContent = said === rest ? "" : said;
     pagerRefresh?.();
-    // UX-1158: the strip draws, and counts, the rows the filter kept.
-    shape?.replaceWith?.(shape = distributionStrip(table, specs, total, few, state.kept) ?? el("span"));
+    relabel?.();
+    // UX-1158: the strip draws, and counts, the rows the filter kept; `UX-1170`: none at two or fewer.
+    shape?.replaceWith?.(shape = distributionStrip(table, specs, total, few || state.filtered <= FEW_ROWS,
+                                                   state.kept) ?? el("span"));
   };
 
   // `UX-349`: **filters appear when the table is long enough to need
@@ -878,68 +952,46 @@ export function interrogable(table, specs, total, depth = 0) {
   // short enough to read at a glance. On the eleven-row element table
   // that was five inputs above eleven rows.
   const worthFiltering = total > TABLE_OPENS_BOUNDED_ABOVE;
+  // `UX-1191` (§3d): one box, one grammar - `binary:ld` exact, `> 5s` a threshold, a word a substring.
+  const keyed = specs.find((spec) => ["element", "binary", "task_uid"].includes(spec?.role));
+  // `UX-349`: a threshold only where the column holds numbers - a boolean guessed `count` takes none.
+  const filterable = specs.map((spec) => !worthFiltering || !spec?.quantity || columnCells(table, spec.key)
+    .some((td) => Number.isFinite(Number(td.getAttribute("data-raw")))) ? spec : { ...spec, quantity: null });
+  const primary = filterable.find((spec) => spec?.quantity && spec.numeric !== false);
+  const jumps = Boolean(table.getAttribute?.("data-keyed-by"));
   const box = worthFiltering ? el("input", {
     type: "search", class: "table-filter",
-    placeholder: "filter rows…",
+    // `UX-1179`: Jump reaches the rows a bound detaches, in the key hint's place so it fits at 390.
+    placeholder: ["filter", !jumps && keyed && `${keyed.role === "task_uid" ? "op" : keyed.role}:\u2026`,
+                  primary && (PLACEHOLDER[primary.quantity] ?? "> 0"), jumps && "or Jump\u2026"].filter(Boolean).join(", "),
     "aria-label": `Filter rows: ${named}`,
+    title: "a word matches any cell; column:value that column exactly (value* its start); column > 5s, or a bare > 5s, a threshold",
   }) : null;
+  // `UX-1191`: an unreadable threshold is said on the page, and applies nothing.
+  const unread = el("span", { class: "filter-unread", role: "status", hidden: true });
   if (box) {
     identify(box, `filter-${key}`);
-    box.addEventListener("input", () => { state.text = box.value; refresh(); });
-  }
-
-  // A threshold per quantity column, in the header, where the column
-  // says what unit it is in.
-  table.querySelectorAll("th").forEach((th, index) => {
-    const spec = specs[index];
-    if (!worthFiltering || !spec || !spec.quantity) return;
-    // `UX-349`: and only where the column holds numbers. `> 10` under a
-    // boolean was the tell - a column whose quantity was *guessed*
-    // `count` by the fallback in `columnSpecs`, never declared, and
-    // then given a numeric threshold box. Read off the rendered cells
-    // rather than off the guess, which is where the truth is.
-    // A column key is a schema identifier, so it needs no escaping -
-    // the same reading `distributionStrip` makes two hundred lines
-    // down, and `CSS.escape` is a browser global the guards' shim does
-    // not have.
-    const numeric = columnCells(table, spec.key)
-      .some((td) => Number.isFinite(Number(td.getAttribute("data-raw"))));
-    if (!numeric) return;
-    const input = el("input", {
-      type: "text", class: "th-filter", "data-column": spec.key,
-      placeholder: PLACEHOLDER[spec.quantity] ?? "> 0",
-      "aria-label": `threshold for ${spec.title ?? spec.key}`,
-    });
-    identify(input, `threshold-${key}-${spec.key}`);
-    input.addEventListener("input", () => {
-      const parsed = parseThreshold(input.value, spec.quantity);
-      // Unparseable is *no filter*, and says so: a threshold nobody can
-      // read must not silently hide every row.
-      //
-      // `UX-304`: and it says so in more than one channel. A red border
-      // was the whole signal, which is styleguide §4.3's defect - a
-      // status tone alone. The border also goes dashed (a shape), and
-      // `aria-invalid` plus a `title` carry it to a reader who is not
-      // looking at borders at all.
-      const bad = Boolean(input.value) && !parsed;
-      input.className = bad ? "th-filter unparsed" : "th-filter";
-      input.setAttribute("aria-invalid", String(bad));
-      if (bad) {
-        input.setAttribute(
-          "title", `"${input.value}" is not a threshold this column can `
-                   + `read, so no filter is applied`);
-      } else {
-        input.removeAttribute("title");
-      }
-      if (parsed) state.thresholds[spec.key] = parsed;
-      else delete state.thresholds[spec.key];
+    box.addEventListener("input", () => {
+      const labels = Object.fromEntries([...table.querySelectorAll("th")].map(
+        (th) => [th.getAttribute("data-column"), th.textContent]));
+      const query = parseQuery(box.value, filterable, labels);
+      Object.assign(state, { text: query.text, exact: query.exact, thresholds: query.thresholds });
+      const bad = query.unread.length > 0;
+      box.classList?.toggle?.("unparsed", bad);
+      box.setAttribute("aria-invalid", String(bad));
+      unread.hidden = !bad;
+      unread.textContent = bad ? `${query.unread.map((c) => `\u201c${c}\u201d`).join(", ")} `
+        + "is not a threshold this table can read, so it is not applied." : "";
+      if (bad && !unread.parentNode) box.after?.(unread);
+      rewind?.();
       refresh();
     });
-    // The header stays clickable for sorting; the input must not
-    // forward its clicks there.
-    input.addEventListener("click", (event) => event.stopPropagation?.());
-    th.append(input);
-  });
+    // The density strip's click (`shapes.js`) writes its threshold here, replacing a bare one.
+    table.addEventListener?.("bga:threshold", (event) => {
+      box.value = `${box.value.replace(/(^|\s)(>=|<=|>|<|=)\s*\S*/g, "$1").trim()} >= ${event.detail}`.trim();
+      box.dispatchEvent?.(new Event("input", { bubbles: true }));
+    });
+  }
 
   // UX-208 item 4: Top-N over any column the schema declares a
   // quantity. `Top 10` is a *preset*, not a cap - the badge still says
@@ -987,6 +1039,9 @@ export function interrogable(table, specs, total, depth = 0) {
     // selected while paging showed a plain offset window).
     let offset = 0;
     let paging = false;
+    // `UX-1185` (D4): the pager steps the ranking the table opened on, one page the opening bound's size.
+    const size = opening?.top.n ?? TABLE_OPENS_BOUNDED_ABOVE;
+    let ranking = opening?.top.column ?? null;
     const canPage = total > ALL_ROWS_CEILING;
     const position = canPage ? el("span", { class: "page-position" }, "") : null;
     const prev = canPage ? el("button", { type: "button", class: "page-prev",
@@ -1000,28 +1055,30 @@ export function interrogable(table, specs, total, depth = 0) {
     // of the unfiltered `total` (Review #295, `UX-1028`).
     if (canPage) {
       pagerRefresh = () => {
-        if (!paging) { position.textContent = ""; return; }
+        if (!paging) { position.textContent = ""; pager?.removeAttribute?.("data-offset"); return; }
         const denom = state.filtered ?? total;
-        const lastStart = denom === 0 ? 0
-          : Math.floor((denom - 1) / TABLE_OPENS_BOUNDED_ABOVE)
-            * TABLE_OPENS_BOUNDED_ABOVE;
+        const lastStart = denom === 0 ? 0 : Math.floor((denom - 1) / size) * size;
         // The filtered population can shrink under the current window
         // (typing a filter mid-page) - clamp back onto its last real
         // page rather than claim a range past what is now filtered.
         if (offset > lastStart) {
           offset = lastStart;
-          state.top = { n: TABLE_OPENS_BOUNDED_ABOVE, column: null, offset };
-          badge.textContent = badgeText(applyFilters(table, state), total);
+          state.top = { n: size, column: ranking, offset };
+          const said = badgeText(applyFilters(table, state), total, state.filtered);
+          badge.textContent = said === rest ? "" : said;
         }
-        const end = Math.min(offset + TABLE_OPENS_BOUNDED_ABOVE, denom);
+        const end = Math.min(offset + size, denom);
         position.textContent = denom === 0 ? "no rows match"
           : `rows ${offset + 1}-${end} of ${denom.toLocaleString("en-US")}`;
         prev.disabled = offset <= 0;
         next.disabled = end >= denom;
+        // `UX-1185`: the fragment's `p.` - `viewstate.js` reads it here and writes it back through `bga:page`; none on the first rows.
+        if (offset) pager?.setAttribute?.("data-offset", String(offset));
+        else pager?.removeAttribute?.("data-offset");
       };
       const step = () => {
         paging = true;
-        state.top = { n: TABLE_OPENS_BOUNDED_ABOVE, column: null, offset };
+        state.top = { n: size, column: ranking, offset };
         // The preset no longer describes what is on the page - paging
         // replaces its claim rather than leaving it beside a window it
         // did not choose (Review #295).
@@ -1029,13 +1086,22 @@ export function interrogable(table, specs, total, depth = 0) {
         refresh();
       };
       prev.addEventListener("click", () => {
-        offset = Math.max(0, offset - TABLE_OPENS_BOUNDED_ABOVE);
+        offset = Math.max(0, offset - size);
         step();
       });
       next.addEventListener("click", () => {
-        const denom = state.filtered ?? total;
-        offset = Math.min(offset + TABLE_OPENS_BOUNDED_ABOVE,
-                          Math.max(0, denom - TABLE_OPENS_BOUNDED_ABOVE));
+        // From the end of what is shown, so `Top 10` then Next is rows 11-35; `pagerRefresh` clamps it.
+        offset = paging ? offset + size : (state.top?.n ?? size);
+        step();
+      });
+      // `UX-1185`: a filter edit names a new population, so the pager starts at its front.
+      rewind = () => {
+        offset = 0;
+        if (state.top) state.top = { ...state.top, offset: 0 };
+      };
+      pager = el("span", { class: "table-pager" }, prev, position, next);
+      pager.addEventListener?.("bga:page", () => {
+        offset = Math.max(0, Number(pager.getAttribute("data-offset")) || 0);
         step();
       });
     }
@@ -1055,7 +1121,10 @@ export function interrogable(table, specs, total, depth = 0) {
       // "unbounded" the way `state.top = null` would.
       state.top = preset.value ? { n: Number(n), column: column || null }
         : preset.selectedIndex === -1 ? (opening?.top ?? null) : null;
+      // `UX-1190`: a ranked preset is a sort, shown on its header.
+      if (state.top?.column) showSort(table, state.sort = { column: state.top.column, direction: "descending" });
       offset = 0;
+      ranking = state.top?.column ?? opening?.top.column ?? null;
       paging = false;
       refresh();
     });
@@ -1069,18 +1138,32 @@ export function interrogable(table, specs, total, depth = 0) {
       // UX-1158: the opening value, which the link leaves unsaid.
       preset.value = preset.opening = opening.value;
       state.top = opening.top;
+      if (opening.top.column) showSort(table, state.sort = { column: opening.top.column, direction: "descending" });
       refresh();
     }
     state.preset = preset;
 
-    if (canPage) {
-      // Not paged at build time: at rest the table opens on `opening`'s
-      // own bound (Top 25, or the first `TABLE_OPENS_BOUNDED_ABOVE`),
-      // and the paging step only takes over once pressed.
-      prev.disabled = true;
-      pager = el("span", { class: "table-pager" }, prev, position, next);
-    }
+    // Not paged at build time: at rest the table opens on `opening`'s
+    // own bound, and the paging step only takes over once pressed.
+    if (prev) prev.disabled = true;
+    // `UX-1190`: a header's sort starts the bound at the front, and a preset it contradicts steps aside.
+    restart = (sort) => {
+      offset = 0;
+      ranking = sort.column;
+      if (state.top) state.top = { ...state.top, offset: 0 };
+      if (preset.value && (preset.value.split(":")[1] !== sort.column || sort.direction !== "descending")) {
+        preset.selectedIndex = -1;
+      }
+    };
   }
+  table.addEventListener?.("bga:sort", (event) => {
+    state.sort = event.detail;
+    restart?.(state.sort);
+    // Unbounded and unfiltered, `sortable` reorders every row itself.
+    if (!state.top && !narrowed()) return;
+    event.preventDefault?.();
+    refresh();
+  });
 
   // UX-279: the noun, not the verb, and the count rather than a
   // promise. Measured on the served report when this was filed: 43 copy
@@ -1096,49 +1179,36 @@ export function interrogable(table, specs, total, depth = 0) {
   // already remembers per-reader preferences, and which failing is not
   // allowed to take the report down with it.
   const shownRows = () => ownRows(table).filter((tr) => !tr.hidden);
-  const asMarkdown = el("label", { class: "copy-as" },
-    el("input", { type: "checkbox", class: "copy-markdown",
-                  "aria-label": `as Markdown: ${named}` }),
-    " as Markdown");
-  const markdownBox = asMarkdown.querySelector("input");
-  if (markdownBox) identify(markdownBox, `copy-markdown-${key}`);
-  const remembered = readCopyFormat();
-  if (markdownBox && remembered === "markdown") markdownBox.checked = true;
-  // `UX-536`: **one preference, one state.** 29 boxes shared one
-  // `localStorage` key that only a reload read back, so a click changed
-  // 1 of 29 and the other 28 went on promising the format the reader
-  // had just turned off.
-  markdownBox?.addEventListener?.(COPY_FORMAT_MIRROR, () => label());
-  markdownBox?.addEventListener?.("change", () => {
-    writeCopyFormat(markdownBox.checked ? "markdown" : "json");
-    label();
-    for (const other of document.querySelectorAll?.("input.copy-markdown")
-                        ?? []) {
-      if (other === markdownBox) continue;
-      other.checked = markdownBox.checked;
-      other.dispatchEvent?.(new Event(COPY_FORMAT_MIRROR));
-    }
-  });
+  // `UX-1189` (§4c): a filter names a population, and copy takes it - up to `ALL_ROWS_CEILING` - not the page.
+  const filtered = narrowed;
+  const copied = () => (filtered() ? (state.kept ?? []).slice(0, ALL_ROWS_CEILING) : shownRows());
+  const markdown = () => readCopyFormat() === "markdown";
+  // `UX-1189`: the format is one page-wide box now (`app.js`); it tells every table.
+  document.addEventListener?.(COPY_FORMAT_MIRROR, () => label());
 
   const copyRows = el("button", { type: "button", class: "copy-rows" });
   const label = () => {
-    const n = shownRows().length;
-    const form = markdownBox?.checked ? "Markdown" : "JSON";
+    const n = copied().length;
+    const form = markdown() ? "Markdown" : "JSON";
     // `UX-412`: through the shared helper, so this label and the badge
     // beside it agree with the count in one place rather than two.
-    const rows = plural(n, "row");
+    const matched = state.filtered ?? 0;
+    const rows = !filtered() ? plural(n, "row")
+      : n < matched ? `first ${n} of ${plural(matched, "matched row")}` : plural(n, "matched row");
     // `UX-1165`: nothing shown, nothing to copy or to say of the rows.
-    for (const node of [copyRows, asMarkdown, copyRows.parentNode?.querySelector?.(".uniform-columns")]) {
+    for (const node of [copyRows, copyRows.parentNode?.querySelector?.(".uniform-columns")]) {
       if (node) node.hidden = !n;
     }
     say(copyRows, `Copy ${rows}`, named);
-    copyRows.title = `Copy the ${rows} shown in this table as ${form}, `
+    copyRows.title = `Copy the ${rows} ${filtered() ? "the filter keeps" : "shown in this table"} as ${form}, `
       + `with their published values`;
   };
+  // `UX-1185`: every `refresh` - a page step is a click, which no `input` listener hears.
+  relabel = label;
   label();
   copyRows.addEventListener("click", () => {
-    const rows = shownRows();
-    copy(markdownBox?.checked
+    const rows = copied();
+    copy(markdown()
       ? rowsMarkdown(rows, specs)
       : `[${rows.map((tr) => rowJson(tr, specs.map((s) => s.key))).join(",")}]`);
     // `UX-355` (styleguide §4c): and it says so. A clipboard write is
@@ -1153,10 +1223,6 @@ export function interrogable(table, specs, total, depth = 0) {
     // is whatever it would say now.
     setTimeout(label, 1200);
   });
-  // The count follows the filter, the threshold, the sort and the
-  // bound - all of which go through `refresh` or the preset - so it is
-  // recomputed on any input rather than only when the table is built.
-  table.parentNode?.addEventListener?.("input", label);
 
   // Copy one cell's published value. Delegated, so 1,202 rows do not
   // mean 1,202 listeners.
@@ -1208,7 +1274,7 @@ export function interrogable(table, specs, total, depth = 0) {
   // (WCAG 2.4.3/1.3.2); `style.css`'s `margin-left: auto` on `top-n`
   // still carries the "nothing shares its trailing space" guarantee.
   const tools = el("div", { class: "table-tools" }, copyRows, box, few ? null : badge,
-                            pager, asMarkdown, expand, shape,
+                            pager, expand, shape,
                             state.preset ?? null);
   // The badge and the count are the same claim; refresh both together.
   tools.addEventListener?.("input", label);

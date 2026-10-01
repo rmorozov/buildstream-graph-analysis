@@ -101,9 +101,14 @@ _SHOW_ALL = r"""
       const settle = () => {
         const all = trend()?.getAttribute("data-store-all");
         if (all || Date.now() > deadline) {
+          // UX-1169: the drawing still routes to the twin, and its toggle's name still resolves.
+          const to = document.getElementById(trend().querySelector("svg[aria-details]")?.getAttribute("aria-details"));
+          const ids = trend().querySelector(".twin-toggle")?.getAttribute("aria-labelledby")?.split(" ") ?? [];
           done({ pressed: true, all: all ? Number(all) : 0,
                  rows: trend().querySelectorAll("tbody tr").length,
-                 hidden: button.hidden === true });
+                 hidden: button.hidden === true,
+                 routed: (to?.querySelectorAll("tbody tr").length ?? -1) === Number(all),
+                 named: ids.length === 2 && ids.every((i) => document.getElementById(i)) });
         } else setTimeout(settle, 50);
       };
       settle();
@@ -221,6 +226,10 @@ class TestTheRestAreReachable:
         assert out["all"] == PAST_IT, out
         assert out["rows"] == PAST_IT, f"the twin lists {out['rows']} rows after 'show all'"
         assert out["hidden"], "the control is still offering what it gave"
+
+    def test_after_show_all_the_drawing_routes_to_the_new_twin_and_its_toggle_keeps_its_name(self, stores):
+        out = stores[PAST_IT]["shown_all"]
+        assert out["routed"] and out["named"], out
 
     def test_a_stamp_past_the_window_can_be_typed(self, stores):
         assert stores[PAST_IT]["page"]["typed"] == 1, "no way to open a run the menu does not list"

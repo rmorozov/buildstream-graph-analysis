@@ -17,7 +17,7 @@
 // re-exported through one file: the export's `_module_order` walks
 // `import` lines, and a re-export is a module it would never inline
 // (`UX-199`).
-import { served, safeStorage } from "./primitives.js";
+import { elementAnchor, served, safeStorage } from "./primitives.js";
 import { bytes, el, heading, quantity, title, typesetAlways } from "./format.js";
 import { handOff, deepLink, tracedSize, openTab, perfettoCanFetch,
          PERFETTO_FRIENDLY_URL } from "./perfetto.js";
@@ -47,7 +47,7 @@ import { jsonToggles } from "./rawjson.js";
 // measured counts in the module.
 import { contained } from "./controls.js";
 import { applyView, joinHash, splitHash, viewLink,
-         wireViewState } from "./viewstate.js";
+         wireViewState, copyFormatBox } from "./viewstate.js";
 import { applyFocus, applyMarks, clearFocus, focusedElement, readMarks,
          renderFocusBar, renderMarkSummary } from "./focus.js";
 import { renderQuestions } from "./questions.js";
@@ -55,7 +55,7 @@ import { copy } from "./tables.js";
 import { strip } from "./drawings.js";
 import { decisionInvestigation, investigate, investigateButton, render,
          renderVerdict, traceUrl } from "./sections.js";
-import { renderStructured, TABLE_OPENS_BOUNDED_ABOVE } from "./structured.js";
+import { filterSection, nameTable, renderStructured, TABLE_OPENS_BOUNDED_ABOVE } from "./structured.js";
 
 // `UX-1037` (§3k): a bespoke element list past the table bound is §1's own.
 const bounded = (key, items) => (items.length > TABLE_OPENS_BOUNDED_ABOVE
@@ -197,6 +197,10 @@ export function foldOnNarrow(nav, doc) {
   title.addEventListener?.("click", () => {
     apply(nav.getAttribute("data-folded") !== "true");
   });
+  // UX-1171: a press that lands on a section folds the rail first; a chapter row keeps it open to choose one.
+  nav.addEventListener?.("click", (event) => {
+    if (narrow?.matches && event.target?.closest?.("a[href^='#'],[data-all],[data-step]")) apply(true);
+  }, true);
   // `addEventListener` on a MediaQueryList is the modern spelling and
   // the only one worth carrying; a browser without it keeps whatever
   // the first `apply` decided, which is correct for its width.
@@ -204,7 +208,7 @@ export function foldOnNarrow(nav, doc) {
 }
 
 export function wireJumpBox(nav, root, payload, context = {}) {
-  const targets = jumpTargets(root, payload);
+  const targets = jumpTargets(root, payload, nav, elementUids(payload));
   const box = document.createElement("input");
   box.setAttribute("type", "search");
   box.setAttribute("id", "jump");
@@ -213,21 +217,39 @@ export function wireJumpBox(nav, root, payload, context = {}) {
   // guard can say so without an exception list.
   box.setAttribute("name", "jump");
   box.setAttribute("placeholder", "Jump to…");
-  box.setAttribute("aria-label", "Jump to a section or element");
+  box.setAttribute("aria-label", "Jump to a section, element or binary");
   const list = document.createElement("ul");
   list.className = "jump-hits";
+  // `UX-1176`: mounted empty, so "Nothing matches" is announced and names the box.
+  const none = document.createElement("p");
+  none.className = "jump-none muted";
+  none.setAttribute("id", "jump-none");
+  none.setAttribute("role", "status");
+  box.setAttribute("aria-describedby", "jump-none");
 
   const go = (target) => {
+    if (target.kind === "rail") { target.link.click(); return; }
+    if (target.kind === "element") {
+      // `UX-1179`: an element's place is its card, built, opened and landed as a pasted anchor is.
+      const next = joinHash(elementAnchor(target.key), splitHash(location.hash).query);
+      history[next === location.hash ? "replaceState" : "pushState"](null, "", next);
+      window.dispatchEvent(new Event("hashchange"));
+      return;
+    }
+    const escaped = CSS?.escape?.(target.key) ?? target.key;
+    const row = () => root.querySelector(`[data-binary="${escaped}"]`);
+    // `UX-1177`: a row past the bound is filtered in, so the jump lands on it.
+    if (target.kind === "binary" && !row()) filterSection(document, target.section, `binary:${target.key}`);
     const node = target.kind === "section"
       ? document.getElementById(target.key)
-      : root.querySelector(`[data-element="${CSS?.escape?.(target.key)
-          ?? target.key}"]`);
+      : row() ?? document.getElementById(target.section);
     if (!node) return;
     // UX-347: a folded chapter is not a wall. Every way in opens it
     // first - here, on a rail link, and on a pasted `#anchor` - so the
     // fold costs the interaction §3b already budgets and never a
     // section a reader cannot reach.
-    revealAndLand(node, "smooth");
+    // `UX-1177`: no smooth scroll, which the settle re-lands mid-flight, short of a target that moves.
+    revealAndLand(node);
     node.setAttribute("data-jumped", "true");
     setTimeout(() => node.removeAttribute("data-jumped"), 1600);
     // UX-671: the jump box has no `<a href>`, so nothing writes the
@@ -246,7 +268,7 @@ export function wireJumpBox(nav, root, payload, context = {}) {
   // grouped display, so `ArrowDown` moves through what a reader sees.
   let rows = [];
   let active = -1;
-  const clear = () => { box.value = ""; list.replaceChildren(); rows = []; active = -1; };
+  const clear = () => { box.value = ""; list.replaceChildren(); none.textContent = ""; rows = []; active = -1; };
   const highlight = () => {
     rows.forEach((row, i) => {
       if (i === active) row.node.setAttribute("data-active", "true");
@@ -273,10 +295,12 @@ export function wireJumpBox(nav, root, payload, context = {}) {
   const render = () => {
     const groups = paletteResults(targets, box.value, payload, context);
     list.replaceChildren();
+    none.textContent = "";
     rows = [];
     active = -1;
     for (const [name, entries] of [["ELEMENT", groups.elements],
                                    ["ACTIONS", groups.actions],
+                                   ["BINARY", groups.binaries],
                                    ["SECTIONS", groups.sections]]) {
       if (!entries.length) continue;
       const heading = document.createElement("li");
@@ -320,6 +344,8 @@ export function wireJumpBox(nav, root, payload, context = {}) {
         list.append(item);
       }
     }
+    // `UX-1170`: typed and nothing found is said, not an empty list over the rail.
+    if (!rows.length && box.value.trim()) none.textContent = `Nothing matches "${box.value.trim()}".`;
   };
 
   box.addEventListener("input", render);
@@ -343,10 +369,10 @@ export function wireJumpBox(nav, root, payload, context = {}) {
   // appending it put it below thirty-odd entries, measured at y=1236 on
   // an 18.8-screen report whose first screen ends at 900.
   const title = nav.querySelector?.(".toc-title");
-  if (title && typeof title.after === "function") title.after(box, list);
-  else nav.prepend?.(list) ?? nav.append(box, list);
-  if (!box.parentNode) nav.prepend(box, list);
-  return { targets, box, list, render, rowsOf: () => rows };
+  if (title && typeof title.after === "function") title.after(box, list, none);
+  else nav.prepend?.(list) ?? nav.append(box, list, none);
+  if (!box.parentNode) nav.prepend(box, list, none);
+  return { targets, box, list, none, render, rowsOf: () => rows };
 }
 
 // ------------------------------------------------------------------ boot
@@ -748,7 +774,7 @@ async function boot() {
     // `renderDecision` below.
     const culprits = comparison && contained(
       document, "culprits", "compare.json",
-      () => renderCulprits(comparison));
+      () => renderCulprits(comparison, schemas[comparison.schema]));
     if (culprits) root.append(culprits);
 
     // UX-202: the overview above the sections, and the evidence header
@@ -946,6 +972,7 @@ async function boot() {
     renderProvenanceRecords(payload, root, schemas[payload.schema]);
 
     chapters(root, document, payload);
+    for (const table of root.querySelectorAll?.("table") ?? []) nameTable(table);
 
     // UX-199: navigation, last, over whatever was rendered. Nothing
     // above changes; a reader who ignores all of it sees the same
@@ -987,7 +1014,7 @@ async function boot() {
         share.textContent = "\u2713 copied";
         setTimeout(() => { share.textContent = "Copy link to this view"; }, 1200);
       });
-      contents.append(el("p", { class: "toc-controls" }, share));
+      contents.append(el("p", { class: "toc-controls" }, share, copyFormatBox(el)));
       // UX-254/UX-255: after the heading, not before it. This used to
       // be `insertBefore(contents, document.body.firstChild)`, which
       // put 573px of navigation above the run's own name - so the page
@@ -1125,11 +1152,15 @@ async function boot() {
       if (fragment(event)?.length > 1 || chapter) {
         // Chrome's own restore lands after popstate and overrides it.
         window.history.scrollRestoration = "manual";
+        // UX-1171: and where the anchor sat, since a scrollY is stale once the folds' estimates settle.
+        const at = document.getElementById(splitHash(location.hash).anchor);
         window.history.replaceState({ ...window.history.state,
           folds: foldSnapshot(root),
-          scrollY: window.scrollY }, "");
+          scrollY: window.scrollY, at: at?.getBoundingClientRect().top }, "");
         if (chapter) {
-          window.history.pushState(null, "", joinHash(`chapter-${chapter}`, splitHash(location.hash).query));
+          const next = joinHash(`chapter-${chapter}`, splitHash(location.hash).query);
+          // UX-1178: a press on the entry already current is no new entry.
+          window.history[next === location.hash ? "replaceState" : "pushState"](null, "", next);
         }
       }
     }, true);
@@ -1142,6 +1173,8 @@ async function boot() {
       if (!Array.isArray(saved?.folds)) return;
       applyFolds(root, saved.folds);
       window.scrollTo?.(0, saved.scrollY ?? 0);
+      const at = document.getElementById(splitHash(location.hash).anchor);
+      if (saved.at !== undefined && at && !at.closest("[hidden]")) revealAndLand(at, undefined, saved.at);
     });
     window.addEventListener?.("hashchange", () => {
       if (window.history?.state?.folds) return; // popstate restored this entry.

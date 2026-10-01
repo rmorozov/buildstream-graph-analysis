@@ -5,7 +5,7 @@
  * points back.
  */
 import { plainValue, served } from "./primitives.js";
-import { COLUMNS, DIRECTION, QUESTION, PRESETS, INLINE, KEY_PATH, LEAD, attachBlockDoor,
+import { COLUMNS, DIRECTION, QUESTION, PRESETS, INLINE, KEYED_BY, KEYED_BY_ELEMENT, KEY_PATH, LEAD, attachBlockDoor,
          childNode, dataKeyed, describedTerm, el, guessQuantity, heading,
          hintsOf, adviceFor, keyAsShown, pathTrail, quantity, quantityFor, sectionHead,
          title } from "./format.js";
@@ -134,6 +134,7 @@ export function elementSignalTable(elements, node, join = null,
                            quantity: measure };
                 })],
     [QUESTION]: "Which element should I look at?",
+    [KEYED_BY]: KEYED_BY_ELEMENT,
   };
   return { rows, hint, merged: present, joined: joinedIn };
 }
@@ -222,7 +223,8 @@ export function presetTable(key, rows, presets, hint, node, payload) {
     // `test_all_rows_means_all_rows.py`.
     body.replaceChildren(
       el("p", { class: "muted" },
-         preset.question ? `${preset.question} ` : "",
+         // UX-1173: the view whose question is the section's heading does not say it again.
+         preset.question && preset.question !== hint[QUESTION] ? `${preset.question} ` : "",
          view.total >= rows.length
            ? `all ${rows.length} elements`
            : `${view.total} of ${rows.length} elements`),
@@ -289,6 +291,9 @@ export function renderPairs(key, object, hint = {}, node = undefined,
         const record = renderPairs(name, value[0], {}, child);
         // The `dl` alone: its `section` would be a second, stray section inside a `dd`.
         cell = [...record.children].find((n) => String(n.tagName).toUpperCase() === "DL");
+        // Its `?` door with it: a described record's sentences are otherwise unreachable.
+        const door = cell?.previousElementSibling;
+        if (door?.classList?.contains("describe")) cell = [door, cell];
       } else {
         const built = buildTable(name, value, hintsOf(child), child);
         cell = el("div", { class: "map-table", "data-bounded": "map" },

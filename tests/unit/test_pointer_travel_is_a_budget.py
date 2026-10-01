@@ -68,11 +68,12 @@ DX_ONLY = ("button.copy-rows", "select.top-n")
 #: `UX-1147`'s heading row lowers macro_micro 390 and re-bases both_scale 390 J3/J4 (one hop), 3 runs, spread 0.
 #: `UX-1160` re-bases all four on the laid-out page (no placeholder section), 3 runs, spread 0.
 #: Round 155's merged tree (`UX-1154`..`UX-1160`) re-measured, 3 runs, spread 0.
+#: `UX-1191` lowers all four J4s: the header's threshold input is gone, one hop fewer; 3 runs, spread 0.
 MEASURED = {
-    ("macro_micro", 1440): {"J1": (4.53, 0), "J2": (18.48, 0), "J3": (5.87, 35123), "J4": (14.76, 10856)},
-    ("macro_micro", 390): {"J1": (2.34, 466), "J2": (14.81, 1487), "J3": (3.56, 56293), "J4": (9.79, 16695)},
-    ("both_scale", 1440): {"J1": (4.45, 0), "J2": (18.33, 1982), "J3": (6.49, 39669), "J4": (14.64, 11201)},
-    ("both_scale", 390): {"J1": (2.07, 769), "J2": (15.15, 2426), "J3": (4.14, 65240), "J4": (10.34, 21340)},
+    ("macro_micro", 1440): {"J1": (4.53, 0), "J2": (18.48, 0), "J3": (5.87, 35123), "J4": (12.31, 10794)},
+    ("macro_micro", 390): {"J1": (2.34, 466), "J2": (14.81, 1487), "J3": (3.56, 56293), "J4": (7.33, 16521)},
+    ("both_scale", 1440): {"J1": (4.45, 0), "J2": (18.33, 1982), "J3": (6.49, 39669), "J4": (12.16, 7622)},
+    ("both_scale", 390): {"J1": (2.07, 769), "J2": (15.15, 2426), "J3": (4.14, 65240), "J4": (8.93, 12255)},
 }
 HEADROOM_BITS = 0.5
 HEADROOM_WHEEL = 1.10
@@ -229,12 +230,12 @@ _DOCUMENT = (
     // The longest table offering the full tool row (`viewstate.js`'s lookup).
     const tools = (t) => t.parentNode?.querySelector(":scope > .table-tools");
     const t = $("table[data-table]")
-      .filter((t) => tools(t)?.querySelector("input.table-filter") && t.querySelector("input.th-filter"))
+      // `UX-1191`: a table whose box takes a threshold, the header input it replaced.
+      .filter((t) => /[<>]/.test(tools(t)?.querySelector("input.table-filter")?.placeholder ?? ""))
       .sort((a, b) => b.rows.length - a.rows.length)[0];
     const row = t && tools(t);
     await hop("table filter", row && $("input.table-filter", row)[0], false);
     await hop("top-n", row && $("select.top-n", row)[0], false);
-    await hop("first column filter", t && $("input.th-filter", t)[0], false);
     await hop("sort first header", t && $("th", t)[0]);
     await hop("copy rows", row && $("button.copy-rows", row)[0], false);
     table = t && t.getAttribute("data-table");

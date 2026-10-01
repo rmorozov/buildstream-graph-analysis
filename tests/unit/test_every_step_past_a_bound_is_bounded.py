@@ -293,6 +293,66 @@ class TestEveryJsonDoorStaysBounded:
         assert not over, f"door(s) drew more than {TEXT_CHARS_MAX} characters: {over}"
 
 
+#: `UX-1188`: the compare chapter's count sentence, and its table filtered to one uid.
+_COMPARE = r"""
+(() => {
+  const section = document.querySelector('[data-section="culprits"]');
+  const table = section?.querySelector("table[data-table=element_deltas]");
+  const mounted = () => [...table.tBodies[0].rows].filter((tr) => !tr.hidden)
+    .map((tr) => tr.getAttribute("data-element"));
+  const rest = table ? mounted() : [];
+  const box = section?.querySelector("input.table-filter");
+  if (box) {
+    box.value = window.__uid;
+    box.dispatchEvent(new Event("input"));
+  }
+  return { counts: section?.querySelector('[data-role="delta-counts"]')?.textContent ?? null,
+           rows: table ? Number(table.getAttribute("data-rows")) : null,
+           rest, filtered: table && box ? mounted() : null };
+})()
+"""
+
+
+@pytest.fixture(scope="module")
+def compare_page(browser, tmp_path_factory):
+    """The 1,202-element two-plane store page, whose second run compares against its first."""
+    from tools.bga_view import export, payloads
+
+    into = tmp_path_factory.mktemp("u1188")
+    page = into / "compare.html"
+    run = str(pages.two_plane_run(into, ("--layers", "20", "--width", "60")))
+    export(run, str(page))
+    deltas = payloads(run)["compare.json"]["element_deltas"]
+    last = deltas["rows"][-1]["element_uid"]
+    got = browser.measure(page.as_uri(), f"window.__uid = {json.dumps(last)};" + _COMPARE, 1440, 900)
+    return deltas, last, got, browser.measure(page.as_uri(), _CENSUS, 1440, 900)
+
+
+@needs_browser
+@pytest.mark.large
+class TestTheCompareChapterCountsWhatMoved:
+    """`UX-1188`: `element_deltas.counts` stated, and every row reachable through the table."""
+
+    def test_the_sentence_states_the_payloads_counts(self, compare_page):
+        deltas, _, got, _ = compare_page
+        counts = deltas["counts"]
+        assert counts["grew"] and counts["shrank"], counts
+        for key in ("grew", "shrank"):
+            assert f"{counts[key]:,} {key}" in (got["counts"] or ""), (key, got["counts"])
+        assert f"of {len(deltas['rows']):,} elements" in got["counts"], got["counts"]
+
+    def test_the_table_holds_every_row_and_opens_bounded(self, compare_page):
+        deltas, _, got, census = compare_page
+        assert got["rows"] == len(deltas["rows"]), got["rows"]
+        table = next(t for t in census["tables"] if t["key"] == "element_deltas")
+        assert len(got["rest"]) > 0 and table["max"] <= MOUNTED_ROWS_MAX, (len(got["rest"]), table)
+
+    def test_the_filter_reaches_one_element_past_the_bound(self, compare_page):
+        _, last, got, _ = compare_page
+        assert last not in got["rest"], "the last-ranked row is mounted at rest - the filter proves nothing"
+        assert got["filtered"] == [last], got["filtered"]
+
+
 #: Past `NAMES_MAX`, `REVEAL_STEP` and `TABLE_OPENS_BOUNDED_ABOVE` at
 #: once, so a fill reaches every step; a reveal keeps a head and tail
 #: of at most ten names besides its window.

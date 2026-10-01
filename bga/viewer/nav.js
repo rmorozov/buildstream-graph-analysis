@@ -119,16 +119,25 @@ export function subsections(section, doc) {
   if (folds.length < 2) return null;
   const list = doc.createElement("ul");
   list.className = "toc-sub";
+  const bare = (fold) => fold.querySelector?.(".map-name")?.textContent ?? fold.textContent;
+  const names = folds.map(bare);
+  const taken = new Set();
   for (const fold of folds.slice(0, SUBSECTIONS_SHOWN)) {
-    const name = fold.querySelector?.(".map-name")?.textContent
-      ?? fold.textContent;
-    const id = `${section.getAttribute("data-section")}--${
-      String(name).trim().toLowerCase().replace(/[^\w]+/g, "-")}`;
     const target = fold.parentElement ?? fold;
+    // UX-1173: a name two folds share takes its row, so each rail entry reads apart.
+    const name = names.filter((n) => n === bare(fold)).length > 1
+      ? `${bare(fold)}${rowOf(target)}` : bare(fold);
+    const base = `${section.getAttribute("data-section")}--${
+      String(name).trim().toLowerCase().replace(/[^\w]+/g, "-")}`;
+    // UX-1173: one id per fold - a section's ids carry its key, so its own folds are the only rivals.
+    let id = base;
+    for (let n = 2; taken.has(id); n += 1) id = `${base}-${n}`;
+    taken.add(id);
     if (!target.getAttribute?.("id")) target.setAttribute?.("id", id);
     const item = doc.createElement("li");
     const link = doc.createElement("a");
-    link.href = `#${target.getAttribute?.("id") ?? id}`;
+    // A fold id is slugged DOM text; encode it so the href cannot carry markup.
+    link.href = `#${encodeURIComponent(target.getAttribute?.("id") ?? id)}`;
     link.setAttribute("data-toc-sub", id);
     link.textContent = String(name).trim();
     item.append(link);
@@ -143,6 +152,14 @@ export function subsections(section, doc) {
     list.append(more);
   }
   return list;
+}
+
+/** UX-1173: " · Level 3" for a fold in a record row - its first cell under its header; a map row's key already names the fold. */
+function rowOf(fold) {
+  const cell = fold.closest?.("td")?.parentElement?.querySelector?.("td");
+  const head = cell?.closest?.("table")?.querySelector?.("th");
+  return cell && !cell.contains(fold) && cell.getAttribute("data-column") !== "key"
+    ? ` · ${head?.textContent ?? ""} ${cell.textContent}` : "";
 }
 
 export function label(key) {
@@ -264,7 +281,9 @@ export function collapsible(root, { document: doc, storage,
     button.setAttribute("aria-label", `Fold ${named}`);
     // A finding card names its own; a nested section comes later and names its own over these.
     for (const door of section.querySelectorAll?.(".describe") ?? []) {
-      if (!door.closest("article")) door.setAttribute("aria-label", `What these mean: ${named}`);
+      // A record's door inside a pair also names the term it sits under.
+      const term = door.closest?.("dd")?.previousElementSibling?.textContent?.trim();
+      if (!door.closest("article")) door.setAttribute("aria-label", `What these mean: ${named}${term ? ` › ${term}` : ""}`);
     }
     button.setAttribute("aria-expanded", String(!collapsed.has(key)));
     button.setAttribute("data-collapse", key);
@@ -439,10 +458,20 @@ export function toc(root, { document: doc, controls } = {}) {
       const button = doc.createElement("button");
       button.textContent = text;
       button.setAttribute("data-all", String(shut));
-      button.addEventListener("click", () => controls.all(shut));
+      button.addEventListener("click", () => {
+        controls.all(shut);
+        // UX-1178: the chapter the rail names is the top again once the folds' heights are in.
+        const at = nav.querySelector?.("[data-current][data-chapter]")?.getAttribute("data-chapter");
+        const box = !shut && at ? chapterBox(root, at) : null;
+        if (box) revealAndLand(box);
+      });
       row.append(button);
     }
     nav.append(row);
+  }
+  // UX-1173: a rail entry the ellipsis cuts is still readable whole on hover.
+  for (const a of nav.querySelectorAll?.("a") ?? []) {
+    if (!a.getAttribute("title")) a.setAttribute("title", a.textContent);
   }
   return nav;
 }
@@ -873,13 +902,18 @@ export function scrollspy(root, nav, { observer } = {}) {
  * anything - `UX-205` is where finding things *inside* a section
  * lives.
  */
-export function jumpTargets(root, payload) {
+export function jumpTargets(root, payload, rail = null, uids = []) {
   // `UX-648`: the same label authority the rail asks, so rail, palette
   // and heading carry one string per section.
   const targets = anchor(root).map((key) => ({
     kind: "section", key,
     text: sectionLabel(root.querySelector?.(`[data-section="${key}"]`), key),
   }));
+  // `UX-1177`: and every fold and preset the rail lists, by its entry's text; a hit presses the entry.
+  for (const link of rail?.querySelectorAll?.("a[data-toc-sub], a[data-toc-view]") ?? []) {
+    const text = String(link.textContent ?? "").trim();
+    if (text) targets.push({ kind: "rail", key: link.getAttribute("href"), text, link });
+  }
 
   const seen = new Set();
   for (const node of root.querySelectorAll?.("[data-element]") ?? []) {
@@ -889,12 +923,27 @@ export function jumpTargets(root, payload) {
       targets.push({ kind: "element", key: uid, text: uid });
     }
   }
-  for (const finding of payload?.findings ?? []) {
+  // `UX-1179`: every element, mounted or not.
+  for (const finding of [...payload?.findings ?? [], { elements: uids }]) {
     for (const uid of finding.elements ?? []) {
       if (!seen.has(uid)) {
         seen.add(uid);
         targets.push({ kind: "element", key: uid, text: uid });
       }
+    }
+  }
+  // `UX-1186`: from the payload; the DOM mounts one page.
+  const binaries = new Set();
+  for (const table of root.querySelectorAll?.("table[data-keyed-by]") ?? []) {
+    if (!table.getAttribute("data-keyed-by").split(" ").includes("binary")) continue;
+    const key = table.getAttribute("data-table");
+    const section = table.closest?.("section[data-section]")?.getAttribute("data-section") ?? key;
+    const value = payload?.[key];
+    const names = Array.isArray(value) ? value.map((row) => row?.binary) : Object.keys(value ?? {});
+    for (const name of names) {
+      if (typeof name !== "string" || binaries.has(name)) continue;
+      binaries.add(name);
+      targets.push({ kind: "binary", key: name, text: name, section });
     }
   }
   return targets;
@@ -955,7 +1004,8 @@ export function paletteResults(targets, query, payload, context = {}, limit = 8)
   const hits = matches(targets, query, limit);
   const elements = hits.filter((hit) => hit.kind === "element")
     .map((hit) => ({ ...hit, facts: paletteFacts(payload, hit.key) }));
-  const sections = hits.filter((hit) => hit.kind === "section");
+  const sections = hits.filter((hit) => hit.kind === "section" || hit.kind === "rail");
+  const binaries = hits.filter((hit) => hit.kind === "binary");
 
   const actions = [];
   const first = elements[0];
@@ -974,5 +1024,5 @@ export function paletteResults(targets, query, payload, context = {}, limit = 8)
                      element: first.key, blast: true });
     }
   }
-  return { elements, actions, sections };
+  return { elements, actions, sections, binaries };
 }

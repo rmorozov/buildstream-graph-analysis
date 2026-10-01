@@ -20,9 +20,9 @@ What the booted exports draw with them today:
 
 ```text
 golden       parallelism.width_at_level
-             "3 levels, 2 → 1, peak 2 at level 1."
+             "3 levels, 2 → 1, peak 2 at level 0."
 macro_micro  parallelism.width_at_level
-             "10 levels, 1 → 1, peak 2 at level 2."
+             "10 levels, 1 → 1, peak 2 at level 1."
              element_duration_distribution
              "0 ms → 19.1 s, median 3.1 s, p95 19.1 s — n=11."
              blast_radius_distribution
@@ -160,7 +160,7 @@ console.log(JSON.stringify({{
 
     def test_the_sentence_names_the_unit_and_the_peak(self):
         out = self._drawn([4, 1, 9, 3, 7])
-        assert out["sentence"] == "5 levels, 4 → 7, peak 9 at level 3."
+        assert out["sentence"] == "5 levels, 4 → 7, peak 9 at level 2."
 
     @pytest.mark.parametrize("values,expected_points", [([5, 9], "2"), ([5], "1")])
     def test_under_three_points_is_a_sentence_and_no_drawing(self, values, expected_points):
@@ -392,7 +392,7 @@ console.log(JSON.stringify({
 
     def test_clicking_the_strip_sets_the_threshold_filter(self):
         """The acceptance test's third clause. Served, a click on the
-        strip sets the same state the threshold input sets — and to an
+        strip sets the same state a typed threshold sets — and to an
         **actual row value**, never to the position the click landed
         on, which would be a derived number entering through a mouse.
         """
@@ -404,8 +404,9 @@ svg.clientWidth = 100;
 // Half way along the range: values run 1000..60000, so the midpoint
 // is 30500 and the nearest row value is 30000 or 31000.
 svg.listeners.click[0]({ currentTarget: svg, offsetX: 50 });
-const input = all(table, (n) =>
-  (n.attrs.class || "").includes("th-filter"))[0];
+// `UX-1191`: into the table's one filter box, as its grammar's threshold.
+const input = all(tools, (n) =>
+  (n.attrs.class || "").includes("table-filter"))[0];
 const shown = all(table, (n) => n.tagName === "tr" && !n.hidden
                                 && n.attrs["data-element"]).length;
 console.log(JSON.stringify({

@@ -268,7 +268,10 @@ class TestTheTwoControlsCompose:
 
     def test_the_badge_never_describes_a_state_the_table_is_not_in(self, composed):
         """One pass, so one place the shown-count comes from."""
-        assert composed["badgeAfterPreset"] == (f"{composed['afterPreset']} of 1,202"), composed
+        # `UX-1170`: a preset under the filter's count names both denominators.
+        shown, matched = composed["afterPreset"], composed["filtered"]
+        told = f"{shown} of {matched} matched, of 1,202" if shown < matched else f"{shown} of 1,202"
+        assert composed["badgeAfterPreset"] == told, composed
 
     def test_clearing_the_filter_returns_to_the_preset(self, composed):
         """Composition both ways.
@@ -296,7 +299,8 @@ class TestThePagerAgreesWithTheFilteredPopulation:
         )
 
     def test_the_position_matches_what_is_actually_on_the_page(self, paged_filter):
-        assert paged_filter["positionAfterOnePage"].startswith("rows 41-80")
+        # `UX-1185`: Next continues from the `Top 10` shown, one 25-row page.
+        assert paged_filter["positionAfterOnePage"].startswith("rows 11-35")
         shown = paged_filter["shownAfterFilter"]
         assert shown == 1, paged_filter
         assert paged_filter["positionAfterFilter"] == f"rows 1-{shown} of {shown}", paged_filter

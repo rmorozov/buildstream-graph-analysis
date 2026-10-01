@@ -173,7 +173,8 @@ def _is_a_fan_in_measure(path):
     coincidence, the same shape `_per_element_measures`'s own docstring
     already excuses twice.
     """
-    return bool(re.match(r"^elements\.fan_in\.[\w./-]+\.bst\.direct$", path))
+    # UX-1187: `dependents` is `dependent_count`'s population, the same construction.
+    return bool(re.match(r"^elements\.fan_in\.[\w./-]+\.bst\.(direct|dependents)$", path))
 
 
 def _is_a_two_hop_chain(path, members):

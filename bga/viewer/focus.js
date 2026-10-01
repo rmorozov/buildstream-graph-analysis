@@ -39,7 +39,9 @@ export function applyFocus(root, uid) {
     else node.setAttribute("data-dimmed", "true");
   }
   for (const section of root.querySelectorAll?.("section[data-section]") ?? []) {
+    // `UX-1186`: a declared population dims, never folds.
     const mentions = section.getAttribute("data-element") === uid
+      || Boolean(section.querySelector?.("table[data-keyed-by]"))
       || [...(section.querySelectorAll?.("[data-element]") ?? [])]
            .some((n) => n.getAttribute("data-element") === uid);
     if (mentions) section.removeAttribute?.("data-unfocused");

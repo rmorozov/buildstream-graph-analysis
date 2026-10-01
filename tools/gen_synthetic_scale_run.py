@@ -133,6 +133,20 @@ STORE_STAMP = "%Y%m%dT%H%M%SZ"
 #: command is for.
 STORE_REGRESSION = 1.6
 
+#: `UX-1182`: `--workload binaries` - fake binaries per call, in seconds,
+#: each binary bound to one named distribution by its index.
+DISTRIBUTIONS = {
+    "constant": lambda rng: 0.05,
+    "uniform": lambda rng: rng.uniform(0.01, 0.5),
+    "exponential": lambda rng: rng.expovariate(10.0),
+    "lognormal": lambda rng: rng.lognormvariate(-2.5, 1.0),
+    "pareto": lambda rng: 0.02 * rng.paretovariate(1.5),
+}
+WORKLOAD_POOL = 600
+WORKLOAD_HEAVY = 8
+WORKLOAD_HEAVY_BINARIES = (200, 500)
+WORKLOAD_LIGHT_BINARIES = (3, 10)
+
 
 def build_graph(layers, width, rng):
     """Return (elements, dependencies) for the layered graph.
@@ -353,6 +367,49 @@ def _plane2_records(placement, durations, started, rng):
     return "".join(lines)
 
 
+def _workload_records(placement, durations, started, elements, rng):
+    """`UX-1182`: a make per building element exec'ing fake binaries.
+
+    The 8 longest elements run 200-500 distinct binaries, the rest 3-10,
+    each 1-3 times; a binary sleeps or burns for its distribution's draw,
+    clamped inside the element's window. `rng` is its own, so `cc` is untouched.
+    """
+    names = list(DISTRIBUTIONS)
+    pool = [names[i % len(names)] for i in range(WORKLOAD_POOL)]
+    building = sorted(e["uid"] for e in elements if e["element_kind"] not in ("import", "stack"))
+    heavy = set(sorted(building, key=lambda uid: (-durations[uid], uid))[:WORKLOAD_HEAVY])
+    epoch = started.timestamp()
+    lines, pid = [], 1000
+    for uid in building:
+        begin = epoch + placement[uid][0] / 1e6
+        window = durations[uid] / 1e6 * 0.92
+        pid += 1
+        root = pid
+        tail = f"element={uid} inv=inv-{root} src=spine"
+        lines.append(f"START pid={root} ppid=1 ts={begin:.6f} {tail} cmd=/usr/bin/make -j4\n")
+        span = WORKLOAD_HEAVY_BINARIES if uid in heavy else WORKLOAD_LIGHT_BINARIES
+        for binary_index in sorted(rng.sample(range(WORKLOAD_POOL), rng.randint(*span))):
+            distribution = pool[binary_index]
+            binary = f"{distribution}-{binary_index:03d}"
+            burn = binary_index % 2 == 1
+            for _call in range(rng.randint(1, 3)):
+                wall = min(DISTRIBUTIONS[distribution](rng), window * 0.9)
+                at = begin + rng.uniform(0, window - wall)
+                pid += 1
+                cmd = f"/opt/fakebin/{binary} --{'burn' if burn else 'sleep'} {wall:.6f}"
+                utime = wall * 0.95 if burn else 0.001
+                lines.append(f"START pid={pid} ppid={root} ts={at:.6f} {tail} cmd={cmd}\n")
+                lines.append(
+                    f"END pid={pid} ppid={root} ts={at + wall:.6f} {tail} exit=0 utime={utime:.3f} "
+                    f"stime={utime / 10:.3f} maxrss_kb={rng.randrange(1024, 65536)} cmd={cmd}\n"
+                )
+        lines.append(
+            f"END pid={root} ppid=1 ts={begin + window:.6f} {tail} exit=0 utime=0.010 stime=0.005 "
+            f"maxrss_kb=4096 cmd=/usr/bin/make -j4\n"
+        )
+    return "".join(lines)
+
+
 def _write_run(directory, elements, dependencies, placement, durations, builders, run_id):
     """The three files a run directory is, factored out of `main`."""
     horizon = max(start + dur for start, dur in placement.values())
@@ -442,7 +499,11 @@ def _plant_store(output, args):
         _write_sources(snapshot / "run", elements)
         (snapshot / "build.log").write_text(_wrapped_log(placement, durations, started, args.builders))
         with gzip.open(snapshot / "plane2.log.gz", "wt", encoding="utf-8") as out:
-            out.write(_plane2_records(placement, durations, started, rng))
+            if args.workload == "binaries":
+                workload_rng = random.Random(f"workload:{args.seed}:{index}")
+                out.write(_workload_records(placement, durations, started, elements, workload_rng))
+            else:
+                out.write(_plane2_records(placement, durations, started, rng))
         planted.append(snapshot)
     (output / ".bga" / "tmp").mkdir(exist_ok=True)
     return planted
@@ -517,6 +578,14 @@ def main():
         help=f"With --store: how many snapshots to plant (default "
         f"{STORE_RUNS}). Two is the minimum that makes `@prev`, "
         f"`compare` and the trend answer at all.",
+    )
+    parser.add_argument(
+        "--workload",
+        choices=("cc", "binaries"),
+        default="cc",
+        help="With --store: Plane 2's population. `cc`, one compiler per "
+        "element; `binaries`, 8 elements exec'ing 200-500 fake binaries "
+        f"each, the rest 3-10, timed from {', '.join(DISTRIBUTIONS)}.",
     )
     args = parser.parse_args()
 

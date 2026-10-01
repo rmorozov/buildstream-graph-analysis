@@ -52,9 +52,12 @@ from .schema_hints import (
     EXPLAINED_BY,
     GROWS,
     INLINE,
+    INSTANT,
     INTERVAL,
     KEY_PATH,
     KEYED_BY,
+    KEYED_BY_BINARY,
+    KEYED_BY_ELEMENT,
     KEYED_BY_TASK_UID,
     LEAD,
     MARKERS,
@@ -1963,7 +1966,15 @@ _ELEMENT_PRESETS = [
     {
         "name": "All elements",
         "question": "Which element should I look at?",
-        "columns": ["element", "element_durations", "downstream_count", "is_leaf", "observed_critical", "element_kind"],
+        "columns": [
+            "element",
+            "element_durations",
+            "unweighted_depth",
+            "downstream_count",
+            "is_leaf",
+            "observed_critical",
+            "element_kind",
+        ],
         "sort": {"column": "element_durations", "direction": "desc"},
     },
     {
@@ -1973,27 +1984,41 @@ _ELEMENT_PRESETS = [
         # selection is published in - the page does not need to know
         # what a critical path is to draw it in the right order.
         "from": "critical_path_detail",
-        "columns": ["element", "element_durations", "slack", "element_kind", "probability"],
+        "columns": ["element", "element_durations", "unweighted_depth", "slack", "element_kind", "probability"],
     },
     {
         "name": "Leaves",
         "question": "What could be deferred?",
         "where": {"column": "is_leaf", "equals": True},
-        "columns": ["element", "element_durations", "downstream_count", "element_kind", "is_structural_kind"],
+        "columns": [
+            "element",
+            "element_durations",
+            "unweighted_depth",
+            "downstream_count",
+            "element_kind",
+            "is_structural_kind",
+        ],
         "sort": {"column": "element_durations", "direction": "desc"},
     },
     {
         "name": "Choke points",
         "question": "What does everything wait on?",
         "from": "bottleneck.choke_points",
-        "columns": ["element", "element_durations", "downstream_count", "weighted_duration_us", "element_kind"],
+        "columns": [
+            "element",
+            "element_durations",
+            "unweighted_depth",
+            "downstream_count",
+            "weighted_duration_us",
+            "element_kind",
+        ],
     },
     {
         "name": "Latent heavies",
         "question": "What is big and off the chain?",
-        "where": {"column": "observed_critical", "equals": False},
-        "columns": ["element", "element_durations", "slack", "downstream_count", "risk_score"],
-        "sort": {"column": "element_durations", "direction": "desc"},
+        # UX-1193: the section's population, so one name counts one set.
+        "from": "latent_heavies",
+        "columns": ["element", "element_durations", "unweighted_depth", "slack", "downstream_count", "risk_score"],
     },
     # `UX-829`: the joined fields with no view of their own - measured
     # on the scale export, `unweighted_depth`, `criticality_probability`
@@ -2006,7 +2031,15 @@ _ELEMENT_PRESETS = [
     {
         "name": "What does my element wait on",
         "question": "What does my element wait on?",
-        "columns": ["element", "slack", "unweighted_depth", "probability", "direct_count", "weighted_duration_us"],
+        "columns": [
+            "element",
+            "element_durations",
+            "unweighted_depth",
+            "slack",
+            "probability",
+            "direct_count",
+            "weighted_duration_us",
+        ],
         "sort": {"column": "slack", "direction": "asc"},
     },
     # UX-338: the two-plane join, as a *view* of this table
@@ -2025,7 +2058,14 @@ _ELEMENT_PRESETS = [
     {
         "name": "Plane 2 (sandbox)",
         "question": "Compute-bound, or badly built?",
-        "columns": ["element", "element_durations", "cores_busy", "requested_jobs", "peak_rss_bytes"],
+        "columns": [
+            "element",
+            "element_durations",
+            "unweighted_depth",
+            "cores_busy",
+            "requested_jobs",
+            "peak_rss_bytes",
+        ],
         # Without these the view is `element_durations` under a
         # heading that promises the sandbox, so it is not offered
         # at all on a run that captured no Plane 2.
@@ -2260,7 +2300,7 @@ _STRUCTURAL_TABLES = {
                     {"key": "length", "title": "Length", "quantity": "count", "sortable": True},
                     {
                         "key": "weighted_duration_us",
-                        "title": "Duration",
+                        "title": "Total",
                         "quantity": "duration_us",
                         "sortable": True,
                         "description": "The members' durations, summed.",
@@ -2289,7 +2329,7 @@ _STRUCTURAL_TABLES = {
                         {"key": "length", "title": "Length", "quantity": "count", "sortable": True},
                         {
                             "key": "weighted_duration_us",
-                            "title": "Duration",
+                            "title": "Total",
                             "quantity": "duration_us",
                             "sortable": True,
                         },
@@ -2799,32 +2839,33 @@ _SIGNALS_TABLES = {
             "properties": {
                 "direct_count": {
                     QUANTITY: "count",
-                    "description": "Dependencies this element names "
-                    "itself. The same number "
-                    "the bottleneck's high fan-in list "
-                    "ranks the top five of, over every "
-                    "element rather than five.",
+                    "description": "Dependencies this element names itself. The same number the bottleneck's "
+                    "high fan-in list ranks the top five of, over every element rather than five.",
                 },
-                # `UX-829`: named, sorted, capped at 40
-                # (`DIRECT_NAMES_CAP`) - `direct_count`'s population,
-                # not a second count. Drawn on the element card, never
-                # in the elements table (styleguide §3c: forty names
-                # is a cell no row survives).
+                # `UX-829`: capped at `DIRECT_NAMES_CAP`, `direct_count`'s population; card only (§3c).
                 "direct": {
                     GROWS: False,
                     "maxItems": 40,
                     "items": {"type": "string", "description": "element uid"},
-                    "description": "This element's direct dependencies "
-                    "by name, sorted, capped at 40. "
-                    "The direct count is the count "
-                    "whether or not it hit the cap.",
+                    "description": "This element's direct dependencies by name, sorted, capped at 40. "
+                    "The direct count is the count whether or not it hit the cap.",
+                },
+                # UX-1187: the mirror of the two above - what names this one.
+                "dependent_count": {
+                    QUANTITY: "count",
+                    "description": "How many elements name this one as a dependency, its out-degree.",
+                },
+                "dependents": {
+                    GROWS: False,
+                    "maxItems": 40,
+                    "items": {"type": "string", "description": "element uid"},
+                    "description": "Those elements by name, sorted, capped at 40. "
+                    "The dependent count is the count whether or not it hit the cap.",
                 },
                 "transitive_count": {
                     QUANTITY: "count",
-                    "description": "Everything it pulls in through "
-                    "those, the closure and not the "
-                    "edge list. An element is not one "
-                    "of the things it pulls in.",
+                    "description": "Everything it pulls in through those, the closure and not the edge list. "
+                    "An element is not one of the things it pulls in.",
                 },
                 "immediate_dominator": {
                     "description": "The nearest element every path "
@@ -3294,6 +3335,7 @@ _RUN_INSTANCE_HINT = {
         "started_at_us": {
             INLINE: "name",
             QUANTITY: "duration_us",
+            INSTANT: True,
             "description": "When the capture began, as microseconds "
             "since the epoch. A point in time rather "
             "than a span — the unit is the same and "
@@ -3379,14 +3421,49 @@ _RUN_INSTANCE_HINT = {
 }
 
 
+_BLAST_COUNTS = {
+    "direct_count": {
+        QUANTITY: "count",
+        "description": "Elements that depend on this one directly. The first hop only.",
+    },
+    "blast_count": {
+        QUANTITY: "count",
+        "description": "Everything a change here rebuilds, transitively — the "
+        "number that makes a small element expensive to touch.",
+    },
+    "building_count": {QUANTITY: "count", "description": "Of those, the ones that do real build work."},
+    "assembling_count": {
+        QUANTITY: "count",
+        "description": "Of those, the ones that only gather what is below them — they rebuild, but cost little.",
+    },
+    "element_count": {
+        QUANTITY: "count",
+        "description": "Elements in the project, as the denominator for the reach above.",
+    },
+    "measured_us": {
+        QUANTITY: "duration_us",
+        "description": "Recorded rebuild time below this element. A sum over the measured elements only, "
+        "so it is a lower bound on the real cost.",
+    },
+}
+
+#: `resource_blast`'s rows: `_BLAST_COUNTS`' quantities, said of a shared resource.
+_RESOURCE_COUNTS = {
+    k: {QUANTITY: _BLAST_COUNTS[k][QUANTITY], "description": v}
+    for k, v in {
+        "direct_count": "Elements that source this resource themselves.",
+        "blast_count": "Everything a change to this resource rebuilds: its elements and all they reach.",
+        "building_count": "Of those, the ones that do real build work.",
+        "assembling_count": "Of those, the ones that only gather what is below them.",
+        "measured_us": "Recorded build time across that set, measured elements only, so a lower bound.",
+    }.items()
+}
+
 _ANALYZE_HINTS = {
     "timestamp_agreement": {
         QUESTION: 'Do the two planes agree about the clock?',
         RAIL: 'prove',
-        # `UX-343`: this block is entirely durations and counts, and
-        # said so nowhere - nine leaves, no unit. `UX-341` then took the
-        # four `_s` members to microseconds; declaring them first is
-        # what made that a rename rather than a guess.
+        # `UX-343`: every leaf is a duration or a count, declared so.
         "properties": {
             "resolution_us": {
                 QUANTITY: "duration_us",
@@ -3456,33 +3533,27 @@ _ANALYZE_HINTS = {
         QUESTION: 'What does one shared resource rebuild?',
         RAIL: 'investigate',
         "properties": {
-            # UX-833: additive - both empty for a project with no
-            # `bga-source-kinds` declaration.
+            # UX-833: both empty with no `bga-source-kinds` declaration.
             "source_kind_map": {
                 "additionalProperties": {"type": "string"},
-                "description": "`project.conf`'s declared "
-                "`bga-source-kinds`: a custom plugin "
-                "kind onto the known kind whose keying "
-                "it inherits.",
+                "description": "`project.conf`'s declared `bga-source-kinds`: a custom plugin "
+                "kind onto the known kind whose keying it inherits.",
             },
             "unmapped_source_kinds": {
                 GROWS: False,
                 "maxItems": 32,
                 "type": "array",
                 "items": {"type": "string"},
-                "description": "Kinds this run saw with no keying, "
-                "sorted — an unmapped custom plugin, "
-                "named rather than folded silently "
-                "into an unestimated blast.",
+                "description": "Kinds this run saw with no keying, sorted — an unmapped custom plugin, "
+                "named rather than folded silently into an unestimated blast.",
             },
             "rows": {
-                GROWS: "resources shared by two or more elements (real "
-                "grower, no cap in the payload; "
-                "structured.js's table bound applies on the "
-                "page)",
+                GROWS: "resources shared by two or more elements (real grower, no cap in the payload; "
+                "structured.js's table bound applies on the page)",
                 "items": {
                     "type": "object",
                     "properties": {
+                        **_RESOURCE_COUNTS,
                         "direct_elements": {
                             GROWS: "elements directly sourcing that resource (subset, no cap)",
                             "items": {"type": "string", "description": "element uid"},
@@ -3499,17 +3570,15 @@ _ANALYZE_HINTS = {
                 },
                 "description": "One row per resource more than one element sources.",
             },
+            "element_count": _BLAST_COUNTS["element_count"],
         },
     },
     "utilization_envelope": {
         QUESTION: 'Were the cores the binding resource?',
         RAIL: 'act',
-        "description": "Cores busy over the build, from the host's own "
-        "`/proc/stat` series, against the smaller "
-        "of what the scheduler was configured to allow and "
-        "what the machine has. `traced processes running` "
-        "cannot answer this: a process blocked on I/O holds "
-        "a slot and no core.",
+        "description": "Cores busy over the build, from the host's own `/proc/stat` series, against the smaller "
+        "of what the scheduler was configured to allow and what the machine has. `traced processes running` "
+        "cannot answer this: a process blocked on I/O holds a slot and no core.",
         "properties": {
             "available": {
                 INLINE: "name",
@@ -3842,7 +3911,10 @@ _ANALYZE_HINTS = {
                 QUANTITY: "duration_us",
                 "description": "The grid in force — without it \"unmeasurable\" names no threshold.",
             },
-            "element_count": {"description": "How many elements, not how many tasks: the reader acts on elements."},
+            "element_count": {
+                QUANTITY: "count",
+                "description": "How many elements, not how many tasks: the reader acts on elements.",
+            },
             "elements": {
                 GROWS: "elements with a below-epsilon span (subset of elements, no cap)",
                 "items": {"type": "string", "description": "element uid"},
@@ -3899,7 +3971,7 @@ _ANALYZE_HINTS = {
                 QUANTITY: "count",
                 "description": "How many levels down the deepest leaf in this document sits.",
             },
-            "deepest_path": {KEY_PATH: True, "description": "One path that reaches it, with `[]` for a list step."},
+            "deepest_path": {KEY_PATH: True, "description": "One path from the top that reaches the deepest leaf."},
             "deeper_than_three": {
                 QUANTITY: "count",
                 "description": "Leaves more than three levels down — the "
@@ -3929,10 +4001,12 @@ _ANALYZE_HINTS = {
             },
             "horizon_start_us": {
                 QUANTITY: "duration_us",
-                "description": "Where this accounting starts, offset from the run's own zero.",
+                INSTANT: True,
+                "description": "Where this accounting starts: the trace's own timestamp, an offset from the run's zero or epoch microseconds.",
             },
             "horizon_end_us": {
                 QUANTITY: "duration_us",
+                INSTANT: True,
                 "description": "Where it ends. Beyond it nothing was scheduled, so nothing is counted.",
             },
             "horizon_us": {
@@ -4739,6 +4813,7 @@ _ANALYZE_HINTS = {
     "by_binary": {
         QUESTION: 'What did this build actually run, and how often?',
         RAIL: 'act',
+        KEYED_BY: KEYED_BY_BINARY,
         QUANTITY: "count",
         GROWS: "distinct binaries Plane 2 saw exec (real grower, no "
         "cap in the payload; structured.js's table/map bound "
@@ -4752,15 +4827,17 @@ _ANALYZE_HINTS = {
     "binary_cost": {
         QUESTION: 'Which binaries cost this build its time?',
         RAIL: 'act',
-        GROWS: "elements (one row per element Plane 2 measured, no cap "
-        "in the payload; structured.js's table bound applies on "
-        "the page)",
+        KEYED_BY: [KEYED_BY_ELEMENT, KEYED_BY_BINARY],
+        GROWS: "(element, binary) pairs (one row per binary each element "
+        "Plane 2 measured ran, no cap in the payload; structured.js's "
+        "table bound applies on the page)",
         COLUMNS: [
             "element",
             "binary",
             "calls",
             {"key": "cpu_us", "title": "CPU"},
             {"key": "cpu_share", "title": "Share of CPU"},
+            {"key": "wall_us", "title": "Wall"},
         ],
         "description": "One row per element and binary Plane 2 saw it "
         "run: how many calls, and what they cost. Two "
@@ -4779,9 +4856,9 @@ _ANALYZE_HINTS = {
                 "cpu_us": {
                     QUANTITY: "duration_us",
                     "description": "CPU across those calls. Null "
-                    "for a binary ranked by count "
-                    "alone — it was too cheap to "
-                    "reach the CPU ranking.",
+                    "only from a Plane 2 report that "
+                    "published two top-5 rankings: a "
+                    "binary ranked by count alone.",
                 },
                 "cpu_share": {QUANTITY: "share", "description": "That CPU as a share of this element's measured CPU."},
                 "wall_us": {
@@ -5632,8 +5709,7 @@ _COMPARE_HINTS = {
             "rows": {
                 COLUMNS: [
                     {"key": "element_uid", "title": "Element", "role": "element", "sortable": True},
-                    {"key": "baseline_us", "title": "Before", "quantity": "duration_us", "sortable": True},
-                    {"key": "candidate_us", "title": "After", "quantity": "duration_us", "sortable": True},
+                    # `UX-1188`: the first quantity is the table's opening Top-N - the culprits.
                     {
                         "key": "delta_us",
                         "title": "Change",
@@ -5643,6 +5719,8 @@ _COMPARE_HINTS = {
                         "not zero, where an element is in "
                         "only one of the runs.",
                     },
+                    {"key": "baseline_us", "title": "Before", "quantity": "duration_us", "sortable": True},
+                    {"key": "candidate_us", "title": "After", "quantity": "duration_us", "sortable": True},
                     {"key": "presence", "title": "Presence", "sortable": True},
                     {"key": "verdict_kind", "title": "Verdict", "sortable": True},
                 ],
@@ -5843,34 +5921,11 @@ _COMPARE_HINTS = {
 }
 
 _BLAST_HINTS = {
-    "direct_count": {
-        QUANTITY: "count",
-        "description": "Elements that depend on this one directly. The first hop only.",
-    },
-    "blast_count": {
-        QUANTITY: "count",
-        "description": "Everything a change here rebuilds, transitively — the "
-        "number that makes a small element expensive to touch.",
-    },
-    "building_count": {QUANTITY: "count", "description": "Of those, the ones that do real build work."},
-    "assembling_count": {
-        QUANTITY: "count",
-        "description": "Of those, the ones that only gather what is below them — they rebuild, but cost little.",
-    },
-    "element_count": {
-        QUANTITY: "count",
-        "description": "Elements in the project, as the denominator for the reach above.",
-    },
+    **_BLAST_COUNTS,
     "measured_elements": {
         QUANTITY: "count",
         "description": "How many of the affected elements have a recorded "
         "duration. The rest are counted, never estimated.",
-    },
-    "measured_us": {
-        QUANTITY: "duration_us",
-        "description": "Recorded rebuild time below this element. A sum over "
-        "the measured elements only, so it is a lower bound on "
-        "the real cost.",
     },
     # UX-206: the closure as a hierarchy rather than a flat list. The
     # depth is what an indented tree needs, and deriving it in the

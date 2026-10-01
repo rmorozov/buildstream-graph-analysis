@@ -25,6 +25,7 @@ from .plural import plural
 # exactly as before. `UX-190`'s rules apply unchanged: adding a hint is
 # an addition, changing what one *means* is a version bump.
 QUANTITY = "bga:quantity"  # how to format the number
+INSTANT = "bga:instant"  # a `duration_us` that is a point in time: epoch microseconds render as a date
 # UX-209: the question a section answers, so the heading, the TOC and
 # the text renderer name it the same way. Silent -> the viewer falls
 # back to `title(key)`.
@@ -210,6 +211,10 @@ KEYED_BY = "bga:keyed_by"  # what the map's own keys are
 #: published verbatim as the row's identity, and what the reader sees is
 #: the part of it that is a name.
 KEYED_BY_TASK_UID = "task_uid"
+#: `UX-1186`: the other two populations a key names. On a list, `KEYED_BY` names
+#: its key columns; each marks its rows for Inspect, Focus and the jump box.
+KEYED_BY_ELEMENT = "element"
+KEYED_BY_BINARY = "binary"
 
 #: `UX-390`: **the run's own advice about this map's keys lives there.**
 #:

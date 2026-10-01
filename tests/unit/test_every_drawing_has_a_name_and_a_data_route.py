@@ -231,7 +231,7 @@ const block = mod.{call.replace("GRADE", grade)};
 class TestElementHistorysSparklineNamesAndRoutesItself:
     """`element.js`'s own inline sparkline - annotation grade only, so
     it draws no twin. Review #295: its route used to be the sentence,
-    which names only the first and last run; the route is now a hidden
+    which names only the first and last run; the route is now an off-screen
     node naming every run, so a middle point stays reachable."""
 
     def test_a_history_with_points_is_named_and_routed_to_every_run(self):
@@ -266,13 +266,14 @@ console.log(JSON.stringify({{
   sentenceText: sentence ? text(sentence) : null,
   routeIsSentence: route === sentence,
   routeLabel: route ? route.attrs["aria-label"] ?? null : null,
-  routeHidden: Boolean(route && route.hidden),
+  routeHidden: Boolean(route && route.hidden), routeRole: route ? route.attrs["data-role"] ?? null : null,
 }}));
 """)
         assert out["label"], out
         assert out["label"] == out["sentenceText"], out
         assert not out["routeIsSentence"], out
-        assert out["routeHidden"], out
+        # UX-1169: in the accessibility tree (off screen by its `data-role`), never `hidden`.
+        assert not out["routeHidden"] and out["routeRole"] == "drawing-values", out
         # The middle run (5,000 µs, stamp "b") is not in the sentence -
         # only its first/last are - but it must be in the route.
         assert "b" in out["routeLabel"] and "5.0 s" in out["routeLabel"], out

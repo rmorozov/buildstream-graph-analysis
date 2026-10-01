@@ -329,8 +329,9 @@ _NESTED = r"""
 
 
 #: How many shared resources the fixture publishes, and so how many
-#: rows the outer table owns.
-RESOURCES = 60
+#: rows the outer table owns - past `UNROLL_AT` (80, `UX-1185`), under
+#: `ALL_ROWS_CEILING`, so it opens bounded and offers "All rows".
+RESOURCES = 100
 
 #: `openingBound`'s head. What `UX-526` leaves attached at rest.
 OPENING = 25

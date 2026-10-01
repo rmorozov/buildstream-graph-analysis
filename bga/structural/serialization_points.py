@@ -84,9 +84,9 @@ def _build_hint(
     """UX-04's own per-category hint precedent: a real, actionable
     sentence naming the specific element and the real numbers behind the
     call, not just a bare flag."""
-    cause = "`variables: notparallel: True`" if notparallel else f"a resolved max-jobs of {max_jobs}"
+    cause = "because its variables set notparallel" if notparallel else f"from a resolved max-jobs of {max_jobs}"
     return (
-        f"{element} runs its own build system at {max_jobs} {'job' if max_jobs == 1 else 'jobs'} - {cause} - while "
+        f"{element} runs its own build system at {max_jobs} {'job' if max_jobs == 1 else 'jobs'} {cause}, while "
         f"the rest of this build runs at {typical_max_jobs}, and it is the longest kind of task here "
         f"({duration_us / 1e6:.1f}s) with {downstream_count} {'element' if downstream_count == 1 else 'elements'} "
         f"waiting behind it. If its sources can handle parallelism, removing the pin is a single-line change; "

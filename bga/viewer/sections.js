@@ -23,9 +23,9 @@
 // several rounds).
 import { chapters } from "./chapters.js";
 import { renderProvenance } from "./decision.js";
-import { GRADE_EXHIBIT, decomposition, interval, strip } from "./drawings.js";
+import { GRADE_EXHIBIT, SERIES_MIN_POINTS, decomposition, interval, strip } from "./drawings.js";
 import { resolvePath } from "./element.js";
-import { COLUMNS, DECOMPOSITION, DISTRIBUTION, INLINE, INTERVAL, KEYED_BY, KEYED_BY_TASK_UID, QUANTITY, SERIES, SEVERITY, attachBlockDoor, bytes, childNode, cssId, describedTerm, el, guessQuantity, heading, hintsOf, keyAsShown, quantity, quantityFor, readerLabel, sectionHead, title } from "./format.js";
+import { COLUMNS, DECOMPOSITION, DISTRIBUTION, INLINE, INTERVAL, KEYED_BY, KEYED_BY_TASK_UID, QUANTITY, SERIES, SEVERITY, attachBlockDoor, bytes, childNode, cssId, describedTerm, el, guessQuantity, heading, hintsOf, keyAsShown, quantity, quantityFor, readerLabel, sectionHead, spoken, taskUid, TERMS, title } from "./format.js";
 import { matches } from "./nav.js";
 import { handOff } from "./perfetto.js";
 import { findingAnchor, plainValue, served } from "./primitives.js";
@@ -185,7 +185,7 @@ export function renderFindings(findings, investigate = null, node = undefined,
           : null,
       ].filter((child) => child !== null && child !== undefined));
       article.querySelector?.(".describe")?.setAttribute("aria-label",
-        `What these mean: ${finding.title}`);
+        `What these mean: ${spoken(finding.title)}`);
       article._hydrate = null;
     };
     if (index < bound) article._hydrate();
@@ -218,7 +218,7 @@ export function investigateButton(finding, investigate) {
                               "data-element": context.element ?? "" });
   // UX-1155: named for what it investigates.
   const button = el("button", { type: "button", "aria-label":
-    `Investigate in Perfetto: ${context.element || finding.title}` }, "Investigate in Perfetto");
+    `Investigate in Perfetto: ${spoken(context.element || finding.title)}` }, "Investigate in Perfetto");
   // `UX-448`: one paste per grain the claim offers, not one button
   // per grain. The handoff opens one trace into one tab whichever
   // question the reader came with, so a second button would send the
@@ -231,7 +231,7 @@ export function investigateButton(finding, investigate) {
   // `data-` attribute), so it is cleared as one: `removeAttribute`
   // would not touch it, and the paste would never appear.
   const pastes = contexts.map((entry) => el(
-    "pre", { class: "query", hidden: true, "data-query-id": entry.queryId },
+    "pre", { class: "query", hidden: "until-found", "data-query-id": entry.queryId },
     contexts.length > 1
       ? el("span", { class: "muted query-grain" }, byId(entry.queryId)?.title
                                                    ?? entry.queryId)
@@ -468,17 +468,22 @@ function renderEmptySection(key, hint, node, sentence = null) {
  * itself; everywhere else `buildTable` already rendered the key
  * verbatim, so only the attribute is added.
  */
-// `UX-835` (§3d): a quantity column's `<th>` may already carry an
-// `input.th-filter` `interrogable` appended after its label - a plain
-// `th.textContent = …` replaces every child and takes the filter with
-// it. Detach the filter first (if there is one), relabel, then
-// reattach the same element - `append` moves rather than copies, in
-// the DOM and in the shim both, so no listener or id is lost.
 function relabelHead(th, label) {
   if (!th) return;
-  const filter = th.querySelector?.("input.th-filter");
-  th.textContent = label;
-  if (filter) th.append(filter);
+  // `UX-1190`: a sortable header's label is its button's.
+  const sort = th.querySelector?.("button.th-sort");
+  if (sort) sort.textContent = label;
+  else th.textContent = label;
+}
+
+/**
+ * `UX-1191` (§3d): a task table whose every row is one op says it once.
+ * The qualifier each cell would carry is the one-value column §3d makes a
+ * sentence; `null` where the ops differ or the rows are too few to be a fact.
+ */
+function statedOp(cells, hint) {
+  const ops = new Set(cells.map((cell) => keyAsShown(cell.getAttribute("data-raw"), hint)?.qualifier));
+  return cells.length >= SERIES_MIN_POINTS && ops.size === 1 ? [...ops][0] : null;
 }
 
 function mapSectionLabels(box, key, hint, node) {
@@ -494,9 +499,18 @@ function mapSectionLabels(box, key, hint, node) {
     const record = Boolean(node?.properties);
     const measure = hintsOf(node)[QUANTITY] ?? guessQuantity(key)
       ?? (record ? null : "count");
-    relabelHead(valueHead, measure ? title(measure, measure) : "Value");
+    // `UX-1184`: a field that names its own quantity titles its column; the bare unit is for the rest.
+    const named = measure && (Object.hasOwn(TERMS, key) || title(key, measure) !== title(key));
+    relabelHead(valueHead, named ? title(key, measure) : measure ? title(measure, measure) : "Value");
+    if (named && measure === "duration_us") {
+      box.prepend(el("p", { class: "section-lead", "data-lead": key },
+        "A share of the active window, not a duration: each element's own is in ",
+        el("a", { href: "#elements" }, "the element table"), "."));
+    }
   }
-  for (const cell of columnCells(table, "key")) {
+  const keys = columnCells(table, "key");
+  const op = taskUidKeyed ? statedOp(keys, hint) : null;
+  for (const cell of keys) {
     const raw = cell.getAttribute("data-raw");
     cell.setAttribute("data-key", raw);
     if (!taskUidKeyed) continue;
@@ -507,11 +521,29 @@ function mapSectionLabels(box, key, hint, node) {
     // (`renderPairs`'s own `task-qualifier` span), never folded into
     // one string, or the reader's search target stops being a single
     // field of the composite.
+    const inspect = cell.querySelector?.("a.inspect");
     cell.textContent = shown.element;
-    if (shown.qualifier) {
+    if (shown.qualifier && !op) {
       cell.append(el("span", { class: "task-qualifier muted" },
                      ` ${shown.qualifier}`));
     }
+    if (inspect) cell.append(inspect);
+  }
+  if (op) {
+    // Beside the table's own one-value sentence (`statedOnce`), or as one where it has none.
+    const said = box.querySelector?.(".uniform-columns");
+    if (said) said.textContent = said.textContent.replace(/\.$/, `, op ${op}.`);
+    else {
+      const note = el("p", { class: "muted uniform-columns", "data-role": "uniform-columns" }, `Every row: op ${op}.`);
+      const copyRows = box.querySelector?.(".copy-rows");
+      if (copyRows) copyRows.after(note);
+      else table.before?.(note);
+    }
+  }
+  // UX-1192: the strip's outlier is named as its row now reads.
+  for (const tip of taskUidKeyed ? box.querySelectorAll?.("[data-outlier] title") ?? [] : []) {
+    const raw = tip.parentNode.getAttribute("data-outlier");
+    tip.textContent = tip.textContent.replace(raw, taskUid(raw).element);
   }
   return box;
 }
@@ -606,7 +638,8 @@ export function renderSection(key, value, hint = {}, node = undefined,
     // test is read off the schema, the same way `mapTable`'s own
     // `record` check already is (`UX-407`).
     const isMap = Boolean(node?.additionalProperties) && !node?.properties;
-    const control = isMap ? classify(value, {
+    // `UX-1186` (D2): a population map is a table at any length.
+    const control = isMap && hint[KEYED_BY] ? CONTROLS.MAP_TABLE : isMap ? classify(value, {
       nestLimit: CELL_NEST_LIMIT,
       inlineFields: OBJECT_INLINE_FIELDS, inlineItems: ARRAY_INLINE_ITEMS,
     }) : null;
@@ -750,7 +783,7 @@ export const SECTION_ANSWERS = {
       + (typeof lost === "number"
         ? (lost === 0 ? "; none went unmeasured." : `; ${lost} could not be read.`) : ".");
   },
-  binary_cost(rows) {
+  binary_cost(rows, payload) {
     if (!Array.isArray(rows) || !rows.length) return null;
     const by = new Map();
     const elements = new Set();
@@ -766,9 +799,11 @@ export const SECTION_ANSWERS = {
       (a, b) => b[1].cpu - a[1].cpu || b[1].calls - a[1].calls)[0];
     const cost = `${many(top.calls, "call")}, `
       + `${quantity(top.cpu, "duration_us")} of CPU`;
-    return by.size === 1
+    // UX-1183: the capture's count, not the rows kept.
+    const ran = Object.keys(payload?.by_binary ?? {}).length || by.size;
+    return ran === 1
       ? `One binary, ${name}, ran in ${many(top.elements, "element")}: ${cost}.`
-      : `${many(by.size, "binary", "binaries")} ran in `
+      : `${many(ran, "binary", "binaries")} ran in `
         + `${many(elements.size, "element")}; ${name} cost the most, `
         + `${cost} in ${many(top.elements, "element")}.`;
   },

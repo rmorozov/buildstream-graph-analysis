@@ -32,8 +32,8 @@ earns is that the export's stripper now knows a comment from a string,
 which is the property that lets it take a trailing comment at all.
 
 It is not a minifier and must not become one (`UX-193`: no build step).
-Code is left exactly as written, so a stack trace from an exported page
-still quotes the source.
+No line is joined (`UX-1175` takes only indentation), so a stack trace
+from an exported page still quotes the source line.
 """
 
 import pathlib

@@ -1,6 +1,9 @@
 """UX-1162: a table's tools, the inspect links, the copy and twin controls
 name what they act on; a drawing's `aria-details` carries its values;
-a published strip's name leads with what it shows.
+a published strip's name leads with what it shows. UX-1169: each
+drawing's `aria-details` reaches a node the tree exposes (6 of 17 before),
+"View as JSON" is named by its question, not its key (46 before), the
+chapter fold's name holds its visible label, the filter badge is `status`.
 
 Read from Chromium's accessibility tree (`cdp.mjs --ax`). Measured on the
 two-plane review page before the fix: 77 `a.inspect` in one name, 17
@@ -51,6 +54,13 @@ _TAG = (
   // One question fold, not all: every fold's SQL at once overruns `cdp.mjs --ax` on the review page.
   for (const fold of document.querySelectorAll("#utilisation details, details.question-group:first-of-type")) fold.open = true;
   let n = 0;
+  for (const b of document.querySelectorAll("button.chapter-open")) b.setAttribute("data-ax-text", b.textContent);
+  const typed = document.querySelector(".table-tools:has(.badge) input.table-filter");
+  if (typed) {
+    typed.setAttribute("data-ax-typed", "1");
+    typed.value = "zzzz";
+    typed.dispatchEvent(new Event("input", { bubbles: true }));
+  }
 """
     + "".join(
         f"""  for (const c of document.querySelectorAll({sel!r})) {{
@@ -67,7 +77,7 @@ _TAG = (
     d.setAttribute("data-ax-n", d.parentElement.dataset.n ?? "");
     if (d.closest("#utilisation")) d.setAttribute("data-ax-util", "1");
   }
-  return ["button", "link", "checkbox", "combobox", "searchbox", "textbox", "image"];
+  return ["button", "link", "checkbox", "combobox", "searchbox", "textbox", "image", "status"];
 })()
 """
 )
@@ -155,3 +165,41 @@ class TestEveryControlAndDrawingNamesWhatItShows:
         for width, nodes in by_width.items():
             found = [n["name"] for n in nodes if n["role"] == "image" and n["attrs"].get("data-ax-util")]
             assert found, (label, width)
+
+    def test_every_drawing_s_details_reach_a_node_the_tree_exposes(self, tree):
+        label, by_width = tree
+        for width, nodes in by_width.items():
+            drawn = [n for n in nodes if n["role"] == "image" and "aria-details" in n["attrs"]]
+            assert drawn, (label, width)
+            unreached = [n["name"][:60] for n in drawn if not n["details"]]
+            assert unreached == [], (label, width, len(drawn), unreached)
+
+    def test_a_json_toggle_is_named_by_its_question_not_its_key(self, tree):
+        label, by_width = tree
+        toggles = [n for n in by_width[1440] if "data-json-toggle" in n["attrs"]]
+        assert toggles, label
+        keyed = [n["name"] for n in toggles if n["name"].endswith(n["attrs"]["data-json-toggle"])]
+        assert keyed == [], (label, len(toggles), keyed[:3])
+        assert all(n["name"].startswith("View as JSON: ") for n in toggles), (label, toggles[0]["name"])
+
+    def test_a_chapter_fold_s_name_holds_its_visible_label(self, tree):
+        label, by_width = tree
+        folds = [n for n in by_width[1440] if "data-ax-text" in n["attrs"]]
+        assert folds, label
+        unheld = [
+            (n["attrs"]["data-ax-text"], n["name"])
+            for n in folds
+            if n["attrs"]["data-ax-text"].split(" ", 1)[1] not in n["name"]
+        ]
+        assert unheld == [], (label, unheld)
+
+    def test_a_filtered_table_s_count_is_a_live_region(self, tree):
+        label, by_width = tree
+        for width, nodes in by_width.items():
+            filtered = any("data-ax-typed" in n["attrs"] for n in nodes)
+            assert filtered or label != "two_plane", (label, width)
+            counts = [
+                n["name"] for n in nodes if n["role"] == "status" and "badge" in n["attrs"].get("class", "").split()
+            ]
+            # `UX-1176`: a badge is in the tree at rest too, empty - `test_a_status_is_announced.py` holds that half.
+            assert counts or not filtered, (label, width, counts)

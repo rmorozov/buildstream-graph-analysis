@@ -112,6 +112,10 @@ def _run_level(block, keys):
     return out or None
 
 
+def _wall_us(wall_s):
+    return round(wall_s * 1_000_000) if isinstance(wall_s, (int, float)) else None
+
+
 def _binary_rows(binary_cost):
     """Plane 2's per-element binary costs, as one flat table.
 
@@ -143,6 +147,21 @@ def _binary_rows(binary_cost):
     for element, cost in sorted((binary_cost or {}).items()):
         if not isinstance(cost, dict) or not cost.get('available'):
             continue
+        # UX-1183: every binary Plane 2 saw; a report without it keeps the two rankings.
+        if cost.get('binaries'):
+            measured = cost.get('measured_cpu_us') or 0
+            rows.extend(
+                {
+                    'element': element,
+                    'binary': entry.get('binary'),
+                    'calls': entry.get('count'),
+                    'cpu_us': entry.get('cpu_us'),
+                    'cpu_share': (entry['cpu_us'] / measured if measured and entry.get('cpu_us') is not None else None),
+                    'wall_us': _wall_us(entry.get('wall_s')),
+                }
+                for entry in cost['binaries']
+            )
+            continue
         calls = {entry.get('binary'): entry.get('count') for entry in cost.get('by_count') or []}
         seen = set()
         for entry in cost.get('by_cpu') or []:
@@ -156,7 +175,7 @@ def _binary_rows(binary_cost):
                     'calls': entry.get('count', calls.get(binary)),
                     'cpu_us': entry.get('cpu_us'),
                     'cpu_share': entry.get('cpu_share'),
-                    'wall_us': (round(wall_s * 1_000_000) if isinstance(wall_s, (int, float)) else None),
+                    'wall_us': _wall_us(wall_s),
                 }
             )
         # A binary ranked by count and not by CPU is a cheap one that

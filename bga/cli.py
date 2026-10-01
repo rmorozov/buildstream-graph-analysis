@@ -165,7 +165,7 @@ def _add_cpu_floor(result, native_report: dict, context) -> None:
     source = 'a declared CPU budget' if cpu_floor['lb_cpu_cores_source'] == 'cpu_budget' else "the host's"
     floors['capacity_model_note'] = (floors.get('capacity_model_note') or '') + (
         f" This run also has a CPU floor, beside LB and not folded into "
-        f"it: {cpu_floor['lb_cpu_us'] / 1e6:.2f}s, the CPU this capture "
+        f"it: {cpu_floor['lb_cpu_us'] / 1e6:.2f} s, the CPU this capture "
         f"measured over {cpu_floor['lb_cpu_governing_cores']} governing "
         f"cores ({source}) — {binds} is the "
         f"binding one."
@@ -1404,16 +1404,16 @@ def _compare_exit_code(args: argparse.Namespace, comparison) -> int:
             print(
                 "Marginal gate not applied: this change added no elements with "
                 "measured work, so there is nothing to judge the efficiency of. "
-                "(This is not a pass - it is an empty check.)",
+                "(This is not a pass; it is an empty check.)",
                 file=sys.stderr,
             )
         elif marginal['stretch'] > limit:
             on_path = ", ".join(marginal['on_critical_path'])
             print(
                 f"Marginal efficiency gate FAILED: "
-                f"{marginal['added_critical_path_us'] / 1e6:.1f}s of the "
-                f"{marginal['added_work_us'] / 1e6:.1f}s this change added landed on "
-                f"the critical path (stretch {marginal['stretch']:.2f} > {limit:.2f}) - "
+                f"{marginal['added_critical_path_us'] / 1e6:.1f} s of the "
+                f"{marginal['added_work_us'] / 1e6:.1f} s this change added landed on "
+                f"the critical path (stretch {marginal['stretch']:.2f} > {limit:.2f}); "
                 f"on the path: {on_path}. Adding work is allowed; adding it "
                 f"serialized is what this gate exists to catch, and unlike the "
                 f"whole-build efficiency gate it does not weaken as the project grows. "

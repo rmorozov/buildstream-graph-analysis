@@ -2,8 +2,8 @@
  * UX-337: the vocabulary every renderer speaks, in one module below them.
  *
  * `app.js`'s own first seam was called `format`, and this is that
- * chapter lifted out whole: the 20 `bga:` hint keys this module
- * declares (of the 23 `bga/schemas.py` emits), the readers that pull
+ * chapter lifted out whole: the 21 `bga:` hint keys this module
+ * declares (of the 24 `bga/schemas.py` emits), the readers that pull
  * them off a schema node (`hintsOf`, `childNode`, `quantityFor`), the
  * formatters that turn a number into a printed value under them, and
  * `el` - the one node constructor everything above builds with.
@@ -124,6 +124,9 @@ export function adviceFor(payload, hint, name) {
   return typeof said === "string" ? said : "";
 }
 export const KEYED_BY_TASK_UID = "task_uid";
+// `UX-1186`: a list's `KEYED_BY` names these columns.
+export const KEYED_BY_ELEMENT = "element";
+export const KEYED_BY_BINARY = "binary";
 
 /**
  * What a map's key should *show*, given the map's own declaration.
@@ -171,6 +174,8 @@ const READERS_SERVED = "bga:readers";
 
 const ROLE = "bga:role";
 
+const INSTANT = "bga:instant";
+
 // ---------------------------------------------------------------- format
 
 export function duration(microseconds) {
@@ -181,6 +186,13 @@ export function duration(microseconds) {
   const m = s / 60;
   if (m < 90) return `${m.toFixed(1)} min`;
   return `${(m / 60).toFixed(1)} h`;
+}
+
+/** `bga:instant`: epoch microseconds as a UTC date; an offset from a run's zero stays a duration. */
+export function instant(microseconds) {
+  if (microseconds === null || microseconds === undefined) return ABSENT;
+  if (microseconds < 1e15) return duration(microseconds);
+  return new Date(microseconds / 1000).toISOString().slice(0, 19).replace("T", " ") + " UTC";
 }
 
 export function bytes(value) {
@@ -195,6 +207,7 @@ export function quantity(value, kind) {
   if (value === null || value === undefined) return ABSENT;
   switch (kind) {
     case "duration_us": return duration(value);
+    case "instant_us": return instant(value);
     case "bytes": return bytes(value);
     case "share": return `${(value * 100).toFixed(1)}%`;
     // UX-341 retired these four from the vocabulary a schema may
@@ -262,6 +275,7 @@ export function guessQuantity(key) {
  */
 const UNIT_SUFFIX = {
   duration_us: /_us$/,
+  instant_us: /_us$/,
   seconds: /_seconds$/,
   bytes: /_bytes$/,
   megabytes: /_mb$/,
@@ -282,6 +296,8 @@ export const TERMS = {
   category_us: "Time waiting",
   deeper_than_three_share: "Share deeper than three",
   started_at_us: "Started at, since the epoch",
+  // `UX-1184`: a task's share of the window, never its duration.
+  wall_clock_share_us: "Wall-clock share",
 };
 
 /**
@@ -621,6 +637,11 @@ function typesetNode(node) {
   if (fragment.textContent !== node.data || parts.length > 1) node.replaceWith(fragment);
 }
 
+/** `UX-1172`: a name is typeset as its text is - the arrow drawn, no backtick. */
+export function spoken(text) {
+  return String(text).replace(/->/g, "\u2192").replace(/`/g, "");
+}
+
 export function typeset(root) {
   if (!root || typeof document.createTreeWalker !== "function") return;
   if (root.nodeType === 3) root = root.parentNode;
@@ -668,7 +689,7 @@ export function hintsOf(node) {
                       RAIL, READERS_SERVED, PRESETS, SERIES, DISTRIBUTION,
                       RUNBOOK,
                       INLINE, LEAD, DECOMPOSITION, INTERVAL, KEYED_BY,
-                      EXPLAINED_BY, COMMAND, KEY_PATH]) {
+                      EXPLAINED_BY, COMMAND, KEY_PATH, INSTANT]) {
     if (name in node) hint[name] = node[name];
   }
   if (node.description) hint.description = node.description;
@@ -750,7 +771,9 @@ export function pathTrail(schema, path) {
  * property of the code rather than of every call site remembering.
  */
 export function quantityFor(node, key) {
-  const declared = hintsOf(node)[QUANTITY];
+  const hints = hintsOf(node);
+  if (hints[INSTANT]) return "instant_us";
+  const declared = hints[QUANTITY];
   if (declared) return declared;
   const guessed = guessQuantity(key);
   if (guessed && typeof console !== "undefined" && globalThis.BGA_STRICT_HINTS) {

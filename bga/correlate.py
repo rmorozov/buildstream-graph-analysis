@@ -350,6 +350,9 @@ def _declared_elements(analysis: dict) -> set:
     return known
 
 
+_MIN_RATIO_SPAN_S = 0.001
+
+
 def _plane2_view(native_report: dict) -> dict[str, dict]:
     """Per-element Plane 2 facts, keyed by the same element UID."""
     view: dict[str, dict] = {}
@@ -372,7 +375,9 @@ def _plane2_view(native_report: dict) -> dict[str, dict]:
     cpu_time = native_report.get("cpu_time") or {}
     for element, entry in (cpu_time.get("per_element") or {}).items():
         record = view.setdefault(element, {})
-        record["cores_busy"] = entry.get("cpu_per_wall_second")
+        # A ratio over a span shorter than the page's 1 ms resolution is not a measurement.
+        span = entry.get("wall_span_s")
+        record["cores_busy"] = entry.get("cpu_per_wall_second") if span is None or span >= _MIN_RATIO_SPAN_S else None
         record["cpu_coverage"] = entry.get("coverage")
         # `UX-383`: the ratio reached the join and the quantity did not,
         # so "this element was CPU-bound" was answerable on the page and

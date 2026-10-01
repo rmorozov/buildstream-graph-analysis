@@ -32,9 +32,9 @@ The three rules this file holds:
 - **a column with one distinct value is stated once and not drawn** -
   `false` eleven times under `Is leaf` is a fact about the table, not
   a column;
-- **a threshold box goes only where the column holds numbers** - `> 10`
+- **a threshold goes only where the column holds numbers** - `> 10`
   under a boolean is the tell of a quantity that was *guessed* rather
-  than declared.
+  than declared (`UX-1191`: typed into the one box, it is refused).
 
 Sorting is deliberately untouched: it costs one header affordance at
 any length and helps at every one, so there is nothing for a threshold
@@ -112,15 +112,8 @@ _LOOK = """
         uniform.push([column, cells[0]]);
       }
     }
-    const thresholds = [...t.querySelectorAll("input.th-filter")].map((i) => {
-      const column = i.getAttribute("data-column");
-      const cells = [...t.querySelectorAll(`td[data-column="${column}"]`)]
-        .map((td) => td.getAttribute("data-raw"));
-      return { column, placeholder: i.placeholder,
-               numeric: cells.some((raw) => Number.isFinite(Number(raw))) };
-    });
     return {
-      table: t.getAttribute("data-table"), rows, uniform, thresholds,
+      table: t.getAttribute("data-table"), rows, uniform,
       search: scope?.querySelectorAll("input.table-filter").length ?? 0,
       sortable: t.querySelectorAll("th[aria-sort]").length
         + t.querySelectorAll("th[data-column]").length,
@@ -166,9 +159,13 @@ const hint = { "bga:columns": [
 const root = make("div");
 root.append(app.renderTable("elements", rows, hint));
 const table = root.querySelectorAll("table[data-table]")[0];
+// `UX-1191`: the thresholds are the box's grammar; typed at a boolean, one is refused on the page.
+const box = root.querySelectorAll("input.table-filter")[0];
+box.value = "is_leaf > 10";
+box.dispatchEvent(new Event("input"));
 console.log(JSON.stringify({
-  thresholds: root.querySelectorAll("input.th-filter").map(
-    (i) => i.getAttribute("data-column")),
+  placeholder: box.placeholder,
+  refused: root.querySelectorAll(".filter-unread").map((n) => n.textContent).join(""),
   search: root.querySelectorAll("input.table-filter").length,
   columns: table.querySelectorAll("th[data-column]").map(
     (h) => h.getAttribute("data-column")),
@@ -221,9 +218,9 @@ class TestAThresholdBoxNeedsANumber:
     def test_a_boolean_column_gets_no_threshold(self):
         out = _mixed_table()
         assert out["search"] == 1, out
-        assert "duration_us" in out["thresholds"], out
-        assert "is_leaf" not in out["thresholds"], (
-            "a boolean column carries a numeric threshold box; its quantity was guessed `count`, never declared"
+        assert out["placeholder"].endswith("> 5s"), out
+        assert "is_leaf > 10" in out["refused"], (
+            "a boolean column takes a numeric threshold; its quantity was guessed `count`, never declared"
         )
 
     def test_the_uniform_column_is_stated_and_gone(self):
@@ -262,10 +259,9 @@ class TestAFilterAppearsWhereItHelps:
         """The acceptance's first clause."""
         cap = _row_cap()
         out = browser.measure(pages[label], _LOOK, 1440, 900)
-        bad = [t for t in out["tables"] if t["rows"] <= cap and (t["search"] or t["thresholds"])]
+        bad = [t for t in out["tables"] if t["rows"] <= cap and t["search"]]
         assert bad == [], f"{label}: {len(bad)} table(s) at or under {cap} rows carry filters: " + ", ".join(
-            f"{t['table']} ({t['rows']} rows, {t['search']} search + {len(t['thresholds'])} thresholds)"
-            for t in bad[:6]
+            f"{t['table']} ({t['rows']} rows, {t['search']} search)" for t in bad[:6]
         )
 
     def test_the_population_is_the_page(self, browser, pages, label):
@@ -312,24 +308,6 @@ class TestAColumnThatNeverVariesIsASentence:
         for table in noted:
             assert table["note"].startswith("Every row: "), table
             assert table["note"].endswith("."), table
-
-
-@needs_browser
-@pytest.mark.medium
-@pytest.mark.parametrize("label", sorted(FIXTURES))
-class TestAThresholdGoesWhereANumberIs:
-    def test_every_threshold_box_sits_over_numbers(self, browser, pages, label):
-        """The acceptance's third clause. `> 10` under a boolean was
-        the tell: the column's quantity was `count` by the fallback in
-        `columnSpecs`, never declared, and the box read the guess."""
-        out = browser.measure(pages[label], _LOOK, 1440, 900)
-        bad = [
-            (t["table"], box["column"], box["placeholder"])
-            for t in out["tables"]
-            for box in t["thresholds"]
-            if not box["numeric"]
-        ]
-        assert bad == [], f"{label}: threshold box over a column with no numbers: {bad}"
 
 
 if __name__ == "__main__":  # pragma: no cover

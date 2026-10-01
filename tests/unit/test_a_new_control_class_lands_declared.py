@@ -62,13 +62,13 @@ REGISTRY = {
     "button.focus-this": (r"^Focus", "§4c"),
     "button.json-toggle": (r"View as JSON", "§1"),
     "button.mark-this": (r".+", "§4c"),
+    "button.th-sort": (r".+", "§6e.8"),  # UX-1190: a sortable header
     "button.toc-title": (r"^Sections$", "§3c"),  # UX-1058
     "button.twin-toggle": (r"^As (table|drawing)$", "§2a"),
     "button[data-all]": (r".+", "§3c"),  # Collapse all / Expand all
     "button[data-step]": (r".+", "§3c"),  # the Top/Prev/Next stepper
     "input.copy-markdown": (r".*", "§4c"),
     "input.table-filter": (r".+", "§3d"),
-    "input.th-filter": (r"^threshold for ", "§3d"),
     "input[type=checkbox]": (r".*", "UX-219"),  # the what-if boxes
     "input[type=search]": (r".+", "UX-223"),  # the jump box
     "select.preset-view": (r".+", "§3d"),

@@ -4,7 +4,7 @@ heading text.
 `format.js:353` used to append `span.section-key.muted` beside every
 section's `h2`. Measured on the golden export before the fix,
 `span.section-key` computed `display != none` on 33 of 47 sections; the
-fix moves the key onto the JSON toggle's `title`/`aria-label` and out
+fix moves the key onto the JSON toggle's `title` (UX-1169: not its name) and out
 of the heading, `data-section` still carrying it for the guards.
 """
 
@@ -52,5 +52,5 @@ class TestTheKeyStaysOffTheHeading:
     def test_every_toggle_carries_its_key(self, measured):
         toggles = measured["toggles"]
         assert len(toggles) >= 30, len(toggles)
-        missing = [t for t in toggles if t["key"] not in t["title"] or t["key"] not in (t["ariaLabel"] or "")]
+        missing = [t for t in toggles if t["key"] not in t["title"]]
         assert not missing, missing

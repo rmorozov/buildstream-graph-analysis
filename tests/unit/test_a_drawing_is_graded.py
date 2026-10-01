@@ -441,7 +441,8 @@ console.log(JSON.stringify({
 """)
         assert out["drawn"] == "4,1,9,3,7"
         assert out["head"] == ["Level", "Value"]
-        assert out["rows"] == [["1", "4u"], ["2", "1u"], ["3", "9u"], ["4", "3u"], ["5", "7u"]]
+        # UX-1173: a `level` series counts from 0, as `parallelism.levels` does.
+        assert out["rows"] == [["0", "4u"], ["1", "1u"], ["2", "9u"], ["3", "3u"], ["4", "7u"]]
 
     def test_a_distribution_twin_holds_every_published_mark(self):
         out = _ok("""
@@ -464,12 +465,13 @@ const block = strip({ n: 3, min: 0, max: 9, p95: 8, deciles: { p50: 4 } },
                     { grade: "exhibit" });
 const table = all(block, (n) => n.attrs["data-role"] === "drawing-twin")[0];
 const button = all(block, (n) => n.attrs["data-drawing-twin"] !== undefined)[0];
+// `UX-1179`: closed is `hidden="until-found"`, so find-in-page reaches the rows.
 const seen = [[table.hidden, text(button)]];
 button.click(); seen.push([table.hidden, text(button)]);
 button.click(); seen.push([table.hidden, text(button)]);
 console.log(JSON.stringify(seen));
 """)
-        assert out == [[True, "As table"], [False, "As drawing"], [True, "As table"]]
+        assert out == [["until-found", "As table"], [False, "As drawing"], ["until-found", "As table"]]
 
     def test_the_twin_survives_print_without_the_toggle(self):
         """§2b's rule that hover is never the only door, applied to a
@@ -932,14 +934,15 @@ class TestTheTwinReallyHidesOnScreen:
                 """
 (() => {
   const table = document.querySelector("table.twin-table");
-  const before = getComputedStyle(table).display;
+  // `UX-1179`: closed is `until-found` - laid out as an empty block, never `display: none`.
+  const before = [getComputedStyle(table).contentVisibility, table.getBoundingClientRect().height];
   document.querySelector("button.twin-toggle").click();
   const after = getComputedStyle(table).display;
   return { before, after };
 })()
 """,
             )
-        assert out["before"] == "none", out
+        assert out["before"] == ["hidden", 0], out
         assert out["after"] == "table", out
 
 

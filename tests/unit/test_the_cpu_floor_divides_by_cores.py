@@ -112,3 +112,16 @@ def test_no_plane_two_leaves_the_floors_and_the_note_as_they_were(tmp_path):
 
     assert [key for key in floors if key.startswith("lb_cpu")] == []
     assert floors["capacity_model_note"] == GOLDEN_NOTE
+
+
+def test_the_cli_spaces_its_unit(monkeypatch):
+    from types import SimpleNamespace
+
+    from bga import cli
+    from bga.floors import cpu
+
+    floor = {"lb_cpu_us": 1_500_000, "lb_cpu_binds": True, "lb_cpu_cores_source": "host", "lb_cpu_governing_cores": 4}
+    monkeypatch.setattr(cpu, "compute_cpu_floor", lambda *_: dict(floor))
+    result = SimpleNamespace(floors={"lb": 1})
+    cli._add_cpu_floor(result, {}, None)
+    assert "1.50 s," in result.floors["capacity_model_note"], result.floors["capacity_model_note"]

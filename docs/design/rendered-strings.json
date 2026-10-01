@@ -506,6 +506,16 @@
   },
   {
     "exception": null,
+    "role": "button",
+    "text": "Claim"
+  },
+  {
+    "exception": null,
+    "role": "button",
+    "text": "Published as"
+  },
+  {
+    "exception": null,
     "role": "summary",
     "text": "Why ##"
   },
@@ -952,6 +962,16 @@
   {
     "exception": null,
     "role": "th",
+    "text": "Task"
+  },
+  {
+    "exception": null,
+    "role": "th",
+    "text": "Wall-clock share"
+  },
+  {
+    "exception": null,
+    "role": "th",
     "text": "Name"
   },
   {
@@ -968,6 +988,11 @@
     "exception": null,
     "role": "th",
     "text": "Downstream count"
+  },
+  {
+    "exception": null,
+    "role": "th",
+    "text": "Unweighted depth"
   },
   {
     "exception": null,
@@ -993,6 +1018,11 @@
     "exception": null,
     "role": "th",
     "text": "Length"
+  },
+  {
+    "exception": null,
+    "role": "th",
+    "text": "Total"
   },
   {
     "exception": null,
@@ -1068,21 +1098,6 @@
     "exception": null,
     "role": "th",
     "text": "Measure"
-  },
-  {
-    "exception": null,
-    "role": "th",
-    "text": "Claim"
-  },
-  {
-    "exception": null,
-    "role": "th",
-    "text": "Published as"
-  },
-  {
-    "exception": null,
-    "role": "th",
-    "text": "Contracts"
   },
   {
     "exception": "sentence continuation",
@@ -1291,6 +1306,111 @@
   },
   {
     "exception": null,
+    "role": "button",
+    "text": "Staged by"
+  },
+  {
+    "exception": null,
+    "role": "button",
+    "text": "Never read by"
+  },
+  {
+    "exception": null,
+    "role": "button",
+    "text": "Task"
+  },
+  {
+    "exception": null,
+    "role": "button",
+    "text": "Wall-clock share"
+  },
+  {
+    "exception": null,
+    "role": "button",
+    "text": "Element"
+  },
+  {
+    "exception": null,
+    "role": "button",
+    "text": "Binary"
+  },
+  {
+    "exception": null,
+    "role": "button",
+    "text": "Calls"
+  },
+  {
+    "exception": "acronym",
+    "role": "button",
+    "text": "CPU"
+  },
+  {
+    "exception": "acronym",
+    "role": "button",
+    "text": "Share of CPU"
+  },
+  {
+    "exception": null,
+    "role": "button",
+    "text": "Wall"
+  },
+  {
+    "exception": null,
+    "role": "button",
+    "text": "Count"
+  },
+  {
+    "exception": null,
+    "role": "button",
+    "text": "Element durations"
+  },
+  {
+    "exception": null,
+    "role": "button",
+    "text": "Downstream count"
+  },
+  {
+    "exception": null,
+    "role": "button",
+    "text": "Unweighted depth"
+  },
+  {
+    "exception": null,
+    "role": "button",
+    "text": "Is leaf"
+  },
+  {
+    "exception": null,
+    "role": "button",
+    "text": "Element kind"
+  },
+  {
+    "exception": null,
+    "role": "button",
+    "text": "Observed critical"
+  },
+  {
+    "exception": null,
+    "role": "button",
+    "text": "Rank"
+  },
+  {
+    "exception": null,
+    "role": "button",
+    "text": "Split this first"
+  },
+  {
+    "exception": null,
+    "role": "button",
+    "text": "Total"
+  },
+  {
+    "exception": null,
+    "role": "button",
+    "text": "Of longest path"
+  },
+  {
+    "exception": null,
     "role": "summary",
     "text": "Evidence \u00b7 # level, # rows"
   },
@@ -1327,7 +1447,7 @@
   {
     "exception": "product name",
     "role": "summary",
-    "text": "core.bst runs its own build system at # job - variables: notparallel: True - while the rest of this build runs at # and it is the longest kind of task here\u2026 moreless"
+    "text": "core.bst runs its own build system at # job because its variables set notparallel, while the rest of this build runs at # and it is the longest kind of task\u2026 moreless"
   },
   {
     "exception": null,
@@ -1338,6 +1458,11 @@
     "exception": null,
     "role": "summary",
     "text": "What Plane # saw \u00b7 # level, # rows"
+  },
+  {
+    "exception": null,
+    "role": "summary",
+    "text": "Binaries \u00b7 # level, # rows"
   },
   {
     "exception": null,
@@ -1527,47 +1652,12 @@
   {
     "exception": null,
     "role": "th",
-    "text": "Staged by"
-  },
-  {
-    "exception": null,
-    "role": "th",
-    "text": "Never read by"
-  },
-  {
-    "exception": null,
-    "role": "th",
     "text": "Projection"
   },
   {
     "exception": null,
     "role": "th",
     "text": "Target closure"
-  },
-  {
-    "exception": null,
-    "role": "th",
-    "text": "Task"
-  },
-  {
-    "exception": null,
-    "role": "th",
-    "text": "Binary"
-  },
-  {
-    "exception": null,
-    "role": "th",
-    "text": "Calls"
-  },
-  {
-    "exception": "acronym",
-    "role": "th",
-    "text": "CPU"
-  },
-  {
-    "exception": "acronym",
-    "role": "th",
-    "text": "Share of CPU"
   },
   {
     "exception": null,
@@ -1583,11 +1673,6 @@
     "exception": null,
     "role": "th",
     "text": "Elapsed"
-  },
-  {
-    "exception": null,
-    "role": "th",
-    "text": "Count"
   },
   {
     "exception": null,
@@ -1662,6 +1747,26 @@
   {
     "exception": null,
     "role": "th",
+    "text": "Binary"
+  },
+  {
+    "exception": null,
+    "role": "th",
+    "text": "Calls"
+  },
+  {
+    "exception": "acronym",
+    "role": "th",
+    "text": "CPU"
+  },
+  {
+    "exception": null,
+    "role": "th",
+    "text": "Wall"
+  },
+  {
+    "exception": null,
+    "role": "th",
     "text": "Static census"
   },
   {
@@ -1712,7 +1817,7 @@
   {
     "exception": null,
     "role": "option",
-    "text": "Top # by Wall clock share"
+    "text": "Top # by Wall-clock share"
   },
   {
     "exception": null,
@@ -1728,6 +1833,11 @@
     "exception": "acronym",
     "role": "option",
     "text": "Top # by Share of CPU"
+  },
+  {
+    "exception": null,
+    "role": "option",
+    "text": "Top # by Wall"
   },
   {
     "exception": null,
@@ -1757,12 +1867,17 @@
   {
     "exception": null,
     "role": "option",
+    "text": "Top # by Unweighted depth"
+  },
+  {
+    "exception": null,
+    "role": "option",
     "text": "Top # by Rank"
   },
   {
     "exception": null,
     "role": "option",
-    "text": "Top # by Duration"
+    "text": "Top # by Total"
   },
   {
     "exception": null,
@@ -1778,6 +1893,26 @@
     "exception": null,
     "role": "heading",
     "text": "Which durations could this run not express?"
+  },
+  {
+    "exception": null,
+    "role": "button",
+    "text": "Kind"
+  },
+  {
+    "exception": null,
+    "role": "button",
+    "text": "Duration"
+  },
+  {
+    "exception": null,
+    "role": "button",
+    "text": "Share of path"
+  },
+  {
+    "exception": null,
+    "role": "button",
+    "text": "Realizable"
   },
   {
     "exception": null,
@@ -1801,13 +1936,58 @@
   },
   {
     "exception": null,
+    "role": "button",
+    "text": "Level"
+  },
+  {
+    "exception": null,
+    "role": "button",
+    "text": "Elements here"
+  },
+  {
+    "exception": null,
+    "role": "button",
+    "text": "Which elements"
+  },
+  {
+    "exception": null,
+    "role": "button",
+    "text": "Could be one element"
+  },
+  {
+    "exception": null,
+    "role": "button",
+    "text": "Always consumed by"
+  },
+  {
+    "exception": null,
+    "role": "button",
+    "text": "Key"
+  },
+  {
+    "exception": null,
+    "role": "button",
+    "text": "Is structural kind"
+  },
+  {
+    "exception": null,
+    "role": "button",
+    "text": "Is potentially deferrable"
+  },
+  {
+    "exception": null,
+    "role": "button",
+    "text": "Deferral risk"
+  },
+  {
+    "exception": null,
     "role": "summary",
     "text": "Half of this graph's # elements reach # others or fewer; the top tenth reach # others or more, up to #. Reach is spread across many elements \u2014 there\u2026 moreless"
   },
   {
     "exception": null,
     "role": "summary",
-    "text": "Elements \u00b7 # level, # rows"
+    "text": "Elements \u00b7 Level # \u00b7 # level, # rows"
   },
   {
     "exception": null,
@@ -1852,22 +2032,17 @@
   {
     "exception": null,
     "role": "th",
-    "text": "Could be one element"
-  },
-  {
-    "exception": null,
-    "role": "th",
-    "text": "Always consumed by"
-  },
-  {
-    "exception": null,
-    "role": "th",
     "text": "Producer"
   },
   {
     "exception": "product name",
     "role": "option",
     "text": "layer#/mod#.bst"
+  },
+  {
+    "exception": null,
+    "role": "option",
+    "text": "Top # by Duration"
   },
   {
     "exception": null,

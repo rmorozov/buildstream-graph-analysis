@@ -67,7 +67,7 @@ export function joinHash(anchor, query) {
  *
  * Keys are short because they end up in a URL somebody pastes: `c` for
  * the collapsed set, then one entry per table for its filter (`f.`),
- * per-column thresholds (`t.`), sort (`s.`) and preset (`n.`), and `o`
+ * thresholds included (`UX-1191`), sort (`s.`) and preset (`n.`), and `o`
  * for the disclosures a reader opened.
  */
 export function captureView(root) {
@@ -104,19 +104,20 @@ export function captureView(root) {
     const key = table.getAttribute("data-table");
     const tools = table.parentNode?.querySelector?.(".table-tools");
     const filter = tools?.querySelector?.("input.table-filter");
+    // `UX-1191`: the thresholds are the box's own text now, so `f.` carries them.
     if (filter?.value) params.set(`f.${key}`, filter.value);
-    for (const input of table.querySelectorAll?.("input.th-filter") ?? []) {
-      if (input.value) {
-        params.set(`t.${key}.${input.getAttribute("data-column")}`, input.value);
-      }
-    }
     const preset = tools?.querySelector?.("select.top-n");
     // UX-1165: `All rows` too, where the table opened bounded.
     if (preset?.selectedIndex > -1 && preset.value !== (preset.opening ?? "")) params.set(`n.${key}`, preset.value);
+    // `UX-1190`: the ranking the preset already names says nothing.
+    const ranked = `${(preset?.value || preset?.opening || "").split(":")[1]}:descending`;
     for (const th of table.querySelectorAll?.("th") ?? []) {
-      const sorted = th.getAttribute("aria-sort");
-      if (sorted) params.set(`s.${key}`, `${th.getAttribute("data-column")}:${sorted}`);
+      const sorted = `${th.getAttribute("data-column")}:${th.getAttribute("aria-sort")}`;
+      if (th.hasAttribute("aria-sort") && sorted !== ranked) params.set(`s.${key}`, sorted);
     }
+    // `UX-1185`: where the pager stands, after the filter it is measured against.
+    const at = tools?.querySelector?.(".table-pager")?.getAttribute?.("data-offset");
+    if (at) params.set(`p.${key}`, at);
   }
 
   const open = [...(root.querySelectorAll?.(FOLDS) ?? [])]
@@ -231,26 +232,28 @@ export function applyView(root, query, { dispatch } = {}) {
       fire(select, "change");
       applied.push(`n:${key}`);
     }
-    const filter = params.get(`f.${key}`);
+    // `UX-1191`: a link from before the one grammar folds its `t.<column>` thresholds into the box.
+    const legacy = [...params].filter(([name]) => name.startsWith(`t.${key}.`))
+      .map(([name, value]) => `${name.slice(key.length + 3)} ${value}`);
+    const filter = [params.get(`f.${key}`), ...legacy].filter(Boolean).join(" ");
     const box = tools?.querySelector?.("input.table-filter");
     if (filter && box) { box.value = filter; fire(box, "input"); applied.push(`f:${key}`); }
-    for (const input of table.querySelectorAll?.("input.th-filter") ?? []) {
-      const value = params.get(`t.${key}.${input.getAttribute("data-column")}`);
-      if (value) { input.value = value; fire(input, "input"); applied.push(`t:${key}`); }
-    }
     const sort = params.get(`s.${key}`);
     if (sort) {
       const [column, direction] = sort.split(":");
       for (const th of table.querySelectorAll?.("th") ?? []) {
         if (th.getAttribute("data-column") !== column) continue;
-        // One click sorts ascending; a second reverses it. Driving the
+        // At most two presses reach either direction (`UX-1190`). Driving the
         // control rather than setting `aria-sort` directly is what keeps
         // the rows in the order the attribute claims.
-        fire(th, "click");
+        if (th.getAttribute("aria-sort") !== direction) fire(th, "click");
         if (th.getAttribute("aria-sort") !== direction) fire(th, "click");
         applied.push(`s:${key}`);
       }
     }
+    const at = params.get(`p.${key}`);
+    const pager = tools?.querySelector?.(".table-pager");
+    if (at && pager) { pager.setAttribute("data-offset", at); fire(pager, "bga:page"); applied.push(`p:${key}`); }
   }
 
   if (params.has("ch")) applyFolds(root, params.get("ch").split(","));
@@ -351,11 +354,14 @@ export function viewLink(root, where) {
 // the page did before.
 const COPY_FORMAT_KEY = "bga.copy-format";
 
-// `UX-536`: what one box tells the other 28. Its own event rather than
-// `change`, so mirroring cannot re-enter the handler that started it.
+// `UX-536`, `UX-1189`: what the one page-wide box tells every table's copy control.
 export const COPY_FORMAT_MIRROR = "bga:copy-format";
 
+// The box's own state, so a page with no storage still copies what it promises.
+let chosen = null;
+
 export function readCopyFormat() {
+  if (chosen) return chosen;
   try {
     return safeStorage()?.getItem(COPY_FORMAT_KEY) === "markdown"
       ? "markdown" : "json";
@@ -365,9 +371,21 @@ export function readCopyFormat() {
 }
 
 export function writeCopyFormat(format) {
+  chosen = format;
   try {
     safeStorage()?.setItem(COPY_FORMAT_KEY, format);
   } catch (error) {
     /* a private window, blocked site data, an export from a folder */
   }
+}
+
+/** `UX-1189`: one Markdown box for every table's copy, where there was one per table. */
+export function copyFormatBox(el) {
+  const box = el("input", { type: "checkbox", class: "copy-markdown", id: "bga-copy-markdown" });
+  box.checked = readCopyFormat() === "markdown";
+  box.addEventListener("change", () => {
+    writeCopyFormat(box.checked ? "markdown" : "json");
+    document.dispatchEvent(new Event(COPY_FORMAT_MIRROR));
+  });
+  return el("label", { class: "copy-as" }, box, " Copy tables as Markdown");
 }

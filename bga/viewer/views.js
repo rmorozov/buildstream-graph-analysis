@@ -482,6 +482,8 @@ export function renderTrend(store, schema = undefined,
         const replacement = exhibitTwin(document, columns, twinRows(all));
         twin.replaceWith?.(replacement);
         twin = replacement;
+        // UX-1169: the new twin is the route, and its toggle keeps its name.
+        nameDrawing(figure, caption.textContent, twin);
         wrapper.setAttribute("data-store-all", String(all.length));
         button.hidden = true;
       });
@@ -1063,7 +1065,11 @@ function pathBox(entry) {
   box.setAttribute("href", `#${elementAnchor(entry.element_uid ?? "")}`);
   const name = document.createElement("span");
   name.className = "path-name";
-  name.textContent = entry.element_uid ?? "";
+  // UX-1172: a chain name breaks after a `/`, not inside a token.
+  (entry.element_uid ?? "").split(/(?<=\/)/).forEach((part, i) => {
+    if (i) name.append(document.createElement("wbr"));
+    name.append(part);
+  });
   const time = document.createElement("span");
   time.className = "path-time num";
   time.textContent = seconds(entry.duration_us ?? 0);

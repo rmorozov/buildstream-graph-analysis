@@ -36,6 +36,8 @@
 
 /** Below this a series is a sentence. Mirrors `schemas.SERIES_MIN_POINTS`. */
 export const SERIES_MIN_POINTS = 3;
+// UX-1173: the first step's number - `parallelism.levels` publishes roots as level 0.
+const SERIES_ORIGIN = { level: 0 };
 
 // UX-316 (styleguide §2a): **two grades, and no third size.**
 //
@@ -130,6 +132,14 @@ function box(doc, tag, attrs = {}, ...children) {
 
 const numeric = (v) => typeof v === "number" && Number.isFinite(v);
 
+/** UX-1192 (§6e.9): a mark says its value on hover - native, no control. */
+function titled(node, text) {
+  const tip = make(node.ownerDocument ?? document, "title");
+  tip.textContent = text;
+  node.append(tip);
+  return node;
+}
+
 // `UX-1017` (styleguide §6e.9): an id counter, so two drawings' route
 // targets on one page never collide - a run with several density
 // strips gives each its own.
@@ -173,8 +183,7 @@ export function nameDrawing(drawing, sentence, routeNode, name) {
  * count (`UX-360`) never sees it - a table twin's cells would have.
  */
 export function valueRoute(doc, allMarksText) {
-  const node = box(doc, "span", { "data-role": "drawing-values" });
-  node.hidden = true;
+  const node = box(doc, "span", { "data-role": "drawing-values", role: "note" });
   node.setAttribute("aria-label", allMarksText);
   return node;
 }
@@ -320,7 +329,8 @@ export function exhibitTwin(doc, headers, rows) {
     body.append(tr);
   }
   table.append(body);
-  table.hidden = true;
+  // `UX-1179`: findable.
+  table.hidden = "until-found";
   const button = box(doc, "button", {
     type: "button", class: "twin-toggle", "data-drawing-twin": "closed",
     "aria-expanded": "false",
@@ -333,8 +343,9 @@ export function exhibitTwin(doc, headers, rows) {
     button.setAttribute("data-drawing-twin", open ? "closed" : "open");
     button.setAttribute("aria-expanded", open ? "false" : "true");
     button.textContent = open ? "As table" : "As drawing";
-    table.hidden = open;
+    table.hidden = open && "until-found";
   });
+  table.addEventListener?.("beforematch", () => button.click());
   wrap.append(button);
   wrap.append(table);
   return wrap;
@@ -351,6 +362,7 @@ export function sparkline(values, {
   unit = "step", format = String, doc = document, label = null,
   grade = undefined,
 } = {}) {
+  const origin = SERIES_ORIGIN[unit] ?? 1;
   const size = scaleFor(grade);
   const points = (values ?? []).filter(numeric);
   const wrap = box(doc, "div", {
@@ -418,27 +430,36 @@ export function sparkline(values, {
   // hovers. Nothing else is marked: a dot per point turns a sparkline
   // into a scatter plot.
   const peak = points.indexOf(high);
+  const says = (at) => `${unit} ${at + origin} ${format(points[at])}`;
+  // UX-1192: every point, not the three it dots, says its value on hover.
+  // Clamped to the viewBox: the end points' half-steps would overhang the sheet.
+  const step = size.width / (points.length - 1);
+  const edge = (at) => Math.min(Math.max(x(at) + step / 2, 0), size.width);
+  points.forEach((v, at) => line.append(titled(make(doc, "rect", {
+    x: edge(at - 1).toFixed(2), y: "0", width: (edge(at) - edge(at - 1)).toFixed(2),
+    height: String(size.spark), fill: "transparent",
+  }), says(at))));
   for (const [at, role] of [[0, "first"], [points.length - 1, "last"],
                             [peak, "peak"]]) {
-    line.append(make(doc, "circle", {
+    line.append(titled(make(doc, "circle", {
       cx: x(at).toFixed(2), cy: y(points[at]).toFixed(2),
       r: (1.6 * size.spark / SPARK_HEIGHT).toFixed(2),
       class: "spark-point", "data-mark": role,
       "data-value": String(points[at]), "data-at": String(at),
-    }));
+    }), says(at)));
   }
   wrap.append(line);
   if (grade === GRADE_EXHIBIT) {
     wrap.append(exhibitAxis(doc, [
-      { name: "first", at: 0, label: `${unit} 1` },
+      { name: "first", at: 0, label: `${unit} ${origin}` },
       { name: "peak", at: (peak / (points.length - 1)) * 100,
         label: format(high) },
-      { name: "last", at: 100, label: `${unit} ${points.length}` },
+      { name: "last", at: 100, label: `${unit} ${points.length - 1 + origin}` },
     ]));
   }
   const sentenceText = `${points.length} ${unit}s, ${format(points[0])} → `
     + `${format(points[points.length - 1])}`
-    + `, peak ${format(high)} at ${unit} ${peak + 1}.`;
+    + `, peak ${format(high)} at ${unit} ${peak + origin}.`;
   const sentence = box(doc, "span", { class: "series-sentence",
                                       "data-role": "series-sentence" },
                        sentenceText);
@@ -451,11 +472,11 @@ export function sparkline(values, {
   let route = sentence;
   if (grade === GRADE_EXHIBIT) {
     twin = exhibitTwin(doc, [unit.charAt(0).toUpperCase() + unit.slice(1), "Value"],
-                       points.map((v, i) => [i + 1, format(v)]));
+                       points.map((v, i) => [i + origin, format(v)]));
     wrap.append(twin);
     route = twin;
   } else {
-    route = valueRoute(doc, points.map((v, i) => `${unit} ${i + 1} ${format(v)}`)
+    route = valueRoute(doc, points.map((v, i) => `${unit} ${i + origin} ${format(v)}`)
                                   .join(", ") + ".");
     wrap.append(route);
   }
@@ -536,9 +557,20 @@ export function twinRows(marks, format) {
   ];
 }
 
-function stripSvg(doc, marks, { printed, size }) {
-  const span = marks.max - marks.min;
-  const at = (v) => span === 0 ? 50 : ((v - marks.min) / span) * 100;
+/** UX-1192: a max past 10x p90 is an outlier - the rest scale to the
+ *  break at 90%, and whatever lies past the break sits at the edge. */
+function stripScale(marks) {
+  const p90 = decileValue(marks, 90) ?? marks.p90;
+  const past = p90 > 0 && marks.max > 10 * p90;
+  const top = past ? Math.max(...[marks.top, p90, marks.p95, marks.p99]
+    .filter((v) => numeric(v) && v <= 10 * p90)) : marks.max;
+  const span = top - marks.min;
+  return { cut: past ? top : undefined,
+           at: (v) => v > top ? 100 : span === 0 ? 50 : ((v - marks.min) / span) * (past ? 90 : 100) };
+}
+
+function stripSvg(doc, marks, { printed, size, format }) {
+  const { at, cut } = stripScale(marks);
   const strip = make(doc, "svg", {
     viewBox: `0 0 ${size.width} ${size.strip}`, class: "density-strip",
     preserveAspectRatio: "none", role: "img", "data-role": "density-strip",
@@ -549,13 +581,14 @@ function stripSvg(doc, marks, { printed, size }) {
     // rows. A self-built strip prints no derived number, and this is
     // what lets a guard tell the two apart on the page.
     "data-printed": printed,
+    "data-cut": cut,
   });
   // The range bar is an eighth of the strip's height at either grade,
   // centred - the same drawing, scaled (§2a).
   const bar = size.strip / 4;
   strip.append(make(doc, "rect", {
     class: "density-range", x: "0", y: String(size.strip / 2 - bar / 2),
-    width: "100", height: String(bar),
+    width: cut ? "90" : "100", height: String(bar),
   }));
   // UX-863: every mark the twin lists as a percentile - the nine
   // deciles, p95, p99 - not the two this used to hardcode, so a reader
@@ -570,20 +603,22 @@ function stripSvg(doc, marks, { printed, size }) {
     // `deciles`, no `p99`) reads those keys as `undefined`, which a
     // strict null check let through as a tick at `NaN`.
     if (!numeric(value)) continue;
-    strip.append(make(doc, "line", {
+    strip.append(titled(make(doc, "line", {
       class: `density-tick density-${name}`
         + (STRIP_OUTER.has(name) ? " density-tick-outer" : ""),
       x1: at(value).toFixed(2), x2: at(value).toFixed(2),
       y1: "0", y2: String(size.strip),
       "data-mark": name, "data-value": String(value),
-    }));
+    }), `${name === "p50" ? "median" : name} ${format(value)}`));
   }
   for (const [name, value] of [["min", marks.min], ["max", marks.max]]) {
-    strip.append(make(doc, "line", {
+    const edge = name === "max" && cut;
+    strip.append(titled(make(doc, "line", {
       class: "density-end", x1: at(value).toFixed(2), x2: at(value).toFixed(2),
       y1: String(size.strip / 8), y2: String(size.strip - size.strip / 8),
       "data-mark": name, "data-value": String(value),
-    }));
+      "data-outlier": edge ? marks.far ?? "" : undefined,
+    }), `${edge && marks.far || name} ${format(value)}`));
   }
   return strip;
 }
@@ -629,7 +664,7 @@ export function strip(distribution, {
   }
   wrap.setAttribute("data-drawn", "true");
   wrap.setAttribute("data-n", marks.n === null ? "" : String(marks.n));
-  const drawn = stripSvg(doc, marks, { printed: "published", size });
+  const drawn = stripSvg(doc, marks, { printed: "published", size, format });
   wrap.append(drawn);
   // UX-863: which names `stripTicks` kept a label for - derived, not
   // restated, so the sentence can never name a mark the axis dropped
@@ -686,8 +721,7 @@ const STRIP_LABEL_GAP_PCT_PER_CHAR = 1.5;
  *  reader who cannot read two labels is better served by one); the
  *  rest of `stripSvg`'s ticks draw with no label regardless. */
 function stripTicks(marks, format) {
-  const span = marks.max - marks.min;
-  const at = (v) => span === 0 ? 50 : ((v - marks.min) / span) * 100;
+  const { at } = stripScale(marks);
   const build = (name, value) => value === null ? null
     : { name, at: at(value), label: format(value) };
   const raw = [
@@ -793,20 +827,20 @@ export function decomposition(parts, {
   let at = 0;
   for (const part of named) {
     const width = (Number(part.value) / whole) * size.width;
-    drawing.append(make(doc, "rect", {
+    drawing.append(titled(make(doc, "rect", {
       x: at.toFixed(3), y: "0", width: Math.max(width, 0).toFixed(3),
       height: String(size.strip), class: `decomposition-part part-${part.key}`,
       "data-part": part.key, "data-raw": String(part.value),
-    }));
+    }), `${part.label} ${format(part.value)}`));
     at += width;
   }
   if (mark && Number.isFinite(Number(mark.value))) {
     const x = (Number(mark.value) / whole) * size.width;
-    drawing.append(make(doc, "line", {
+    drawing.append(titled(make(doc, "line", {
       x1: x.toFixed(3), x2: x.toFixed(3), y1: "0", y2: String(size.strip),
       class: "decomposition-mark", "data-mark": mark.key,
       "data-raw": String(mark.value),
-    }));
+    }), `${mark.label} ${format(mark.value)}`));
   }
   wrap.append(drawing);
 
@@ -924,11 +958,11 @@ export function interval(marks, {
   }));
   if (threshold !== null && Number.isFinite(Number(threshold))) {
     const x = place(threshold);
-    drawing.append(make(doc, "line", {
+    drawing.append(titled(make(doc, "line", {
       x1: x.toFixed(3), x2: x.toFixed(3), y1: "0", y2: String(size.strip),
       class: "interval-threshold", "data-mark": "threshold",
       "data-raw": String(threshold),
-    }));
+    }), `${thresholdLabel} ${format(threshold)}`));
   }
   for (const one of named) {
     const mark = make(doc, "circle", {
@@ -944,10 +978,7 @@ export function interval(marks, {
     // overlap guard is for, and it caught exactly that here. The
     // reading a tick row would have carried is in the sentence below
     // and in the table twin, both of which name every mark.
-    const names = make(doc, "title", {});
-    names.textContent = `${one.label} ${format(one.value)}`;
-    mark.append(names);
-    drawing.append(mark);
+    drawing.append(titled(mark, `${one.label} ${format(one.value)}`));
   }
   wrap.append(drawing);
   const sentenceText = named.map((one) => `${one.label} ${format(one.value)}`)
@@ -971,13 +1002,16 @@ export function interval(marks, {
 }
 
 export function columnStrip(values, { format = String, doc = document,
-                                      label = null, of,
+                                      label = null, of, names = [],
                                       grade = GRADE_ANNOTATION, name } = {}) {
   // `UX-316`: annotation grade by construction and by argument both -
   // a strip drawn beside a table *is* the §2a annotation case, and the
   // parameter exists so the guard reads one rule rather than two.
   const size = scaleFor(grade);
-  const numbers = (values ?? []).filter(numeric).slice().sort((a, b) => a - b);
+  // UX-1192: each value keeps its row's name, so an outlier can be named.
+  const named = (values ?? []).map((v, i) => [v, names[i]])
+    .filter(([v]) => numeric(v)).sort((a, b) => a[0] - b[0]);
+  const numbers = named.map(([v]) => v);
   const n = of ? `${numbers.length} of ${of}` : numbers.length;
   const wrap = box(doc, "div", { class: "density density-self",
                                  "data-role": "density",
@@ -997,11 +1031,14 @@ export function columnStrip(values, { format = String, doc = document,
   const marks = {
     n: numbers.length,
     min: numbers[0], max: numbers[numbers.length - 1],
-    p50: rank(50), p95: rank(95),
+    p50: rank(50), p95: rank(95), p90: rank(90),
   };
+  const past = named.filter(([v]) => v > 10 * marks.p90);
+  marks.top = numbers[numbers.length - past.length - 1];
+  marks.far = past.at(-1)?.[1];
   wrap.setAttribute("data-drawn", "true");
   wrap.setAttribute("data-n", String(marks.n));
-  const drawn = stripSvg(doc, marks, { printed: "rows", size });
+  const drawn = stripSvg(doc, marks, { printed: "rows", size, format });
   wrap.append(drawn);
   // Actual row values and a count. Nothing derived is spelled out.
   const sentenceText = `${format(marks.min)} → ${format(marks.max)} across ${n} rows.`;

@@ -48,6 +48,66 @@ export function parseThreshold(text, quantity) {
   return { op, value: value * scale };
 }
 
+// `UX-1191` (§3d): `name:value` is exact on any named column; `op` and `element` read a task uid's parts.
+const slug = (text) => String(text ?? "").toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "");
+
+/** What a reader may call each column: its key, its role, its head's label and each word of it. */
+function columnNames(specs, labels = {}) {
+  const names = new Map();
+  const words = new Map();
+  for (const spec of specs) {
+    if (!spec) continue;
+    const said = [spec.key, spec.role, spec.title, labels[spec.key]].map(slug).filter(Boolean);
+    for (const name of said) names.set(name, names.get(name) ?? spec);
+    if (spec.role === "task_uid") { names.set("op", spec); names.set("element", names.get("element") ?? spec); }
+    for (const word of said.flatMap((name) => name.split("_"))) {
+      words.set(word, words.has(word) && words.get(word) !== spec ? null : spec);
+    }
+  }
+  for (const [word, spec] of words) if (spec && !names.has(word)) names.set(word, spec);
+  return names;
+}
+
+/**
+ * `UX-1191`: the one filter box's grammar. `binary:ld` is exact on a key
+ * column (`ld*` a prefix), `duration > 60s` a threshold (bare `> 5s` is
+ * the first quantity column's), and what is left matches as a substring.
+ * A threshold nobody can read is returned in `unread`, never applied.
+ */
+export function parseQuery(text, specs = [], labels = {}) {
+  const names = columnNames(specs, labels);
+  const primary = specs.find((spec) => spec?.quantity && spec.numeric !== false);
+  const exact = [];
+  const thresholds = {};
+  const unread = [];
+  let rest = String(text ?? "").replace(/(^|\s)([a-z_][\w-]*):(\S+)/gi, (whole, lead, name, value) => {
+    const spec = names.get(slug(name));
+    if (!spec) return whole;
+    const part = spec.role !== "task_uid" ? null : slug(name) === "op" ? 1 : slug(name) === "element" ? 0 : null;
+    const prefix = value.endsWith("*");
+    exact.push({ column: spec.key, part, prefix, value: (prefix ? value.slice(0, -1) : value).toLowerCase() });
+    return lead;
+  });
+  rest = rest.replace(/(^|\s)(?:([a-z_][\w-]*)\s*)?(>=|<=|>|<|=)\s*(\S*)/gi, (whole, lead, name, op, value) => {
+    // A word that names no column is a word: it stays a substring, and the threshold is the primary's.
+    const spec = (name && names.get(slug(name))) || primary;
+    const word = name && !names.has(slug(name)) ? `${name} ` : "";
+    const parsed = spec?.quantity ? parseThreshold(`${op} ${value}`, spec.quantity) : null;
+    if (parsed) thresholds[spec.key] = parsed;
+    else unread.push(whole.slice(lead.length + word.length));
+    return lead + word;
+  });
+  return { text: rest.replace(/\s+/g, " ").trim(), exact, thresholds, unread };
+}
+
+/** Does a row's key cell equal (or start with) the clause's value? */
+function matchesKey(tr, clause) {
+  const cell = [...tr.children].find((td) => td.getAttribute("data-column") === clause.column);
+  const raw = String(cell?.getAttribute("data-raw") ?? "");
+  const got = (clause.part === null ? raw : raw.split("|")[clause.part] ?? "").toLowerCase();
+  return clause.prefix ? got.startsWith(clause.value) : got === clause.value;
+}
+
 /** Does one published number pass a parsed threshold? */
 export function passes(raw, threshold) {
   if (!threshold) return true;
@@ -189,13 +249,13 @@ export function columnCells(table, key, rows = everyRow(ownBody(table))) {
  * return shape every caller has to unpack.
  */
 export function applyFilters(table, options = {}) {
-  const { text = "", thresholds = {}, top = null } = options;
+  const { text = "", thresholds = {}, exact = [], top = null, sort = null } = options;
   const needle = String(text).trim().toLowerCase();
   const body = ownBody(table);
   const rows = everyRow(body);
   const kept = [];
   for (const tr of rows) {
-    let keep = !needle || rowText(tr).includes(needle);
+    let keep = (!needle || rowText(tr).includes(needle)) && exact.every((clause) => matchesKey(tr, clause));
     if (keep) {
       // Over the *thresholds*, not over the row's cells: walking the
       // cells means a threshold naming a column this row does not carry
@@ -233,8 +293,10 @@ export function applyFilters(table, options = {}) {
   // else about it is the same pass, so the badge, the filter and the
   // copy control cannot tell the two apart.
   let shown = kept;
+  // `UX-1190`: a header's sort ranks the population, before any bound slices it.
+  if (sort?.column) kept.sort(byColumn(sort.column, sort.direction));
   if (top && Number.isFinite(Number(top.n))) {
-    if (top.column) {
+    if (top.column && !sort?.column) {
       const value = (tr) => {
         const cell = [...tr.children].find(
           (td) => td.getAttribute("data-column") === top.column);
@@ -289,8 +351,11 @@ export function applyFilters(table, options = {}) {
  */
 export const ALL_ROWS_CEILING = 200;
 
+// `UX-1185` (D1): two pages or fewer open whole.
+export const UNROLL_AT = 80;
+
 export function openingBound(presets, total, bound) {
-  if (total <= bound) return null;
+  if (total <= Math.max(bound, UNROLL_AT)) return null;
   const [column] = presets;
   return column
     ? { value: `25:${column}`, top: { n: 25, column } }
@@ -314,13 +379,16 @@ export function plural(count, noun) {
 }
 
 /** `12 of 1,202` - and just the total when nothing is filtered. */
-export function badgeText(shown, total) {
+export function badgeText(shown, total, matched = total) {
   const n = (value) => value.toLocaleString("en-US");
   // The `N of M` form needs no agreement: a denominator is always a
   // population, and `1 of 12` is right as it stands.
   // UX-1158: an emptied table says why beside the box that emptied it.
+  // `UX-1170`: a bound over a filter says both denominators.
   return shown === total ? plural(total, "row")
-    : shown ? `${n(shown)} of ${n(total)}` : `none of ${n(total)} match`;
+    : !shown ? `none of ${n(total)} match`
+      : shown < matched && matched < total ? `${n(shown)} of ${n(matched)} matched, of ${n(total)}`
+        : `${n(shown)} of ${n(total)}`;
 }
 
 /**
@@ -425,7 +493,9 @@ export function rowJson(tr, columns) {
     // because attributes are, and a number that went in comes back out
     // as one.
     const number = Number(raw);
-    out[column] = raw !== "" && !Number.isNaN(number) ? number : raw;
+    // `UX-1189`: and a boolean as one.
+    out[column] = raw === "true" || raw === "false" ? raw === "true"
+      : raw !== "" && !Number.isNaN(number) ? number : raw;
   }
   return JSON.stringify(out);
 }
@@ -533,6 +603,8 @@ export function applyPreset(preset, rows, payload, key = "element") {
 
 // ---------------------------------------------------------------- UX-280
 
+const RAW_UNIT = { duration_us: "\u00b5s", bytes: "B", seconds: "s", kilobytes: "KB", megabytes: "MB", percent: "%" };
+
 /**
  * The shown rows as a GitHub-flavoured Markdown table.
  *
@@ -549,7 +621,9 @@ export function applyPreset(preset, rows, payload, key = "element") {
  */
 export function rowsMarkdown(rows, specs) {
   const columns = specs.map((spec) => spec.key);
-  const titles = specs.map((spec) => spec.title ?? spec.key);
+  // UX-1172: the cells are raw, so the header names their unit.
+  const titles = specs.map((spec) => (spec.title ?? spec.key)
+    + (RAW_UNIT[spec.quantity] ? ` (${RAW_UNIT[spec.quantity]})` : ""));
   const cell = (value) => String(value ?? "")
     .replace(/\|/g, "\\|").replace(/\s*\n\s*/g, " ");
   const lines = [
@@ -571,30 +645,72 @@ export function rowsMarkdown(rows, specs) {
 // table's *behaviour* - filters, bounds, presets, copy - and sorting
 // is behaviour. It was in the DOM builder only because that is where
 // it was first written.
+// `UX-1190`: a table this short is read whole, so its header stays text.
+export const SORTABLE_ABOVE = 10;
+
+/** Rows in `column`'s order: numbers as numbers, anything else as text. */
+export function byColumn(column, direction) {
+  const sign = direction === "ascending" ? 1 : -1;
+  const raws = new Map();
+  const raw = (tr) => {
+    if (!raws.has(tr)) {
+      raws.set(tr, [...(tr.children ?? [])].find(
+        (td) => td.getAttribute?.("data-column") === column)?.getAttribute?.("data-raw") ?? "");
+    }
+    return raws.get(tr);
+  };
+  return (a, b) => {
+    const x = raw(a), y = raw(b);
+    const nx = Number(x), ny = Number(y);
+    const numeric = x !== "" && y !== "" && !Number.isNaN(nx) && !Number.isNaN(ny);
+    return sign * (numeric ? nx - ny : String(x).localeCompare(String(y)));
+  };
+}
+
+/** The table's own header cells - not a nested table's. */
+export function ownHeads(table) {
+  return childrenNamed(childrenNamed(childrenNamed(table, "thead")[0], "tr")[0], "th");
+}
+
+/** Mark `sort` on the table's own header, and only there. */
+export function showSort(table, sort) {
+  for (const th of ownHeads(table)) {
+    if (sort && th.getAttribute("data-column") === sort.column) th.setAttribute("aria-sort", sort.direction);
+    else th.removeAttribute("aria-sort");
+  }
+}
+
+// `UX-450`: moved here from `structured.js`. This file is the
+// table's *behaviour* - filters, bounds, presets, copy - and sorting
+// is behaviour. It was in the DOM builder only because that is where
+// it was first written.
 export function sortable(table, specs = []) {
   const body = ownBody(table);
-  table.querySelectorAll("th").forEach((th, index) => {
+  if (everyRow(body).length <= SORTABLE_ABOVE) return;
+  ownHeads(table).forEach((th, index) => {
     // UX-201: a column the schema declares unsortable stays unsortable,
     // whatever its values happen to look like.
     if (specs[index] && specs[index].sortable === false) return;
+    // `UX-1190` (styleguide §6e.8): a button, so the sort is in the tab order.
+    const label = th.textContent;
+    th.textContent = "";
+    th.append(el("button", { type: "button", class: "th-sort" }, label));
     th.addEventListener("click", () => {
-      const ascending = th.getAttribute("aria-sort") !== "ascending";
-      table.querySelectorAll("th").forEach((other) =>
-        other.removeAttribute("aria-sort"));
-      th.setAttribute("aria-sort", ascending ? "ascending" : "descending");
-      // `UX-526`: over every row, held or shown - a sort that saw only
-      // the shown ones would rank the top 25 among themselves.
-      const rows = [...everyRow(body)];
-      rows.sort((a, b) => {
-        const x = a.children[index]?.dataset.raw ?? "";
-        const y = b.children[index]?.dataset.raw ?? "";
-        const nx = Number(x), ny = Number(y);
-        const numeric = x !== "" && y !== "" && !Number.isNaN(nx) && !Number.isNaN(ny);
-        const order = numeric ? nx - ny : String(x).localeCompare(String(y));
-        return ascending ? order : -order;
-      });
-      reorder(body, rows);
+      const was = th.getAttribute("aria-sort");
+      // The first press on a quantity puts its largest first.
+      const direction = was ? (was === "ascending" ? "descending" : "ascending")
+        : specs[index]?.quantity ? "descending" : "ascending";
+      const sort = { column: th.getAttribute("data-column"), direction };
+      showSort(table, sort);
+      // A head-and-tail fold is about the listing's order, which a sort replaces: open it first.
+      childrenNamed(body, "tr").find((tr) => tr.className === "fold-row" && !tr.hidden)
+        ?.querySelector?.("button")?.click?.();
+      // The table's own tools re-rank past a bound; with none, every row is shown and reordered here.
+      const event = new CustomEvent("bga:sort", { cancelable: true, detail: sort });
+      table.dispatchEvent?.(event);
+      if (event.defaultPrevented) return;
+      // `UX-526`: over every row, held or shown.
+      reorder(body, [...everyRow(body)].sort(byColumn(sort.column, direction)));
     });
   });
 }
-

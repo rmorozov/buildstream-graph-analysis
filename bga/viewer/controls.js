@@ -25,7 +25,7 @@
 const taken = new Set();
 
 /** A sanitized, document-unique id from `stem`. */
-import { el } from "./format.js";
+import { el, spoken } from "./format.js";
 
 export function uniqueId(stem) {
   const base = `bga-${String(stem)}`.replace(/[^A-Za-z0-9_-]+/g, "-")
@@ -58,7 +58,7 @@ export function identify(node, stem) {
 /** `UX-1162`: a control's text, and its name with what it acts on after it. */
 export function say(control, text, of) {
   control.textContent = text;
-  if (of) control.setAttribute?.("aria-label", `${text}: ${of}`);
+  if (of) control.setAttribute?.("aria-label", `${text}: ${spoken(of)}`);
 }
 
 /** Point `label` at `node`, identifying `node` if it is not already. */

@@ -20,7 +20,7 @@
 // The default is `headline.top_actions[0]` now, which is `core.bst`
 // on that one fixture by coincidence rather than by compilation.
 
-import { identify, labelFor, say } from "./controls.js";
+import { identify, labelFor, say, uniqueId } from "./controls.js";
 import { title } from "./format.js";
 
 // `UX-210`: **every query says which plane it is asking.**
@@ -497,7 +497,7 @@ limit 25;`,
     title: "What did this element wait for, by the graph?",
     why:
       "Plane 1 again, by the graph rather than the clock: the trace " +
-      "draws the dependency edges as **flows**, so this is " +
+      "draws the dependency edges as flows, so this is " +
       "the declared graph rather than whatever happened to finish " +
       "first. The timestamp-proximity version of this question is " +
       "`dependency-wait` above; where they disagree, the gap is a " +
@@ -937,6 +937,11 @@ function elementPicker(section, make, options) {
   search.value = chosen ?? "";
   search.setAttribute("value", chosen ?? "");
   labelFor(label, search, "query-element");
+  // `UX-1176`: the note is mounted from the start, so what it says after a keystroke is announced.
+  const noteId = uniqueId("query-element-note");
+  note.setAttribute("id", noteId);
+  note.setAttribute("role", "status");
+  search.setAttribute("aria-describedby", noteId);
   // The matched few, redrawn on every keystroke. `includes`, not a
   // prefix: an element is `layer07/mod123.bst` and the part a reader
   // remembers is rarely the layer.
@@ -949,6 +954,7 @@ function elementPicker(section, make, options) {
     for (const uid of hits.slice(0, PICKER_SHOWN)) {
       list.append(make("option", { value: uid }, uid));
     }
+    return hits.length;
   };
   fill("");
   note.textContent = `${lead}Type any part of a uid to search this run's `
@@ -957,11 +963,23 @@ function elementPicker(section, make, options) {
                    + "one the report's first action names.";
   box.append(label, search, list, note);
   section.append(box);
+  const told = note.textContent;
+  let current = chosen;
   const applyTyped = () => {
-    fill(search.value);
+    const hits = fill(search.value);
     // Only a uid this run has reaches the query: a half-typed name is a
     // reader still typing, not a request to substitute nothing.
-    if (population.includes(search.value)) applyElement(section, search.value);
+    if (population.includes(search.value)) applyElement(section, current = search.value);
+    // `UX-1170`: a box that matches nothing says so, and what the queries still ask about.
+    // `UX-1177`: a partial uid several elements share says how many it matched.
+    const typed = search.value.trim();
+    const says = hits > 1 && typed && !population.includes(search.value)
+      ? `${hits.toLocaleString("en-US")} elements match "${typed}"; the box offers the first `
+        + `${Math.min(hits, PICKER_SHOWN)}, and the queries still ask about ${current}.`
+      : hits ? told
+      : `Nothing in this run's ${population.length} elements matches "${search.value.trim()}"; `
+        + `the queries still ask about ${current}.`;
+    if (note.textContent !== says) note.textContent = says;
   };
   search.addEventListener?.("input", applyTyped);
   search.addEventListener?.("change", applyTyped);

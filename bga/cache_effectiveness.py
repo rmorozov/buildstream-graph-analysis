@@ -384,7 +384,7 @@ def _churn_precondition(
             'reason': 'baseline_built_set_not_measured',
             'explanation': (
                 "the baseline run does not publish per-element durations, so an "
-                "element it also rebuilt cannot be told from one it had cached - "
+                "element it also rebuilt cannot be told from one it had cached, "
                 "and those are different findings"
             ),
         }

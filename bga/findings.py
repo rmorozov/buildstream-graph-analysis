@@ -1619,7 +1619,7 @@ def _outlook_findings(result: AnalysisResult) -> list[dict]:
         detail = []
         if total:
             detail.append(
-                f"    - the last of those leaves "
+                f"    The last of those leaves "
                 f"{qty.share(last['cumulative_saving_us'] / total)} of the build "
                 f"removed, projected from this run without building again"
             )

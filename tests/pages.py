@@ -492,6 +492,14 @@ def has_expected_output(fixture) -> bool:
 #: elements. `two_plane_run` with this shape.
 REVIEW_SHAPE = ("--layers", "8", "--width", "14")
 
+
+#: `UX-1182`: the review's page with `--workload binaries` - 8 elements
+#: at 200-500 distinct fake binaries, the rest at 3-10.
+def heavy_binary_run(into) -> pathlib.Path:
+    """`two_plane_run` of REVIEW_SHAPE, `--workload binaries`. The run."""
+    return two_plane_run(into, ("--workload", "binaries", *REVIEW_SHAPE), name="heavy")
+
+
 #: `UX-1142`: every door a reader can open, opened - each block's `?`
 #: clicked, every `details` open, every folded chapter and section
 #: lifted. Statements, for the head of a guard's own expression.
@@ -501,7 +509,7 @@ OPEN_EVERY_DOOR_JS = """
   document.querySelectorAll('section[data-section][data-collapsed]').forEach(
     (n) => n.setAttribute('data-collapsed', 'false'));
   document.querySelectorAll('section.chapter[data-open]').forEach((n) => n.setAttribute('data-open', 'true'));
-  document.querySelectorAll('[hidden="until-found"]').forEach((n) => n.removeAttribute('hidden'));
+  document.querySelectorAll('[hidden="until-found"]:not(.twin-table, .query)').forEach((n) => n.removeAttribute('hidden'));
   document.querySelectorAll('details').forEach((d) => { d.open = true; });
   document.querySelectorAll('section.chapter > section[data-section]').forEach(
     (n) => { n.style.contentVisibility = 'visible'; });

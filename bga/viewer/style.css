@@ -242,7 +242,7 @@ button[aria-pressed="true"] {
    beside something it annotates - a fold, a chapter, a JSON door - and
    a surface on it would read as the page's next action. */
 button.collapse, button.fold-more, button.json-toggle, button.twin-toggle,
-button.focus-back, button.expand-table, button.chapter-open, button.toc-title {
+button.focus-back, button.expand-table, button.chapter-open, button.toc-title, button.th-sort {
   background: transparent; color: var(--muted);
 }
 
@@ -337,7 +337,7 @@ body[data-has-toc] > header {
    is no longer 92-134px tall. */
 body[data-has-toc] { --head: 3.25rem; }
 body[data-has-toc] > nav.toc { top: var(--head); max-height: calc(100vh - var(--head)); }
-body[data-has-toc] main > section, body[data-has-toc] [id] { scroll-margin-top: calc(var(--head) + var(--space-2)); }
+body[data-has-toc] main > section, body[data-has-toc] [id], body[data-has-toc] [data-binary] { scroll-margin-top: calc(var(--head) + var(--space-2)); }
 /* UX-1018 (styleguide §6e.1): a chapter (`h2`) outranks its section
    (`h3`), which outranks its block (`h4`) - three levels, not one
    flat `h2` a chapter and its own first section wore alike. */
@@ -411,7 +411,8 @@ a:not(p a) { display: inline-flex; align-items: center; justify-content: center;
 .advice[data-severity="info"], .advice[data-severity="low"] {
   border-left-color: var(--accent);
 }
-.join-evidence { margin: var(--space-2) 0; }
+/* A card's two Plane 2 folds share one line while closed. */
+.join-evidence, details[data-fold="binaries"] { display: inline-block; vertical-align: top; margin: 0 var(--space-4) 0 0; }
 .join-evidence > p { margin: var(--space-2) 0 var(--space-1); }
 
 .finding .title { font-weight: 600; }
@@ -459,10 +460,16 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
   /* `UX-1157`: a header wraps between words, and a table of tables stacks its cells. */
   th, td { white-space: normal; font-size: var(--font-small); padding: var(--space-1); }
   table:has(td table) > * > tr, table:has(td table) > * > tr > * { display: block; }
+  /* `UX-1171`: a stacked cell names its column; a step's entrants take its whole row. */
+  table:has(td table) > * > tr > td::before { content: attr(data-label); display: block; color: var(--muted); }
+  table:has(td table) > thead { display: none; }
+  td.num { white-space: nowrap; }
+  main code:not(pre code) { display: inline-block; vertical-align: bottom; }
+  .horizon-step > .horizon-entering { grid-column: 1 / -1; }
   /* `UX-1164`: no tick label, part or question is cut. */
   .draw-axis:not([data-layout]) { height: 3.2em; }
   .draw-tick:nth-child(even) { top: 1.6em; }
-  .decomposition .draw-axis, [data-layout] { height: auto; flex-wrap: wrap; }
+  .decomposition .draw-axis, .draw-axis[data-layout] { height: auto; flex-wrap: wrap; }
   .decomposition .draw-tick { position: relative; display: table; top: 0; }
   .chapter-head { flex-wrap: wrap; }
   .chapter-head > h2 { order: 1; flex-basis: 100%; }
@@ -579,6 +586,9 @@ button.collapse:hover { color: var(--fg); }
         background: var(--bg); color: var(--fg); }
 .jump-hits { list-style: none; margin: var(--space-1) 0 0; padding: 0;
              display: flex; flex-wrap: wrap; gap: var(--space-1); }
+.jump-none { font-size: var(--font-small); margin: var(--space-1) 0 0; }
+/* UX-1176: an empty live region stays in the tree and takes no room. */
+.badge:empty, .jump-none:empty { position: absolute; margin: 0; }
 
 /* UX-286: the chapters. A rule, a name and the space a heading earns -
    the grouping has to be visible to be navigation, and it must not cost
@@ -679,6 +689,10 @@ button.chapter-open:hover, button.chapter-open[aria-expanded="true"] {
   .description { display: block !important; }
   /* An exhibit's twin prints open, so its values reach paper (§2b: hover is never the only door). */
   table.twin-table { display: table !important; }
+  /* `UX-1179`: a fold prints once; a held-back count is text. */
+  details.long-text > summary, pre.query[hidden] { display: none !important; }
+  button.fold-more { font-size: 0; border: 0; background: none; padding: 0; min-height: 0; }
+  button.fold-more::after { content: attr(data-folded) " more " attr(data-noun) ", not printed"; font-size: var(--font-small); }
 }
 
 /* Collapsed sections keep their heading; everything below it goes.
@@ -809,14 +823,11 @@ h3.category { letter-spacing: .04em;
    pairing costs one line on four tables, not most. */
 .table-tools button.copy-rows { align-self: flex-start; }
 .table-tools select.top-n { margin-left: auto; align-self: flex-start; }
-th .th-filter { display: block; width: 100%; margin-top: var(--space-1);
-                font: inherit; font-size: var(--font-small); font-weight: normal;
-                padding: 0 var(--space-1); background: var(--bg); color: inherit;
-                border: 1px solid var(--line); border-radius: 2px; }
 /* UX-304: the tone is not the signal - `border-style` is the shape
    that carries it without color (styleguide §4.3), and `aria-invalid`
-   carries it without sight. */
-th .th-filter.unparsed { border-color: var(--bad); border-style: dashed; }
+   carries it without sight; UX-1191: `.filter-unread` says it in words. */
+.table-filter.unparsed { border-color: var(--bad); border-style: dashed; }
+.filter-unread { font-size: var(--font-small); }
 
 /* UX-206: the chain, drawn. A list with widths - flex-grow carries the
    published share, so nothing here is a layout algorithm. */
@@ -897,8 +908,10 @@ section[data-promoted] { border-left: 3px solid var(--accent); }
                            color: var(--muted); margin-top: var(--space-1); }
 
 /* UX-208 / UX-209: investigation affordances, and the rail. */
-.inspect { margin-left: var(--space-1); text-decoration: none; opacity: .55; }
+.inspect { margin-left: var(--space-1); text-decoration: none; opacity: .55; margin-block: calc(var(--space-1) * -1); }
 .inspect:hover { opacity: 1; }
+/* On screen a name and its Inspect link are one line: the column widens, the row does not double. */
+@media screen { td:has(> a.inspect) { white-space: nowrap; } }
 .copy-sql { margin-top: var(--space-1); }
 /* UX-369: the query builder's one substitution. Inline with its label
    so it reads as a sentence the reader completes, not as a form. The
@@ -1321,6 +1334,8 @@ button.json-toggle:hover { color: var(--fg); }
 .series-sentence, .density-sentence {
   font-size: var(--font-small); font-variant-numeric: tabular-nums;
 }
+/* UX-1169: in the accessibility tree, so a drawing's `aria-details` reaches it; not on screen. */
+[data-role="drawing-values"] { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
 .density-strip {
   width: var(--draw-annotation-strip-w);
   height: var(--draw-annotation-strip-h); flex: none;
@@ -1429,6 +1444,8 @@ button.json-toggle:hover { color: var(--fg); }
 button.twin-toggle:hover { color: var(--fg); }
 table.twin-table { margin-top: var(--space-1); font-size: var(--font-small); }
 table.twin-table td { font-variant-numeric: tabular-nums; }
+/* UX-1179: a table ignores `content-visibility`. */
+:is(table.twin-table, pre.query)[hidden="until-found"] { display: block; margin: 0; }
 
 /* `UX-390`: the run's advice for one attribution bucket, under the
    value it is about. Muted and narrow: it is a second sentence on a

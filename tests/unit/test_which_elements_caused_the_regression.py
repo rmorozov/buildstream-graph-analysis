@@ -302,33 +302,34 @@ const text = (n) => (n.children ?? []).reduce(
 
 @needs_node
 class TestTheStripReadsThePayload:
+    """`UX-1188`: the strip is one table over `element_deltas.rows`, its cells the payload's."""
+
     @staticmethod
     def _render(comparison):
         script = (
             _SHIM
             + f'''
           const {{ renderCulprits }} = await import("./tests/viewer.mjs");
-          const section = renderCulprits({json.dumps(comparison.to_dict())});
-          const items = all(section, (n) => n.tagName === "li").map((li) => {{
-            const link = all(li, (n) => n.tagName === "a")[0];
+          const section = renderCulprits({json.dumps(comparison.to_dict())},
+                                         {json.dumps(schemas.schema(schemas.COMPARE))});
+          const cell = (tr, column) => all(tr, (n) => n.tagName === "td"
+            && n.attrs["data-column"] === column)[0];
+          const items = all(section, (n) => n.tagName === "tr" && n.attrs["data-element"]).map((tr) => {{
+            const link = all(tr, (n) => n.tagName === "a")[0];
             return {{
-              element: li.attrs["data-element"],
-              verdict: li.attrs["data-verdict-kind"],
-              presence: li.attrs["data-presence"],
-              delta: li.attrs["data-delta-us"] ?? null,
-              group: null,
-              href: link.href ?? link.attrs.href ?? "",
-              text: text(li),
+              element: tr.attrs["data-element"],
+              verdict: cell(tr, "verdict_kind")?.attrs["data-raw"] ?? null,
+              presence: cell(tr, "presence")?.attrs["data-raw"] ?? null,
+              delta: cell(tr, "delta_us")?.attrs["data-raw"] || null,
+              href: link?.href ?? link?.attrs.href ?? "",
             }};
           }});
-          const groups = all(section, (n) => n.attrs["data-group"]).map(
-            (n) => [n.attrs["data-group"],
-                    all(n, (m) => m.tagName === "li")
-                      .map((m) => m.attrs["data-element"])]);
           const caveat = all(section,
             (n) => n.attrs["data-role"] === "not-banded")[0];
+          const counts = all(section,
+            (n) => n.attrs["data-role"] === "delta-counts")[0];
           console.log(JSON.stringify({{
-            items, groups, caveat: text(caveat),
+            items, caveat: text(caveat), counts: text(counts),
             section: section.attrs["data-section"],
           }}));
         '''
@@ -339,28 +340,12 @@ class TestTheStripReadsThePayload:
         assert result.returncode == 0, result.stderr
         return json.loads(result.stdout)
 
-    def test_the_strip_orders_as_the_payload_ranked(self, three_regressions):
-        """Clause 4's mutation: a page sorting by its own computed delta
-        would be a second comparison.
-
-        Asserted on a fixture with three rows in one group, because the
-        four-case fixture has one row per group and no ordering
-        assertion over a single row can ever fail.
-        """
-        out = self._render(three_regressions)
-        by_group = dict(out["groups"])
-        assert by_group["worse"] == ["big.bst", "mid.bst", "small.bst"]
-        assert by_group["better"] == ["saver.bst", "tiny.bst"]
-
     def test_the_rendered_order_is_the_payloads_order(self, three_regressions):
-        """Stated against the payload rather than a literal, so the two
-        cannot be edited apart."""
+        """Clause 4's mutation: a page sorting by its own computed delta
+        would be a second comparison. Five rows, so the order can fail."""
         out = self._render(three_regressions)
-        ranked = [row["element_uid"] for row in three_regressions.element_deltas["rows"] if row["delta_us"] is not None]
-        rendered = [item["element"] for item in out["items"]]
-        # Each group keeps the payload's relative order.
-        worse = [uid for uid in ranked if uid in dict(out["groups"])["worse"]]
-        assert [u for u in rendered if u in worse] == worse
+        ranked = [row["element_uid"] for row in three_regressions.element_deltas["rows"]]
+        assert [item["element"] for item in out["items"]] == ranked
 
     def test_every_element_links_to_its_section(self, four_cases):
         out = self._render(four_cases)
@@ -374,11 +359,14 @@ class TestTheStripReadsThePayload:
         assert gone["presence"] == "disappeared"
         assert gone["verdict"] == "not_comparable"
         assert gone["delta"] is None
-        assert "no delta to compare" in gone["text"]
 
     def test_the_strip_says_the_rows_are_not_banded(self, four_cases):
         out = self._render(four_cases)
         assert "not judged against a noise band" in out["caveat"]
+
+    def test_the_counts_are_the_payloads_own(self, four_cases):
+        out = self._render(four_cases)
+        assert out["counts"] == "1 grew, 1 shrank, 1 appeared, 1 disappeared of 4 elements.", out["counts"]
 
     def test_the_shown_figures_are_the_payloads_own(self, four_cases):
         """Nothing in the page subtracts anything."""

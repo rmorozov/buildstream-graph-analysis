@@ -305,8 +305,13 @@ if (journeying) {
   // returned list, with its DOM attributes so a guard can say which.
   if (axing) {
     const roles = new Set(Array.isArray(value) ? value : []);
-    await send("DOM.getDocument", { depth: -1 });
-    const { nodes } = await send("Accessibility.getFullAXTree");
+    const { root } = await send("DOM.getDocument", { depth: -1 });
+    // Queried per role, not read whole: the whole tree is one message past the client's 4 MiB cap.
+    const nodes = [];
+    for (const role of roles) {
+      const found = await send("Accessibility.queryAXTree", { backendNodeId: root.backendNodeId, role });
+      nodes.push(...(found?.nodes ?? []));
+    }
     out = [];
     for (const node of nodes ?? []) {
       const role = node.role?.value;
@@ -315,7 +320,9 @@ if (journeying) {
       const pairs = dom?.node?.attributes ?? [];
       const attrs = {};
       for (let i = 0; i < pairs.length; i += 2) attrs[pairs[i]] = pairs[i + 1];
-      out.push({ role, name: node.name?.value ?? "", attrs });
+      // UX-1169: how many nodes the tree's own `details` relation reaches.
+      const details = node.properties?.find((p) => p.name === "details")?.value?.relatedNodes?.length ?? 0;
+      out.push({ role, name: node.name?.value ?? "", attrs, details });
     }
   }
   if (observing) {

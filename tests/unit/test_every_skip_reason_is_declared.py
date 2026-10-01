@@ -120,7 +120,16 @@ import skip_reasons
 #: `test_the_vocabulary_has_the_shape.py:59`, same form again.
 #: `UX-1168` argues **one** more, to 79:
 #: `test_the_rail_mark_follows_the_reading_line.py`, same form again.
-UNRESOLVABLE = 79
+#: `UX-1173` argues **one** more, to 80:
+#: `test_the_page_ids_are_unique.py`, same form again.
+#: `UX-1184` argues **one** more, to 81:
+#: `test_a_column_is_named_for_its_field.py`, same form again.
+#: `UX-1186` argues **one** more, to 82:
+#: `test_a_population_key_is_declared.py`, same form again.
+#: `UX-1192`'s `test_a_mark_says_its_value.py` and `UX-1178`'s
+#: `test_the_narrow_page_keeps_its_place.py` import `NO_BROWSER` from
+#: `tests.browser`, which the scan reads: none more, 82 on round 158's merged tree.
+UNRESOLVABLE = 82
 
 
 def test_every_declared_skip_reason_is_known():

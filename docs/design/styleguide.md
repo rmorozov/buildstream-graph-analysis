@@ -1569,6 +1569,9 @@ the spacing rule assumes. The guard measures every visible `button`,
 `a`, `input`, `select` and `summary` outside running prose, once with a
 fine pointer and once under touch emulation (`hasTouch`,
 `pointer: coarse`).
+A checkbox inside its wrapping `<label>` is measured by the label's box,
+which activates it and is its target, so the box keeps its text's size
+(`UX-1209`, `tests/unit/test_controls_meet_the_target_size.py`).
 
 **Rule 9, the name and the route.** A sentence names the image; it does
 not make its marks, values or threshold readable. A sentence that is only

@@ -7,6 +7,7 @@ Next from `latent_heavies` landed on `wall_clock_share_us`; Back kept a
 filter its entry lacked; Expand all pushed nothing; an opened Binaries
 fold sat beside the closed one; the elided-elements line sat atop the report.
 Next after a pressed `latent_heavies` entry also skipped `joint_saving`.
+`UX-1209`: the Markdown checkbox was 24x24 beside a 20 px line; now 13x13 inside a 24 px label.
 """
 
 import pathlib
@@ -242,6 +243,29 @@ def test_the_rail_tools_and_the_pager_share_one_size_and_line(browser, uris, lab
         assert got["pagers"] and got["sorted"], got
     for head in got["sorted"]:
         assert head["th"] in ("none", '""') and head["button"].strip('"').strip() in "▲▼", head
+
+
+_BOX = r"""
+(async () => {
+  const nav = document.querySelector(".toc");
+  if (nav?.getAttribute("data-folded") === "true") nav.querySelector(".toc-title").click();
+  await new Promise((done) => setTimeout(done, 100));
+  const box = document.querySelector("input.copy-markdown");
+  const label = box.closest("label");
+  const b = box.getBoundingClientRect(), l = label.getBoundingClientRect();
+  return { box: [b.width, b.height], label: [l.width, l.height],
+           line: parseFloat(getComputedStyle(label).lineHeight) };
+})()
+"""
+
+
+@needs_browser
+@pytest.mark.parametrize("width", [1440, 390])
+@pytest.mark.parametrize("label", ["golden", "macro_micro"])
+def test_the_markdown_box_is_its_label_s_line(browser, uris, label, width):
+    got = browser.measure(uris[label], _BOX, width=width, height=844)
+    assert got["box"][1] <= got["line"] + 0.01, got
+    assert got["label"][1] >= 24, got
 
 
 @needs_browser

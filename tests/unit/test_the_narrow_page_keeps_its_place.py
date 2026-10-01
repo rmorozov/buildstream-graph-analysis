@@ -112,17 +112,21 @@ _RAILED = r"""
     addEventListener("scrollend", () => setTimeout(done, 100), { once: true });
     setTimeout(done, 1000);
   });
-  const y = Math.min(9000, document.documentElement.scrollHeight - innerHeight);
+  let y = Math.min(9000, document.documentElement.scrollHeight - innerHeight);
   scrollTo(0, y);
   await rest();
+  // A reread: up to half way and dwell there 2 s, the last place read (UX-1208 follow-up, walk N2).
+  if (CLIMB === "reread") { y = Math.round(y / 2); scrollTo(0, y); await rest(); await wait(2000); }
   // A wheel climbs in notches, each a scrollend of its own (UX-1208 follow-up); a jump is one.
-  if (CLIMB === "steps") while (scrollY > 0) { scrollBy(0, -400); await rest(); }
+  if (CLIMB !== "jump") while (scrollY > 0) { scrollBy(0, -400); await rest(); }
   else { scrollTo(0, 0); await rest(); }
+  const rail = document.querySelector(".toc");
+  const folded = rail.getAttribute("data-folded");
   document.querySelector(".toc-title").click();
   await wait(300);
   const press = PRESS === "all"
     ? document.querySelector(".toc [data-all='false']")
-    : [...document.querySelectorAll(".toc [data-toc]")].at(-1);
+    : [...document.querySelectorAll(PRESS === "chapter" ? ".toc [data-toc-chapter]" : ".toc [data-toc]")].at(-1);
   press.click();
   await wait(1500);
   const after = Math.round(scrollY);
@@ -130,7 +134,8 @@ _RAILED = r"""
     addEventListener("popstate", () => setTimeout(done, 1000), { once: true });
     history.back();
   });
-  return { y: Math.round(y), after, back: Math.round(scrollY), height: innerHeight };
+  return { y: Math.round(y), after, back: Math.round(scrollY), height: innerHeight,
+           folded, rail: rail.getAttribute("data-folded") };
 })()
 """
 
@@ -208,11 +213,12 @@ def test_a_reader_who_scrolls_during_the_landing_is_not_pulled_back(browser, uri
 
 
 @needs_browser
-@pytest.mark.parametrize("climb", ["jump", "steps"])
-@pytest.mark.parametrize("press", ["link", "all"])
+@pytest.mark.parametrize("climb", ["jump", "steps", "reread"])
+@pytest.mark.parametrize("press", ["link", "all", "chapter"])
 @pytest.mark.parametrize("label", ["big", *sorted(pages.FIXTURES)])
 def test_back_after_a_rail_link_or_expand_all_lands_where_the_reader_read(browser, uris, big, label, press, climb):
     drive = _RAILED.replace("PRESS", f'"{press}"').replace("CLIMB", f'"{climb}"')
     got = browser.measure({**uris, "big": big}[label], drive, width=390, height=844)
     assert got["y"] > 2 * got["height"], got
     assert abs(got["back"] - got["y"]) <= LINE_PX, got
+    assert got["rail"] == got["folded"] == "true", got

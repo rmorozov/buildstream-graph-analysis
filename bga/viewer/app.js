@@ -194,6 +194,7 @@ export function foldOnNarrow(nav, doc) {
     title.disabled = !isNarrow;
   };
   settle(Boolean(narrow?.matches));
+  nav._fold = apply; // `UX-1208`: Back folds the rail as its entry found it.
   title.addEventListener?.("click", () => {
     apply(nav.getAttribute("data-folded") !== "true");
   });
@@ -1150,16 +1151,23 @@ async function boot() {
     const fragment = (event) => event?.target?.closest?.("a[href^=\"#\"]")
       ?.getAttribute?.("href");
     // UX-1171: the folds and where the anchor sat, since a scrollY is stale once the folds' estimates settle.
-    const here = () => ({ scrollY: window.scrollY,
+    const here = () => ({ scrollY: window.scrollY, rail: document.querySelector(".toc")?.getAttribute("data-folded"),
       at: document.getElementById(splitHash(location.hash).anchor)?.getBoundingClientRect().top });
     // `UX-1208`: where the reader last stopped below the narrow rail, which they climb to the top to open.
     let read = null;
     let end = 0;
+    let stop = null;
     window.addEventListener?.("scrollend", () => {
       // A stop above the last one under the same hash is the climb to the rail, which keeps the place read.
       const climbing = read?.[0] === location.hash && window.scrollY < end;
       end = window.scrollY;
-      if (!climbing && document.querySelector(".toc")?.getBoundingClientRect().bottom < 0) read = [location.hash, here()];
+      const place = [location.hash, here(), Date.now()];
+      if (document.querySelector(".toc")?.getBoundingClientRect().bottom < 0) [stop, read] = climbing ? [place, read] : [null, place];
+    });
+    // ...unless the reader dwelt there: a wheel's notches lull 600 ms, a reread lasts seconds.
+    window.addEventListener?.("scroll", () => {
+      if (Date.now() - stop?.[2] > 1000) read = stop;
+      stop = null;
     });
     const keepPlace = (railed) => {
       // `UX-1203` follow-up: with no such place, an opened rail's reader is at the anchor.
@@ -1233,6 +1241,7 @@ async function boot() {
       applyView(root, query);
       if (!Array.isArray(saved?.folds)) return;
       applyFolds(root, saved.folds);
+      if (saved.rail) document.querySelector(".toc")?._fold?.(saved.rail === "true");
       window.scrollTo?.(0, saved.scrollY ?? 0);
       const at = document.getElementById(splitHash(location.hash).anchor);
       if (saved.at !== undefined && at && !at.closest("[hidden]")) revealAndLand(at, undefined, saved.at);

@@ -94,9 +94,10 @@ _FILTER = r"""
   const one = { matched: count(needle), ...(await type(needle)) };
   const none = await type("zz-no-such-row-qx");
   const cleared = await type("");
-  const threshold = table.querySelector("input.th-filter");
-  const unmet = threshold ? await type("> 999999999999999", threshold) : null;
-  const unset = threshold ? await type("", threshold) : null;
+  // `UX-1191`: the threshold is the box's own grammar; a bare one reads the first quantity column.
+  const threshold = /[<>]/.test(box.placeholder);
+  const unmet = threshold ? await type("> 999999999999999") : null;
+  const unset = threshold ? await type("") : null;
   const typed = await type(needle);
   await type("");
   return { key: table.getAttribute("data-table"), needle, total, before, all, some, wide, one, none,
@@ -379,7 +380,7 @@ class TestAFilterSaysWhatItKept:
                 out = seen[label][width]
                 # `UX-1189`: the Markdown box is page-wide now, not in the table's tools.
                 assert "copy-rows" in out["before"]["offered"], (label, width, out)
-                # `UX-1170`: the header's threshold too, not only the text box.
+                # `UX-1170`: a threshold too, not only a word.
                 for empty, back in (("none", "cleared"), ("unmet", "unset")):
                     assert out[empty]["offered"] == [], (label, width, empty, out)
                     assert out[back]["offered"] == out["before"]["offered"], (label, width, back, out)

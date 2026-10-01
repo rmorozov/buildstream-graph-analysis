@@ -816,14 +816,11 @@ h3.category { letter-spacing: .04em;
    pairing costs one line on four tables, not most. */
 .table-tools button.copy-rows { align-self: flex-start; }
 .table-tools select.top-n { margin-left: auto; align-self: flex-start; }
-th .th-filter { display: block; width: 100%; margin-top: var(--space-1);
-                font: inherit; font-size: var(--font-small); font-weight: normal;
-                padding: 0 var(--space-1); background: var(--bg); color: inherit;
-                border: 1px solid var(--line); border-radius: 2px; }
 /* UX-304: the tone is not the signal - `border-style` is the shape
    that carries it without color (styleguide §4.3), and `aria-invalid`
-   carries it without sight. */
-th .th-filter.unparsed { border-color: var(--bad); border-style: dashed; }
+   carries it without sight; UX-1191: `.filter-unread` says it in words. */
+.table-filter.unparsed { border-color: var(--bad); border-style: dashed; }
+.filter-unread { font-size: var(--font-small); }
 
 /* UX-206: the chain, drawn. A list with widths - flex-grow carries the
    published share, so nothing here is a layout algorithm. */

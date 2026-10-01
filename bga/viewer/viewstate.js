@@ -67,7 +67,7 @@ export function joinHash(anchor, query) {
  *
  * Keys are short because they end up in a URL somebody pastes: `c` for
  * the collapsed set, then one entry per table for its filter (`f.`),
- * per-column thresholds (`t.`), sort (`s.`) and preset (`n.`), and `o`
+ * thresholds included (`UX-1191`), sort (`s.`) and preset (`n.`), and `o`
  * for the disclosures a reader opened.
  */
 export function captureView(root) {
@@ -104,12 +104,8 @@ export function captureView(root) {
     const key = table.getAttribute("data-table");
     const tools = table.parentNode?.querySelector?.(".table-tools");
     const filter = tools?.querySelector?.("input.table-filter");
+    // `UX-1191`: the thresholds are the box's own text now, so `f.` carries them.
     if (filter?.value) params.set(`f.${key}`, filter.value);
-    for (const input of table.querySelectorAll?.("input.th-filter") ?? []) {
-      if (input.value) {
-        params.set(`t.${key}.${input.getAttribute("data-column")}`, input.value);
-      }
-    }
     const preset = tools?.querySelector?.("select.top-n");
     // UX-1165: `All rows` too, where the table opened bounded.
     if (preset?.selectedIndex > -1 && preset.value !== (preset.opening ?? "")) params.set(`n.${key}`, preset.value);
@@ -236,13 +232,12 @@ export function applyView(root, query, { dispatch } = {}) {
       fire(select, "change");
       applied.push(`n:${key}`);
     }
-    const filter = params.get(`f.${key}`);
+    // `UX-1191`: a link from before the one grammar folds its `t.<column>` thresholds into the box.
+    const legacy = [...params].filter(([name]) => name.startsWith(`t.${key}.`))
+      .map(([name, value]) => `${name.slice(key.length + 3)} ${value}`);
+    const filter = [params.get(`f.${key}`), ...legacy].filter(Boolean).join(" ");
     const box = tools?.querySelector?.("input.table-filter");
     if (filter && box) { box.value = filter; fire(box, "input"); applied.push(`f:${key}`); }
-    for (const input of table.querySelectorAll?.("input.th-filter") ?? []) {
-      const value = params.get(`t.${key}.${input.getAttribute("data-column")}`);
-      if (value) { input.value = value; fire(input, "input"); applied.push(`t:${key}`); }
-    }
     const sort = params.get(`s.${key}`);
     if (sort) {
       const [column, direction] = sort.split(":");

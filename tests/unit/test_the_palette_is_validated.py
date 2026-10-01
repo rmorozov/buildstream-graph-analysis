@@ -292,7 +292,7 @@ class TestStatusToneIsNeverAlone:
         ".trend-point.verdict-improved": "data-marker",
         '.band[data-disputed="true"] .candidate': "data-disputed, and the band's own sentence",
         # `UX-304` gave this one its channel: it had only the tone.
-        "th .th-filter.unparsed": "border-style: dashed, aria-invalid, title",
+        ".table-filter.unparsed": "border-style: dashed, aria-invalid, and the .filter-unread sentence",
         # `UX-451`: the hand-off's refusal. The tone is the warn rule
         # down its left edge; the channels are that the element does
         # not render at all in any other state - a block appears where
@@ -331,7 +331,7 @@ class TestStatusToneIsNeverAlone:
     def test_the_dashed_border_is_really_there(self):
         """The one channel this item added, asserted on the rule rather
         than on the promise above."""
-        rule = dict(_rules())["th .th-filter.unparsed"]
+        rule = dict(_rules())[".table-filter.unparsed"]
         assert "border-style: dashed" in rule, rule
 
 

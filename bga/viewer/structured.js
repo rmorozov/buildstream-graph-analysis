@@ -34,7 +34,7 @@ import { CONTROLS, UNMAPPED, classify, noteUnmapped, depthSentence,
          distributionStrip, shapeOf } from "./shapes.js";
 import { enterTableFocus, focusedTable, leaveTableFocus, registerFocusTarget }
   from "./tablefocus.js";
-import { parseThreshold, applyFilters, badgeText, rowJson, cellText,
+import { parseQuery, applyFilters, badgeText, rowJson, cellText,
          copy, presetColumns, openingBound, plural, sortable, ownRows,
          ownBody, showAlso, columnCells, rowsMarkdown, showSort, ALL_ROWS_CEILING }
   from "./tables.js";
@@ -850,7 +850,7 @@ export function renderTable(key, rows, hint = {}, node = undefined,
 }
 
 /**
- * The filter bar, the per-column thresholds and the copy affordances.
+ * The filter bar (one grammar: words, `column:value`, thresholds) and the copy affordances.
  *
  * Every comparison runs against `data-raw` - the published value - not
  * against the formatted cell text. Comparing "1.2s" to "5s" as strings
@@ -859,7 +859,8 @@ export function renderTable(key, rows, hint = {}, node = undefined,
  * is a `duration_us`, so the suffix has a meaning.
  */
 export function interrogable(table, specs, total, depth = 0) {
-  const state = { text: "", thresholds: {}, top: null, sort: null };
+  const state = { text: "", thresholds: {}, exact: [], top: null, sort: null };
+  const narrowed = () => Boolean(state.text.trim() || Object.keys(state.thresholds).length || state.exact.length);
   // UX-334: what these controls are called. The table key is the name
   // `viewstate.js` already keys this table's url state by, so the
   // control's `name` and its bookmarked parameter say the same word.
@@ -901,68 +902,43 @@ export function interrogable(table, specs, total, depth = 0) {
   // short enough to read at a glance. On the eleven-row element table
   // that was five inputs above eleven rows.
   const worthFiltering = total > TABLE_OPENS_BOUNDED_ABOVE;
+  // `UX-1191` (§3d): one box, one grammar - `binary:ld` exact, `> 5s` a threshold, a word a substring.
+  const keyed = specs.find((spec) => ["element", "binary", "task_uid"].includes(spec?.role));
+  // `UX-349`: a threshold only where the column holds numbers - a boolean guessed `count` takes none.
+  const filterable = specs.map((spec) => !worthFiltering || !spec?.quantity || columnCells(table, spec.key)
+    .some((td) => Number.isFinite(Number(td.getAttribute("data-raw")))) ? spec : { ...spec, quantity: null });
+  const primary = filterable.find((spec) => spec?.quantity && spec.numeric !== false);
   const box = worthFiltering ? el("input", {
     type: "search", class: "table-filter",
-    placeholder: "filter rows…",
+    placeholder: ["filter", keyed && `${keyed.role === "task_uid" ? "op" : keyed.role}:\u2026`,
+                  primary && (PLACEHOLDER[primary.quantity] ?? "> 0")].filter(Boolean).join(", "),
     "aria-label": `Filter rows: ${named}`,
+    title: "a word matches any cell; column:value that column exactly (value* its start); column > 5s, or a bare > 5s, a threshold",
   }) : null;
+  // `UX-1191`: an unreadable threshold is said on the page, and applies nothing.
+  const unread = el("span", { class: "filter-unread", role: "status", hidden: true });
   if (box) {
     identify(box, `filter-${key}`);
-    box.addEventListener("input", () => { state.text = box.value; refresh(); });
-  }
-
-  // A threshold per quantity column, in the header, where the column
-  // says what unit it is in.
-  table.querySelectorAll("th").forEach((th, index) => {
-    const spec = specs[index];
-    if (!worthFiltering || !spec || !spec.quantity) return;
-    // `UX-349`: and only where the column holds numbers. `> 10` under a
-    // boolean was the tell - a column whose quantity was *guessed*
-    // `count` by the fallback in `columnSpecs`, never declared, and
-    // then given a numeric threshold box. Read off the rendered cells
-    // rather than off the guess, which is where the truth is.
-    // A column key is a schema identifier, so it needs no escaping -
-    // the same reading `distributionStrip` makes two hundred lines
-    // down, and `CSS.escape` is a browser global the guards' shim does
-    // not have.
-    const numeric = columnCells(table, spec.key)
-      .some((td) => Number.isFinite(Number(td.getAttribute("data-raw"))));
-    if (!numeric) return;
-    const input = el("input", {
-      type: "text", class: "th-filter", "data-column": spec.key,
-      placeholder: PLACEHOLDER[spec.quantity] ?? "> 0",
-      "aria-label": `threshold for ${spec.title ?? spec.key}`,
-    });
-    identify(input, `threshold-${key}-${spec.key}`);
-    input.addEventListener("input", () => {
-      const parsed = parseThreshold(input.value, spec.quantity);
-      // Unparseable is *no filter*, and says so: a threshold nobody can
-      // read must not silently hide every row.
-      //
-      // `UX-304`: and it says so in more than one channel. A red border
-      // was the whole signal, which is styleguide §4.3's defect - a
-      // status tone alone. The border also goes dashed (a shape), and
-      // `aria-invalid` plus a `title` carry it to a reader who is not
-      // looking at borders at all.
-      const bad = Boolean(input.value) && !parsed;
-      input.className = bad ? "th-filter unparsed" : "th-filter";
-      input.setAttribute("aria-invalid", String(bad));
-      if (bad) {
-        input.setAttribute(
-          "title", `"${input.value}" is not a threshold this column can `
-                   + `read, so no filter is applied`);
-      } else {
-        input.removeAttribute("title");
-      }
-      if (parsed) state.thresholds[spec.key] = parsed;
-      else delete state.thresholds[spec.key];
+    box.addEventListener("input", () => {
+      const labels = Object.fromEntries([...table.querySelectorAll("th")].map(
+        (th) => [th.getAttribute("data-column"), th.textContent]));
+      const query = parseQuery(box.value, filterable, labels);
+      Object.assign(state, { text: query.text, exact: query.exact, thresholds: query.thresholds });
+      const bad = query.unread.length > 0;
+      box.classList?.toggle?.("unparsed", bad);
+      box.setAttribute("aria-invalid", String(bad));
+      unread.hidden = !bad;
+      unread.textContent = bad ? `${query.unread.map((c) => `\u201c${c}\u201d`).join(", ")} `
+        + "is not a threshold this table can read, so it is not applied." : "";
+      if (bad && !unread.parentNode) box.after?.(unread);
       refresh();
     });
-    // The header stays clickable for sorting; the input must not
-    // forward its clicks there.
-    input.addEventListener("click", (event) => event.stopPropagation?.());
-    th.append(input);
-  });
+    // The density strip's click (`shapes.js`) writes its threshold here, replacing a bare one.
+    table.addEventListener?.("bga:threshold", (event) => {
+      box.value = `${box.value.replace(/(^|\s)(>=|<=|>|<|=)\s*\S*/g, "$1").trim()} >= ${event.detail}`.trim();
+      box.dispatchEvent?.(new Event("input", { bubbles: true }));
+    });
+  }
 
   // UX-208 item 4: Top-N over any column the schema declares a
   // quantity. `Top 10` is a *preset*, not a cap - the badge still says
@@ -1124,7 +1100,7 @@ export function interrogable(table, specs, total, depth = 0) {
     state.sort = event.detail;
     restart?.(state.sort);
     // Unbounded and unfiltered, `sortable` reorders every row itself.
-    if (!state.top && !state.text.trim() && !Object.keys(state.thresholds).length) return;
+    if (!state.top && !narrowed()) return;
     event.preventDefault?.();
     refresh();
   });
@@ -1144,7 +1120,7 @@ export function interrogable(table, specs, total, depth = 0) {
   // allowed to take the report down with it.
   const shownRows = () => ownRows(table).filter((tr) => !tr.hidden);
   // `UX-1189` (§4c): a filter names a population, and copy takes it - up to `ALL_ROWS_CEILING` - not the page.
-  const filtered = () => Boolean(state.text.trim() || Object.keys(state.thresholds).length);
+  const filtered = narrowed;
   const copied = () => (filtered() ? (state.kept ?? []).slice(0, ALL_ROWS_CEILING) : shownRows());
   const markdown = () => readCopyFormat() === "markdown";
   // `UX-1189`: the format is one page-wide box now (`app.js`); it tells every table.
@@ -1187,11 +1163,6 @@ export function interrogable(table, specs, total, depth = 0) {
     // is whatever it would say now.
     setTimeout(label, 1200);
   });
-  // The count follows the filter, the threshold, the sort and the
-  // bound - all of which go through `refresh` or the preset - so it is
-  // recomputed on any input rather than only when the table is built.
-  // `UX-1170`: a threshold box sits in the table's header, outside `tools`.
-  table.addEventListener?.("input", label);
 
   // Copy one cell's published value. Delegated, so 1,202 rows do not
   // mean 1,202 listeners.

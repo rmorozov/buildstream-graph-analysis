@@ -280,14 +280,10 @@ export function distributionStrip(table, specs, total, few = false, rows) {
     const chosen = sorted.reduce((best, value) =>
       Math.abs(value - wanted) < Math.abs(best - wanted) ? value : best,
       sorted[0]);
-    const input = table.querySelector(
-      `.th-filter[data-column="${spec.key}"]`);
-    if (!input) return;
     // Raw units, no suffix - `parseThreshold` reads a bare number as
     // the published one, so this round-trips exactly rather than
-    // through a formatted string.
-    input.value = `>= ${chosen}`;
-    input.dispatchEvent?.(new Event("input", { bubbles: true }));
+    // through a formatted string. `UX-1191`: into the table's one filter box.
+    table.dispatchEvent?.(new CustomEvent("bga:threshold", { detail: chosen }));
   });
   return drawn;
 }

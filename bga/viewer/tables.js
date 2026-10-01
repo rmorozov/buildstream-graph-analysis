@@ -48,6 +48,66 @@ export function parseThreshold(text, quantity) {
   return { op, value: value * scale };
 }
 
+// `UX-1191` (§3d): `name:value` is exact on any named column; `op` and `element` read a task uid's parts.
+const slug = (text) => String(text ?? "").toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "");
+
+/** What a reader may call each column: its key, its role, its head's label and each word of it. */
+function columnNames(specs, labels = {}) {
+  const names = new Map();
+  const words = new Map();
+  for (const spec of specs) {
+    if (!spec) continue;
+    const said = [spec.key, spec.role, spec.title, labels[spec.key]].map(slug).filter(Boolean);
+    for (const name of said) names.set(name, names.get(name) ?? spec);
+    if (spec.role === "task_uid") { names.set("op", spec); names.set("element", names.get("element") ?? spec); }
+    for (const word of said.flatMap((name) => name.split("_"))) {
+      words.set(word, words.has(word) && words.get(word) !== spec ? null : spec);
+    }
+  }
+  for (const [word, spec] of words) if (spec && !names.has(word)) names.set(word, spec);
+  return names;
+}
+
+/**
+ * `UX-1191`: the one filter box's grammar. `binary:ld` is exact on a key
+ * column (`ld*` a prefix), `duration > 60s` a threshold (bare `> 5s` is
+ * the first quantity column's), and what is left matches as a substring.
+ * A threshold nobody can read is returned in `unread`, never applied.
+ */
+export function parseQuery(text, specs = [], labels = {}) {
+  const names = columnNames(specs, labels);
+  const primary = specs.find((spec) => spec?.quantity && spec.numeric !== false);
+  const exact = [];
+  const thresholds = {};
+  const unread = [];
+  let rest = String(text ?? "").replace(/(^|\s)([a-z_][\w-]*):(\S+)/gi, (whole, lead, name, value) => {
+    const spec = names.get(slug(name));
+    if (!spec) return whole;
+    const part = spec.role !== "task_uid" ? null : slug(name) === "op" ? 1 : slug(name) === "element" ? 0 : null;
+    const prefix = value.endsWith("*");
+    exact.push({ column: spec.key, part, prefix, value: (prefix ? value.slice(0, -1) : value).toLowerCase() });
+    return lead;
+  });
+  rest = rest.replace(/(^|\s)(?:([a-z_][\w-]*)\s*)?(>=|<=|>|<|=)\s*(\S*)/gi, (whole, lead, name, op, value) => {
+    // A word that names no column is a word: it stays a substring, and the threshold is the primary's.
+    const spec = (name && names.get(slug(name))) || primary;
+    const word = name && !names.has(slug(name)) ? `${name} ` : "";
+    const parsed = spec?.quantity ? parseThreshold(`${op} ${value}`, spec.quantity) : null;
+    if (parsed) thresholds[spec.key] = parsed;
+    else unread.push(whole.slice(lead.length + word.length));
+    return lead + word;
+  });
+  return { text: rest.replace(/\s+/g, " ").trim(), exact, thresholds, unread };
+}
+
+/** Does a row's key cell equal (or start with) the clause's value? */
+function matchesKey(tr, clause) {
+  const cell = [...tr.children].find((td) => td.getAttribute("data-column") === clause.column);
+  const raw = String(cell?.getAttribute("data-raw") ?? "");
+  const got = (clause.part === null ? raw : raw.split("|")[clause.part] ?? "").toLowerCase();
+  return clause.prefix ? got.startsWith(clause.value) : got === clause.value;
+}
+
 /** Does one published number pass a parsed threshold? */
 export function passes(raw, threshold) {
   if (!threshold) return true;
@@ -189,13 +249,13 @@ export function columnCells(table, key, rows = everyRow(ownBody(table))) {
  * return shape every caller has to unpack.
  */
 export function applyFilters(table, options = {}) {
-  const { text = "", thresholds = {}, top = null, sort = null } = options;
+  const { text = "", thresholds = {}, exact = [], top = null, sort = null } = options;
   const needle = String(text).trim().toLowerCase();
   const body = ownBody(table);
   const rows = everyRow(body);
   const kept = [];
   for (const tr of rows) {
-    let keep = !needle || rowText(tr).includes(needle);
+    let keep = (!needle || rowText(tr).includes(needle)) && exact.every((clause) => matchesKey(tr, clause));
     if (keep) {
       // Over the *thresholds*, not over the row's cells: walking the
       // cells means a threshold naming a column this row does not carry

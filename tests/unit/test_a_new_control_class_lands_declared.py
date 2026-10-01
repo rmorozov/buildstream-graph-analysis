@@ -69,7 +69,6 @@ REGISTRY = {
     "button[data-step]": (r".+", "§3c"),  # the Top/Prev/Next stepper
     "input.copy-markdown": (r".*", "§4c"),
     "input.table-filter": (r".+", "§3d"),
-    "input.th-filter": (r"^threshold for ", "§3d"),
     "input[type=checkbox]": (r".*", "UX-219"),  # the what-if boxes
     "input[type=search]": (r".+", "UX-223"),  # the jump box
     "select.preset-view": (r".+", "§3d"),

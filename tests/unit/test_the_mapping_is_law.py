@@ -642,9 +642,9 @@ console.log(JSON.stringify({
         assert seen["sortable"] == ["true", "true"], seen
         assert seen["headers"] == ["Task", "Wall-clock share"], seen
         # `UX-391`'s rule, read here: the composite survives as the
-        # row's identity and the reader sees the element it names -
-        # `renderPairs`'s own qualifier span, no separator invented.
-        assert seen["firstKeyLabel"] == "el-1201.bst BUILD", seen
+        # row's identity and the reader sees the element it names;
+        # `UX-1191`: every row one op, it is said once, not per row.
+        assert seen["firstKeyLabel"] == "el-1201.bst", seen
         assert seen["firstKeyElement"] == "el-1201.bst", seen
         assert seen["firstKeyRaw"] == "el-1201.bst|BUILD|BUILD|0", seen
 

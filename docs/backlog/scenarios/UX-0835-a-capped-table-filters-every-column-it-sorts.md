@@ -2,7 +2,7 @@
 
 **Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-392 (the filter over the preset), §3d | **Found by:** round 115, the design review | **Serves:** the owner filtering a large project's tables | **Topic:** guards | **Area:** tools | **Shape:** mechanical
 
-**Guard:** test_a_capped_table_filters_what_it_sorts.py
+**Guard:** none — retired by UX-1191: the header threshold inputs are gone, and the claim that every quantity column filters is held by UX-1191's guard
 
 ## Motivation
 

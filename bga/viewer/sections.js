@@ -23,7 +23,7 @@
 // several rounds).
 import { chapters } from "./chapters.js";
 import { renderProvenance } from "./decision.js";
-import { GRADE_EXHIBIT, decomposition, interval, strip } from "./drawings.js";
+import { GRADE_EXHIBIT, SERIES_MIN_POINTS, decomposition, interval, strip } from "./drawings.js";
 import { resolvePath } from "./element.js";
 import { COLUMNS, DECOMPOSITION, DISTRIBUTION, INLINE, INTERVAL, KEYED_BY, KEYED_BY_TASK_UID, QUANTITY, SERIES, SEVERITY, attachBlockDoor, bytes, childNode, cssId, describedTerm, el, guessQuantity, heading, hintsOf, keyAsShown, quantity, quantityFor, readerLabel, sectionHead, spoken, taskUid, TERMS, title } from "./format.js";
 import { matches } from "./nav.js";
@@ -468,20 +468,22 @@ function renderEmptySection(key, hint, node, sentence = null) {
  * itself; everywhere else `buildTable` already rendered the key
  * verbatim, so only the attribute is added.
  */
-// `UX-835` (§3d): a quantity column's `<th>` may already carry an
-// `input.th-filter` `interrogable` appended after its label - a plain
-// `th.textContent = …` replaces every child and takes the filter with
-// it. Detach the filter first (if there is one), relabel, then
-// reattach the same element - `append` moves rather than copies, in
-// the DOM and in the shim both, so no listener or id is lost.
 function relabelHead(th, label) {
   if (!th) return;
   // `UX-1190`: a sortable header's label is its button's.
   const sort = th.querySelector?.("button.th-sort");
-  if (sort) { sort.textContent = label; return; }
-  const filter = th.querySelector?.("input.th-filter");
-  th.textContent = label;
-  if (filter) th.append(filter);
+  if (sort) sort.textContent = label;
+  else th.textContent = label;
+}
+
+/**
+ * `UX-1191` (§3d): a task table whose every row is one op says it once.
+ * The qualifier each cell would carry is the one-value column §3d makes a
+ * sentence; `null` where the ops differ or the rows are too few to be a fact.
+ */
+function statedOp(cells, hint) {
+  const ops = new Set(cells.map((cell) => keyAsShown(cell.getAttribute("data-raw"), hint)?.qualifier));
+  return cells.length >= SERIES_MIN_POINTS && ops.size === 1 ? [...ops][0] : null;
 }
 
 function mapSectionLabels(box, key, hint, node) {
@@ -506,7 +508,9 @@ function mapSectionLabels(box, key, hint, node) {
         el("a", { href: "#elements" }, "the element table"), "."));
     }
   }
-  for (const cell of columnCells(table, "key")) {
+  const keys = columnCells(table, "key");
+  const op = taskUidKeyed ? statedOp(keys, hint) : null;
+  for (const cell of keys) {
     const raw = cell.getAttribute("data-raw");
     cell.setAttribute("data-key", raw);
     if (!taskUidKeyed) continue;
@@ -519,11 +523,22 @@ function mapSectionLabels(box, key, hint, node) {
     // field of the composite.
     const inspect = cell.querySelector?.("a.inspect");
     cell.textContent = shown.element;
-    if (shown.qualifier) {
+    if (shown.qualifier && !op) {
       cell.append(el("span", { class: "task-qualifier muted" },
                      ` ${shown.qualifier}`));
     }
     if (inspect) cell.append(inspect);
+  }
+  if (op) {
+    // Beside the table's own one-value sentence (`statedOnce`), or as one where it has none.
+    const said = box.querySelector?.(".uniform-columns");
+    if (said) said.textContent = said.textContent.replace(/\.$/, `, op ${op}.`);
+    else {
+      const note = el("p", { class: "muted uniform-columns", "data-role": "uniform-columns" }, `Every row: op ${op}.`);
+      const copyRows = box.querySelector?.(".copy-rows");
+      if (copyRows) copyRows.after(note);
+      else table.before?.(note);
+    }
   }
   // UX-1192: the strip's outlier is named as its row now reads.
   for (const tip of taskUidKeyed ? box.querySelectorAll?.("[data-outlier] title") ?? [] : []) {

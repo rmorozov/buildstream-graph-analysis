@@ -721,7 +721,6 @@ MEDIUM = (
     "tests/unit/test_every_control_has_a_resting_appearance.py",  #  6.7s
     "tests/unit/test_the_json_toggle_carries_the_key.py",  #  2.0s
     "tests/unit/test_the_readers_are_drawn_once.py",  #  2.3s
-    "tests/unit/test_a_capped_table_filters_what_it_sorts.py",  #  3.6s
     "tests/unit/test_a_distribution_twin_draws_every_mark.py",  #  3.5s
     "tests/unit/test_the_header_keeps_its_budget.py",  #  2.9s
     "tests/unit/test_a_reader_never_sees_the_register.py",  #  3.6s
@@ -1121,6 +1120,8 @@ MEDIUM = (
     "tests/unit/test_a_population_key_is_declared.py",  #  5.2s
     # `UX-1192`: 8.38 / 8.49 / 9.43s.
     "tests/unit/test_a_mark_says_its_value.py",  #  8.5s
+    # `UX-1191`: 7.44 / 6.86s.
+    "tests/unit/test_a_key_column_matches_exactly.py",  #  7.2s
     # Round 147, tiered on the merged tree: three single-process runs
     # alone each (setup+call+teardown).
     # `UX-1083`: 4.17 / 4.08 / 4.23s.

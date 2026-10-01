@@ -41,6 +41,11 @@ task file, which is the only place it ever lived twice.
 | UX-1250 | [next-step commands carry a 100-character absolute run path](UX-1250-a-next-step-command-names-the-run-by-its-snapshot.md) | viewer | Medium | R1 | 🔴 Not Started |
 | UX-1251 | [the floors drawing's labels overprint each other when the chain segment is narrow](UX-1251-the-floors-drawing-labels-collide-on-a-narrow-segment.md) | viewer | Low | R1, R3 | 🔴 Not Started |
 | UX-1252 | [zero counters take a row each, counts lose their separators, and an absence names the wrong series](UX-1252-all-clear-counters-are-one-sentence-and-values-keep-separators.md) | viewer | Low | R1, R5 | 🔴 Not Started |
+| UX-1253 | [five sections each publish a bound, and nothing checks that they agree](UX-1253-the-page-checks-its-verdicts-agree.md) | analysis | Medium | R1, R4, R5 | 🔴 Not Started |
+| UX-1254 | [the capacity operator assembles a sizing answer from five sections](UX-1254-an-agent-sizing-card-for-the-capacity-operator.md) | viewer | Medium | R5 | 🔴 Not Started |
+| UX-1255 | [39,854 Plane 2 processes produce no finding](UX-1255-plane-2-measurements-reach-the-findings.md) | analysis | Medium | R1, R2, R5 | 🔴 Not Started |
+| UX-1256 | [findings publish facts, and the steps live only in attribution hints and next steps](UX-1256-every-finding-publishes-its-step.md) | analysis | Medium | R1, R8 | 🔴 Not Started |
+| UX-1257 | ["What changed since last time?" has an empty lead, and the first screen never says the delta](UX-1257-the-compare-chapter-leads-with-the-delta.md) | viewer | Medium | R4, R7, R8 | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

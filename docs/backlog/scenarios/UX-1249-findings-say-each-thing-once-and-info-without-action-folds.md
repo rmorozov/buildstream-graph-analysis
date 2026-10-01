@@ -24,7 +24,7 @@ A ranked finding's list items are its links; two findings naming the same set be
 
 ## Out of Scope
 
-Title length (`UX-1248`); which findings the analysis emits.
+Title length (`UX-1248`); which findings the analysis emits; the payload's step field (`UX-1256`).
 
 ## Acceptance Test
 

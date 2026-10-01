@@ -378,7 +378,9 @@ BUDGETS = (
     # spread 0) - `UX-1152`'s card links fit once `UX-1146`/`UX-1147` cut.
     # `UX-1185` (D1): px 38,200 -> 38,400 - a table of 80 rows or fewer opens whole, and
     # macro_micro's 71-row `binary_cost` unrolls: 38,226 px measured. 174 of headroom.
-    (50, 38_400, 13_200, 800, 7_900),
+    # UX-1200b, Ruslan 05:49 (ranked cards list Blocks/Depends on): px 38,400 -> 39,188, controls
+    # 800 -> 868 - macro_micro's measured +788 px, +68 controls; headroom unchanged.
+    (50, 39_188, 13_200, 868, 7_900),
     # `UX-1050`: px 36,500 -> 43,500, words 9,600 -> 13,200, nodes
     # 6,000 -> 7,500 on the 4,100 class: `xl_both` (Plane 2 and a store)
     # reads 42,982 px, 12,872 words, 7,209 nodes; Plane 2's cost is flat
@@ -386,7 +388,9 @@ BUDGETS = (
     # (UX-1053). 518/328/291 of headroom.
     # Round 158: px 43,500 -> 44,629, D1's unrolls on xl_both (+1,129 px measured, Ruslan 19:04).
     # Controls 900 -> 1,020: 1,006 measured +10, rounded up; one Markdown box, then raise (Ruslan 19:26).
-    (4_100, 44_629, 13_200, 1_020, 7_500),
+    # UX-1200b, Ruslan 05:49: px 44,629 -> 46,822, controls 1,020 -> 1,192, nodes 7,500 -> 7,720 -
+    # xl_both's measured +2,193 px, +172 controls, +220 nodes; headroom unchanged.
+    (4_100, 46_822, 13_200, 1_192, 7_720),
 )
 
 

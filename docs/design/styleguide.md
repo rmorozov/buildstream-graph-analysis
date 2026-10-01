@@ -752,7 +752,7 @@ column re-read in round 73:
                  elements   landed   opened    words   controls    nodes
 golden                  4    3,800   15,618    7,144        427    2,498
 macro_micro            11    5,965   31,804   12,002        750    5,686
-budget, to 50 elts             7,600   38,400   13,200        800    7,900
+budget, to 50 elts             7,600   39,188   13,200        868    7,900
 
 scale               1,202    4,763   26,242   36,542      1,941   24,294
 budget, to 4,000 elts          7,000   32,000   41,000      2,300   27,500
@@ -779,7 +779,7 @@ in it hidden, and the class is bounded at both ends:
                  elements   landed   opened    words   controls    nodes
 scale               1,202    5,007   26,584    8,259        787    4,732
 xl                  4,002    4,937   27,230    8,275        812    4,960
-budget, to 4,100 elts          7,600   44,629   13,200      1,020    7,500
+budget, to 4,100 elts          7,600   46,822   13,200      1,192    7,720
 ```
 
 Height does not move at all — a bounded row costs no pixels, which is
@@ -904,6 +904,13 @@ D1's unrolls on `xl_both` (+1,129 px, `consolidation_candidates` 40 ->
 75 rows; 43,158 px without them), and its controls 900 -> 1,020: one
 page-wide Markdown box (`UX-1189`), then the measured 1,006 plus 10,
 rounded up - the owner's "consolidate + raise".
+
+`UX-1200` (the owner's 05:49 decision) gave every ranked card its Blocks
+and Depends on lists, open, as links. The bounds they push over moved by
+exactly the measured delta: the small class's height 38,400 -> 39,188 and
+controls 800 -> 868 (`macro_micro` +788, +68); the 4,100 class's height
+44,629 -> 46,822, controls 1,020 -> 1,192 and nodes 7,500 -> 7,720
+(`xl_both` +2,193, +172, +220).
 
 `UX-1152`'s card links read section titles, not ids; alone they took
 `macro_micro` to 38,201 px and 13,441 words. Round 154's merged tree,

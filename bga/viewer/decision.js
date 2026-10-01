@@ -465,7 +465,9 @@ function investigationEvidence(payload, uid, options) {
     // this row cannot honour.
     rows.push({
       label, source: path, present: found !== undefined,
-      text: found === undefined ? "not in this document" : "yes",
+      text: found !== undefined ? "yes"
+        : resolvePath(payload, path.slice(0, path.indexOf("["))) !== undefined
+          ? "section present, this element not in it" : "not in this document",
     });
   }
   const named = (payload.findings ?? []).filter(

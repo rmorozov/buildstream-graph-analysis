@@ -423,3 +423,33 @@ def test_focus_and_its_filters_agree_across_a_link_and_back(across):
         assert uid and got["focused"]["bars"] == 1 and got["focused"]["box"] == f"element:{uid}", (label, got)
         assert got["linked"] == got["focused"], (label, got)
         assert got["back"] == {**got["rest"], "focus": None}, (label, got)
+
+
+# `UX-1212`: the horizon row tells a section that lacks the uid from a section the document does not hold.
+_ABSENCE = r"""
+(async () => {
+  const turn = () => new Promise((done) => setTimeout(done, 80));
+  const uid = __UID__;
+  const box = document.getElementById("jump");
+  box.value = uid;
+  box.dispatchEvent(new Event("input", { bubbles: true }));
+  await turn();
+  document.querySelector('.jump-hits button[data-action="focus"]').click();
+  await turn();
+  const rows = Object.fromEntries([...document.querySelectorAll("[data-role=focus-investigation] [data-source]")]
+    .map((row) => [row.getAttribute("data-source"), row.textContent.trim()]));
+  return { rows, sections: [...document.querySelectorAll("section[data-section]")].map((s) => s.getAttribute("data-section")) };
+})()
+"""
+
+
+@needs_browser
+@pytest.mark.parametrize("width,height", [(1440, 900), (390, 844)])
+def test_the_horizon_row_says_the_section_is_present_and_the_uid_absent(walk, width, height):
+    uid = "layer19/mod040.bst"
+    with Browser(find_chrome()) as browser:
+        got = browser.measure(walk.as_uri(), _ABSENCE.replace("__UID__", json.dumps(uid)), width, height)
+    row = got["rows"][f"optimization_horizon[element_uid={uid}]"]
+    assert "optimization_horizon" in got["sections"], got["sections"]
+    assert "section present, this element not in it" in row, row
+    assert "not in this document" not in row, row

@@ -238,9 +238,9 @@ export function wireJumpBox(nav, root, payload, context = {}) {
       return;
     }
     const escaped = CSS?.escape?.(target.key) ?? target.key;
-    const row = () => root.querySelector(`[data-binary="${escaped}"]`);
-    // `UX-1177`: a row past the bound is filtered in, so the jump lands on it.
-    if (target.kind === "binary" && !row()) filterSection(document, target.section, `binary:${target.key}`);
+    const row = () => document.getElementById(target.section)?.querySelector(`[data-binary="${escaped}"]`);
+    // `UX-1177`, `UX-1225`: a binary's own table is filtered to it, mounted or not, so the jump lands on it.
+    if (target.kind === "binary") filterSection(document, target.section, `binary:${target.key}`);
     const node = target.kind === "section"
       ? document.getElementById(target.key)
       : row() ?? document.getElementById(target.section);

@@ -2,7 +2,7 @@
 
 **Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-160 walk and verification (2026-10-01) | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical | **Reading:** container
 
-**Guard:** none — open, no guard named yet
+**Guard:** `tests/unit/test_a_jump_to_a_binary_lands_on_it.py`
 
 ## Motivation
 
@@ -43,4 +43,28 @@ Question:  none
 
 ## Outcome
 
-Open.
+The gap measured, at `e60195184` (both source edits reverted), the 1,202-element `--workload binaries` page
+(`pages.two_plane_run`), Chromium 1440x900, the guard's probe: a jump to by_binary's last mounted binary and to an
+unmounted one, then the unmounted row's key link (`scratchpad/<worktree>/gap1225.py`):
+
+```text
+uniform-241    (mounted)    #by_binary    by_binary "25 of 601", box ''
+lognormal-003  (unmounted)  #binary_cost  by_binary "25 of 601", box ''   (binary_cost filtered instead)
+```
+
+Two causes, not one: `jumpTargets` (`nav.js`) gave every binary that `binary_cost` also holds the section
+`binary_cost` (first keyed table in the page), and `go()` searched the whole root and filtered only an unmounted
+row. The close measured, same probe: both land on `#by_binary`, badge "1 matched", box `binary:<key>`; the key
+link reads binary_cost "23 matched", `binary:lognormal-003`. The guard at 1440 and 390: 1 passed (15.7 s).
+Golden's page half 159,357 -> 159,409 B (+52). The 97 files naming jump, `nav.js`, `app.js`, by_binary or
+keyed-by: 1,546 passed, 19 skipped.
+
+| mutation | reddened | run printed |
+|---|---|---|
+| `go()`: root-wide `row()`, filter only `if (!row())` | the mounted jump (by_binary "25 of 601") | 1 failed |
+| `sections.js`: drop `cell.replaceChildren(link)` | the link assertion (binary_cost "25 of 11,683") | 1 failed |
+| `nav.js`: binary tables in page order again | both jumps (`#binary_cost`, "25 of 601") | 1 failed |
+| reverted, each | | 1 passed |
+
+The Decision's own guard - an unmounted binary only - passed under the `go()` mutation once `nav.js` named
+by_binary; the mounted case (the walk's own) is what discriminates it.

@@ -105,6 +105,7 @@ would have caught it; a bound at it would only just have.
 | 31 | 2026-09-29 | 1079 | three bookkeeping lines filed, no task file, nothing fixed - rounds 151-152 (40 closed) and the shape is a *later row's deviation that no document restates*: `UX-1066` ships the three raw logs' `ts=`/`wall=`/wrapper stamps verbatim while `anonymized-bundle.md:62` still says time is shifted to epoch 0, and the same file's stage 8 (`:233`) lists the row as still to do; and `decompose/SKILL.md:167` keeps `make test-touching` as the per-item loop that `verify` and `implementer.md` now say a worktree hook refuses. Sound: 27 ids, 10 printable, 10 superseded, so *seventeen live*, *last seventeen*, *other ten* (10 commands, `junction-cost/v1` included) and *seven* unprintable all reproduce; `analyze/v6` 63 properties; `_consumer_surface()` 602 as `cli.md` says; `dev_process_bands.py --runs 251` gives 83 runs, 318k and 249k as `CLAUDE.md` says; `--spread` 34-178 of 715; `bga --help` lists `junction-cost`, which refuses one run as `cli.md` says; 1079 closed in both markers |
 | 32 | 2026-09-30 | 1109 | two bookkeeping lines filed, no task file, nothing fixed - rounds 153-155 (30 closed, `UX-1136`..`UX-1160`) and the shape is review 22's one turn on: **guards that landed without a section to be found from.** 11 of the 19 tests the window added cite no § and appear in no §7 row, so the ledger guard, which reads section to test, cannot see them (`UX-1150`'s boolean rule, `UX-1155`'s accessible names, `UX-1157`'s compact width among them); and §6e.2.1 says every word is read off `TERMS` while *Peak tasks at once* is a schema title (`UX-1151`) with no `TERMS` key. Sound: 27 ids, 10 printable, 10 superseded, 11 schemas; `_consumer_surface()` 604 as `cli.md` says; 22 hints in the table and `format.js`'s *of the 22*; 23 viewer modules; the §3e headroom figures (353/87 px and words, 67/696 compact) sum to the guard's 38,200/13,200 and 8,500/11,400; `CLAUDE.md`'s 102 judgement runs at `--runs 232` and 318k/249k; 1109 closed in both markers |
 | 33 | 2026-10-01 | 1142 | one bookkeeping line filed, no task file, nothing fixed - rounds 156-158 (33 closed, `UX-1161`..`UX-1193`) and the shape is review 32's again: **guards that landed without a section to be found from.** 14 of the 23 tests the window added read 0 in `styleguide.md` and cite no §, so the ledger guard, which reads section to test, cannot see them (`UX-1177`'s rail mark, `UX-1179`'s print and find, `UX-1190`'s sortable header among them); review 32's `r155` line is still open and this one is its continuation. Sound: 27 ids, 10 printable, 10 superseded, 11 schemas; `_consumer_surface()` 606 as `cli.md:1150` says; 24 `bga:` hints emitted, 24 table rows in the styleguide, `format.js`'s *21 of the 24*; 23 viewer modules; `PAGE_BUDGET_B` 160,000 in `bga_view.py:782` and `cli.md`; §3e's 38,226 and 43,158 + 1,129 px sit under the guard's 38,400 and 44,629; `CLAUDE.md`'s 115 of 302 and 318k/249k at `--runs 232`; every test and path the diff's added sentences name exists; 1142 closed, 16 open in `dev_close_task.py --counts` |
+| 34 | 2026-10-01 | 1169 | one bookkeeping line filed, no task file, nothing fixed - round 160 and `UX-1240`..`UX-1241` (27 closed) and the shape is review 33's again: **guards that landed without a section to be found from.** 7 of the 8 tests the window added read 0 in `styleguide.md` and cite no §, and the `r155` and `r158` lines on 25 more are still open; this is `r160`. Sound: 27 ids, 10 printable, 10 superseded, 11 schemas; `analyze/v6` 64 properties as the new `architecture.md` entry says; `_consumer_surface()` 607 as `cli.md:1150` says; 24 `bga:` hints emitted and *of the 24* in `format.js`; 23 viewer modules; `PAGE_BUDGET_B` 160,000; `CLAUDE.md`'s 117 of 330 and 318k/249k at `--runs 232`; `report.json` 57 sections; 1169 closed, 18 open in `dev_close_task.py --counts` |
 
 ### Review 11 — 2026-09-02
 
@@ -1563,6 +1564,38 @@ six named plus §1a were checked. The §6 module map's ~103 per-row
 descriptions were checked for the CI-workflow block only — `UX-780`
 came out of that block, which is a reason to think the rest is worth a
 pass. `UX-689` owns the map's structural half.
+
+## Review 34 — 2026-10-01, at 1169 closed rows
+
+Run by one reader over round 160 and `UX-1240`, `UX-1241` (`closed.md` 1142 to
+1169: 27 closes) and the 57 files
+`git diff --name-only 41ad53a6..HEAD -- docs/ README.md CLAUDE.md examples/README.md .claude/skills`
+lists, 44 of them under `docs/backlog/scenarios/`. One bookkeeping line filed
+as `r160` in `bookkeeping.md`, no task file, nothing fixed.
+
+**The shape** is review 33's: guards landed without a section to be found from.
+
+```text
+$ for f in $(git diff 41ad53a6..HEAD --diff-filter=A --name-only -- tests/unit); do echo "$(grep -c $(basename $f) docs/design/styleguide.md) $f"; done | grep -c '^0'
+7                                  # of 8 added; none of the 7 cites a § in its own file
+```
+
+Filed as one `r160` `coverage` line; `r155` and `r158` are its open predecessors.
+
+### The five checks
+
+| check | result |
+|---|---|
+| code does what it says | `PAGE_BUDGET_B = 160_000` at `tools/bga_view.py:782`; `cli.md`'s `task_durations_us` row names `UX-1194`; `what-the-viewer-answers.md:21` reads *57 top-level sections*, held by `test_a_counted_figure_is_derived.py` |
+| contracts have a home | `ids()` 27, `printable()` 10, `superseded()` 10, `names()` 11 - unchanged from review 33; `bga analyze --schema` gives 64 properties, as the new `architecture.md` entry says |
+| figures invalidated | `_consumer_surface()` 607, `cli.md:1150` *607 keys*; 24 `bga:` hints, `format.js` *of the 24*; 23 viewer modules; `CLAUDE.md` *117 of 330*, `dev_process_bands.py --runs 232` gives 117, 318k, 249k of 330 |
+| shipped, no document names it | the Plane 2 report and the hook's path dedup are in task files `UX-1240`, `UX-1241`; the exception is the guards, above |
+| last-updated claims | `docs/README.md:351` and `round-register.md:149` carry round 160; `directions.md:2114` carries row 160; 1169 closed, 18 open in `dev_close_task.py --counts` |
+
+### One gap in this sweep
+
+The task files' own pasted measurements (`UX-1240`, `UX-1241`) are dated
+records and were not re-run.
 
 ## Review 33 — 2026-10-01, at 1142 closed rows
 

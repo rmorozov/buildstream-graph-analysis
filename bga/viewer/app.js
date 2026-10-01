@@ -230,17 +230,18 @@ export function wireJumpBox(nav, root, payload, context = {}) {
 
   const go = (target) => {
     if (target.kind === "rail") { target.link.click(); return; }
+    // `UX-1220`: the rail's navigation step, so Back keeps the place read before the rail opened.
+    context.navigate?.(nav, true);
     if (target.kind === "element") {
       // `UX-1179`: an element's place is its card, built, opened and landed as a pasted anchor is.
-      const next = joinHash(elementAnchor(target.key), splitHash(location.hash).query);
-      history[next === location.hash ? "replaceState" : "pushState"](null, "", next);
+      history.replaceState(null, "", joinHash(elementAnchor(target.key), splitHash(location.hash).query));
       window.dispatchEvent(new Event("hashchange"));
       return;
     }
     const escaped = CSS?.escape?.(target.key) ?? target.key;
-    const row = () => root.querySelector(`[data-binary="${escaped}"]`);
-    // `UX-1177`: a row past the bound is filtered in, so the jump lands on it.
-    if (target.kind === "binary" && !row()) filterSection(document, target.section, `binary:${target.key}`);
+    const row = () => document.getElementById(target.section)?.querySelector(`[data-binary="${escaped}"]`);
+    // `UX-1177`, `UX-1225`: a binary's own table is filtered to it, mounted or not, so the jump lands on it.
+    if (target.kind === "binary") filterSection(document, target.section, `binary:${target.key}`);
     const node = target.kind === "section"
       ? document.getElementById(target.key)
       : row() ?? document.getElementById(target.section);
@@ -284,6 +285,7 @@ export function wireJumpBox(nav, root, payload, context = {}) {
   };
   const act = (action) => {
     if (action.focus) {
+      context.navigate?.(nav, true);
       applyFocus(root, action.element);
       root.querySelector?.("[data-role=focus-bar]")?.scrollIntoView?.();
       root.dispatchEvent?.(new Event("change", { bubbles: true }));
@@ -356,7 +358,7 @@ export function wireJumpBox(nav, root, payload, context = {}) {
       if (!rows.length) return;
       event.preventDefault?.();
       const step = event.key === "ArrowDown" ? 1 : -1;
-      active = (active + step + rows.length + (active < 0 ? 1 : 0)) % rows.length;
+      active = active < 0 ? (step > 0 ? 0 : rows.length - 1) : (active + step + rows.length) % rows.length;
       highlight();
       return;
     }
@@ -1005,6 +1007,7 @@ async function boot() {
       // rule - an affordance whose precondition is absent is not shown
       // at all, rather than shown and dead.
       wireJumpBox(contents, root, payload, {
+        navigate,
         hasTimeline: Boolean(run.has_timeline),
         hasBlast: location.protocol === "http:"
                || location.protocol === "https:",
@@ -1172,7 +1175,7 @@ async function boot() {
     const keepPlace = (railed) => {
       // `UX-1203` follow-up: with no such place, an opened rail's reader is at the anchor.
       const place = !railed ? here() : read?.[0] === location.hash ? read[1] : { scrollY: window.scrollY, at: null };
-      window.history.replaceState({ ...window.history.state, folds: foldSnapshot(root), ...place }, "");
+      window.history.replaceState({ ...window.history.state, folds: foldSnapshot(root), sections: controls.shut(), ...place }, "");
     };
     // `UX-1203` follow-up: Chrome fires popstate inside a followed fragment link's click; that is no traversal.
     let following = false;
@@ -1180,29 +1183,33 @@ async function boot() {
     // UX-1158: a rail chapter press is navigation too, with an entry of its own.
     document.addEventListener?.("click", (event) => {
       const chapter = event.target?.closest?.("[data-toc-chapter]")?.dataset.tocChapter;
-      const all = event.target?.closest?.("[data-all]");
+      // `UX-1222`: Focus is one step Back, as Expand all is.
+      const all = event.target?.closest?.("[data-all],[data-focus-element]");
       if (fragment(event)?.length > 1) {
         following = true;
         setTimeout(() => { following = false; }, 0);
       }
       if (fragment(event)?.length > 1 || chapter || all) {
-        // Chrome's own restore lands after popstate and overrides it.
-        window.history.scrollRestoration = "manual";
-        const rail = event.target?.closest?.(".toc");
-        keepPlace(rail?.getAttribute("data-folded") === "false"
-          && rail.querySelector(".toc-title")?.disabled === false);
+        navigate(event.target?.closest?.(".toc"), all);
         if (chapter) {
           const next = joinHash(`chapter-${chapter}`, splitHash(location.hash).query);
           // UX-1178: a press on the entry already current is no new entry.
           window.history[next === location.hash ? "replaceState" : "pushState"](null, "", next);
         }
-        // `UX-1203`: Expand all and Collapse all are one step Back, and Forward restores the entry they made.
-        if (all) {
-          window.history.pushState(null, "", location.href);
-          setTimeout(() => keepPlace(false), 0);
-        }
       }
     }, true);
+    // `UX-1220`: one navigation step, for a press and for the jump box, which has no event target.
+    function navigate(rail, push) {
+      // Chrome's own restore lands after popstate and overrides it.
+      window.history.scrollRestoration = "manual";
+      keepPlace(rail?.getAttribute("data-folded") === "false"
+        && rail.querySelector(".toc-title")?.disabled === false);
+      // `UX-1203`: Expand all and Collapse all are one step Back, and Forward restores the entry they made.
+      if (push) {
+        window.history.pushState(null, "", location.href);
+        setTimeout(() => keepPlace(false), 0);
+      }
+    }
     document.addEventListener?.("click", (event) => {
       const href = fragment(event);
       // `UX-1196`: a card's "Also in" link lands its element's row there, a folded one included.
@@ -1241,6 +1248,7 @@ async function boot() {
       applyView(root, query);
       if (!Array.isArray(saved?.folds)) return;
       applyFolds(root, saved.folds);
+      if (saved.sections) controls.restore(saved.sections);
       if (saved.rail) document.querySelector(".toc")?._fold?.(saved.rail === "true");
       window.scrollTo?.(0, saved.scrollY ?? 0);
       const at = document.getElementById(splitHash(location.hash).anchor);

@@ -30,20 +30,8 @@ task file, which is the only place it ever lived twice.
 | UX-1014 | [the "safe cap plus auto" default is measured on more shapes and hosts before it is anyone's default](UX-1014-the-builders-and-auto-default-is-measured-on-more-shapes-and-hosts.md) | capture | High | R4, R5 | 🔴 Not Started |
 | UX-1134 | [`--jobserver auto` with no plan widens a memory-bound giant into the OOM killer](UX-1134-auto-oom-kills-a-memory-bound-giant-with-no-plan.md) | capture | High | R4, R5 | 🔴 Not Started |
 | UX-1040 | [a paired reading decides whether implementers move to opus at low effort](UX-1040-a-paired-reading-decides-the-implementers-model.md) | guards | Medium | every round's implementer spend | 🔴 Not Started |
-| UX-1219 | [Back after Collapse all reopens what it folded](UX-1219-back-after-collapse-all-reopens-what-it-folded.md) | viewer | Medium | R1 | 🔴 Not Started |
-| UX-1220 | [the narrow rail jump box keeps the place read for Back, as its links do](UX-1220-the-narrow-rail-jump-box-keeps-the-place-read-for.md) | viewer | Medium | R1 | 🔴 Not Started |
-| UX-1221 | [Back after a card link restores the card offset](UX-1221-back-after-a-card-link-restores-the-card-offset.md) | viewer | Low | R1 | 🔴 Not Started |
-| UX-1222 | [Focus is one step Back](UX-1222-focus-is-one-step-back.md) | viewer | Low | R1 | 🔴 Not Started |
-| UX-1223 | [returning to All rows restores the chain order, or the badge says sorted](UX-1223-returning-to-all-rows-restores-the-chain-order-or.md) | viewer | Low | R1 | 🔴 Not Started |
-| UX-1224 | [a printed filtered table states its filter](UX-1224-a-printed-filtered-table-states-its-filter.md) | viewer | Low | R1 | 🔴 Not Started |
-| UX-1225 | [a jump to a binary lands on the filtered by_binary list](UX-1225-a-jump-to-a-binary-lands-on-the-filtered-by-binary.md) | viewer | Low | R1 | 🔴 Not Started |
-| UX-1226 | [a card label reads as its column title](UX-1226-a-card-label-reads-as-its-column-title.md) | viewer | Low | R1 | 🔴 Not Started |
-| UX-1227 | [the palette's first ArrowDown lands on its first row](UX-1227-the-palette-s-first-arrowdown-lands-on-its-first.md) | viewer | Low | R1 | 🔴 Not Started |
-| UX-1228 | [a transitive downstream: clause filters the elements an element blocks, through every level](UX-1228-a-transitive-downstream-clause-filters-the-elements.md) | viewer | Low | R1 | 🔴 Not Started |
-| UX-1229 | [focusing the Elements filter box after +N more is measured at 390 for the touch keyboard](UX-1229-focusing-the-elements-filter-box-after-n-more-is.md) | viewer | Low | R1 | 🔴 Not Started |
-| UX-1230 | [the badge's all-N-matched arm and the said-back clause's owned-words rule have a mutation that reddens them](UX-1230-the-badge-s-all-n-matched-arm-and-the-said-back.md) | guards | Low | R1 | 🔴 Not Started |
-| UX-1231 | [the styleguide states two rules: a filtering link moves focus to its filter, an entry naming no View is at the opening View](UX-1231-the-styleguide-states-two-rules-a-filtering-link.md) | docs | Low | R1 | 🔴 Not Started |
-| UX-1232 | [the hang guard's sleeper does not take 49.9 s of wall at 2.05 s of user](UX-1232-the-hang-guard-s-sleeper-does-not-take-49-9-s-of.md) | guards | Medium | R1 | 🔴 Not Started |
+| UX-1235 | [a binary jump lands below the stuck tools, at every width, with the rail open](UX-1235-a-binary-jump-lands-below-the-stuck-tools-at-every-width.md) | guards | Low | R1 | 🔴 Not Started |
+| UX-1236 | [a bare `downstream > N` says what it read, and `downstream_count > N` is guarded](UX-1236-a-bare-downstream-comparison-says-what-it-read.md) | viewer | Low | R1 | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

@@ -1,8 +1,8 @@
 # UX-1228: a transitive downstream: clause filters the elements an element blocks, through every level
 
-**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** `UX-1214`'s Decision, dropped for budget (2026-10-01) | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** judgement | **Reading:** container
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** — | **Found by:** `UX-1214`'s Decision, dropped for budget (2026-10-01) | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical | **Reading:** container
 
-**Guard:** none — open, no guard named yet
+**Guard:** `tests/unit/test_a_downstream_clause_follows_the_closure.py`
 
 ## Motivation
 
@@ -24,6 +24,36 @@ Input classes: the 1,202-element two-plane page and its `--workload binaries` va
 
 On the 1,202-element page `downstream:toolchain.bst` matches its Downstream count; a guard in a new `test_a_downstream_clause_follows_the_closure.py`; the page half stays under 160,000 B. Mutation: restore the defect, and the guard reds.
 
+## Decision
+
+Architect, round 161 (2026-10-01):
+
+```text
+Route:     In tables.js, a `downstream:<uid>` clause resolves once per parse to a Set by BFS from <uid> over the rows' `data-list-*` lists (the direction giving 1,201 for toolchain.bst); matchesKey tests tr's data-element against it. pairs.js declares `downstream` as one more undrawn column and adds it to `help`.
+Rejected:  per-row downstream list column (~1,202 x hundreds of uids in the DOM); publishing the closure in the payload (reverses UX-1214); raising the budget (Ruslan's call).
+Files:     bga/viewer/tables.js, bga/viewer/pairs.js, tests/unit/test_a_downstream_clause_follows_the_closure.py
+Guard:     1,202-element page: `downstream:toolchain.bst` -> Elements badge 1,201 matched vs `depends_on:toolchain.bst` 1,200. Budget guard stays green.
+Mutation:  Match direct members only: badge 1,200, red.
+Class:     product
+Split:     merged last among viewer rows; over budget it waits.
+Question:  none
+```
+
 ## Outcome
 
-Open.
+**Gap measured.** On the 1,202-element page (`gen-synthetic --seed 1 --store --layers 20 --width 60`), toolchain.bst's Downstream count is 1201; before, `downstream:` named no column of its own, so the word fell to Downstream count's and `downstream:toolchain.bst` matched 0 ("none of 1,202 match"); `depends_on:toolchain.bst` matched 1,200.
+
+**Close measured.** `downstream:<uid>` resolves once per filter pass to a Set, BFS over the rows' `data-list-depends_on` (`tables.js` `reach`); `pairs.js` declares `downstream` undrawn (each row carries `downstream: null`, which `columnSpecs`'s `present` needs) and in the box's help.
+
+```text
+$ pytest -q tests/unit/test_a_downstream_clause_follows_the_closure.py
+count 1201, downstream:toolchain.bst matched 1201 ("25 of 1,201 matched"), depends_on:toolchain.bst matched 1200
+1 passed in 6.04s
+golden page half: 159,146 -> 159,418 B (+272); 582 B under PAGE_BUDGET_B
+```
+
+`downstream > N` no longer reads Downstream count: the word now names this clause's column, so a threshold on it is said back unread; `downstream_count > N` still reads it.
+
+| mutation | reddened | count |
+|---|---|---|
+| direct members only (`for (const next of under[uid] ?? []) seen.add(next)`) | `assert 1200 == 1201`, badge "25 of 1,200 matched" | 1 failed |

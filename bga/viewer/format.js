@@ -305,6 +305,8 @@ export const TERMS = {
   started_at_us: "Started at, since the epoch",
   // `UX-1184`: a task's share of the window, never its duration.
   wall_clock_share_us: "Wall-clock share",
+  // `UX-1234`: the reader's word for two columns a card shares.
+  probability: "On the path", element_durations: "Element duration",
 };
 
 /**
@@ -422,7 +424,7 @@ export function title(key, kind = null, published = false) {
   // `UX-1151`: one spelling of the planes and of the acronym on every label.
   return named.replace(/[_-]/g, " ").replace(/^./, (c) => c.toUpperCase())
     .replace(/^Lb /, "LB ")
-    .replace(/\bplane ?([12])\b/gi, "Plane $1").replace(/\bcpu(s?)\b/gi, "CPU$1");
+    .replace(/\bplane ?([12])\b/gi, "Plane $1").replace(/\b(cpu|rss)(?=s?\b)/gi, (w) => w.toUpperCase());
 }
 
 /**

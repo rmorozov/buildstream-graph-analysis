@@ -1696,7 +1696,7 @@ def compute_jobserver_block(
     """UX-847: `analyze/v6`'s additive `jobserver` block, pure over
     Plane 2's tracer report and Plane 1's element population. `None`
     when this run's Plane 2 report carries no mode - a run without
-    `--jobserver` produces today's `analyze/v6` byte for byte.
+    `--jobserver` produces today's `analyze/v7` byte for byte.
     """
     if not native_report or not native_report.get("jobserver"):
         return None

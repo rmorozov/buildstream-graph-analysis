@@ -134,6 +134,7 @@ class TestAnOlderStoreStillReads:
             "analyze/v3",
             "analyze/v4",
             "analyze/v5",
+            "analyze/v6",
             "blast/v1",
             "compare/v1",
             "correlate/v1",

@@ -481,6 +481,20 @@ function mapTitles(key, hint, node) {
   };
 }
 
+/** `UX-1199`: a binary the cost table holds links to its rows there. */
+function linkCosted(cells, payload) {
+  const costed = new Set((payload?.binary_cost ?? []).map((row) => row.binary));
+  for (const cell of cells) {
+    const raw = cell.getAttribute("data-raw");
+    if (!costed.has(raw)) continue;
+    const query = `binary:${raw}`;
+    const link = el("a", { href: joinHash("binary_cost", new URLSearchParams({ "f.binary_cost": query }).toString()),
+                           title: `${raw}'s rows in binary cost` }, raw);
+    link.addEventListener?.("click", () => filterSection(document, "binary_cost", query));
+    cell.replaceChildren(link);
+  }
+}
+
 function mapSectionLabels(box, key, hint, node, payload, titles) {
   const table = box.querySelector?.("table");
   if (!table) return box;
@@ -501,18 +515,10 @@ function mapSectionLabels(box, key, hint, node, payload, titles) {
   }
   const keys = columnCells(table, "key");
   const op = taskUidKeyed ? statedOp(keys, hint) : null;
-  // `UX-1199`: a binary the cost table holds links to its rows there.
-  const costed = new Set(hint[KEYED_BY] === KEYED_BY_BINARY ? (payload?.binary_cost ?? []).map((row) => row.binary) : []);
+  if (hint[KEYED_BY] === KEYED_BY_BINARY) linkCosted(keys, payload);
   for (const cell of keys) {
     const raw = cell.getAttribute("data-raw");
     cell.setAttribute("data-key", raw);
-    if (costed.has(raw)) {
-      const query = `binary:${raw}`;
-      const link = el("a", { href: joinHash("binary_cost", new URLSearchParams({ "f.binary_cost": query }).toString()),
-                             title: `${raw}'s rows in binary cost` }, raw);
-      link.addEventListener?.("click", () => filterSection(document, "binary_cost", query));
-      cell.replaceChildren(link);
-    }
     if (!taskUidKeyed) continue;
     const shown = keyAsShown(raw, hint);
     if (!shown) continue;
@@ -604,7 +610,11 @@ export function renderSection(key, value, hint = {}, node = undefined,
         && value.every((item) => item && typeof item === "object"
                                  && !Array.isArray(item))) {
       if (oneRecord(value, hint, node)) return renderPairs(key, value[0], hint, node);
-      return renderTable(key, value, hint, node);
+      const drawn = renderTable(key, value, hint, node);
+      // `UX-1247`: by_binary's rows link to binary_cost, as its map keys did.
+      const table = hint[KEYED_BY] === KEYED_BY_BINARY ? drawn.querySelector?.("table") : null;
+      if (table) linkCosted(columnCells(table, KEYED_BY_BINARY), payload);
+      return drawn;
     }
     const body = control === CONTROLS.INLINE_LIST
       ? el("p", {}, el("code", {}, value.join(", ")))
@@ -786,27 +796,20 @@ export const SECTION_ANSWERS = {
         ? (lost === 0 ? "; none went unmeasured." : `; ${lost} could not be read.`) : ".");
   },
   binary_cost(rows, payload) {
-    if (!Array.isArray(rows) || !rows.length) return null;
-    const by = new Map();
-    const elements = new Set();
-    for (const row of rows) {
-      const one = by.get(row.binary) ?? { cpu: 0, calls: 0, elements: 0 };
-      one.cpu += Number(row.cpu_us) || 0;
-      one.calls += Number(row.calls) || 0;
-      one.elements += 1;
-      by.set(row.binary, one);
-      elements.add(row.element);
+    // UX-1247: the answer is by_binary's first row, the analyzer's own ranking.
+    const totals = payload?.by_binary;
+    if (!Array.isArray(rows) || !rows.length || !Array.isArray(totals) || !totals.length) return null;
+    const top = totals[0];
+    const elements = new Set(rows.map((row) => row.element)).size;
+    if (typeof top.cpu_us !== "number") {
+      return `${many(totals.length, "binary", "binaries")} ran; ${top.binary} ran the most, `
+        + `${many(top.calls, "call")}.`;
     }
-    const [name, top] = [...by].sort(
-      (a, b) => b[1].cpu - a[1].cpu || b[1].calls - a[1].calls)[0];
-    const cost = `${many(top.calls, "call")}, `
-      + `${quantity(top.cpu, "duration_us")} of CPU`;
-    // UX-1183: the capture's count, not the rows kept.
-    const ran = Object.keys(payload?.by_binary ?? {}).length || by.size;
-    return ran === 1
-      ? `One binary, ${name}, ran in ${many(top.elements, "element")}: ${cost}.`
-      : `${many(ran, "binary", "binaries")} ran in `
-        + `${many(elements.size, "element")}; ${name} cost the most, `
+    const cost = `${many(top.calls, "call")}, ${quantity(top.cpu_us, "duration_us")} of CPU`;
+    return totals.length === 1
+      ? `One binary, ${top.binary}, ran in ${many(top.elements, "element")}: ${cost}.`
+      : `${many(totals.length, "binary", "binaries")} ran in `
+        + `${many(elements, "element")}; ${top.binary} cost the most, `
         + `${cost} in ${many(top.elements, "element")}.`;
   },
   peak_memory(value, payload) {

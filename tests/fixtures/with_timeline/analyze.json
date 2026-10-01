@@ -1,5 +1,5 @@
 {
-    "schema": "analyze/v6",
+    "schema": "analyze/v7",
     "run_id": "054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec",
     "total_duration_us": 46133000,
     "section": null,
@@ -1856,7 +1856,7 @@
         {
             "claim": "diagnosis",
             "kind": "diagnosis",
-            "document": "analyze/v6",
+            "document": "analyze/v7",
             "evidence": [
                 {
                     "path": "floors.t_infinity_observed",
@@ -1892,7 +1892,7 @@
         {
             "claim": "wait-category",
             "kind": "finding",
-            "document": "analyze/v6",
+            "document": "analyze/v7",
             "evidence": [
                 {
                     "path": "attribution.untracked_head_us",
@@ -1925,7 +1925,7 @@
         {
             "claim": "time-concentration",
             "kind": "finding",
-            "document": "analyze/v6",
+            "document": "analyze/v7",
             "evidence": [
                 {
                     "path": "total_duration_us",
@@ -1954,7 +1954,7 @@
         {
             "claim": "chain-graph",
             "kind": "finding",
-            "document": "analyze/v6",
+            "document": "analyze/v7",
             "evidence": [
                 {
                     "path": "elements.zero_slack_share",
@@ -1978,7 +1978,7 @@
         {
             "claim": "joint-saving",
             "kind": "finding",
-            "document": "analyze/v6",
+            "document": "analyze/v7",
             "evidence": [
                 {
                     "path": "joint_saving.joint_saving_us",
@@ -2023,7 +2023,7 @@
         {
             "claim": "optimization-horizon",
             "kind": "finding",
-            "document": "analyze/v6",
+            "document": "analyze/v7",
             "evidence": [
                 {
                     "path": "optimization_horizon[0].makespan_after_us",
@@ -2058,7 +2058,7 @@
         {
             "claim": "blast-radius-reach",
             "kind": "finding",
-            "document": "analyze/v6",
+            "document": "analyze/v7",
             "evidence": [
                 {
                     "path": "elements.blast_radius[core.bst].downstream_count",
@@ -2093,7 +2093,7 @@
         {
             "claim": "latent-heavies",
             "kind": "finding",
-            "document": "analyze/v6",
+            "document": "analyze/v7",
             "evidence": [
                 {
                     "path": "latent_heavies[0].duration_us",
@@ -2120,7 +2120,7 @@
         {
             "claim": "blast-radius-structural",
             "kind": "finding",
-            "document": "analyze/v6",
+            "document": "analyze/v7",
             "evidence": [
                 {
                     "path": "elements.blast_radius[toolchain.bst].downstream_count",
@@ -2143,7 +2143,7 @@
         {
             "claim": "fan-in-ranking",
             "kind": "finding",
-            "document": "analyze/v6",
+            "document": "analyze/v7",
             "evidence": [
                 {
                     "path": "elements.fan_in[app.bst].transitive_count",
@@ -2178,7 +2178,7 @@
         {
             "claim": "fan-in-structural",
             "kind": "finding",
-            "document": "analyze/v6",
+            "document": "analyze/v7",
             "evidence": [
                 {
                     "path": "elements.fan_in[all.bst].transitive_count",
@@ -2201,7 +2201,7 @@
         {
             "claim": "graph-width",
             "kind": "finding",
-            "document": "analyze/v6",
+            "document": "analyze/v7",
             "evidence": [],
             "rule": {
                 "name": null,
@@ -2217,7 +2217,7 @@
         {
             "claim": "cache-hit-ratio",
             "kind": "finding",
-            "document": "analyze/v6",
+            "document": "analyze/v7",
             "evidence": [
                 {
                     "path": "cache.hit_share",
@@ -2257,7 +2257,7 @@
         {
             "claim": "confidence",
             "kind": "finding",
-            "document": "analyze/v6",
+            "document": "analyze/v7",
             "evidence": [
                 {
                     "path": "confidence.primary",
@@ -2296,7 +2296,7 @@
         {
             "claim": "remote-execution-whatif",
             "kind": "finding",
-            "document": "analyze/v6",
+            "document": "analyze/v7",
             "evidence": [],
             "rule": {
                 "name": null,
@@ -2312,7 +2312,7 @@
         {
             "claim": "efficiency-score",
             "kind": "finding",
-            "document": "analyze/v6",
+            "document": "analyze/v7",
             "evidence": [
                 {
                     "path": "floors.efficiency_score",
@@ -2344,10 +2344,10 @@
         }
     ],
     "document_shape": {
-        "leaves": 1581,
+        "leaves": 1583,
         "deepest_depth": 7,
         "deepest_path": "findings.[].evidence.steps.[].entering.[]",
-        "deeper_than_three": 958,
-        "deeper_than_three_share": 0.6059456040480709
+        "deeper_than_three": 959,
+        "deeper_than_three_share": 0.605811749842072
     }
 }

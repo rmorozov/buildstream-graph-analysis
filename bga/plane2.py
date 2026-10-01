@@ -508,3 +508,37 @@ def apply_resolved_widths(native_report: dict, widths: dict[str, int]) -> int:
         # the number `UX-894` was filed for.
         entry["achieved_vs_requested"] = min(1.0, peak / width) if width > 0 else None
     return filled
+
+
+def binary_totals(native_report: Optional[dict]) -> list[dict]:
+    """`UX-1247`: one row per binary - CPU, wall, calls, elements - ranked by CPU.
+
+    CPU and wall are the sums of `binary_cost`'s (element, binary) pairs and
+    calls the capture's whole-run `by_binary`. A report whose elements carry
+    only the two top-N rankings leaves `cpu_us`, `wall_us` and `elements`
+    absent rather than partial, and ranks by calls.
+    """
+    report = native_report or {}
+    costs = [
+        cost for cost in (report.get("binary_cost") or {}).values() if isinstance(cost, dict) and cost.get("available")
+    ]
+    whole = all(cost.get("binaries") for cost in costs)
+    summed: dict[str, dict] = {}
+    for cost in costs if whole else ():
+        for entry in cost["binaries"]:
+            one = summed.setdefault(entry.get("binary"), {"cpu_us": 0, "wall_us": 0, "calls": 0, "elements": 0})
+            one["cpu_us"] += entry.get("cpu_us") or 0
+            one["wall_us"] += round((entry.get("wall_s") or 0) * 1_000_000)
+            one["calls"] += entry.get("count") or 0
+            one["elements"] += 1
+    calls = dict(report.get("by_binary") or {}) or {name: one["calls"] for name, one in summed.items()}
+    rows = []
+    for name in sorted(set(calls) | set(summed)):
+        row = {"binary": name, "calls": calls.get(name, 0)}
+        if name in summed:
+            row.update(
+                cpu_us=summed[name]["cpu_us"], wall_us=summed[name]["wall_us"], elements=summed[name]["elements"]
+            )
+        rows.append(row)
+    rows.sort(key=lambda row: (-row.get("cpu_us", -1), -row["calls"], row["binary"]))
+    return rows

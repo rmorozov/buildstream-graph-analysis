@@ -367,7 +367,7 @@ class TestEachPopulationIsPublishedOnce:
     def test_the_version_moved_with_them(self, payload):
         """`architecture.md`'s rule: a removal bumps the version. This is
         the first time it has been exercised."""
-        assert payload["schema"] == "analyze/v6", payload["schema"]
+        assert payload["schema"] == "analyze/v7", payload["schema"]
 
 
 class TestWhatReplacedThem:

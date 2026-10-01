@@ -7,6 +7,7 @@ from .. import producer, provenance, schemas
 from ..consistency import verdict_violations
 from ..findings import compute_findings, compute_headline, compute_next_steps, finding_copy_text, reader_index
 from ..ingest.models import AnalysisResult
+from ..plane2 import binary_totals
 from ._shared import (
     ATTRIBUTION_CATEGORY_HINTS_BY_KEY,
     GRAPH_SIGNAL_KEYS,
@@ -534,8 +535,10 @@ def _add_plane2_join(data, result, section, by_kind):
     # Plane 2 report published it, which is why this sits beside
     # the join rather than in `correlate`. Absent without
     # `--plane2` for the same reason the join is.
-    if native_report.get('by_binary'):
-        data['by_binary'] = dict(native_report['by_binary'])
+    # `UX-1247`: per binary, ranked by CPU; `binary_cost` is the drill-down.
+    totals = binary_totals(native_report)
+    if totals:
+        data['by_binary'] = totals
     rows = _binary_rows(native_report.get('binary_cost'))
     if rows:
         data['binary_cost'] = rows

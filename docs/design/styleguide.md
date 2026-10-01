@@ -2249,7 +2249,8 @@ column whatever its length, so its bound is the table row's above -
 
 **Checked from the schema.** The page's census finds a violation only
 after it is drawn; the schema can name every sequence before anything
-is. Walking every list and data-keyed map in two `analyze/v6` payloads
+is. Walking every list and data-keyed map in two `analyze/v6` payloads (an id
+since superseded by `analyze/v7`)
 — `macro_micro` (both planes, 11 elements) and the 4,002-element run —
 and resolving each path in `schemas.schema("analyze/v6")`:
 

@@ -3,7 +3,7 @@
 What changed between the `bga` you installed and the one you have now.
 
 A release here records a **contract state**, not a date: the
-twenty-seven published contracts and the command surface as they stood, plus what
+twenty-eight published contracts and the command surface as they stood, plus what
 moved since the last row. The procedure is
 [`docs/contributing/release-guide.md`](docs/contributing/release-guide.md)
 and the argument is
@@ -39,6 +39,7 @@ derivation actually reads.
 
 | release | date | closed rows | kind |
 |---|---|---|---|
+| [Unreleased](#unreleased) | — | — | breaking |
 | [0.5.0](#050--the-tool-prices-its-own-cost-and-the-jobserver-2026-09-29) | 2026-09-29 | 1083 | extending |
 | [0.4.1](#041--the-tool-says-what-it-assumes-2026-09-12) | 2026-09-12 | 813 | patch |
 | [0.4.0](#040--a-capture-you-can-carry-2026-09-03) | 2026-09-03 | 537 | breaking |
@@ -60,6 +61,18 @@ round 86 first "corrected" that to *a lineage `main` cannot reach*.
 Both are wrong: `pyproject.toml` enters this history at `4ace856`
 (2026-08-13) and `0.2.0` is an ordinary release. The wrong correction
 was read off a shallow clone — `UX-633`, and `UX-637` for the cause.
+
+## Unreleased
+
+**Contract delta:** `analyze/v7` - `by_binary` is one row per binary,
+`{binary, cpu_us, wall_us, calls, elements}` ranked by CPU, where it was
+a map of binary to calls (`UX-1247`); `analyze/v6` is read, never
+written. A bumped contract makes the next cut `breaking`.
+
+```text state
+contracts: analyze/v2 analyze/v3 analyze/v4 analyze/v5 analyze/v6 analyze/v7 blast/v1 blast/v2 bundle-manifest/v1 capacity-model/v1 capture-layout/v1 compare/v1 compare/v2 correlate/v1 correlate/v2 host-samples/v1 host/v1 host/v2 junction-cost/v1 plane2/v1 plane2/v2 plane2/v3 sources/v1 store-aggregate/v1 store/v1 sweep/v1 tail/v1 whatif/v1
+commands: analyze baseline blast bundle cache-logs cache-trend capture checkout-cost chrome-to-trace compare correlate cross-check diagnostics doctor extract floors gen-synthetic graph graph-from-show junction-cost log-to-chrome native-to-chrome rebuild-set release-notes replay run-context snapshot sweep timeline utilisation view whatif wrap
+```
 
 ## 0.5.0 — the tool prices its own cost and the jobserver (2026-09-29)
 

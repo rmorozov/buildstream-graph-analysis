@@ -256,10 +256,8 @@ def test_every_map_names_its_columns_once_in_header_cells_and_copy(maps, label):
         assert len(t["json"]) == len(t["heads"]) and not {"key", "value"} & set(t["json"]), t
         for head, labels in zip(t["heads"], t["labels"]):
             assert set(labels) <= {head}, (t["table"], head, set(labels))
-    if label in ("walk", "heavy"):
-        by_binary = next(t for t in tables if t["table"] == "by_binary")
-        assert by_binary["heads"][0] == "Binary", by_binary
-        assert by_binary["json"][:2] == ["binary", "calls_in_run"], by_binary
+    # `UX-1247`: by_binary is rows since analyze/v7, so it is no longer one of these maps.
+    assert "by_binary" not in {t["table"] for t in tables}, label
 
 
 @needs_browser

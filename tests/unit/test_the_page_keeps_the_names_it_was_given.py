@@ -57,7 +57,6 @@ needs_node = pytest.mark.skipif(node is None, reason="node is not installed")
 #: agree with the code by construction.
 DATA_KEYED = (
     ("wall_clock_share_us", ()),
-    ("by_binary", ()),
     ("element_durations", ("elements",)),
     ("slack", ("elements",)),
     ("downstream_count", ("elements",)),
@@ -173,7 +172,8 @@ class TestADataKeyIsRenderedAsPublished:
         renamed = [row for row in looked[label]["seen"] if row["key"] in data and not _is_the_given_name(row)]
         assert renamed == [], f"{label}: the page renamed {len(renamed)} of the reader's own names, e.g. {renamed[:3]}"
 
-    @pytest.mark.parametrize("name", ["wall_clock_share_us", "by_binary"])
+    # `UX-1247`: `by_binary` is rows now, its names a column's values rather than map keys.
+    @pytest.mark.parametrize("name", ["wall_clock_share_us"])
     def test_the_reader_can_find_what_they_searched_for(self, looked, label, name):
         """Non-vacuity, and not against a round number. The clause above
         passes trivially if no data key reaches a `<dt>` at all, so

@@ -326,6 +326,7 @@ export const READER_LABELS = {
   native_max_jobs: "Native build jobs",
   INSUFFICIENT_EVIDENCE: "Not enough evidence",
   HIGH_CPU_UTILIZATION: "High CPU use",
+  HIGH_SLOT_OCCUPANCY: "Builder slots full",
   CONCURRENT_TASKS_EXCEED_CPUS: "More tasks at once than cores",
   idle_no_tasks: "Idle, no task ready",
   idle_underparallel: "Idle, too little parallel work",

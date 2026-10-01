@@ -172,6 +172,23 @@ def _add_cpu_floor(result, native_report: dict, context) -> None:
     )
 
 
+def _reread_oversubscription(analyzer, result) -> None:
+    """UX-1245: Plane 2's cores busy is the CPU evidence; slot occupancy alone never was."""
+    from bga.utilisation import oversubscription_evidence
+
+    util = getattr(result, 'utilisation', None)
+    if not util or not util.get('cpu_accounting_available'):
+        return
+    config = any(v.get('type') == 'resource_oversubscription' for v in getattr(analyzer, 'violations', None) or [])
+    util['potential_oversubscription'], util['oversubscription_evidence'] = oversubscription_evidence(
+        util.get('useful_share'),
+        (result.plane2_capacity or {}).get('cores_busy'),
+        util.get('effective_cpus'),
+        peak=util.get('max_observed_concurrency') or 0,
+        config_violation=config,
+    )
+
+
 def _attach_plane2_capacity(args: argparse.Namespace, analyzer, result) -> None:
     """UX-83: let Plane 1's capacity advice consult Plane 2, when Plane 2
     is in hand for the same run.
@@ -234,6 +251,7 @@ def _attach_plane2_capacity(args: argparse.Namespace, analyzer, result) -> None:
             native_report, plane2_shape.resolved_widths(os.path.join(str(run_dir), 'graph.json'))
         )
     result.plane2_capacity = summarize_plane2_capacity(native_report, host_cpu_count)
+    _reread_oversubscription(analyzer, result)
     # UX-202: how much of the build Plane 2 actually saw, published
     # rather than left in the native report. The evidence header states
     # what a capture can support before any number is believed, and

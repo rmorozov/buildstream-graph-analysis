@@ -5229,12 +5229,14 @@ _ANALYZE_HINTS = {
                 "this accounting, not the capacity verdict."
             },
             "oversubscription_evidence": {
-                "description": "What that hint rests on, including the case where there was not enough to say."
+                "description": "What that hint rests on, including the case where there was not enough "
+                "to say. HIGH_SLOT_OCCUPANCY is builder slots full and is no hint on its own; "
+                "HIGH_CPU_UTILIZATION needs Plane 2's cores busy."
             },
             "max_observed_concurrency": {
                 QUANTITY: "count",
                 "title": "Peak tasks at once",
-                "description": "The most tasks seen running together in this accounting's own view of the run.",
+                "description": "The most task intervals that overlap at one instant.",
             },
             "useful_share": {
                 INLINE: "name",

@@ -997,6 +997,9 @@ def build_shim_argv(
     # log path).
     if os.environ.get("BST_TRACE_OPENS"):
         injected += ["--setenv", "BST_TRACE_OPENS", "1"]
+        # UX-1241: one table per sandbox, so a path its processes repeat is written once.
+        if invocation_id is not None:
+            injected += ["--setenv", "BST_TRACE_OPENS_SEEN", f"{bind_dst}/opens-seen-{invocation_id}"]
     # UX-842: a `notparallel` element's own `-j1` (Direction 20 argument
     # 1) means this sandbox never joins - no MAKEFLAGS auth, no fifo:
     # bind, argv byte for byte as without the mode - a pin can be the

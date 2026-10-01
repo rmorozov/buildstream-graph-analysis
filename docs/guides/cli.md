@@ -867,6 +867,7 @@ is which before touching any of them.
 | name | what it changes | where |
 |---|---|---|
 | `BST_TRACE_OPENS` | records `open()` as well as `exec`, forwarded into the sandbox by the shim. The `opens` half of Plane 2, and the more expensive half | `tools/native_trace/bwrap_shim.py` |
+| `BST_TRACE_OPENS_SEEN` | the sandbox's table of path hashes already written, so a path its processes repeat is written once (`UX-1241`); set by the shim per invocation, a file in the bind directory | `tools/native_trace/bwrap_shim.py`, `tools/native_trace/hook.c` |
 | `BST_TRACE_SPINE` | turns the ptrace spine on for this element — Plane 3, which sees the processes `LD_PRELOAD` cannot | `tools/native_trace/bwrap_shim.py` |
 | `BST_TRACE_SPINE_POLICY` | `auto`, `on` or `off`; `auto` resolves per element against the census below rather than for the whole build | `tools/native_trace/bwrap_shim.py` |
 | `BST_TRACE_SPINE_CENSUS` | the census `auto` consults to decide whether this element is worth the spine's price | `tools/native_trace/bwrap_shim.py` |

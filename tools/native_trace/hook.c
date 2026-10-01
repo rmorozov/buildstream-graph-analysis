@@ -84,7 +84,10 @@
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/mman.h>
 #include <sys/resource.h>
+#include <sys/stat.h>
+#include <sys/uio.h>
 #include <time.h>
 #include <unistd.h>
 
@@ -670,6 +673,98 @@ static void write_trace_line(const char *event, double ts, int with_rusage) {
     g_in_hook = outer;
 }
 
+/* UX-1241: a path another process of this sandbox already wrote is not
+ * written again - the parser unions an element's paths. Any failure or a
+ * crowded table writes the path: a repeat is harmless, a lost one is not. */
+#ifndef SEEN_SLOTS
+#define SEEN_SLOTS 32768  /* power of two; 256 KiB, left with the capture's scratch */
+#endif
+#define SEEN_MAX_PROBE 64
+static _Atomic unsigned long *g_seen = NULL;
+static int g_seen_tried = 0;
+
+static void map_seen_table(void) {
+    g_seen_tried = 1;
+    const char *path = getenv("BST_TRACE_OPENS_SEEN");
+    if (path == NULL || path[0] == '\0') {
+        return;
+    }
+    int outer = g_in_hook;
+    g_in_hook = 1;
+    int fd = open(path, O_RDWR | O_CREAT | O_CLOEXEC, 0600);
+    g_in_hook = outer;
+    if (fd < 0) {
+        return;
+    }
+    size_t bytes = (size_t)SEEN_SLOTS * sizeof(unsigned long);
+    struct stat st;
+    /* Every process extends to the same size, so racing ftruncates agree. */
+    if (fstat(fd, &st) != 0 || ((size_t)st.st_size < bytes && ftruncate(fd, (off_t)bytes) != 0)) {
+        close(fd);
+        return;
+    }
+    void *table = mmap(NULL, bytes, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+    close(fd);
+    if (table != MAP_FAILED) {
+        g_seen = (_Atomic unsigned long *)table;
+    }
+}
+
+/* 1 when this process is the sandbox's first to write `h`, or when the
+ * table cannot say. */
+static int seen_first(unsigned long h) {
+    size_t slot = (size_t)(h & (SEEN_SLOTS - 1));
+    for (size_t probe = 0; probe < SEEN_MAX_PROBE; probe++) {
+        _Atomic unsigned long *cell = &g_seen[(slot + probe) & (SEEN_SLOTS - 1)];
+        unsigned long current = atomic_load_explicit(cell, memory_order_acquire);
+        if (current == 0) {
+            unsigned long expected = 0;
+            if (atomic_compare_exchange_strong_explicit(cell, &expected, h, memory_order_acq_rel,
+                                                        memory_order_acquire)) {
+                return 1;
+            }
+            current = expected;
+        }
+        if (current == h) {
+            return 0;
+        }
+    }
+    return 1;
+}
+
+/* Compacts the arena to the paths no other process of this sandbox has
+ * written yet, and returns how many remain. */
+static unsigned keep_first_in_sandbox(void) {
+    if (!g_seen_tried) {
+        map_seen_table();
+    }
+    if (g_seen == NULL) {
+        return g_open_unique;
+    }
+    size_t read = 0, kept_bytes = 0;
+    unsigned kept = 0;
+    while (read < g_open_arena_used) {
+        char *start = g_open_arena + read;
+        char *end = memchr(start, '\n', g_open_arena_used - read);
+        size_t len = end ? (size_t)(end - start) + 1 : g_open_arena_used - read;
+        if (end) {
+            *end = '\0';
+        }
+        int first = seen_first(path_hash(start));
+        if (end) {
+            *end = '\n';
+        }
+        if (first) {
+            memmove(g_open_arena + kept_bytes, start, len);
+            kept_bytes += len;
+            kept++;
+        }
+        read += len;
+    }
+    g_open_arena_used = kept_bytes;
+    return kept;
+}
+
 /* UX-46: one OPEN record per process, listing the unique absolute paths
  * it opened. Written in the destructor as a single write() for the same
  * atomicity reason as write_trace_line, and only when something was
@@ -687,6 +782,9 @@ static void write_open_record(void) {
     if (fd < 0) {
         return;
     }
+    /* After the open, so a failed open marks nothing seen; the header goes
+     * out even when nothing is left, carrying the process and its counts. */
+    g_open_unique = keep_first_in_sandbox();
     char header[256];
     /* UX-57: `part` distinguishes several windows written by one process
      * (see flush_open_window) from several processes. Appended rather
@@ -701,12 +799,12 @@ static void write_open_record(void) {
                      g_open_unique, g_open_dropped, g_open_part,
                      g_open_relative, g_open_dirfd);
     if (n > 0 && (size_t)n < sizeof(header)) {
-        ssize_t w = write(fd, header, (size_t)n);
-        (void)w;
         /* The arena is already newline-separated, so the paths go out
          * as one contiguous block. Each is prefixed by nothing: the
-         * parser reads `unique` lines following the header. */
-        w = write(fd, g_open_arena, g_open_arena_used);
+         * parser reads `unique` lines following the header. One writev,
+         * so another process's append cannot land between the two. */
+        struct iovec parts[2] = {{header, (size_t)n}, {g_open_arena, g_open_arena_used}};
+        ssize_t w = writev(fd, parts, 2);
         (void)w;
     }
     close(fd);

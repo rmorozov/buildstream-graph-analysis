@@ -637,9 +637,9 @@ LARGE = (
     # viewports, every journey on one load each and J2 per chapter.
     # Measured alone in one process: 37.28 / 37.64 / 37.12s.
     "tests/unit/test_pointer_travel_is_a_budget.py",  #   37.3s
-    # `UX-1076`: two 1,202-element opens passes, no browser.
-    # Measured alone in one process: 15.96 / 14.91 / 16.37s.
-    "tests/unit/test_the_open_paths_are_interned.py",  #   16.0s
+    # `UX-1076`: two 1,202-element opens passes, no browser; UX-1240's
+    # reference reader as the uninterned arm. Alone in one process: 21.57 / 20.97s.
+    "tests/unit/test_the_open_paths_are_interned.py",  #   21.0s
     # `UX-1178`, round 158's merged tree with its follow-up clause: eighteen
     # Chromium loads at 390/320/1440. Alone in one process: 23.84 / 24.01 / 23.96s;
     # round 160's merged tree (UX-1208): 51.65 / 51.61s, base 24.89s on the same machine;
@@ -695,6 +695,12 @@ MEDIUM = (
     # clauses that need no browser. Three single-process runs:
     # 1.41 / 1.35 / 1.35s.
     "tests/unit/test_a_runbook_is_not_a_table.py",  #    1.4s
+    # `UX-1240`: two subprocess opens passes at 1,202 x 40 x 50, and two fuzzes.
+    # Measured alone in one process: 6.74 / 6.20s.
+    "tests/unit/test_the_opens_pass_holds_paths_as_ids.py",  #    6.7s
+    # `UX-1242`: two tracemalloc subprocesses at 20,000 records, and two fuzzes.
+    # Measured alone in one process, `--durations=0`: 3.68s.
+    "tests/unit/test_the_records_are_packed.py",  #    3.7s
     # `UX-667`, tiered on landing. One Chromium, one module-scoped
     # page - the rail's landing state, a 68-mark walk and the CSS
     # sweep all read from it. Measured single-process, `--durations=0`:

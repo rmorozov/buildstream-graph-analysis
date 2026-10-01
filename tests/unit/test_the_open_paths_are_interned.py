@@ -4,8 +4,8 @@ handle each repeated line is a distinct object, so the per-element sets
 held one allocation per occurrence rather than per distinct path.
 
 Measured against a *live* subprocess run rather than a fixed MB number:
-`sys.intern` patched to identity reproduces the pre-fix shape exactly,
-on this machine, in the same run - the 60% bound is the audit's own
+the pre-fix shape is UX-1240's set-of-strings reference with interning
+off, on this machine, in the same run - the 60% bound is the audit's own
 ratio (261 / 552 MB, `docs/audits/perf-snapshot-view-2026-09-28.md`),
 not a number carried over from a different container.
 """
@@ -19,10 +19,15 @@ ELEMENTS, PROCESSES_PER_ELEMENT, PATHS_PER_PROCESS = 1202, 160, 50
 
 _MEASURE = textwrap.dedent("""
     import sys
-    if sys.argv[2] == "no-intern":
-        sys.intern = lambda s: s
     sys.path.insert(0, sys.argv[3])
-    from tools.bst_native_build_tracer import parse_open_lines
+    sys.path.insert(0, sys.argv[3] + "/tests/unit")
+    if sys.argv[2] == "no-intern":
+        # UX-1240: the reader holds ids now; the pre-fix shape is its reference.
+        from functools import partial
+        from test_the_opens_pass_holds_paths_as_ids import reference_parse_open_lines
+        parse_open_lines = partial(reference_parse_open_lines, intern=lambda s: s)
+    else:
+        from tools.bst_native_build_tracer import parse_open_lines
     with open(sys.argv[1]) as handle:
         report = parse_open_lines(handle)
     # VmHWM, not ru_maxrss: Linux carries ru_maxrss across exec, so a

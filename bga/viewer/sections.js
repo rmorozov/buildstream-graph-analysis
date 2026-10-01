@@ -33,7 +33,7 @@ import { byId, copyButton } from "./questions.js";
 import { recordSource } from "./rawjson.js";
 import { CONTROLS, classify } from "./shapes.js";
 import { ARRAY_INLINE_ITEMS, CELL_NEST_LIMIT, LIFTED_SECTION, OBJECT_INLINE_FIELDS, TABLE_OPENS_BOUNDED_ABOVE, foldedList, liftedCriticalPath, mapTable, oneRecord, renderStructured, renderTable } from "./structured.js";
-import { renderPairs } from "./pairs.js";
+import { renderPairs, taskSignalTable } from "./pairs.js";
 import { boundCards, columnCells } from "./tables.js";
 import { investigationsFor } from "./trace_context.js";
 import { INCOMPLETE, PLANE2_NOT_CAPTURED, renderEvidence }
@@ -356,6 +356,9 @@ export const DRAWN_ELSEWHERE = {
     + "on the row it belongs to",
   // `UX-1146`: the panel's `Next` list is the runbook, and the rail
   // reaches it as the decision entry's sub-link (`nav.js`'s `subsections`).
+  // `UX-1194`: keyed like the share, so it is that table's Duration column.
+  task_durations_us: "the Duration column of the task table (`wall_clock_share_us`, `pairs.js`'s "
+    + "`taskSignalTable`), beside each task's share of the window",
   next_steps: "the decision panel's numbered list under \"What should I "
     + "run next?\" (`decision.js`), which the rail links as the decision "
     + "entry's sub-entry - a section whose whole body was a link to it "
@@ -502,7 +505,10 @@ function mapSectionLabels(box, key, hint, node) {
     // `UX-1184`: a field that names its own quantity titles its column; the bare unit is for the rest.
     const named = measure && (Object.hasOwn(TERMS, key) || title(key, measure) !== title(key));
     relabelHead(valueHead, named ? title(key, measure) : measure ? title(measure, measure) : "Value");
-    if (named && measure === "duration_us") {
+    // `UX-1194`: beside the task's own duration the share is marked, and a bare threshold reads the duration.
+    const beside = table.querySelector?.('th[data-column="duration_us"]');
+    if (beside) valueHead.setAttribute("data-share", "");
+    else if (named && measure === "duration_us") {
       box.prepend(el("p", { class: "section-lead", "data-lead": key },
         "A share of the active window, not a duration: each element's own is in ",
         el("a", { href: "#elements" }, "the element table"), "."));
@@ -646,7 +652,8 @@ export function renderSection(key, value, hint = {}, node = undefined,
     if (control === CONTROLS.MAP_TABLE) {
       const rows = Object.entries(value).map(
         ([name, member]) => ({ key: name, value: member }));
-      const box = mapTable(key, rows, hint, node, false, 0, key);
+      const beside = taskSignalTable(rows, hint, payload, root);
+      const box = mapTable(key, rows, hint, node, false, 0, key, false, beside ? [beside] : []);
       return el("section", { "data-section": key,
                              "data-rail": heading(key, hint).rail },
                 sectionHead(key, hint), mapSectionLabels(box, key, hint, node));

@@ -146,7 +146,7 @@ export const CHAPTERS = [
     sections: ["attribution", "attribution_hints",
                "critical_path_detail", "critical-path-drawn", "horizon",
                "optimization_horizon", "latent_heavies", "joint_saving",
-               "cache", "fetch_build_overlap", "wall_clock_share_us",
+               "cache", "fetch_build_overlap", "wall_clock_share_us", "task_durations_us",
                // `UX-414`: where the time went *inside* an element -
                // one call count per binary, which is this chapter's
                // question at the program level rather than the

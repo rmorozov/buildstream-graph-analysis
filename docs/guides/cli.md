@@ -1147,7 +1147,7 @@ the blocks a reader meets first, and `certified_headroom`, the number
 Key Findings leads with, had never been in the population at all. It was
 302 such keys when that was filed and 305 when it landed. One level and
 no further: `blast_radius_distribution.deciles` is in the population and
-its own nine buckets are not. The surface is **606 keys** today, and
+its own nine buckets are not. The surface is **607 keys** today, and
 that figure is derived from the walk rather than typed here.
 
 So the statement of coverage, which is now a statement and not a
@@ -1205,6 +1205,7 @@ can look one up.
 | `element_join_coverage` | How far the two-plane join reaches: `joined_elements`, each plane's count, and the elements only one plane saw. |
 | `attribution_hints` | One sentence per wait category saying what reduces it — the advice that belongs with `attribution`, not a second copy of it. |
 | `latent_heavies` | Heavy elements not on the path today. They cost nothing now and become the constraint once what is above them is fixed. |
+| `task_durations_us` | `UX-1194`: each task's own duration, start to finish, keyed by task uid like `wall_clock_share_us` beside it - a duration, where the share is the window that task alone held. |
 | `consolidation_candidates` | Elements always consumed together that could be one element. Structural: from the graph's edges, never a timing estimate. |
 | `batch_opportunities` | What could be built together, with `serialized_pairs` naming the pairs that share a chain and therefore cannot. |
 | `joint_saving` | What fixing the top candidates *together* is worth, simulated, beside `sum_of_individual_us` — they differ when savings overlap or compound. `relation` says which (`add`, `overlap`, `compound`); `worth_more_after` names the candidates worth more once the ones above them are fixed. |

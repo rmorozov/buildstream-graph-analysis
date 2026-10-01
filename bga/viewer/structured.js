@@ -144,7 +144,7 @@ function inlineObject(value, node) {
  * top-level section needs lives there, beside that one call, so this
  * function's body is unchanged from its cell-only years.
  */
-export function mapTable(key, rows, hint, node, nested, depth = 0, path = key, list = false) {
+export function mapTable(key, rows, hint, node, nested, depth = 0, path = key, list = false, beside = []) {
   let declared = hint;
   if (!nested) {
     // A `{name: number}` map's value column has to *declare* a
@@ -167,7 +167,7 @@ export function mapTable(key, rows, hint, node, nested, depth = 0, path = key, l
       ?? (record ? null : "count");
     // UX-1173: a list's index is not a name, so a list draws its items alone.
     declared = { ...hint, [COLUMNS]: [
-      ...(list ? [] : [{ key: "key", title: "Name" }]),
+      ...(list ? [] : [{ key: "key", title: "Name" }]), ...beside,
       { key: "value", title: title(key, measure), quantity: measure }] };
   }
   const { table, tools } = buildTable(path, rows, declared, node, depth);

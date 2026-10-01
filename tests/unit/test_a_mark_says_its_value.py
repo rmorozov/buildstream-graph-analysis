@@ -6,7 +6,11 @@ Measured before the fix on the 1,202-element two-plane page: 16 svgs,
 0 titles; the task-share strip ran 0 ms to 4.9 min with p95 at 0.6% of it.
 """
 
+import base64
+import gzip
+import json
 import pathlib
+import re
 import sys
 
 import pytest
@@ -70,7 +74,15 @@ def reads(tmp_path_factory):
     run = pages.two_plane_run(into, SCALE_SHAPE)
     path = pathlib.Path(into) / "report.html"
     view.export(str(run), str(path))
-    uris = {"two_plane": path.as_uri()}
+    # `UX-1194`: the task table's first quantity is the task's own Duration; the share draws its strip without it.
+    text = path.read_text(encoding="utf-8")
+    packed = re.search(r'id="bga-report-gz">([^<]*)</script>', text)
+    report = json.loads(gzip.decompress(base64.b64decode(packed.group(1))))
+    del report["task_durations_us"]
+    repacked = base64.b64encode(gzip.compress(json.dumps(report).encode())).decode()
+    shares = pathlib.Path(into) / "shares.html"
+    shares.write_text(text[: packed.start(1)] + repacked + text[packed.end(1) :], encoding="utf-8")
+    uris = {"two_plane": path.as_uri(), "shares": shares.as_uri()}
     for label in ("golden", "macro_micro"):
         uris[label] = pages.export_uri(pages.FIXTURES[label], into / label)
     with Browser(chrome) as opened:
@@ -91,7 +103,7 @@ def test_every_mark_says_its_value(reads):
 
 @needs_browser
 def test_a_strip_names_its_outlier_and_scales_the_rest(reads):
-    share = reads["two_plane"]["share"]
+    share = reads["shares"]["share"]
     assert share["cut"] is not None and share["cut"] < share["max"], share
     edge = [t for t in share["ticks"] if t["mark"] == "max"][0]
     assert edge["x"] == 100 and edge["outlier"].startswith("toolchain.bst"), edge

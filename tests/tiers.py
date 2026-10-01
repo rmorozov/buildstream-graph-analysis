@@ -1122,6 +1122,8 @@ MEDIUM = (
     "tests/unit/test_a_mark_says_its_value.py",  #  8.5s
     # `UX-1191`: 7.44 / 6.86s.
     "tests/unit/test_a_key_column_matches_exactly.py",  #  7.2s
+    # `UX-1194`: 6.87 / 6.46s.
+    "tests/unit/test_op_and_duration_meet_on_durations.py",  #  6.9s
     # `UX-1176`: 7.23 / 7.51s.
     "tests/unit/test_a_status_is_announced.py",  #  7.4s
     # `UX-1177`: 2.63 / 2.70s; its Jump-lands residue, merged tree: 9.75 / 9.70 / 9.73s.

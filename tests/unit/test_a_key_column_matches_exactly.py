@@ -146,7 +146,8 @@ def test_binary_ld_is_the_ld_rows_only(seen):
 @needs_browser
 def test_a_threshold_is_the_box_s_own_grammar(seen):
     rows = seen["report"]["binary_cost"]
-    shares = seen["report"]["wall_clock_share_us"]
+    # `UX-1194`: the task table's first quantity is each task's own duration.
+    shares = seen["report"]["task_durations_us"]
     got = seen["heavy"]
     assert got["binary_cost cpu > 1s"]["matched"] == sum(row["cpu_us"] > 1e6 for row in rows) > 0
     assert got["wall_clock_share_us > 1s"]["matched"] == sum(v > 1e6 for v in shares.values()) > 0

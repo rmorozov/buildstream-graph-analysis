@@ -315,6 +315,7 @@ _ANALYZE_OPTIONAL = {
     "optimization_horizon": "array",
     "latent_heavies": "array",
     "wall_clock_share_us": "object",
+    "task_durations_us": "object",
     "cache": "object",
     "ready_queue": "object",
     "fetch_build_overlap": "object",
@@ -1095,6 +1096,7 @@ ANALYZE_FULL_KEYS = (
     "optimization_horizon",
     "latent_heavies",
     "wall_clock_share_us",
+    "task_durations_us",
     "ready_queue",
     "joint_saving",
     "leaf_analysis",
@@ -2704,9 +2706,7 @@ _SIGNALS_TABLES = {
             QUANTITY: "duration_us",
             "description": "How long this element took in this run, restore or build.",
         },
-        "description": "Each element's own duration, keyed by "
-        "uid. A cached element contributes its "
-        "restore, not its build.",
+        "description": "Each element's own duration, keyed by uid. A cached element contributes its restore, not its build.",
     },
     "slack": {
         QUANTITY: "duration_us",
@@ -2715,9 +2715,7 @@ _SIGNALS_TABLES = {
             QUANTITY: "duration_us",
             "description": "How long this element could have been delayed without moving the makespan.",
         },
-        "description": "How long each element could have been "
-        "delayed without moving the makespan. "
-        "Zero is on the chain.",
+        "description": "How long each element could have been delayed without moving the makespan. Zero is on the chain.",
     },
     "downstream_count": {
         QUANTITY: "count",
@@ -2729,9 +2727,8 @@ _SIGNALS_TABLES = {
         QUANTITY: "count",
         GROWS: "elements",
         "additionalProperties": {QUANTITY: "count", "description": "Edges from this element to the root."},
-        "description": "Edges from each element to the root, "
-        "ignoring duration. The graph's shape "
-        "rather than this run's timings.",
+        "description": "Edges from each element to the root, ignoring duration. "
+        "The graph's shape rather than this run's timings.",
     },
     "wall_clock_share_us": {
         INLINE: "name",
@@ -2743,16 +2740,18 @@ _SIGNALS_TABLES = {
         GROWS: "tasks",
         "additionalProperties": {
             QUANTITY: "duration_us",
-            "description": "The wall-clock this task alone is "
-            "responsible for — its marginal share of "
-            "the active window, as time rather than "
-            "as a fraction.",
+            "description": "The wall-clock this task alone is responsible for — its marginal share of "
+            "the active window, as time rather than as a fraction.",
         },
-        "description": "How much of the active window each task "
-        "alone accounts for, in microseconds. Keyed "
-        "by the task's own identity, not by element, "
-        "because one element can run more than one "
-        "task.",
+        "description": "How much of the active window each task alone accounts for, in microseconds. "
+        "Keyed by the task's own identity, not by element, because one element can run more than one task.",
+    },
+    "task_durations_us": {
+        QUANTITY: "duration_us",
+        KEYED_BY: KEYED_BY_TASK_UID,
+        GROWS: "tasks",
+        "additionalProperties": {QUANTITY: "duration_us", "description": "How long this task ran, start to finish."},
+        "description": "How long each task ran, keyed like the share beside it, so a duration threshold reads a duration.",
     },
     "criticality_probability": {
         GROWS: "elements",
@@ -5288,6 +5287,7 @@ _LIFTED_HINTS = {
     "cache": ('act', 'How much of this run came from the cache?'),
     "fetch_build_overlap": ('act', 'Did fetching wait for building?'),
     "wall_clock_share_us": ('prove', 'How much of the run did each task hold?'),
+    "task_durations_us": ('prove', 'How long did each task run?'),
     "ready_queue": ('prove', 'How much work was waiting to start?'),
     "leaf_analysis": ('investigate', 'Which elements does nothing wait on?'),
     "element_duration_distribution": ('investigate', "How are this run's element durations spread?"),

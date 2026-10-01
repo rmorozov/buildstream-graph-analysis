@@ -5,8 +5,8 @@
  * points back.
  */
 import { plainValue, served } from "./primitives.js";
-import { COLUMNS, DIRECTION, QUESTION, PRESETS, INLINE, KEYED_BY, KEYED_BY_ELEMENT, KEY_PATH, LEAD, attachBlockDoor,
-         childNode, dataKeyed, describedTerm, el, guessQuantity, heading,
+import { COLUMNS, DIRECTION, QUESTION, PRESETS, INLINE, KEYED_BY, KEYED_BY_ELEMENT, KEYED_BY_TASK_UID, KEY_PATH, LEAD,
+         attachBlockDoor, childNode, dataKeyed, describedTerm, el, guessQuantity, heading,
          hintsOf, adviceFor, keyAsShown, pathTrail, quantity, quantityFor, sectionHead,
          title } from "./format.js";
 import { identify, labelFor } from "./controls.js";
@@ -137,6 +137,24 @@ export function elementSignalTable(elements, node, join = null,
     [KEYED_BY]: KEYED_BY_ELEMENT,
   };
   return { rows, hint, merged: present, joined: joinedIn };
+}
+
+//: `UX-1194`: each task's own duration, drawn as a column of the task table it is keyed like.
+export const TASK_DURATIONS = "task_durations_us";
+
+/**
+ * `UX-1194`: the task-keyed sibling of `elementSignalTable`.
+ *
+ * Writes each task's own duration onto its `{key, value}` row and returns
+ * the column, so `op:BUILD > 60s` reads a duration rather than a share of
+ * the window; `null` where the run publishes none or the map is not task-keyed.
+ */
+export function taskSignalTable(rows, hint, payload, root) {
+  const durations = payload?.[TASK_DURATIONS];
+  if (hint[KEYED_BY] !== KEYED_BY_TASK_UID || !durations || typeof durations !== "object") return null;
+  for (const row of rows) row.duration_us = durations[row.key] ?? null;
+  return { key: "duration_us", title: "Duration",
+           quantity: quantityFor(childNode(root, TASK_DURATIONS), TASK_DURATIONS) };
 }
 
 /**

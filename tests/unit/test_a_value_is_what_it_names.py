@@ -1,5 +1,8 @@
 """UX-1180: a value on the page is the thing its label names.
 
+UX-1213: a card prints a boolean as the tables do, a filtered badge says
+"matched" whatever the window, and a count of a thousand carries its comma.
+
 Four readings that were not: a "Cores busy 983564.29x" over a 0 ms span
 (toolchain.bst: 938 ms of CPU over a 1 us wall span), an epoch start
 printed as "496481.0 h", and a gate message with a spaced hyphen and a
@@ -157,3 +160,81 @@ def test_the_constant_column_sentence_says_both_runs_not_presence_both(two_plane
     assert not [n for n in seen["notes"] if re.search(r"Presence|[a-z]+_[a-z]+", n)], seen["notes"]
     assert any("In both runs" in n for n in said), said
     assert seen["negMs"] == [], seen["negMs"]
+
+
+_BIG = ("--layers", "20", "--width", "60")
+
+_SAID = r"""
+(async () => {
+  for (const b of document.querySelectorAll("section.chapter")) b.setAttribute("data-open", "true");
+  document.querySelectorAll("details").forEach((d) => { d.open = true; });
+  const turn = () => new Promise((done) => setTimeout(done, 150));
+  location.hash = "#element-layer10-mod010-bst";
+  await turn();
+  const cards = [...document.querySelectorAll("[id^=element-]")];
+  const text = (node) => node.textContent.replace(/\s+/g, " ");
+  const bools = cards.flatMap((c) => text(c).match(/.{0,24}\b(true|false)\b/g) ?? []);
+  const rows = [];
+  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    if (/\b\d{4,}\b rows/.test(node.data)) rows.push(node.data.trim().slice(0, 80));
+  }
+  const out = { cards: cards.length, demand: /Is a leaf(yes|no)/.test(document.getElementById("element-layer10-mod010-bst")?.textContent ?? ""), bools, rows, badges: null };
+  const table = document.querySelector('table[data-table="elements"]');
+  const tools = table?.parentNode.querySelector(".table-tools");
+  const select = tools?.querySelector("select.top-n");
+  const top = select && [...select.options].find((o) => o.textContent === "Top 10 rows");
+  if (!top) return out;
+  select.value = top.value;
+  select.dispatchEvent(new Event("change", { bubbles: true }));
+  const box = tools.querySelector("input.table-filter");
+  const badge = () => tools.querySelector(".badge").textContent;
+  const uid = table.querySelector("tbody tr").getAttribute("data-element");
+  out.badges = { window: badge(), filtered: [] };
+  for (let k = uid.length; k > 3 && out.badges.filtered.length < 14; k -= 1) {
+    box.value = uid.slice(0, k);
+    box.dispatchEvent(new Event("input", { bubbles: true }));
+    await turn();
+    out.badges.filtered.push([uid.slice(0, k), badge()]);
+  }
+  return out;
+})()
+"""
+
+
+@pytest.fixture(scope="module")
+def big_page(tmp_path_factory):
+    import tools.bga_view as view
+
+    into = tmp_path_factory.mktemp("value-big")
+    run = pages.two_plane_run(into, _BIG)
+    page = into / "page.html"
+    view.export(str(run), str(page))
+    return page.as_uri()
+
+
+@pytest.fixture(scope="module")
+def said(big_page, tmp_path_factory):
+    out = {"big": big_page}
+    for label in ("golden", "macro_micro"):
+        out[label] = pages.export_uri(pages.FIXTURES[label], tmp_path_factory.mktemp(f"value-{label}"))
+    with Browser(chrome) as browser:
+        return {label: browser.measure(uri, _SAID) for label, uri in out.items()}
+
+
+@needs_browser
+class TestAValueReadsTheSameEverywhere:
+    def test_no_card_prints_a_boolean_as_true_or_false(self, said):
+        """`UX-1213`: the tables say yes and no; the cards said `Is a leaf false`."""
+        assert said["big"]["demand"], said["big"]
+        assert {k: v["bools"] for k, v in said.items() if v["bools"]} == {}
+
+    def test_a_filter_matching_few_says_matched_under_a_window(self, said):
+        badges = said["big"]["badges"]
+        assert badges["window"] == "10 of 1,202", badges
+        kept = [b for _, b in badges["filtered"] if re.fullmatch(r"\d+ matched", b)]
+        assert "10 matched" in kept and "1 matched" in kept, badges
+        assert not [b for _, b in badges["filtered"] if re.fullmatch(r"\d+ of 1,202", b)], badges
+
+    def test_a_count_of_a_thousand_carries_its_comma(self, said):
+        assert {k: v["rows"] for k, v in said.items() if v["rows"]} == {}

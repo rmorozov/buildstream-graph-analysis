@@ -622,7 +622,8 @@ the placeholder `> 10`.
   row:", and a short table left one column draws no header. At two rows
   or fewer no self-built strip is drawn: the rows are the values —
   filtered to them too (`UX-1170`). A bound over a filter reads
-  `25 of 112 matched`, one population (`UX-1195`); a threshold that empties the table hides
+  `25 of 112 matched`, one population (`UX-1195`), and a filter keeping no
+  more than the window `10 matched` (`UX-1213`); a threshold that empties the table hides
   the copy tools as the text box does. A name that stands alone in the
   rail or the accessibility tree may repeat its cell's label (`UX-1177`).
 

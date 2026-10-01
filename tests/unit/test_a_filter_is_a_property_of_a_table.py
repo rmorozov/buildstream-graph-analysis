@@ -250,7 +250,7 @@ class TestTheTwoControlsCompose:
         assert composed["total"] == 1202, composed["total"]
         assert composed["opened"] == 25, composed["opened"]
         assert 0 < composed["filtered"] < composed["total"], composed
-        assert composed["badgeFiltered"] == (f"{composed['filtered']} of 1,202"), composed
+        assert composed["badgeFiltered"] == (f"{composed['filtered']} matched"), composed
 
     def test_a_preset_narrows_what_the_filter_left(self, composed):
         """The defect: a second pass over every row.
@@ -302,7 +302,7 @@ class TestThePagerAgreesWithTheFilteredPopulation:
         assert paged_filter["positionAfterOnePage"].startswith("rows 11-20")
         shown = paged_filter["shownAfterFilter"]
         assert shown == 1, paged_filter
-        assert paged_filter["positionAfterFilter"] == f"{shown} of 1,202", paged_filter
+        assert paged_filter["positionAfterFilter"] == f"{shown} matched", paged_filter
 
     def test_the_buttons_bound_themselves_to_the_filtered_population(self, paged_filter):
         assert paged_filter["nextDisabledAfterFilter"]

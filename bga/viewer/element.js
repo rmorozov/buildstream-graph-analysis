@@ -19,7 +19,7 @@ import { COLUMNS, READER_LABELS, TERMS, childNode, el, findingLink, hintsOf, tit
 import { buildTable, filterSection } from "./structured.js";
 import { joinHash } from "./viewstate.js";
 import {
-  SVG, svg, seconds, mib, bar, OVERVIEW_SHOWN, elementAnchor,
+  SVG, svg, seconds, mib, bar, OVERVIEW_SHOWN, elementAnchor, plainValue,
 } from "./primitives.js";
 import {
   SCALE, GRADE_ANNOTATION, GRADE_EXHIBIT, exhibitAxis, exhibitTwin,
@@ -606,7 +606,7 @@ export function renderElementSections(payload, root, options = {}) {
   return sections;
 }
 
-const shown = (row, format) => (typeof row.value === "number" ? format(row.value, row.kind) : String(row.value));
+const shown = (row, format) => (typeof row.value === "number" ? format(row.value, row.kind) : plainValue(row.value));
 // An element's rows as one `dl.pairs`; a Plane 2 row carries its `data-path`.
 const pairList = (rows, format) => el("dl", { class: "pairs" }, rows.flatMap((row) => [
   el("dt", {}, row.label),

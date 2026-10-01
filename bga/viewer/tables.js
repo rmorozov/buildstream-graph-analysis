@@ -400,11 +400,12 @@ export function badgeText(shown, total, matched = total, { offset = 0, sorted = 
   // population, and `1 of 12` is right as it stands.
   // UX-1158: an emptied table says why beside the box that emptied it.
   // `UX-1195`: a bound over a filter states one population, the matched one.
-  const of = shown < matched && matched < total ? `${n(matched)} matched` : n(total);
+  const of = matched < total ? `${n(matched)} matched` : n(total);
   // `UX-1197`: a page past the first says its window; a sort pressed says itself.
   const said = shown === total ? plural(total, "row")
     : !shown ? `none of ${n(total)} match`
-      : offset ? `rows ${n(offset + 1)}-${n(offset + shown)} of ${of}` : `${n(shown)} of ${of}`;
+      : offset ? `rows ${n(offset + 1)}-${n(offset + shown)} of ${of}`
+        : shown === matched && matched < total ? of : `${n(shown)} of ${of}`;
   return sorted ? `${said}, sorted by ${sorted}` : said;
 }
 

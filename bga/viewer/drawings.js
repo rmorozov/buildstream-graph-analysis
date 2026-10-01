@@ -1037,6 +1037,8 @@ export function columnStrip(values, { format = String, doc = document,
     .filter(([v]) => numeric(v)).sort((a, b) => a[0] - b[0]);
   const numbers = named.map(([v]) => v);
   const n = of ? `${numbers.length} of ${of}` : numbers.length;
+  const count = (v) => v.toLocaleString("en-US");
+  const said = of ? `${count(numbers.length)} of ${count(of)}` : count(numbers.length);
   const wrap = box(doc, "div", { class: "density density-self",
                                  "data-role": "density",
                                  "data-grade": grade });
@@ -1045,7 +1047,7 @@ export function columnStrip(values, { format = String, doc = document,
     wrap.setAttribute("data-drawn", "false");
     wrap.append(box(doc, "span", { class: "density-sentence muted",
                                    "data-role": "density-sentence" },
-                    `${n} row${n === 1 ? "" : "s"}`
+                    `${said} row${n === 1 ? "" : "s"}`
                     + " — too few to have a shape."));
     return wrap;
   }
@@ -1065,7 +1067,7 @@ export function columnStrip(values, { format = String, doc = document,
   const drawn = stripSvg(doc, marks, { printed: "rows", size, format });
   wrap.append(drawn);
   // Actual row values and a count. Nothing derived is spelled out.
-  const sentenceText = `${format(marks.min)} → ${format(marks.max)} across ${n} rows.`;
+  const sentenceText = `${format(marks.min)} → ${format(marks.max)} across ${said} rows.`;
   const sentence = box(doc, "span", { class: "density-sentence",
                                       "data-role": "density-sentence" },
                        sentenceText);

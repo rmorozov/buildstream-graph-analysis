@@ -204,7 +204,7 @@ export function shapeOf(value) {
 /** `shapeOf` as the sentence a summary carries. */
 export function depthSentence(value) {
   const { levels, rows } = shapeOf(value);
-  const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
+  const plural = (n, word) => `${n.toLocaleString("en-US")} ${word}${n === 1 ? "" : "s"}`;
   return `${plural(levels, "level")}, ${plural(rows, "row")}`;
 }
 

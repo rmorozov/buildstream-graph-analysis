@@ -104,10 +104,49 @@ _YIELD = r"""
 })()
 """
 
+#: `UX-1208`: the reader reads at `y`, climbs to the folded rail, opens it and presses `press`, then Back.
+_RAILED = r"""
+(async () => {
+  const wait = (ms) => new Promise((done) => setTimeout(done, ms));
+  const rest = () => new Promise((done) => {
+    addEventListener("scrollend", () => setTimeout(done, 100), { once: true });
+    setTimeout(done, 1000);
+  });
+  const y = Math.min(9000, document.documentElement.scrollHeight - innerHeight);
+  scrollTo(0, y);
+  await rest();
+  scrollTo(0, 0);
+  await rest();
+  document.querySelector(".toc-title").click();
+  await wait(300);
+  const press = PRESS === "all"
+    ? document.querySelector(".toc [data-all='false']")
+    : [...document.querySelectorAll(".toc [data-toc]")].at(-1);
+  press.click();
+  await wait(1500);
+  const after = Math.round(scrollY);
+  await new Promise((done) => {
+    addEventListener("popstate", () => setTimeout(done, 1000), { once: true });
+    history.back();
+  });
+  return { y: Math.round(y), after, back: Math.round(scrollY), height: innerHeight };
+})()
+"""
+
 
 @pytest.fixture(scope="module")
 def uris(tmp_path_factory):
     return pages.pages(tmp_path_factory, "narrow")
+
+
+@pytest.fixture(scope="module")
+def big(tmp_path_factory):
+    import tools.bga_view as view
+
+    into = tmp_path_factory.mktemp("narrow-big")
+    page = into / "page.html"
+    view.export(str(pages.two_plane_run(into, ("--layers", "20", "--width", "60"))), str(page))
+    return page.as_uri()
 
 
 @pytest.fixture(scope="module")
@@ -165,3 +204,12 @@ def test_a_press_on_the_current_chapter_adds_no_entry(browser, uris, label):
 def test_a_reader_who_scrolls_during_the_landing_is_not_pulled_back(browser, uris, width):
     got = browser.measure(uris["macro_micro"], _YIELD, width=width, height=844)
     assert got["to"] > 0 and abs(got["at"] - got["to"]) <= LINE_PX, got
+
+
+@needs_browser
+@pytest.mark.parametrize("press", ["link", "all"])
+@pytest.mark.parametrize("label", ["big", *sorted(pages.FIXTURES)])
+def test_back_after_a_rail_link_or_expand_all_lands_where_the_reader_read(browser, uris, big, label, press):
+    got = browser.measure({**uris, "big": big}[label], _RAILED.replace("PRESS", f'"{press}"'), width=390, height=844)
+    assert got["y"] > 2 * got["height"], got
+    assert abs(got["back"] - got["y"]) <= LINE_PX, got

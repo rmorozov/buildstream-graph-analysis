@@ -1150,11 +1150,17 @@ async function boot() {
     const fragment = (event) => event?.target?.closest?.("a[href^=\"#\"]")
       ?.getAttribute?.("href");
     // UX-1171: the folds and where the anchor sat, since a scrollY is stale once the folds' estimates settle.
+    const here = () => ({ scrollY: window.scrollY,
+      at: document.getElementById(splitHash(location.hash).anchor)?.getBoundingClientRect().top });
+    // `UX-1208`: where the reader last stopped below the narrow rail, which they climb to the top to open.
+    let read = null;
+    window.addEventListener?.("scrollend", () => {
+      if (document.querySelector(".toc")?.getBoundingClientRect().bottom < 0) read = [location.hash, here()];
+    });
     const keepPlace = (railed) => {
-      const at = document.getElementById(splitHash(location.hash).anchor);
-      // `UX-1203` follow-up: an opened narrow rail sits at the page top, so the reader's place is the anchor.
-      window.history.replaceState({ ...window.history.state, folds: foldSnapshot(root),
-        scrollY: window.scrollY, at: railed ? null : at?.getBoundingClientRect().top }, "");
+      // `UX-1203` follow-up: with no such place, an opened rail's reader is at the anchor.
+      const place = !railed ? here() : read?.[0] === location.hash ? read[1] : { scrollY: window.scrollY, at: null };
+      window.history.replaceState({ ...window.history.state, folds: foldSnapshot(root), ...place }, "");
     };
     // `UX-1203` follow-up: Chrome fires popstate inside a followed fragment link's click; that is no traversal.
     let following = false;
@@ -1170,7 +1176,7 @@ async function boot() {
       if (fragment(event)?.length > 1 || chapter || all) {
         // Chrome's own restore lands after popstate and overrides it.
         window.history.scrollRestoration = "manual";
-        const rail = all?.closest?.(".toc");
+        const rail = event.target?.closest?.(".toc");
         keepPlace(rail?.getAttribute("data-folded") === "false"
           && rail.querySelector(".toc-title")?.disabled === false);
         if (chapter) {

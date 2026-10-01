@@ -2,11 +2,12 @@
 // fetch, and nothing else - that is the argument for driving a browser
 // directly rather than adding Playwright.
 //
-//   node cdp.mjs <port> <url> <width> <height> [--observe] [--coarse] [--media=print] [--scheme=dark] [--ax] [--fresh-history]  < expression
+//   node cdp.mjs <port> <url> <width> <height> [--observe] [--coarse] [--media=print] [--scheme=dark] [--ax]  < expression
 //
-// `--fresh-history` (`UX-1203`): `Page.resetNavigationHistory` before the
-// load. At the shared tab's 50-entry cap, gesture-less pushes prune the
-// document's own older entries: a second Back leaves the page.
+// Every drive starts on a fresh history (`UX-1203`, `UX-1215`):
+// `Page.resetNavigationHistory` before the load. At the shared tab's
+// 50-entry cap, gesture-less pushes prune the document's own older
+// entries: a second Back leaves the page.
 //
 // `--coarse` (`UX-1022`): touch emulation plus `Emulation.setEmulatedMedia`
 // forcing `pointer: coarse`/`hover: none`, so `@media (pointer: coarse)`
@@ -50,7 +51,6 @@ const observing = process.argv.includes("--observe");
 const journeying = process.argv.includes("--journey");
 const coarse = process.argv.includes("--coarse");
 const axing = process.argv.includes("--ax");
-const freshHistory = process.argv.includes("--fresh-history");
 const mediaArg = process.argv.find((a) => a.startsWith("--media="));
 const media = mediaArg ? mediaArg.slice("--media=".length) : null;
 const schemeArg = process.argv.find((a) => a.startsWith("--scheme="));
@@ -181,7 +181,7 @@ if (features.length || media) {
 // navigation this run is about.
 if (observing) await new Promise((resolve) => setTimeout(resolve, 300));
 recording = true;
-if (freshHistory) await send("Page.resetNavigationHistory");
+await send("Page.resetNavigationHistory");
 await send("Page.navigate", { url });
 // `UX-482`: this was a fixed 1,200ms settle, on the reasoning that the
 // page is one file with inlined payloads and no network. That is a

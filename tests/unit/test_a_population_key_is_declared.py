@@ -411,7 +411,6 @@ def across(heavy, walk):
                 _ACROSS.replace("__UID__", json.dumps(_past_the_first_page(page))),
                 1440,
                 900,
-                fresh_history=True,
             )
             for label, page in {"heavy": heavy[1], "walk": walk}.items()
         }

@@ -272,7 +272,7 @@ def test_rail_next_after_a_pressed_entry_goes_to_the_entry_after_it(browser, uri
 @needs_browser
 @pytest.mark.parametrize("label", ["golden", "macro_micro", "big"])
 def test_expand_and_collapse_push_one_entry_and_back_drops_the_filter(browser, uris, label):
-    got = browser.measure(uris[label], _HISTORY, width=1440, height=900, fresh_history=True)
+    got = browser.measure(uris[label], _HISTORY, width=1440, height=900)
     assert got["expand"] == got["collapse"] == "pushed", got
     assert got["back"] == ["expanded", True, "start", True], got
     assert got["forward"] == [True, True], got
@@ -283,7 +283,7 @@ def test_expand_and_collapse_push_one_entry_and_back_drops_the_filter(browser, u
 
 @needs_browser
 def test_back_after_the_narrow_rail_s_expand_all_lands_the_reader_s_anchor(browser, uris):
-    got = browser.measure(uris["big"], _NARROW, width=390, height=844, fresh_history=True)
+    got = browser.measure(uris["big"], _NARROW, width=390, height=844)
     assert got["down"] > 2 * got["height"], got
     assert 0 <= got["back"] < got["height"], got
 

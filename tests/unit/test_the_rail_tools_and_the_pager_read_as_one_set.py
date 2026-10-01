@@ -126,10 +126,11 @@ _HISTORY = r"""
   const open = () => [...document.querySelectorAll("section.chapter")].map((c) => c.getAttribute("data-open")).join();
   // Padding, so a Back the page did not push stays in this document.
   for (let i = 0; i < 4; i += 1) history.pushState(null, "", location.href);
-  const back = () => new Promise((done) => {
+  const go = (step) => new Promise((done) => {
     addEventListener("popstate", () => setTimeout(done, 800), { once: true });
-    history.back();
+    history.go(step);
   });
+  const back = () => go(-1);
   // A mark on the entry, not `history.length`: a shared tab is capped at 50 entries.
   const mark = (name) => history.replaceState({ ...history.state, mark: name }, "");
   const out = { folds: open() };
@@ -148,13 +149,19 @@ _HISTORY = r"""
   out.back.push(history.state?.mark, open() === out.folds);
   const box = document.querySelector(".table-tools input.table-filter");
   if (!box) return { ...out, box: null };
-  document.querySelector(".toc [data-toc]").click();
+  const links = [...document.querySelectorAll(".toc [data-toc]")];
+  links[0].click();
   await wait(500);
   const at = location.hash;
   box.value = "zzz-no-such-row";
   box.dispatchEvent(new Event("input", { bubbles: true }));
   await wait(300);
   out.filtered = location.hash !== at;
+  // A followed link is no traversal: its filter stays, in the box and in the hash.
+  links.find((a) => a.getAttribute("href") !== at.split("~")[0]).click();
+  await wait(500);
+  out.kept = [box.value, atob(location.hash.split("~")[1] ?? "").includes("zzz-no-such-row")];
+  await back();
   await back();
   out.box = box.value;
   return out;
@@ -240,7 +247,8 @@ def test_expand_and_collapse_push_one_entry_and_back_drops_the_filter(browser, u
     assert got["expand"] == got["collapse"] == "pushed", got
     assert got["back"] == ["expanded", True, "start", True], got
     if label != "golden":  # golden has no table long enough for a filter
-        assert got["filtered"] and got["box"] == "", got
+        assert got["filtered"] and got["kept"] == ["zzz-no-such-row", True], got
+        assert got["box"] == "", got
 
 
 @needs_browser

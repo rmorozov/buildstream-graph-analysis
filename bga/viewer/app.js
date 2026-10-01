@@ -1149,11 +1149,17 @@ async function boot() {
     };
     const fragment = (event) => event?.target?.closest?.("a[href^=\"#\"]")
       ?.getAttribute?.("href");
+    // `UX-1203` follow-up: Chrome fires popstate inside a followed fragment link's click; that is no traversal.
+    let following = false;
     // UX-1056: capture phase, so the snapshot precedes nav.js's own reveal.
     // UX-1158: a rail chapter press is navigation too, with an entry of its own.
     document.addEventListener?.("click", (event) => {
       const chapter = event.target?.closest?.("[data-toc-chapter]")?.dataset.tocChapter;
       const all = event.target?.closest?.("[data-all]");
+      if (fragment(event)?.length > 1) {
+        following = true;
+        setTimeout(() => { following = false; }, 0);
+      }
       if (fragment(event)?.length > 1 || chapter || all) {
         // Chrome's own restore lands after popstate and overrides it.
         window.history.scrollRestoration = "manual";
@@ -1188,6 +1194,7 @@ async function boot() {
       if (href && href.length > 1) revealAnchor(href.slice(1));
     });
     window.addEventListener?.("popstate", (event) => {
+      if (following) { following = false; return; }
       const saved = event.state;
       // `UX-1203`: the entry's view, and no filter it lacks.
       const query = splitHash(location.hash).query;

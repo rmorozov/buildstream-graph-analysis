@@ -122,3 +122,9 @@ Mutations rerun: Expand/Collapse `pushState` removed gives 3 failed; popstate `b
 **Deviation (round 159 residue).** The cursor fix covered a stepper-landed cursor only: on the 1,202-element page at 1440, pressing the rail entry `latent_heavies` (short) marked `#joint_saving`, and Next went to `#wall_clock_share_us`.
 A press on any `[data-toc]` entry now sets the stepper's cursor: Next goes to `#joint_saving` (1440 and 390).
 `test_rail_next_after_a_pressed_entry_goes_to_the_entry_after_it` holds it; the click listener's cursor assignment removed gives 1 failed, 14 passed.
+
+**Deviation (round 159 walk N1, a followed link).** Chrome fires popstate inside a fragment link's click, before a 0 ms timer, so every in-page link cleared the filters its bare hash lacked.
+The capture handler marks a followed link until the next task; that popstate is no traversal.
+Gap: `_HISTORY`'s link after a filter read `kept ["", false]` (macro_micro, big); the walk's steps on big, trusted clicks: rail Next, a rail entry and a row link each kept `layer05`, "25 of 60 matched", in box and hash, after.
+Close: `kept ["zzz-no-such-row", true]`, 3 passed; Back still drops the filter its entry lacks.
+Mutation: the popstate early return removed gives 2 failed (macro_micro, big); popstate `box.value = ""` removed still gives 2 failed.

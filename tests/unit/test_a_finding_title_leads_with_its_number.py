@@ -15,8 +15,6 @@ from bga.cli import main
 from tests import pages
 
 TITLE_MAX = 100
-#: Its wording is UX-1246's; this rule reaches it when that lands.
-NOT_YET = {"capacity-recommendation"}
 _CAPITALISED_SPAN = re.compile(r"(?<!^)(?<![.:!?] )\b(?:[A-Z][\w-]*\s+){1,}[A-Z][\w-]*")
 
 
@@ -36,7 +34,7 @@ def titles(tmp_path_factory):
         buffer = io.StringIO()
         with contextlib.redirect_stdout(buffer), contextlib.redirect_stderr(io.StringIO()):
             main(["analyze", str(run), "--format", "json"])
-        out[name] = [(f["id"], f["title"]) for f in json.loads(buffer.getvalue())["findings"] if f["id"] not in NOT_YET]
+        out[name] = [(f["id"], f["title"]) for f in json.loads(buffer.getvalue())["findings"]]
     return out
 
 

@@ -258,7 +258,7 @@ class TestTheFinding:
 
         finding = _capacity_recommendation_finding(self._result(recommendation))[0]
 
-        assert "the host's 8 cores cap it at 8; the CPU alone could feed 64" in finding['title']
+        assert finding['title'].startswith("8 builders: the host's 8 cores cap it; the CPU alone could feed 64")
         assert "CPU binds" not in finding['title']
         assert finding['evidence']['binding_constraint'] == 'host_cores'
 
@@ -270,7 +270,7 @@ class TestTheFinding:
 
         finding = _capacity_recommendation_finding(self._result(recommendation))[0]
 
-        assert "the host's 4 cores cap it at exactly 4; the CPU alone could feed 18" in finding['title']
+        assert finding['title'].startswith("4 builders: the host's 4 cores cap it; the CPU alone could feed 18")
         assert "CPU binds" not in finding['title'] + recommendation['verdict']
 
     def test_the_title_names_the_setting_the_constraint_and_the_verdict(self):
@@ -281,8 +281,8 @@ class TestTheFinding:
         finding = _capacity_recommendation_finding(self._result(recommendation))[0]
 
         assert finding['id'] == 'capacity-recommendation'
-        assert "builders 4 x max-jobs 4 on 4 cores" in finding['title']
-        assert "CPU binds at exactly 4" in finding['title']
+        assert finding['title'].startswith("4 builders: CPU binds")
+        assert "builders 4 x max-jobs 4 on 4 cores" in finding['detail'][1]
 
     def test_an_unrecorded_max_jobs_is_named_rather_than_dropped(self):
         """The question is the joint one. "builders 4" reads as a complete
@@ -293,7 +293,7 @@ class TestTheFinding:
 
         finding = _capacity_recommendation_finding(self._result(recommendation))[0]
 
-        assert "max-jobs unrecorded" in finding['title']
+        assert "max-jobs unrecorded" in finding['detail'][1]
 
     def test_every_constraint_is_shown_beneath_the_verdict(self):
         """The binding one is the answer; the others are why it binds, and
@@ -347,7 +347,7 @@ class TestTheFinding:
         finding = _capacity_recommendation_finding(self._result(recommendation))[0]
 
         assert finding['severity'] == 'info'
-        assert "already at the setting its own measurements support" in finding['title']
+        assert "already at the setting its own measurements support" in finding['detail'][1]
 
     def test_a_setting_above_what_the_run_supports_is_the_loudest(self):
         """Configured higher than anything measured supports is the one
@@ -359,7 +359,7 @@ class TestTheFinding:
         finding = _capacity_recommendation_finding(self._result(recommendation))[0]
 
         assert finding['severity'] == 'high'
-        assert "contend rather than overlap" in finding['title']
+        assert "contend rather than overlap" in finding['detail'][1]
 
 
 class TestRoomToGrowIsAHypothesis:
@@ -382,7 +382,7 @@ class TestRoomToGrowIsAHypothesis:
             compute_capacity_recommendation(_plane2(cores_busy=1.0, host=8), _envelope(11), knee=6, builders=2)
         )
 
-        assert "hypothesis to time rather than a setting to apply" in finding['title']
+        assert "hypothesis to time rather than a setting to apply" in finding['detail'][1]
 
     def test_headroom_carries_the_reason_both_ceilings_are_optimistic(self):
         finding = self._finding(

@@ -1302,6 +1302,7 @@ def _capacity_recommendation_finding(result: AnalysisResult) -> list[dict]:
             f"which is a hypothesis to time rather than a "
             f"setting to apply"
         )
+        short = "time it before keeping it"
         severity = SEVERITY_MEDIUM
     elif recommended < builders:
         verdict = (
@@ -1309,16 +1310,22 @@ def _capacity_recommendation_finding(result: AnalysisResult) -> list[dict]:
             f"{builders} configured — more builders contend rather than "
             f"overlap here"
         )
+        short = f"below the {builders} configured"
         severity = SEVERITY_HIGH
     else:
         verdict = (
             f"{cap or f'{binding} binds'} at exactly {recommended}{clamp_note} — this "
             f"run is already at the setting its own measurements support"
         )
+        short = "the setting this run supports"
         severity = SEVERITY_INFO
 
     # UX-1143: the section's own lead sentence first, so the text report and the page say one thing.
     detail = [f"    {recommendation['verdict']}"] if recommendation.get('verdict') else []
+    # UX-1248: the title keeps the number and the cap; the setting and the verdict's reason read here.
+    detail.append(
+        f"    {setting} on {plural(recommendation['host_cpu_count'], 'core')}: {verdict.split(' — ', 1)[-1]}."
+    )
     detail += [
         f"    {constraint['name']} allows {constraint['allows']}: {constraint['reason']}"
         for constraint in recommendation['constraints']
@@ -1359,7 +1366,7 @@ def _capacity_recommendation_finding(result: AnalysisResult) -> list[dict]:
         _finding(
             'capacity-recommendation',
             severity,
-            f"Capacity: {setting} on {(n := recommendation['host_cpu_count'])} core{'' if n == 1 else 's'}: {verdict}",
+            f"{plural(recommended, 'builder')}: {cap or f'{binding} binds'}{clamp_note} — {short}",
             detail=detail,
             elements=pinned,
             evidence={
@@ -1382,6 +1389,9 @@ def _capacity_recommendation_finding(result: AnalysisResult) -> list[dict]:
             step=(
                 _step(f"Remove `notparallel` from {pinned[0]} or raise its job count before raising anything.")
                 if pinned
+                # UX-1244: a host-core cap's step is measuring past the cap, the decision panel's builders step.
+                else _step(f"{_capacity_step(result)[1]}.", _run_command(result, 'sweep'))
+                if binding == 'host_cores'
                 else _step(
                     f"Time a build at --builders {recommended} against this one before keeping it.",
                     _run_command(result, 'sweep'),
@@ -2480,8 +2490,10 @@ def _capacity_step(result: AnalysisResult) -> tuple[str, str]:
 
 def _builders_actions(result: AnalysisResult, by_id: dict) -> list[dict]:
     """The decision's first action on a capacity-bound run: the builders step, and the finding reasoning it."""
-    action = {'step': _capacity_step(result)[1]}
     finding = next((fid for fid in ('capacity-recommendation', 'wait-category') if fid in by_id), None)
+    # UX-1256: the capacity finding's own step where it has one; the derived step otherwise.
+    said = ((by_id.get('capacity-recommendation') or {}).get('step') or {}).get('text')
+    action = {'step': said.rstrip('.') if said else _capacity_step(result)[1]}
     if finding:
         action['finding_id'] = finding
     return [action]

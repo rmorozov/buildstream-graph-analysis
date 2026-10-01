@@ -10,6 +10,7 @@ glued "1.5s". Read on the two-plane page (`gen-synthetic --seed 1
 import json
 import pathlib
 import re
+import shutil
 import sys
 
 import pytest
@@ -112,3 +113,47 @@ class TestTheGateMessageIsSpaced:
         assert re.search(r"\d\.\d s of the \d+\.\d s this change added", line), line
         assert " - " not in line, line
         assert not re.search(r"\d(?:ms|s)\b", line), line
+
+
+_NODE_DURATION = r"""
+const { duration } = await import(process.env.BGA_REPO + "/bga/viewer/format.js");
+process.stdout.write(JSON.stringify([-5_060_000, -50_000, 5_060_000, -8_460_000].map(duration)) + "\n");
+"""
+
+_COMPARE_TEXT = r"""
+(() => {
+  document.querySelectorAll("details").forEach((d) => { d.open = true; });
+  const text = document.body.innerText;
+  return {
+    notes: [...document.querySelectorAll("[data-role=uniform-columns]")].map((n) => n.textContent),
+    negMs: text.match(/-\d{4,} ms/g) ?? [],
+  };
+})()
+"""
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="node is not installed")
+def test_a_negative_duration_scales_as_a_positive_one_does():
+    import os
+    import subprocess
+
+    out = subprocess.run(
+        [shutil.which("node"), "--input-type=module", "-e", _NODE_DURATION],
+        capture_output=True,
+        text=True,
+        check=True,
+        env={**os.environ, "BGA_REPO": str(pages.REPO)},
+    )
+    assert json.loads(out.stdout) == ["-5.1 s", "-50 ms", "5.1 s", "-8.5 s"], out.stdout
+
+
+@needs_browser
+def test_the_constant_column_sentence_says_both_runs_not_presence_both(two_plane):
+    uri, _ = two_plane
+    with Browser(chrome) as browser:
+        seen = browser.measure(uri, _COMPARE_TEXT)
+    said = [n for n in seen["notes"] if "both" in n]
+    assert said, seen["notes"]
+    assert not [n for n in seen["notes"] if re.search(r"Presence|[a-z]+_[a-z]+", n)], seen["notes"]
+    assert any("In both runs" in n for n in said), said
+    assert seen["negMs"] == [], seen["negMs"]

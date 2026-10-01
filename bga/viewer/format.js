@@ -180,6 +180,7 @@ const INSTANT = "bga:instant";
 
 export function duration(microseconds) {
   if (microseconds === null || microseconds === undefined) return ABSENT;
+  if (microseconds < 0) return `-${duration(-microseconds)}`;
   const s = microseconds / 1e6;
   if (s < 1) return `${Math.round(microseconds / 1000)} ms`;
   if (s < 90) return `${s.toFixed(1)} s`;
@@ -344,6 +345,14 @@ export const READER_LABELS = {
   "Resource.PROCESS": "Builders",
   "Resource.DOWNLOAD": "Fetchers",
   "Resource.UPLOAD": "Pushers",
+  both: "both runs",
+  appeared: "the candidate only",
+  disappeared: "the baseline only",
+  improved: "Improved",
+  regressed: "Regressed",
+  no_significant_change: "No significant change",
+  within_observed_range: "Within observed range",
+  not_comparable: "Not comparable",
 };
 
 /** A published value as the reader's phrase; unmapped values pass. */

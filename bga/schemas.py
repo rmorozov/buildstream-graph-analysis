@@ -5721,7 +5721,7 @@ _COMPARE_HINTS = {
                     },
                     {"key": "baseline_us", "title": "Before", "quantity": "duration_us", "sortable": True},
                     {"key": "candidate_us", "title": "After", "quantity": "duration_us", "sortable": True},
-                    {"key": "presence", "title": "Presence", "sortable": True},
+                    {"key": "presence", "title": "In", "sortable": True},
                     {"key": "verdict_kind", "title": "Verdict", "sortable": True},
                 ],
                 DIRECTION: "lower_is_better",

@@ -1,6 +1,6 @@
 # UX-1230: the badge's all-N-matched arm and the said-back clause's owned-words rule have a mutation that reddens them
 
-**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-160 residue pass, track R (2026-10-01) | **Serves:** R1 | **Topic:** guards | **Area:** tests | **Shape:** mechanical | **Reading:** container
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the round-160 residue pass, track R (2026-10-01) | **Serves:** R1 | **Topic:** guards | **Area:** tests | **Shape:** mechanical | **Reading:** container
 
 **Guard:** `tests/unit/test_a_value_is_what_it_names.py::test_a_filter_that_keeps_every_row_says_all_n_matched`, `tests/unit/test_a_key_column_matches_exactly.py::test_a_word_another_column_also_names_is_not_taken_as_the_column_s_own`
 

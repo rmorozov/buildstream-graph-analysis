@@ -1,6 +1,6 @@
 # UX-1233: the page budget is raised to 165,000 B for round 161's eleven viewer rows
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** round 161's architect read of the page budget (2026-10-01) | **Serves:** R1 | **Topic:** guards | **Area:** tests | **Shape:** mechanical | **Reading:** container
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — | **Found by:** round 161's architect read of the page budget (2026-10-01) | **Serves:** R1 | **Topic:** guards | **Area:** tests | **Shape:** mechanical | **Reading:** container
 
 **Guard:** `tests/unit/test_the_ceilings_table_states_each_bound.py::test_each_row_states_the_value_its_constant_holds`; the bound itself: `tests/unit/test_the_viewer_js_ships_compressed.py::test_the_page_half_is_under_its_bound`
 

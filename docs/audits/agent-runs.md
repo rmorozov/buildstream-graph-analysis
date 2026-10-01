@@ -715,6 +715,18 @@ pairing for every merged row from round 103 on.
 | 160 | implementer | opus | implementer: residue W4 390 Back place (N2 N8) | 237k | 69 | 35 m | see round-160 | cost: ecaab997 +140 B; guard 12 to 27 cases, 15 red on a69d1d88; tiers narrow 51.6 to 171.1 s |
 | 160 | integrator | opus | integrator: residue picked, head c14ba043 | 384k | 107 | 43.6 m | see round-160 | cost: make test 11,654 p / 0 f / 211 s; page half 159,146/160,000; hang test intermittent (filed) |
 | 160 | closer | sonnet | closer: UX-1206..UX-1217, UX-1219..UX-1232 filed | 129k | 55 | 7 m | see round-160 | cost: filing 14 rows from the walk and residue; P7 census on HEAD read 0; budgets measured with the volume guard's own instrument |
+| 161 | architect | opus | shape UX-1219..1222 | 46k | 27 | 2.7 m | complete | architect shaped four rows |
+| 161 | architect | opus | shape UX-1223,1224,1226,1230,1231 | 70k | 33 | 3.5 m | complete | architect shaped five rows |
+| 161 | architect | opus | shape UX-1225,1227,1228,1229,1232 | 52k | 25 | 3.0 m | complete | architect shaped five rows |
+| 161 | implementer | sonnet | track G: UX-1232,1230,1231 | 61k | 52 | 12.2 m | complete | track G |
+| 161 | verifier | sonnet | track G + UX-1233 | 35k | 32 | 4.5 m | see round-161 | 4 PASS |
+| 161 | implementer | opus | track C: UX-1226,1229,1228 (+272 B) | 137k | 94 | 23.6 m | complete | track C |
+| 161 | verifier | sonnet | track C | 41k | 29 | 2.8 m | see round-161 | 3 PASS, two labels judged worse (owner card -> UX-1234) |
+| 161 | implementer | opus | track H: UX-1221,1219,1222,1220 (+148 B) | 137k | 128 | 36.9 m | complete | track H |
+| 161 | verifier | sonnet | track H | 48k | 29 | 6.0 m | see round-161 | 4 PASS |
+| 161 | implementer | sonnet | track W: UX-1234 (+36 B) | 79k | 74 | 17.8 m | complete | track W |
+| 161 | implementer | opus | track T: UX-1224,1223,1227,1225 (+263 B) | 148k | 132 | 52.3 m | complete | track T |
+| 161 | verifier | sonnet | track T | 44k | 29 | 3.6 m | see round-161 | 4 PASS, UX-1177 assertion swap mild weakening (UX-1235) |
 
 Round 101's four tracks are **not** here: this session could not
 identify their transcripts with certainty after a context rebuild, and
@@ -727,7 +739,7 @@ committed cleanly once told to run in the foreground. Three of the five
 left a derived figure or a §6 context-map row behind - the same class
 the round itself was about, arriving in the tracks' own work.
 
-What the six hundred and ninety-eight rows already say: a researcher that reads a document
+What the seven hundred and ten rows already say: a researcher that reads a document
 whole costs 100-180k; a walker that drives every control costs 336k;
 the two cuts cost a re-run each. The `walk` and `design-review`
 skills fix the report shape so the next rows are smaller, and the

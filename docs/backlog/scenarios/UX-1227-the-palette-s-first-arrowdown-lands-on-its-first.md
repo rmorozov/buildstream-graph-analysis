@@ -1,6 +1,6 @@
 # UX-1227: the palette's first ArrowDown lands on its first row
 
-**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** verifier A, the round-160 verification (2026-10-01) | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical | **Reading:** container
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** — | **Found by:** verifier A, the round-160 verification (2026-10-01) | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical | **Reading:** container
 
 **Guard:** `tests/unit/test_the_palette_arrows_start_at_the_ends.py`
 

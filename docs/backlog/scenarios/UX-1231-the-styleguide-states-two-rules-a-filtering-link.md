@@ -1,6 +1,6 @@
 # UX-1231: the styleguide states two rules: a filtering link moves focus to its filter, an entry naming no View is at the opening View
 
-**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-160 residue pass, track W3 (2026-10-01) | **Serves:** R1 | **Topic:** docs | **Area:** unassigned | **Shape:** mechanical | **Reading:** container
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the round-160 residue pass, track W3 (2026-10-01) | **Serves:** R1 | **Topic:** docs | **Area:** unassigned | **Shape:** mechanical | **Reading:** container
 
 **Guard:** `tests/unit/test_the_styleguide_names_its_guards.py` (holds the §3d row naming `test_a_card_s_more_reaches_every_dependency_both_ways.py`)
 

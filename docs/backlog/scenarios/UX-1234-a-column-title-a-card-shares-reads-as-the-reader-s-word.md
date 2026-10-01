@@ -1,6 +1,6 @@
 # UX-1234: a column title the card shares reads as the reader's word
 
-**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** UX-1226 | **Found by:** the round-161 verification of UX-1226 (2026-10-01) | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical | **Reading:** container
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** UX-1226 | **Found by:** the round-161 verification of UX-1226 (2026-10-01) | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical | **Reading:** container
 
 **Guard:** `tests/unit/test_a_shared_title_is_the_reader_s_word.py` - head and card read "On the path" and "Duration"; `probability` and `durations` still parse as those columns.
 

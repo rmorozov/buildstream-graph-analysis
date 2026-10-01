@@ -1,6 +1,6 @@
 # UX-1232: the hang guard's sleeper does not take 49.9 s of wall at 2.05 s of user
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-160 integration (2026-10-01) | **Serves:** R1 | **Topic:** guards | **Area:** tests | **Shape:** mechanical | **Reading:** container
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the round-160 integration (2026-10-01) | **Serves:** R1 | **Topic:** guards | **Area:** tests | **Shape:** mechanical | **Reading:** container
 
 **Guard:** `tests/unit/test_a_hang_is_caught_inside_the_one_run.py::test_a_sleeping_test_fails_with_the_timeout_and_its_node_id`
 

@@ -2112,6 +2112,7 @@ lives in `agent-runs.md`'s rows, counted per round from there.
 | [158](../audits/round-158.md) | the data-exploration review and round 157's residue - `UX-1176`-`UX-1193`, eighteen rows in three waves (a container restart mid-integration, a verifier FAIL on `UX-1179` fixed in a residue pass, 18 of 18 guards red on undo); the review's five tasks now 3 answered, 1 half, 1 wrong; the walk's residue filed as `UX-1194`-`UX-1205` |
 | [159](../audits/round-159.md) | round 158's walk residue - `UX-1194`-`UX-1205`, twelve rows in two waves (owner: full Blocks lists with bounds raised by the measured delta, `UX-1205` rides bst-tests); 12/12 verified PASS; the review's five tasks all answered; walk N1-N8 fixed in three residue tracks; the residue filed as `UX-1206`-`UX-1217` |
 | [160](../audits/round-160.md) | round 159's walk residue - `UX-1206`-`UX-1217`, twelve rows in two architect waves (owner: `UX-1214` publishes every direct list, `depends_on:` and `blocks:` exact, the transitive `downstream:` dropped); verifiers 10 PASS and `UX-1208` FAIL (fixed); the review's five tasks all answered; walk N1-N8 fixed in five residue tracks; the residue filed as `UX-1219`-`UX-1232` |
+| [161](../audits/round-161.md) | round 160's walk residue - `UX-1219`-`UX-1232` in four tracks, with the owner's `UX-1233` (page budget 165,000 B) and `UX-1234` (shared titles); verifiers 15 PASS; the residue filed as `UX-1235`, `UX-1236` |
 
 ## Verification Log
 

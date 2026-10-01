@@ -1,6 +1,6 @@
 # UX-1228: a transitive downstream: clause filters the elements an element blocks, through every level
 
-**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** `UX-1214`'s Decision, dropped for budget (2026-10-01) | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical | **Reading:** container
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** — | **Found by:** `UX-1214`'s Decision, dropped for budget (2026-10-01) | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical | **Reading:** container
 
 **Guard:** `tests/unit/test_a_downstream_clause_follows_the_closure.py`
 

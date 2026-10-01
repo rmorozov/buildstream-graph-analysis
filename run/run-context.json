@@ -1,0 +1,202 @@
+{
+  "trace_epsilon_us": 50000,
+  "resource_capacities": {
+    "PROCESS": 4,
+    "DOWNLOAD": 10,
+    "UPLOAD": 4
+  },
+  "max_jobs": 4,
+  "native_max_jobs": 4,
+  "native_max_jobs_source": "operator_declared",
+  "host_cpu_count": 4,
+  "host_memory_mb": 15989,
+  "host_manifest": {
+    "schema": "host/v2",
+    "cpu_model": "AMD EPYC 7763 64-Core Processor",
+    "cpu_count": 4,
+    "memory_bytes": 16765681664,
+    "kernel_release": "6.17.0-1022-azure",
+    "distro_id": "ubuntu 24.04",
+    "toolchain": {
+      "bst": "2.8.1",
+      "bwrap": "bubblewrap 0.9.0",
+      "buildbox-run": null,
+      "cc": "cc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0"
+    }
+  },
+  "cache_capacity": {
+    "config_path": null,
+    "cachedir": "/home/runner/.cache/buildstream",
+    "quota_declared": null,
+    "reserved_declared": null,
+    "low_watermark_declared": null,
+    "volume_total_bytes": 154894188544,
+    "volume_free_bytes": 90650656768,
+    "quota_bytes": null,
+    "reserved_bytes": null,
+    "cache_used_bytes": null,
+    "cache_used_source": "not_walked"
+  },
+  "producer": {
+    "tool": "bga",
+    "version": "0.5.0",
+    "contracts": [
+      "analyze/v2",
+      "analyze/v3",
+      "analyze/v4",
+      "analyze/v5",
+      "analyze/v6",
+      "blast/v1",
+      "blast/v2",
+      "bundle-manifest/v1",
+      "capacity-model/v1",
+      "capture-layout/v1",
+      "compare/v1",
+      "compare/v2",
+      "correlate/v1",
+      "correlate/v2",
+      "host-samples/v1",
+      "host/v1",
+      "host/v2",
+      "junction-cost/v1",
+      "plane2/v1",
+      "plane2/v2",
+      "plane2/v3",
+      "sources/v1",
+      "store-aggregate/v1",
+      "store/v1",
+      "sweep/v1",
+      "tail/v1",
+      "whatif/v1"
+    ]
+  },
+  "wall_clock": {
+    "start_us": 1790851878428000,
+    "end_us": 1790865627803000,
+    "start_us_source": "log_timestamp"
+  },
+  "queue_seam": {
+    "requested_at_us": null,
+    "requested_at_source": null,
+    "started_at_us": 1790851878428000,
+    "started_at_source": "log_timestamp",
+    "queue_wait_us": null,
+    "absent_reason": "no_request_instant"
+  },
+  "pipeline_overhead": [
+    {
+      "phase": "Loading elements",
+      "elapsed_us": 341000
+    },
+    {
+      "phase": "Resolving elements",
+      "elapsed_us": 217000
+    },
+    {
+      "phase": "Initializing remote caches",
+      "elapsed_us": 0
+    },
+    {
+      "phase": "Query cache",
+      "elapsed_us": 4356000
+    }
+  ],
+  "build_outcome": {
+    "failed_elements": [],
+    "failed_count": 0,
+    "interrupted": false
+  },
+  "queue_summary": {
+    "fetch": {
+      "processed": 0,
+      "skipped": 126,
+      "failed": 0
+    },
+    "build": {
+      "processed": 126,
+      "skipped": 0,
+      "failed": 0
+    }
+  },
+  "timestamp_agreement": {
+    "tasks_compared": 126,
+    "tasks_shorter_than_bst": 11,
+    "shorter_than_bst": [
+      {
+        "element": "bootstrap/build/ncurses-stage1.bst",
+        "action": "build",
+        "span_s": 234.298,
+        "bst_elapsed_s": 235.0,
+        "shortfall_s": 0.702
+      },
+      {
+        "element": "bootstrap/base-sdk/perl.bst",
+        "action": "build",
+        "span_s": 473.874,
+        "bst_elapsed_s": 474.0,
+        "shortfall_s": 0.126
+      },
+      {
+        "element": "bootstrap/glibc.bst",
+        "action": "build",
+        "span_s": 447.499,
+        "bst_elapsed_s": 448.0,
+        "shortfall_s": 0.501
+      },
+      {
+        "element": "bootstrap/build/gcc-stage2.bst",
+        "action": "build",
+        "span_s": 1713.863,
+        "bst_elapsed_s": 1714.0,
+        "shortfall_s": 0.137
+      },
+      {
+        "element": "bootstrap/acl.bst",
+        "action": "build",
+        "span_s": 81.186,
+        "bst_elapsed_s": 82.0,
+        "shortfall_s": 0.814
+      },
+      {
+        "element": "bootstrap/elfutils.bst",
+        "action": "build",
+        "span_s": 168.6,
+        "bst_elapsed_s": 169.0,
+        "shortfall_s": 0.4
+      },
+      {
+        "element": "bootstrap/sed.bst",
+        "action": "build",
+        "span_s": 95.145,
+        "bst_elapsed_s": 96.0,
+        "shortfall_s": 0.855
+      },
+      {
+        "element": "bootstrap/gcc.bst",
+        "action": "build",
+        "span_s": 2411.628,
+        "bst_elapsed_s": 2412.0,
+        "shortfall_s": 0.372
+      }
+    ],
+    "worst_shortfall_s": -0.855,
+    "worst_excess_s": 1.544,
+    "note": "Each task's duration measured twice: the wrapped log's own timestamps, which are stamped when the wrapper read each line, against BuildStream's `[HH:MM:SS]` elapsed prefix, which is its own timing truncated to whole seconds. The difference is the wrapper's read-lag, and it bounds the resolution of every Plane 1 duration in this run. A task reported as shorter than BuildStream's own figure is provably short, not merely imprecise (UX-110)."
+  },
+  "run_identity": {
+    "manifest_hash": "f12a845e2327de7a0101a227aaf602b15b8b45a3cfc78185af3485d3472cace8",
+    "project_identity": ".",
+    "targets": [
+      "components/libxml2.bst"
+    ],
+    "scheduler": {
+      "builders": 4,
+      "fetchers": 10,
+      "pushers": 4,
+      "native_max_jobs": 4
+    },
+    "project_git_commit": "953683fb96b82cdf6d7941c4ba9859378942f22b",
+    "project_refs_sha256": null
+  },
+  "jobserver_env": []
+}

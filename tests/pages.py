@@ -509,7 +509,7 @@ OPEN_EVERY_DOOR_JS = """
   document.querySelectorAll('section[data-section][data-collapsed]').forEach(
     (n) => n.setAttribute('data-collapsed', 'false'));
   document.querySelectorAll('section.chapter[data-open]').forEach((n) => n.setAttribute('data-open', 'true'));
-  document.querySelectorAll('[hidden="until-found"]').forEach((n) => n.removeAttribute('hidden'));
+  document.querySelectorAll('[hidden="until-found"]:not(.twin-table, .query)').forEach((n) => n.removeAttribute('hidden'));
   document.querySelectorAll('details').forEach((d) => { d.open = true; });
   document.querySelectorAll('section.chapter > section[data-section]').forEach(
     (n) => { n.style.contentVisibility = 'visible'; });

@@ -902,7 +902,7 @@ export function scrollspy(root, nav, { observer } = {}) {
  * anything - `UX-205` is where finding things *inside* a section
  * lives.
  */
-export function jumpTargets(root, payload, rail = null) {
+export function jumpTargets(root, payload, rail = null, uids = []) {
   // `UX-648`: the same label authority the rail asks, so rail, palette
   // and heading carry one string per section.
   const targets = anchor(root).map((key) => ({
@@ -923,7 +923,8 @@ export function jumpTargets(root, payload, rail = null) {
       targets.push({ kind: "element", key: uid, text: uid });
     }
   }
-  for (const finding of payload?.findings ?? []) {
+  // `UX-1179`: every element, mounted or not.
+  for (const finding of [...payload?.findings ?? [], { elements: uids }]) {
     for (const uid of finding.elements ?? []) {
       if (!seen.has(uid)) {
         seen.add(uid);

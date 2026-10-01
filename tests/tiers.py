@@ -1126,6 +1126,8 @@ MEDIUM = (
     "tests/unit/test_a_status_is_announced.py",  #  7.4s
     # `UX-1177`: 2.63 / 2.70s.
     "tests/unit/test_jump_finds_what_the_rail_lists.py",  #  2.7s
+    # `UX-1179`: 11.51 / 11.84 / 11.68s, the 1,202-element page built in it.
+    "tests/unit/test_print_and_find_reach_the_content.py",  # 11.7s
     # Round 147, tiered on the merged tree: three single-process runs
     # alone each (setup+call+teardown).
     # `UX-1083`: 4.17 / 4.08 / 4.23s.

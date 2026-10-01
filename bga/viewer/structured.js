@@ -218,7 +218,7 @@ function boundedList(value, noun, item = null) {
   const position = el("span", { class: "list-position" }, "");
   const prev = el("button", { type: "button", class: "list-prev",
                               "aria-label": `previous ${noun}` }, "‹ Prev");
-  const more = el("button", { type: "button", class: "fold-more" });
+  const more = el("button", { type: "button", class: "fold-more", "data-noun": noun });
   let page = -1;
   const render = () => {
     const start = Math.max(0, page) * REVEAL_STEP;
@@ -951,8 +951,10 @@ export function interrogable(table, specs, total, depth = 0) {
   const primary = filterable.find((spec) => spec?.quantity && spec.numeric !== false);
   const box = worthFiltering ? el("input", {
     type: "search", class: "table-filter",
+    // `UX-1179`: Jump reaches the rows a bound detaches.
     placeholder: ["filter", keyed && `${keyed.role === "task_uid" ? "op" : keyed.role}:\u2026`,
-                  primary && (PLACEHOLDER[primary.quantity] ?? "> 0")].filter(Boolean).join(", "),
+                  primary && (PLACEHOLDER[primary.quantity] ?? "> 0"),
+                  table.getAttribute?.("data-keyed-by") && "or Jump\u2026"].filter(Boolean).join(", "),
     "aria-label": `Filter rows: ${named}`,
     title: "a word matches any cell; column:value that column exactly (value* its start); column > 5s, or a bare > 5s, a threshold",
   }) : null;

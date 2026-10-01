@@ -329,7 +329,8 @@ export function exhibitTwin(doc, headers, rows) {
     body.append(tr);
   }
   table.append(body);
-  table.hidden = true;
+  // `UX-1179`: findable.
+  table.hidden = "until-found";
   const button = box(doc, "button", {
     type: "button", class: "twin-toggle", "data-drawing-twin": "closed",
     "aria-expanded": "false",
@@ -342,8 +343,9 @@ export function exhibitTwin(doc, headers, rows) {
     button.setAttribute("data-drawing-twin", open ? "closed" : "open");
     button.setAttribute("aria-expanded", open ? "false" : "true");
     button.textContent = open ? "As table" : "As drawing";
-    table.hidden = open;
+    table.hidden = open && "until-found";
   });
+  table.addEventListener?.("beforematch", () => button.click());
   wrap.append(button);
   wrap.append(table);
   return wrap;

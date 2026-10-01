@@ -231,7 +231,7 @@ export function investigateButton(finding, investigate) {
   // `data-` attribute), so it is cleared as one: `removeAttribute`
   // would not touch it, and the paste would never appear.
   const pastes = contexts.map((entry) => el(
-    "pre", { class: "query", hidden: true, "data-query-id": entry.queryId },
+    "pre", { class: "query", hidden: "until-found", "data-query-id": entry.queryId },
     contexts.length > 1
       ? el("span", { class: "muted query-grain" }, byId(entry.queryId)?.title
                                                    ?? entry.queryId)

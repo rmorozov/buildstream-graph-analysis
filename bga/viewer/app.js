@@ -17,7 +17,7 @@
 // re-exported through one file: the export's `_module_order` walks
 // `import` lines, and a re-export is a module it would never inline
 // (`UX-199`).
-import { served, safeStorage } from "./primitives.js";
+import { elementAnchor, served, safeStorage } from "./primitives.js";
 import { bytes, el, heading, quantity, title, typesetAlways } from "./format.js";
 import { handOff, deepLink, tracedSize, openTab, perfettoCanFetch,
          PERFETTO_FRIENDLY_URL } from "./perfetto.js";
@@ -208,7 +208,7 @@ export function foldOnNarrow(nav, doc) {
 }
 
 export function wireJumpBox(nav, root, payload, context = {}) {
-  const targets = jumpTargets(root, payload, nav);
+  const targets = jumpTargets(root, payload, nav, elementUids(payload));
   const box = document.createElement("input");
   box.setAttribute("type", "search");
   box.setAttribute("id", "jump");
@@ -235,6 +235,8 @@ export function wireJumpBox(nav, root, payload, context = {}) {
       : target.kind === "binary"
         ? root.querySelector(`[data-binary="${escaped}"]`) ?? document.getElementById(target.section)
         : root.querySelector(`[data-element="${escaped}"]`);
+    // `UX-1179`: an unmounted element opens its card.
+    if (!node && target.kind === "element") location.hash = joinHash(elementAnchor(target.key), splitHash(location.hash).query);
     if (!node) return;
     // UX-347: a folded chapter is not a wall. Every way in opens it
     // first - here, on a rail link, and on a pasted `#anchor` - so the

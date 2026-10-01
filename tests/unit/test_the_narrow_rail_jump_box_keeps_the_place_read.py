@@ -42,6 +42,10 @@ _JUMP = r"""
   await wait(1500);
   const after = Math.round(scrollY);
   const pushed = history.length - length;
+  const row = MODE === "binary" ? document.querySelector("#by_binary [data-binary]") : null;
+  const tools = row?.closest("table")?.parentNode?.querySelector(":scope > .table-tools");
+  const land = row && tools ? { stuck: Math.round(tools.getBoundingClientRect().bottom), top: Math.round(row.getBoundingClientRect().top),
+    shown: [...row.closest("table").querySelectorAll(":scope > tbody > tr")].filter((r) => r.offsetParent).length } : null;
   await traverse(() => history.back());
   const back = Math.round(scrollY);
   const rail = document.querySelector(".toc").getAttribute("data-folded");
@@ -50,7 +54,7 @@ _JUMP = r"""
     const r = node?.getBoundingClientRect();
     return Boolean(r) && r.bottom > 0 && r.top < innerHeight;
   };
-  return { y, after, pushed, hash: location.hash, back, rail, forward: Math.round(scrollY),
+  return { y, after, pushed, land, hash: location.hash, back, rail, forward: Math.round(scrollY),
            focus: document.getElementById("report").getAttribute("data-focus"),
            card: seen(document.getElementById("element-layer12-mod030-bst")),
            bar: seen(document.querySelector("[data-role=focus-bar]")) };
@@ -97,6 +101,8 @@ def test_the_narrow_rail_jump_box_keeps_the_place_read(browser, big, big_binarie
     assert got["rail"] == "true", got
     if mode == "binary":
         assert got["pushed"] == 1 and got["hash"].startswith("#by_binary"), got
+        land = got["land"]
+        assert land and 0 < land["stuck"] <= land["top"] + 1 and land["shown"] == 1, got
     elif mode == "jump":
         assert got["card"], got
     else:

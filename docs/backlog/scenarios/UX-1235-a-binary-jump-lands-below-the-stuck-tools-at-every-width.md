@@ -52,3 +52,5 @@ Mutations: a sticky toolbar taller than the section margin reds the landing; `go
 | `go` navigates for element only (app.js:234) | `[binary]`, `pushed` 0, Back y 0 | 1 failed, 2 passed |
 
 **Deviation:** the Decision's padding mutation alone does not red (the landing is tools-aware); the red needs the landing's `clear()` also removed. The guard discriminates only a toolbar taller than the margin that the landing ignores.
+
+**Fix round (verifier):** `[binary]` at 390 with the rail open now also reads `land` {stuck, top, shown} and asserts `0 < stuck <= top+1`, `shown == 1`. Mutation (80px padding + `clear()` returns 0): `[binary]` red, `land` {stuck 109, top 80}; 1 failed, 2 passed. Reverted: 3 passed.

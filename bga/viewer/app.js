@@ -230,10 +230,11 @@ export function wireJumpBox(nav, root, payload, context = {}) {
 
   const go = (target) => {
     if (target.kind === "rail") { target.link.click(); return; }
+    // `UX-1220`: the rail's navigation step, so Back keeps the place read before the rail opened.
+    context.navigate?.(nav, true);
     if (target.kind === "element") {
       // `UX-1179`: an element's place is its card, built, opened and landed as a pasted anchor is.
-      const next = joinHash(elementAnchor(target.key), splitHash(location.hash).query);
-      history[next === location.hash ? "replaceState" : "pushState"](null, "", next);
+      history.replaceState(null, "", joinHash(elementAnchor(target.key), splitHash(location.hash).query));
       window.dispatchEvent(new Event("hashchange"));
       return;
     }
@@ -284,6 +285,7 @@ export function wireJumpBox(nav, root, payload, context = {}) {
   };
   const act = (action) => {
     if (action.focus) {
+      context.navigate?.(nav, true);
       applyFocus(root, action.element);
       root.querySelector?.("[data-role=focus-bar]")?.scrollIntoView?.();
       root.dispatchEvent?.(new Event("change", { bubbles: true }));
@@ -1005,6 +1007,7 @@ async function boot() {
       // rule - an affordance whose precondition is absent is not shown
       // at all, rather than shown and dead.
       wireJumpBox(contents, root, payload, {
+        navigate,
         hasTimeline: Boolean(run.has_timeline),
         hasBlast: location.protocol === "http:"
                || location.protocol === "https:",
@@ -1187,23 +1190,26 @@ async function boot() {
         setTimeout(() => { following = false; }, 0);
       }
       if (fragment(event)?.length > 1 || chapter || all) {
-        // Chrome's own restore lands after popstate and overrides it.
-        window.history.scrollRestoration = "manual";
-        const rail = event.target?.closest?.(".toc");
-        keepPlace(rail?.getAttribute("data-folded") === "false"
-          && rail.querySelector(".toc-title")?.disabled === false);
+        navigate(event.target?.closest?.(".toc"), all);
         if (chapter) {
           const next = joinHash(`chapter-${chapter}`, splitHash(location.hash).query);
           // UX-1178: a press on the entry already current is no new entry.
           window.history[next === location.hash ? "replaceState" : "pushState"](null, "", next);
         }
-        // `UX-1203`: Expand all and Collapse all are one step Back, and Forward restores the entry they made.
-        if (all) {
-          window.history.pushState(null, "", location.href);
-          setTimeout(() => keepPlace(false), 0);
-        }
       }
     }, true);
+    // `UX-1220`: one navigation step, for a press and for the jump box, which has no event target.
+    function navigate(rail, push) {
+      // Chrome's own restore lands after popstate and overrides it.
+      window.history.scrollRestoration = "manual";
+      keepPlace(rail?.getAttribute("data-folded") === "false"
+        && rail.querySelector(".toc-title")?.disabled === false);
+      // `UX-1203`: Expand all and Collapse all are one step Back, and Forward restores the entry they made.
+      if (push) {
+        window.history.pushState(null, "", location.href);
+        setTimeout(() => keepPlace(false), 0);
+      }
+    }
     document.addEventListener?.("click", (event) => {
       const href = fragment(event);
       // `UX-1196`: a card's "Also in" link lands its element's row there, a folded one included.

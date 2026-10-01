@@ -37,8 +37,10 @@ fails, a staging of 60,000 inodes, a shape nobody wants to hand-write.
 
 import argparse
 import json
+import os
 import pathlib
 import shutil
+import struct
 import sys
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
@@ -225,6 +227,73 @@ def write_project(spec, out, busybox=None):
         encoding="utf-8",
     )
     (out / "spec.json").write_text(json.dumps(spec, indent=2) + "\n", encoding="utf-8")
+    return out
+
+
+#: `UX-1205`: where the fake binaries sit in the sandbox - the synthetic workload's own path.
+FAKEBIN = "/opt/fakebin"
+
+
+def _link_or_copy(src, dst):
+    try:
+        os.link(src, dst)
+    except OSError:
+        shutil.copy2(src, dst)
+
+
+def is_dynamic(path):
+    """Whether the 64-bit ELF at `path` names an interpreter (a `PT_INTERP` header)."""
+    data = pathlib.Path(path).read_bytes()
+    if data[:5] != b"\x7fELF\x02":
+        return False
+    (phoff,) = struct.unpack_from("<Q", data, 32)
+    size, count = struct.unpack_from("<HH", data, 54)
+    return any(struct.unpack_from("<I", data, phoff + i * size)[0] == 3 for i in range(count))
+
+
+def workload_commands(calls):
+    """One shell line per planned call: `{binary: calls}` -> `/opt/fakebin/<binary> <1-5 ms>`."""
+    lines = []
+    for index, (binary, count) in enumerate(sorted(calls.items())):
+        lines += [f"{FAKEBIN}/{binary} 0.00{1 + (index + call) % 5}" for call in range(count)]
+    return lines
+
+
+def write_workload_project(calls, out, toolchain, sleep):
+    """`UX-1205`: a project whose elements exec `{uid: {binary: calls}}`, and return it.
+
+    Every binary is a copy of `sleep`, which must be dynamic: `LD_PRELOAD`
+    does not load into a static binary, so the hook would see nothing.
+    `toolchain` is a staged sysroot (examples/05's) providing `sh` and libc.
+    """
+    if not is_dynamic(sleep):
+        raise SpecError(f"{sleep} is not a dynamic ELF: the LD_PRELOAD hook cannot see a static binary run")
+    out = pathlib.Path(out)
+    if out.exists():
+        shutil.rmtree(out)
+    (out / "elements").mkdir(parents=True)
+    shutil.copytree(toolchain, out / "files/toolchain", symlinks=True, copy_function=_link_or_copy)
+    fakebin = out / "files/fakebin" / FAKEBIN.lstrip("/")
+    fakebin.mkdir(parents=True)
+    for binary in sorted({b for per in calls.values() for b in per}):
+        shutil.copy2(sleep, fakebin / binary)
+    for uid, path in (("toolchain.bst", "files/toolchain"), ("fakebin.bst", "files/fakebin")):
+        (out / "elements" / uid).write_text(
+            f"kind: import\nsources:\n- kind: local\n  path: {path}\n", encoding="utf-8"
+        )
+    for uid, per in sorted(calls.items()):
+        body = "".join(f"    {line}\n" for line in workload_commands(per))
+        (out / "elements" / uid).write_text(
+            "kind: manual\ndepends:\n- filename: toolchain.bst\n  type: build\n- filename: fakebin.bst\n  type: build\n"
+            f"config:\n  install-commands:\n  - |\n{body}",
+            encoding="utf-8",
+        )
+    (out / "elements" / TARGET_UID).write_text(
+        "kind: stack\ndepends:\n" + "".join(f"- {uid}\n" for uid in sorted(calls)), encoding="utf-8"
+    )
+    (out / "project.conf").write_text(
+        "name: captured-workload\nmin-version: 2.0\nelement-path: elements\n", encoding="utf-8"
+    )
     return out
 
 

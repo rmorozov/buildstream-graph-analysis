@@ -926,6 +926,8 @@ MEDIUM = (
     # `UX-465`: two real `bst build` runs where bst is installed,
     # and the spec/YAML half everywhere.
     "tests/unit/test_a_generated_project_builds.py",  #    6.5s
+    # `UX-1205`: one subprocess runs the written project's fake binaries.
+    "tests/unit/test_a_captured_workload_matches_its_plan.py",  #    1.2s
     "tests/unit/test_the_printed_sentences_are_contracts.py",  #    1.6s
     "tests/unit/test_a_capture_that_cannot_start.py",  #    1.5s
     "tests/unit/test_the_handoff_does_not_carry_the_trace.py",  #    1.3s

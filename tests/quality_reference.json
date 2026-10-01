@@ -1,5 +1,5 @@
 {
-  "paths": ["bga/schema_hints.py", "bga/schemas.py"],
+  "paths": ["tools/bga_gen_project.py", "tools/gen_synthetic_scale_run.py"],
   "files": {
     ".claude/hooks/agent_worktree_limits.py": {"duplicate_blocks": 0, "file_lines": 128, "longest_function": 23},
     ".claude/hooks/gate_covers_push.py": {"duplicate_blocks": 1, "file_lines": 168, "longest_function": 28},
@@ -93,7 +93,7 @@
     "tools/_run_context_common.py": {"duplicate_blocks": 0, "file_lines": 497, "longest_function": 61},
     "tools/bga_cross_check.py": {"duplicate_blocks": 0, "file_lines": 244, "longest_function": 107},
     "tools/bga_doctor.py": {"duplicate_blocks": 1, "file_lines": 1087, "longest_function": 164},
-    "tools/bga_gen_project.py": {"duplicate_blocks": 0, "file_lines": 296, "longest_function": 54},
+    "tools/bga_gen_project.py": {"duplicate_blocks": 0, "file_lines": 365, "longest_function": 54},
     "tools/bga_release_notes.py": {"duplicate_blocks": 0, "file_lines": 132, "longest_function": 25},
     "tools/bga_snapshot.py": {"duplicate_blocks": 1, "file_lines": 1941, "longest_function": 252},
     "tools/bga_timeline.py": {"duplicate_blocks": 2, "file_lines": 2206, "longest_function": 333},
@@ -148,7 +148,7 @@
     "tools/dev_touching.py": {"duplicate_blocks": 0, "file_lines": 450, "longest_function": 93},
     "tools/dev_trace_coverage.py": {"duplicate_blocks": 0, "file_lines": 573, "longest_function": 59},
     "tools/dev_track_cost.py": {"duplicate_blocks": 0, "file_lines": 483, "longest_function": 45},
-    "tools/gen_synthetic_scale_run.py": {"duplicate_blocks": 0, "file_lines": 695, "longest_function": 141},
+    "tools/gen_synthetic_scale_run.py": {"duplicate_blocks": 0, "file_lines": 720, "longest_function": 141},
     "tools/hang_witness.py": {"duplicate_blocks": 0, "file_lines": 150, "longest_function": 36},
     "tools/jobserver/__init__.py": {"duplicate_blocks": 0, "file_lines": 85, "longest_function": 5},
     "tools/jobserver/_jsonl.py": {"duplicate_blocks": 3, "file_lines": 26, "longest_function": 20},

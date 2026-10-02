@@ -585,7 +585,8 @@ p.empty-population { margin: var(--space-1) 0 0; color: var(--muted); max-width:
 /* One "you are here" across the rail: the chapter row and its section link. */
 button.toc-chapter-open[aria-current="location"],
 .toc a[data-current] { font-weight: 600; color: var(--fg); }
-.toc a[data-current]::before { content: "\25b8\00a0"; }
+/* Out of the text's flow: a marker that took width re-wrapped a long entry and moved the page under a restore. */
+.toc a[data-current]::before { content: "\25b8"; position: absolute; margin-left: -1em; }
 /* `UX-1203`: the rail's tools at one size, each on one line. */
 .toc-controls { margin: var(--space-2) 0 0; display: flex; flex-wrap: wrap; align-items: center;
                 gap: var(--space-2); font-size: var(--font-small); }

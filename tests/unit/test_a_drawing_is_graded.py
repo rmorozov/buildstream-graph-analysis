@@ -770,8 +770,9 @@ class TestTheNamedDrawingsAreExhibitsOnTheRealPages:
         # `UX-681`: 4 -> 5. `fan_in_distribution` is the fourth declared
         # shape on `macro_micro`, drawn by the same strip control as the
         # blast one it mirrors - which is why the mirror cost a section
-        # and no new instrument.
-        assert seen == 5, f"expected 4 on macro_micro + 1 on golden, saw {seen}"
+        # and no new instrument. `UX-1274`: 5 -> 6, the builder sweep's curve
+        # (`capacity_recommendation.sweep`) is a declared series on macro_micro.
+        assert seen == 6, f"expected 5 on macro_micro + 1 on golden, saw {seen}"
 
     def test_the_self_built_strips_are_annotations(self, booted):
         """The other side of the same split, and new with `UX-350`:

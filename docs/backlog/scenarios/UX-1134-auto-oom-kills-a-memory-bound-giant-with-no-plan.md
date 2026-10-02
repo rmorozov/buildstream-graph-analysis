@@ -1,6 +1,6 @@
 # UX-1134: `--jobserver auto` with no plan widens a memory-bound giant into the OOM killer
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-1132 | **Found by:** round 152's Graviton arms, `memgiant` leg (bga-bench runs 36597448095 and 36602046680) | **Serves:** R4, R5 | **Topic:** capture | **Area:** tools | **Shape:** mechanical | **Reading:** owner:CodSpeed Graviton
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-1132 | **Found by:** round 152's Graviton arms, `memgiant` leg (bga-bench runs 36597448095 and 36602046680) | **Serves:** R4, R5 | **Topic:** capture | **Area:** tools | **Shape:** mechanical | **Reading:** owner:CodSpeed Graviton
 
 **Guard:** test_the_pool_withholds_for_measured_rss_with_no_plan.py, test_the_auto_advice_names_its_memory_bound.py
 
@@ -53,6 +53,27 @@ Mutation:  A1 treat live_max > finished peak as settled -> red; A2 per_job = liv
 Reading:   the Graviton memgiant autocap arm completes at mem_lines 320000 with rss_withheld > 0 in its notice; mixed8 autocap within its noise. The 4-core CI step cannot witness it (fits in memory; pool starts at ceiling-1 and never adds).
 ```
 
+Revised 2026-10-02: Graviton run 37012305358's autocap arm reached 11 jobs (the prediction above) and
+cc1 was OOM-killed at 2.68 GB anon-rss; 11 x 2.8 GB = 30.8 GB leaves no room for `as`, make, bwrap,
+undroppable page cache or growth past a finished peak. Margin: one per_job held free,
+`MEMORY_RESERVE_JOBS = 1` in `tools/jobserver/memory.py` (the gate: hold when
+per_job x (pool + running + 1 + 1) > MemAvailable + live) and `bga/correlate.py` (the advice: bound
+when peak x (pool + 1) > MemTotal, fit = floor(MemTotal / peak) - 1); two copies because `bga/` does
+not import `tools/` (UX-325), a guard holds them equal. MemAvailable already counts reclaimable cache
+as free, so it is no margin of its own. At 31 GB / 2.8 GB: advice 10, gate 9-10 (MemAvailable < MemTotal).
+Revised 2026-10-02 (2): run 37016667967 failed the same at the same second, giant peak 12. Not the
+seed: `--jobserver auto --builders 8` hands the tracer `--jobserver 16 --jobserver-seed 8`
+(cli.py `_translate_capture_jobserver`), so the pool opens at 8, never `ceiling - 1`. The adds came
+before the giant compiled: with no sandbox live `withhold` returns `None`, and through bst's startup and
+cmake configure every live job is small, so two-tick underload adds took the pool 8 -> 15 in ~2 s, every
+`+` sitting unread in the FIFO. Fix: with the gate armed, `_handle_underload` holds `tokens idle N` while
+`FIONREAD` shows unread tokens - a `+` is added only when make has taken every one, so the compile opens
+at 9 jobs and each add meets `withhold`. Seeding at max_jobs - 1 is not taken: it moves the start 8 -> 7
+and leaves the pre-compile widening intact. Cost on short-job shapes: no pre-widening, so a wide phase
+ramps from the seed at one `+` per 250 ms tick after its first job ends (11-serial-giant's cc1 ~0.5 s):
+~0.5 + 7 x 0.25 = ~2.3 s on 16 cores; pairs/cap3 pass no `--builders`, seed 15, and never add. Residual:
+a cc1 younger than configure's largest finished job (~30 MB) can still pass one `+` in the first tick.
+
 ## Out of Scope
 
 Cgroup memory limits; swap policy.
@@ -74,13 +95,7 @@ E   assert ('add' == 'hold'        (live 1 GB cc1 > every finished 4 MB job)
 2 failed, 1 passed
 ```
 
-Close measured: the same file on this branch, `3 passed in 0.41s`; the
-touching selection (`dev_touching.py --base c6c6e4ed --list`, 148 files,
-plus the guard) `1 failed, 3457 passed, 62 skipped in 138.59s` - the one
-red is `test_every_doc_path_a_help_string_names_exists` naming
-`docs/audits/mutation.md`, an ignored record the worktree lacks. One
-`withhold` on this host's `/proc` (129 entries): 0.99 ms mean of 20. The
-Graviton notice, on a scripted report:
+Close measured: `3 passed in 0.41s`. One `withhold` on 129 `/proc` entries: 0.99 ms mean of 20. Scripted notice:
 `pool dynamic idle 0.00 starved 0.00 admit None wait 0.0s rank None psiw 0 rssw 7`.
 
 | mutation (tools/jobserver/memory.py) | reddened | run printed |
@@ -91,9 +106,60 @@ Graviton notice, on a scripted report:
 
 Track B (advice), `tests/unit/test_the_auto_advice_names_its_memory_bound.py`: with peak 2.7 GB, pool 16, host 31 GB the Builders line names the bound and `--jobserver 11`; at 1.9 GB or with no memory reading the line is unchanged.
 
-| Mutation (B1) | Result |
-|---|---|
-| `>` flipped to `<` in `peak * pool_size > host_memory` | 2 failed, 2 passed |
-| `memory=` dropped | 1 failed, 3 passed |
-| `>` relaxed to `>=` | 1 failed, 3 passed (exactly host memory) |
-| revert | 4 passed |
+B1 mutations: `>` -> `<` 2 failed; `memory=` dropped 1 failed; `>` -> `>=` 1 failed; revert 4 passed.
+
+### Graviton reading, run 37012305358
+
+Job 110854756306 (mixed8 off8 145.08/141.05 s, auto8 116.33/116.56 s, rssw 0):
+
+```text
+autocap-1 failed | 298.1 [00:04:53] build:giant.bst FAILURE Command failed | oom: 15 kill(s), Out of memory: Killed process 7027 (cc1) total-vm:2993912kB, anon-rss:2684452kB
+autocap report: Peak Memory giant.bst 2795.4 MB; native parallelism giant.bst peak 11
+```
+
+Reserve gap, the two guards against `e822738b` (constant only added): `3 failed, 7 passed` -
+`test_a_giant_that_fits_only_with_no_reserve_gets_no_token` (`'add' == 'hold'`, 2 GB x 6 = 12 GB
+fits 12.5 GB, x 7 does not), the 2.7 GB / 31 GB line (`--jobserver 11`, wants 10),
+`test_a_pool_that_fits_only_with_no_reserve_is_bound` (2 GB x 16 = 32 GB). Close: `10 passed`.
+
+| mutation | reddened | run printed |
+|---|---|---|
+| R1 memory.py `+ 1 + MEMORY_RESERVE_JOBS` -> `+ 1` | `..._fits_only_with_no_reserve_gets_no_token` | 1 failed, 9 passed |
+| R2 correlate.py `(pool_size + MEMORY_RESERVE_JOBS) > host` -> `pool_size > host` | `..._fits_only_with_no_reserve_is_bound` | 1 failed, 9 passed |
+| R3 correlate.py `host_memory // peak - MEMORY_RESERVE_JOBS` -> `host_memory // peak` | the 2.7 GB line, `..._is_bound` | 2 failed, 8 passed |
+| R4 memory.py `MEMORY_RESERVE_JOBS = 0` | the gate boundary, `..._hold_the_same_reserve` | 2 failed, 8 passed |
+| reverted from the copy | - | 10 passed |
+
+### Graviton reading, run 37016667967 (the reserve in, 9ad5ed7a)
+
+```text
+memgiant off | wall 559.32s cpu 3214s mem 21892M giant-peak 8 giant:373.8/8/7.9
+autocap-1 failed | 299.8 [00:04:53] build:giant.bst FAILURE Command failed | oom: 15 kill(s), Killed process 7926 (cc1) anon-rss:2678508kB
+autocap report: Peak Memory giant.bst 2795.8 MB; native parallelism giant.bst peak 12
+```
+
+Gap, the pool guard against `623ee0ec`: `test_with_no_sandbox_running_and_its_seed_unread_the_pool_stays_at_its_seed`
+`assert 15 == 8` (8 low ticks, seed 8 unread, no sandbox), `1 failed, 4 passed`; close `5 passed`.
+`graviton_arms.sh`'s `why` now adds `<arm> pool:: start S max M ticks T adds A rss-holds R idle-holds I
+withdraws W` from `$OUT/<arm>-<i>.json.jobserver_ledger.jsonl` (scripted ledger: `start 8 max 9 ticks 4 adds 1 ...`).
+
+| mutation (tools/jobserver/pool.py) | reddened | run printed |
+|---|---|---|
+| P1 `idle = ... if self.memory_gate else 0` -> `idle = 0` | `..._stays_at_its_seed` (`15 == 8`) | 1 failed, 4 passed |
+| P2 `_readable_tokens` returns `0` | `..._stays_at_its_seed` (`15 == 8`) | 1 failed, 4 passed |
+| reverted from the copy | - | 5 passed |
+
+### Graviton reading, runs 37022814276 and 37031346135 (the idle hold in, b1bfb7aa)
+
+```text
+widechain off  262.19/260.96/260.84 s  autocap 198.91/198.49/198.59 s  rssw 6      -24%
+mixed8    off8 144.52/141.17/141.20 s  auto8   118.48/118.44/118.40 s  rssw 2,3,0  -17%
+memgiant  autocap 560.26/560.45 s (run 37022814276), 562.87 s (37031346135)  mem 26.7-26.9 GB  peak 10  rssw 1004-1009
+          off     557.82/560.05 s (run 37022814276), 559.74 s (37031346135)  mem 21.6-21.7 GB  peak 8
+```
+
+The Acceptance reading: the autocap arm completes at `mem_lines 320000` at 10 jobs with
+1004-1009 memory holds, +0.4% mean wall against `off` (three autocap repeats across the two
+runs, read by the owner from the job logs, 2026-10-02). Both jobs then hit the runner's time
+before their last arm's notice; that is UX-1281's. The win shapes keep their wins (widechain as round 152; mixed8
+auto8 +2 s against run 37012305358's 116.3-116.6 s).

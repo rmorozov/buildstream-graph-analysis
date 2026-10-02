@@ -16,6 +16,10 @@ try:
 except (ValueError, OSError, AttributeError):  # pragma: no cover
     _PAGE_SIZE = 4096
 
+# Jobs' worth of memory kept free past the one being added: at 11 x 2.8 GB on 31 GB cc1 was OOM-killed.
+# `bga.correlate.MEMORY_RESERVE_JOBS` is the advice's copy; a guard holds them equal.
+MEMORY_RESERVE_JOBS = 1
+
 
 def _end_fields(line: str) -> Optional[tuple[str, int]]:
     """`(element, maxrss_bytes)` from one hook END line, else `None`."""
@@ -126,7 +130,7 @@ class MemoryGate:
         if available is None:
             return None
         per_job = max(max(live_max[e], self.finished_peak.get(e, 0)) for e in live_max)
-        jobs = pool + len(live_max) + 1
+        jobs = pool + len(live_max) + 1 + MEMORY_RESERVE_JOBS
         if per_job * jobs > available + live_total:
             return f"rss {per_job}x{jobs}>{available}+{live_total}"
         return None

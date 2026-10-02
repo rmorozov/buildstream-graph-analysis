@@ -1,6 +1,6 @@
 # UX-1014: the "safe cap plus auto" default is measured on more shapes and hosts before it is anyone's default
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-1005 | **Found by:** Ruslan on the Graviton thread (2026-09-25): "we found sane default solution and further we need more experiments, scenarios and data" | **Serves:** R4, R5 | **Topic:** capture | **Area:** tools | **Shape:** judgement | **Reading:** owner:CodSpeed Graviton and an x86 16-core host
+**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-1005 | **Found by:** Ruslan on the Graviton thread (2026-09-25): "we found sane default solution and further we need more experiments, scenarios and data" | **Serves:** R4, R5 | **Topic:** capture | **Area:** tools | **Shape:** judgement | **Reading:** owner:CodSpeed Graviton
 
 **Guard:** none — open, no guard named yet
 
@@ -55,5 +55,18 @@ bga-bench runs 36597448095 and 36602046680:
 
 Two giants gain nothing because 2 x 8 jobs already fill 16 cores; the
 memory-bound giant is the shape where the default loses. Still to read:
-an x86 16-core host and a real project.
+an x86 16-core host, whose steps are
+UX-1280's own row (2026-10-02), and a real project.
 
+
+Round 166, with UX-1134's memory gate and idle hold in (bga-bench runs
+37022814276, 37031346135):
+
+| shape | off wall | auto wall | change | runs |
+|---|---|---|---|---|
+| `15-wide-chain` | 260.8-262.2 s | 198.5-198.9 s | -24% | 3+3, run 37022814276 |
+| `13-mixed-graph` (mixed8) | 141.2-144.5 s | 118.4-118.5 s | -17% | 3+3, run 37022814276 |
+| `16-memory-bound-giant` | 557.8-560.1 s | 560.3-562.9 s, 10 jobs, 1004-1009 memory holds | +0.4% | 3+3 over runs 37022814276 and 37031346135; UX-1281 |
+
+The memory-bound giant no longer loses: the default completes at the
+width memory allows and costs 0.4% wall.

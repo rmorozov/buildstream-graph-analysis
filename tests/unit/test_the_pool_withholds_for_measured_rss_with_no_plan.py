@@ -1,6 +1,6 @@
 """UX-1134: with no plan, `PoolController` withholds its next `+` when the
-running jobs' measured RSS per job, times one more, exceeds
-`MemAvailable` plus the RSS the build already holds - real FIFO, a
+running jobs' measured RSS per job, times one more plus one held free,
+exceeds `MemAvailable` plus the RSS the build already holds - real FIFO, a
 scripted `/proc` root and meminfo, real hook END lines.
 """
 
@@ -25,16 +25,18 @@ def _end(element, maxrss_bytes, pid=7):
     return f"END pid={pid} ppid=1 ts=1.0 element={element} utime=0.1 stime=0.0 maxrss_kb={kb} cmd=cc1 -O2 x.c\n"
 
 
-def _controller(tmp_path, *, live, finished, available, seed=4):
+def _controller(tmp_path, *, live, finished, available, seed=4, drained=True, sandbox=True):
     """A 16-slot pool at `seed`, one running `giant.bst` sandbox whose one
-    descendant holds `live` bytes, `finished` its END lines' peaks."""
+    descendant holds `live` bytes, `finished` its END lines' peaks;
+    `drained`: make has read every seeded token."""
     proc = tmp_path / "proc"
     _stat(proc, 1, 0, 8 * PAGE, "init")
     _stat(proc, SANDBOX, 1, 2 * PAGE, "bwrap")
     _stat(proc, SANDBOX + 1, SANDBOX, live)
     _stat(proc, 50, 1, 5 * GB, "unrelated")
     decisions = tmp_path / "decisions.jsonl"
-    decisions.write_text(json.dumps({"element": "giant.bst", "pid": SANDBOX, "decision": "joined"}) + "\n")
+    row = {"element": "giant.bst", "pid": SANDBOX, "decision": "joined"}
+    decisions.write_text(json.dumps(row) + "\n" if sandbox else "")
     trace_log = tmp_path / "trace.log"
     trace_log.write_text("".join(_end("giant.bst", peak) for peak in finished))
     meminfo = tmp_path / "meminfo"
@@ -42,6 +44,8 @@ def _controller(tmp_path, *, live, finished, available, seed=4):
     scratch = tmp_path / "fifo"
     scratch.mkdir()
     _path, fd, _tokens = tracer.open_jobserver(16, str(scratch), seed=seed)
+    if drained:
+        os.read(fd, seed)
     ledger = str(tmp_path / "ledger.jsonl")
     paths = {"seed": seed, "trace_log": str(trace_log), "decisions": str(decisions)}
     paths.update({"meminfo": str(meminfo), "proc_root": str(proc), "memory": str(tmp_path / "no-psi")})
@@ -54,7 +58,7 @@ def _two_low_ticks(controller):
 
 
 def test_a_settled_giant_that_does_not_fit_gets_no_token(tmp_path):
-    # 2 GB finished peak x (4 pool + 1 running + 1) = 12 GB > 8 GB avail + 0.5 GB live.
+    # 2 GB finished peak x (4 pool + 1 running + 1 + 1 reserve) = 14 GB > 8 GB avail + 0.5 GB live.
     controller, ledger = _controller(tmp_path, live=GB // 2, finished=[4 << 20, 2 * GB], available=8 * GB)
     row = _two_low_ticks(controller)
     assert row["action"] == "hold" and row["reason"].startswith("rss "), row
@@ -78,9 +82,17 @@ def test_a_settled_giant_that_does_not_fit_gets_no_token(tmp_path):
     assert block["jobserver_pool"]["memory"]["rss_withheld"] == 1
 
 
-def test_the_same_giant_gets_its_token_when_it_fits(tmp_path):
-    # 12 GB <= 12 GB avail + 0.5 GB live.
+def test_a_giant_that_fits_only_with_no_reserve_gets_no_token(tmp_path):
+    # 2 GB x 6 = 12 GB <= 12 GB avail + 0.5 GB live, but x 7 with one held free = 14 GB does not.
     controller, _ledger = _controller(tmp_path, live=GB // 2, finished=[2 * GB], available=12 * GB)
+    row = _two_low_ticks(controller)
+    assert row["action"] == "hold" and row["reason"].startswith("rss "), row
+    assert controller.pool == 4
+
+
+def test_the_same_giant_gets_its_token_when_it_fits_with_its_reserve(tmp_path):
+    # 14 GB <= 14 GB avail + 0.5 GB live.
+    controller, _ledger = _controller(tmp_path, live=GB // 2, finished=[2 * GB], available=14 * GB)
     row = _two_low_ticks(controller)
     assert row["action"] == "add", row
     assert controller.pool == 5
@@ -94,3 +106,13 @@ def test_a_live_job_bigger_than_every_finished_one_holds(tmp_path):
     with open(tmp_path / "trace.log", "a", encoding="utf-8") as handle:
         handle.write(_end("giant.bst", 3 * GB // 2))
     assert controller.tick(busy_cores=2.0, psi_some10=0.0)["action"] == "add"
+
+
+def test_with_no_sandbox_running_and_its_seed_unread_the_pool_stays_at_its_seed(tmp_path):
+    # bst's startup on Graviton: 8 seeded tokens unread, busy low, nothing to measure.
+    controller, _ledger = _controller(
+        tmp_path, live=0, finished=[], available=64 * GB, seed=8, drained=False, sandbox=False
+    )
+    rows = [controller.tick(busy_cores=1.0, psi_some10=0.0) for _ in range(8)]
+    assert controller.pool == 8, rows
+    assert rows[-1]["action"] == "hold" and rows[-1]["reason"] == "tokens idle 8", rows[-1]

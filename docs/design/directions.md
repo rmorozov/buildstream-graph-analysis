@@ -2115,6 +2115,7 @@ lives in `agent-runs.md`'s rows, counted per round from there.
 | [161](../audits/round-161.md) | round 160's walk residue - `UX-1219`-`UX-1232` in four tracks, with the owner's `UX-1233` (page budget 165,000 B) and `UX-1234` (shared titles); verifiers 15 PASS; the residue filed as `UX-1235`, `UX-1236` |
 | [163](../audits/round-163.md) | the round-162 review's rows - `UX-1235`, `UX-1236`, `UX-1244`-`UX-1257` in eleven opus and two sonnet tracks (a capacity-bound run reads `capacity_bound`, `analyze/v7`'s per-binary totals, Plane 2 findings, the sizing card, the compare lead); three owner calls pending (`UX-1254` 872 controls, `UX-1249` 13,500 words, `UX-1244` the host-core cap); the residue filed as `UX-1258`-`UX-1267` |
 | [165](../audits/round-165.md) | the round-163 residue and the round-164 review's rows - `UX-1258`, `UX-1260`-`UX-1277` in six opus tracks (a finding's Why #1 from its own step, `analyze/v7` `findings_diff` and `blocked_unparented`, the capacity page's `counts`, the replayed sweep knee, a comparison page guarded); owner-call defaults taken for the `xl_both`/`macro_micro` budgets, `joint-saving`, `builds_per_day`; the log re-grounded as `UX-1278` |
+| [166](../audits/round-166.md) | the memory-bound giant and two closes - `UX-902` (the serial-giant case, two Graviton cases), `UX-1279` (a sort button names its next press), `UX-1134` (the no-plan memory gate, autocap completes at 10 jobs); `UX-1280`, `UX-1281` filed |
 
 ## Verification Log
 

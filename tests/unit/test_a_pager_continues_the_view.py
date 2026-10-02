@@ -298,7 +298,9 @@ def test_no_two_pager_or_sort_buttons_share_a_name(continued):
     twice = {name for name in names if names.count(name) > 1}
     assert len(names) > 20 and not twice, sorted(twice)
     # `UX-1197` follow-up: the task table's tools are named for its tasks, never for its share column.
-    assert "Duration, sort: Tasks" in names and not [n for n in names if n.endswith(": Wall-clock share")], names
+    assert "Sort by Duration, ascending: Tasks" in names and not [
+        n for n in names if n.endswith(": Wall-clock share")
+    ], names
 
 
 @pytest.fixture(scope="module")

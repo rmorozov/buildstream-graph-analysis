@@ -36,7 +36,7 @@ import { enterTableFocus, focusedTable, leaveTableFocus, registerFocusTarget }
   from "./tablefocus.js";
 import { parseQuery, applyFilters, badgeText, rowJson, jsonNames, cellText,
          copy, presetColumns, openingBound, plural, sortable, ownRows,
-         ownBody, showAlso, columnCells, rowsMarkdown, showSort, ownHeads, STATED, ALL_ROWS_CEILING, reorder }
+         ownBody, showAlso, columnCells, rowsMarkdown, showSort, labelSorts, ownHeads, STATED, ALL_ROWS_CEILING, reorder }
   from "./tables.js";
 import { PATH_HEAD, PATH_TAIL } from "./views.js";
 
@@ -709,7 +709,7 @@ export function buildTable(key, rows, hint = {}, node = undefined,
   for (const [name, row] of shared.filter((names) => names.length > 1).flat()) {
     name.textContent += ` \u00b7 ${specs[0].title} ${row}`;
   }
-  sortable(table, specs);
+  sortable(table);
   // UX-205: the tools. Sorting alone cannot reduce 1,202 rows to the
   // twelve that matter, and the page renders every row of every array
   // unconditionally - the right default for a viewer, unusable without
@@ -1316,11 +1316,7 @@ export function interrogable(table, specs, total, depth = 0, undrawn = []) {
   // rule is unchanged - a table inside a cell offers the way out - and
   // the number it is spelled with followed the document.
   // `UX-1197`: a sort button's name ends with its table's, once the section has relabelled its heads.
-  globalThis.queueMicrotask?.(() => {
-    for (const sort of ownHeads(table).map((th) => th.querySelector?.("button.th-sort")).filter(Boolean)) {
-      sort.setAttribute("aria-label", `${sort.textContent.trim()}, sort: ${named}`);
-    }
-  });
+  globalThis.queueMicrotask?.(() => { table.sortName = named; labelSorts(table); });
   const nested = depth > 0;
   const expand = served() && (nested || total > TABLE_OPENS_BOUNDED_ABOVE)
     ? expandTableControl(table, depth) : null;
@@ -1368,8 +1364,7 @@ export function liftedCriticalPath(document, node) {
   // `UX-1196`: the listing's order is a claim, so its header sorts at any length.
   const table = section.querySelector?.("table");
   if (table) {
-    sortable(table, ownHeads(table).map((th) => ({ sortable: th.getAttribute("data-sortable") !== "false",
-                                                  quantity: th.getAttribute("data-quantity") })), { always: true });
+    sortable(table, { always: true });
   }
   return section;
 }

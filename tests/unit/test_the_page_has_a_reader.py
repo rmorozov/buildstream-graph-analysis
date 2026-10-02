@@ -88,8 +88,10 @@ _DRIVE = r"""
   select.value = last.value;
   select.dispatchEvent(new Event("change", { bubbles: true }));
   // `UX-646`: the writer runs a turn after the dispatch, so the
-  // fragment a reader would copy is read after that turn.
-  await new Promise((go) => setTimeout(go, 120));
+  // fragment a reader would copy is read after that turn - polled, since a loaded host takes more than 120 ms.
+  for (let waited = 0; !location.hash && waited < 3000; waited += 40) {
+    await new Promise((go) => setTimeout(go, 40));
+  }
   return { picker: true, before, seen, wanted: last.value,
            hash: location.hash,
            labelled: Boolean(document.querySelector(

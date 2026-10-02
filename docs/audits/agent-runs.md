@@ -775,6 +775,17 @@ pairing for every merged row from round 103 on.
 | 165 | verifier | sonnet | track 5 verifier | 58k | — | — | see round-165 | tool calls and wall not in the brief |
 | 165 | verifier | sonnet | track 6 verifier | 42k | — | — | see round-165 | tool calls and wall not in the brief |
 | 165 | integrator | opus | six merges + 12 merged-tree reds | 255k | — | — | see round-165 | worktree sandbox refused compound shell commands (probes via scratch scripts); -n 1 touching runs took 14-21 min on a shared 4-core box; 5 of 6 tracks needed a verifier fix loop |
+| 166 | architect | opus | UX-1279 architect | 31k | 13 | 101 s | complete | see round-166 |
+| 166 | architect | opus | UX-902 architect | 39k | 16 | 126 s | complete | see round-166 |
+| 166 | implementer | sonnet | UX-1279 sort-button label | 85k | 85 | 1143 s | complete | see round-166 |
+| 166 | implementer | sonnet | UX-1279 fix loop | 95k | 19 | 375 s | complete | see round-166 |
+| 166 | implementer | opus | UX-902 serial-giant case | 79k | 67 | 1018 s | complete | see round-166 |
+| 166 | implementer | opus | UX-902 fix loop | 96k | 25 | 375 s | complete | see round-166 |
+| 166 | implementer | opus | UX-1134 no-plan memory gate | 56k | 37 | 995 s | complete | see round-166 |
+| 166 | implementer | opus | UX-1134 loop | 127k | 51 | 1811 s | complete | see round-166 |
+| 166 | verifier | sonnet | UX-902 verifier (first launch) | 16k | 5 | 29 s | blocked | launched with the session's cwd in another repo, got that repo's worktree |
+| 166 | verifier | sonnet | UX-902 verifier | 48k | 27 | 406 s | complete | see round-166 |
+| 166 | verifier | sonnet | UX-1279 verifier | 49k | 33 | 471 s | complete | see round-166 |
 
 Round 101's four tracks are **not** here: this session could not
 identify their transcripts with certainty after a context rebuild, and
@@ -787,7 +798,7 @@ committed cleanly once told to run in the foreground. Three of the five
 left a derived figure or a §6 context-map row behind - the same class
 the round itself was about, arriving in the tracks' own work.
 
-What the seven hundred and fifty-eight rows already say: a researcher that reads a document
+What the seven hundred and sixty-nine rows already say: a researcher that reads a document
 whole costs 100-180k; a walker that drives every control costs 336k;
 the two cuts cost a re-run each. The `walk` and `design-review`
 skills fix the report shape so the next rows are smaller, and the

@@ -319,8 +319,9 @@ class TestTheDeclarationIsTheDerivation:
         (`UX-551`), not comparable across rounds) against a ~4s
         selection, and the round that doubles it should have to say
         so. The bound is a ceiling, not a target. `UX-1120`: 34 files,
-        1887 tests/68.9s at `-n auto`, load 3.0 beside one track."""
-        assert len(tiers.CENSUS) <= 34, (
+        1887 tests/68.9s at `-n auto`, load 3.0 beside one track.
+        `UX-902`: 35 files, 2227 tests/41.0s at `-n auto`, load 1.3."""
+        assert len(tiers.CENSUS) <= 35, (
             f"{len(tiers.CENSUS)} census files - re-measure the set's seconds and move this bound with the number"
         )
 

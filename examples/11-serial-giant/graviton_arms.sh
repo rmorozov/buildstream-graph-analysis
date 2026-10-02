@@ -118,6 +118,15 @@ spined() {  # the spine alone reports how processes ended
 
 why() {  # a failed arm's cause as a notice: bst's own failure lines and the kernel's OOM kills
     echo "::notice title=$1 failed::$(grep -E ' FAILURE |Killed|rror' "$OUT/$1.log" | head -3 | cut -c1-200 | paste -sd'|' -) | oom: $(sudo -n dmesg 2>/dev/null | grep -ciE 'out of memory|oom-kill') kill(s), $(sudo -n dmesg 2>/dev/null | grep -iE 'killed process' | tail -1 | cut -c1-160)"
+    # UX-1134: whether the pool's gate ran - the controller's ledger, copied beside the capture on failure too
+    echo "::notice title=$1 pool::$(python3 -c 'import json, sys
+rows = [r for r in map(json.loads, open(sys.argv[1])) if "action" in r and "pool" in r]
+acts = [r["action"] for r in rows]
+held = [str(r.get("reason", "")) for r in rows if r["action"] == "hold"]
+pools = [r["pool"] for r in rows] or ["-"]
+print("start", pools[0], "max", max(pools), "ticks", len(rows), "adds", acts.count("add"),
+      "rss-holds", sum(h.startswith("rss ") for h in held), "idle-holds", sum(h.startswith("tokens idle") for h in held),
+      "withdraws", acts.count("withdraw"))' "$OUT/$1.json.jobserver_ledger.jsonl" 2>/dev/null || echo "no ledger at $OUT/$1.json.jobserver_ledger.jsonl")"
 }
 
 build() {  # build <arm> <repeat> <plane2 path or -> -- <command...>

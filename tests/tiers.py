@@ -125,6 +125,7 @@ CENSUS = (
     "tests/unit/test_a_committed_analysis_matches_the_analyzer.py",
     "tests/unit/test_a_derived_figure_is_printed_not_committed.py",
     "tests/unit/test_a_guard_reads_only_what_a_clone_has.py",
+    "tests/unit/test_a_case_carries_both_captures.py",
     "tests/unit/test_capture_ref_patterns.py",
     "tests/unit/test_every_direction_names_its_reader.py",
     "tests/unit/test_every_skill_directory_is_named_in_claude_md.py",
@@ -1155,6 +1156,8 @@ MEDIUM = (
     "tests/unit/test_a_pager_continues_the_view.py",  # 10.3s
     # `UX-1190`: 8.31s.
     "tests/unit/test_a_sortable_header_is_a_button.py",  #  8.3s
+    # `UX-1279`: 3.44s.
+    "tests/unit/test_a_sort_button_names_its_next_press.py",  #  3.4s
     # `UX-1189`: 8.48s.
     "tests/unit/test_copy_takes_the_matched_population.py",  #  8.5s
     "tests/unit/test_copy_follows_the_order_on_screen.py",  # 12.7s

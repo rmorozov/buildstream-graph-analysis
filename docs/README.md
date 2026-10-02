@@ -167,6 +167,7 @@ ones to run today (`UX-139`).
 
 | document | what it records |
 |---|---|
+| [`cases/serial-giant-jobserver.md`](cases/serial-giant-jobserver.md) | a showcase case, both captures: one giant element held to `max-jobs`, off to `--jobserver auto` on 16 Graviton cores, -57.0 % at `max-jobs: 3` and -19.2 % at the default 8 (`UX-902`) |
 | [`audits/case-study-06-macro-micro.md`](audits/case-study-06-macro-micro.md) | the macro-then-micro cycle, **including where the tool did not guide the user** |
 | [`audits/optimization-walkthrough-04.md`](audits/optimization-walkthrough-04.md) | the retired `sleep N` proxy walkthrough, kept for provenance |
 | [`audits/planted-defect-walk-round-72.md`](audits/planted-defect-walk-round-72.md) | three defects **chosen first**, generated into real projects, and how far the front door gets each reader towards the planted answer (`UX-468`) |
@@ -353,6 +354,7 @@ The rounds themselves:
 [161](audits/round-161.md) ·
 [163](audits/round-163.md) ·
 [165](audits/round-165.md) ·
+[166](audits/round-166.md) ·
 [the guard census of round 64](audits/guard-census-round-64.md)
 
 ## Backlog

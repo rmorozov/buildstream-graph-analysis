@@ -150,7 +150,7 @@ function mergeRows(lines, uids) {
 // UX-1256's `step`: what to do, or why there is nothing to.
 function renderStep(step, uids, named) {
   if (step?.text) {
-    return el("p", { class: "step" }, el("strong", {}, "Next: "), ...linkNames(step.text, uids, named),
+    return el("p", { class: "step" }, "Next: ", ...linkNames(step.text, uids, named),
               step.command ? " " : null, step.command ? el("code", {}, step.command) : null);
   }
   return step?.why_none ? el("p", { class: "step muted" }, `No step: ${step.why_none}`) : null;

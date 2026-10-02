@@ -803,7 +803,8 @@ def _builder_pool_text_lines(recommendation: dict) -> list[str]:
         fit = bound['fit_jobs']
         lines[0] += (
             f" - memory-bound: {bound['element']} peaks {bound['peak_bytes'] / gb:.1f} GB per job x "
-            f"{bound['pool_size']} = {bound['peak_bytes'] * bound['pool_size'] / gb:.1f} GB > "
+            f"({bound['pool_size']} + {bound['reserve_jobs']} held free) = "
+            f"{bound['peak_bytes'] * (bound['pool_size'] + bound['reserve_jobs']) / gb:.1f} GB > "
             f"{bound['host_memory_bytes'] / gb:.0f} GB; auto withholds past {fit} jobs, --jobserver {fit} pins it"
         )
     lines.append(f"Pool size: {recommendation['pool_size']}, from {recommendation['pool_reading']}")

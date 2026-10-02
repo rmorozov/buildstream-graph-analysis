@@ -1,6 +1,6 @@
 """UX-1134: with no plan, `PoolController` withholds its next `+` when the
-running jobs' measured RSS per job, times one more, exceeds
-`MemAvailable` plus the RSS the build already holds - real FIFO, a
+running jobs' measured RSS per job, times one more plus one held free,
+exceeds `MemAvailable` plus the RSS the build already holds - real FIFO, a
 scripted `/proc` root and meminfo, real hook END lines.
 """
 
@@ -54,7 +54,7 @@ def _two_low_ticks(controller):
 
 
 def test_a_settled_giant_that_does_not_fit_gets_no_token(tmp_path):
-    # 2 GB finished peak x (4 pool + 1 running + 1) = 12 GB > 8 GB avail + 0.5 GB live.
+    # 2 GB finished peak x (4 pool + 1 running + 1 + 1 reserve) = 14 GB > 8 GB avail + 0.5 GB live.
     controller, ledger = _controller(tmp_path, live=GB // 2, finished=[4 << 20, 2 * GB], available=8 * GB)
     row = _two_low_ticks(controller)
     assert row["action"] == "hold" and row["reason"].startswith("rss "), row
@@ -78,9 +78,17 @@ def test_a_settled_giant_that_does_not_fit_gets_no_token(tmp_path):
     assert block["jobserver_pool"]["memory"]["rss_withheld"] == 1
 
 
-def test_the_same_giant_gets_its_token_when_it_fits(tmp_path):
-    # 12 GB <= 12 GB avail + 0.5 GB live.
+def test_a_giant_that_fits_only_with_no_reserve_gets_no_token(tmp_path):
+    # 2 GB x 6 = 12 GB <= 12 GB avail + 0.5 GB live, but x 7 with one held free = 14 GB does not.
     controller, _ledger = _controller(tmp_path, live=GB // 2, finished=[2 * GB], available=12 * GB)
+    row = _two_low_ticks(controller)
+    assert row["action"] == "hold" and row["reason"].startswith("rss "), row
+    assert controller.pool == 4
+
+
+def test_the_same_giant_gets_its_token_when_it_fits_with_its_reserve(tmp_path):
+    # 14 GB <= 14 GB avail + 0.5 GB live.
+    controller, _ledger = _controller(tmp_path, live=GB // 2, finished=[2 * GB], available=14 * GB)
     row = _two_low_ticks(controller)
     assert row["action"] == "add", row
     assert controller.pool == 5

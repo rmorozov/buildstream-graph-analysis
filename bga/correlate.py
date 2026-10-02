@@ -81,6 +81,10 @@ _DOMINANT_BINARY_SHARE = 0.5
 # round 9's host had 16 GB across 4 builders, so 4 GB each.
 _PEAK_RSS_NOTABLE_BYTES = GIB
 
+# UX-1134: jobs' worth of memory the advice's fit keeps free; equal to
+# `tools.jobserver.memory.MEMORY_RESERVE_JOBS`, the gate's copy.
+MEMORY_RESERVE_JOBS = 1
+
 #: `UX-341`: Plane 2's record names its durations in seconds and is an
 #: input with its own conventions. Every one it hands over is republished
 #: in this document, so the rename happens once, here, rather than in
@@ -1409,9 +1413,9 @@ def compute_builder_pool_recommendation(
     presented as the same reading.
 
     **Memory (UX-1134).** `memory` is `(peak_rss_bytes per element, host
-    MemTotal bytes)`; when the largest per-job peak x `pool_size` exceeds
-    host memory a `memory_bound` entry names the element and the job count
-    that fits.
+    MemTotal bytes)`; when the largest per-job peak x (`pool_size` +
+    `MEMORY_RESERVE_JOBS`) exceeds host memory a `memory_bound` entry names
+    the element and the job count that fits with that reserve free.
 
     `{}` with no ready-set width or host core count - a recommendation
     needs both.
@@ -1432,13 +1436,14 @@ def compute_builder_pool_recommendation(
     peaks, host_memory = memory or (None, None)
     if peaks and host_memory:
         element, peak = max(peaks.items(), key=lambda item: item[1])
-        if peak > 0 and peak * pool_size > host_memory:
+        if peak > 0 and peak * (pool_size + MEMORY_RESERVE_JOBS) > host_memory:
             memory_bound = {
                 'element': element,
                 'peak_bytes': peak,
                 'pool_size': pool_size,
                 'host_memory_bytes': host_memory,
-                'fit_jobs': max(1, host_memory // peak),
+                'reserve_jobs': MEMORY_RESERVE_JOBS,
+                'fit_jobs': max(1, host_memory // peak - MEMORY_RESERVE_JOBS),
             }
     return {
         'ready_set_width': ready_set_width,

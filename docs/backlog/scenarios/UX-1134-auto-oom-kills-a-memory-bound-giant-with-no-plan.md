@@ -53,6 +53,15 @@ Mutation:  A1 treat live_max > finished peak as settled -> red; A2 per_job = liv
 Reading:   the Graviton memgiant autocap arm completes at mem_lines 320000 with rss_withheld > 0 in its notice; mixed8 autocap within its noise. The 4-core CI step cannot witness it (fits in memory; pool starts at ceiling-1 and never adds).
 ```
 
+Revised 2026-10-02: Graviton run 37012305358's autocap arm reached 11 jobs (the prediction above) and
+cc1 was OOM-killed at 2.68 GB anon-rss; 11 x 2.8 GB = 30.8 GB leaves no room for `as`, make, bwrap,
+undroppable page cache or growth past a finished peak. Margin: one per_job held free,
+`MEMORY_RESERVE_JOBS = 1` in `tools/jobserver/memory.py` (the gate: hold when
+per_job x (pool + running + 1 + 1) > MemAvailable + live) and `bga/correlate.py` (the advice: bound
+when peak x (pool + 1) > MemTotal, fit = floor(MemTotal / peak) - 1); two copies because `bga/` does
+not import `tools/` (UX-325), a guard holds them equal. MemAvailable already counts reclaimable cache
+as free, so it is no margin of its own. At 31 GB / 2.8 GB: advice 10, gate 9-10 (MemAvailable < MemTotal).
+
 ## Out of Scope
 
 Cgroup memory limits; swap policy.
@@ -97,3 +106,27 @@ Track B (advice), `tests/unit/test_the_auto_advice_names_its_memory_bound.py`: w
 | `memory=` dropped | 1 failed, 3 passed |
 | `>` relaxed to `>=` | 1 failed, 3 passed (exactly host memory) |
 | revert | 4 passed |
+
+### Graviton reading, run 37012305358
+
+Job 110854756306, memgiant, mem_lines 320000 (mixed8, job 110854756162: off8 145.08/141.05 s,
+auto8 116.33/116.56 s, rssw 0):
+
+```text
+memgiant off | wall 562.02s cpu 3194s mem 21449M giant-peak 8 ... giant:373.7/8/7.9
+autocap-1 failed | 298.1 [00:04:53] build:giant.bst FAILURE Command failed | oom: 15 kill(s), Out of memory: Killed process 7027 (cc1) total-vm:2993912kB, anon-rss:2684452kB
+autocap report: Peak Memory giant.bst 2795.4 MB; native parallelism giant.bst peak 11
+```
+
+Reserve gap, the two guards against `e822738b` (constant only added): `3 failed, 7 passed` -
+`test_a_giant_that_fits_only_with_no_reserve_gets_no_token` (`'add' == 'hold'`, 2 GB x 6 = 12 GB
+fits 12.5 GB, x 7 does not), the 2.7 GB / 31 GB line (`--jobserver 11`, wants 10),
+`test_a_pool_that_fits_only_with_no_reserve_is_bound` (2 GB x 16 = 32 GB). Close: `10 passed`.
+
+| mutation | reddened | run printed |
+|---|---|---|
+| R1 memory.py `+ 1 + MEMORY_RESERVE_JOBS` -> `+ 1` | `..._fits_only_with_no_reserve_gets_no_token` | 1 failed, 9 passed |
+| R2 correlate.py `(pool_size + MEMORY_RESERVE_JOBS) > host` -> `pool_size > host` | `..._fits_only_with_no_reserve_is_bound` | 1 failed, 9 passed |
+| R3 correlate.py `host_memory // peak - MEMORY_RESERVE_JOBS` -> `host_memory // peak` | the 2.7 GB line, `..._is_bound` | 2 failed, 8 passed |
+| R4 memory.py `MEMORY_RESERVE_JOBS = 0` | the gate boundary, `..._hold_the_same_reserve` | 2 failed, 8 passed |
+| reverted from the copy | - | 10 passed |

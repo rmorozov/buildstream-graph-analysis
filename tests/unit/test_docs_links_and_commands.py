@@ -1599,7 +1599,7 @@ def test_the_code_span_sweep_reads_a_population():
     ]
     assert len(names) > 100, ("the code-span sweep reads too few names to be reading these documents", len(names))
     architecture = (REPO / "docs/design/architecture.md").read_text(encoding="utf-8")
-    assert "`optimization-walkthrough.md` (what that felt like)" in architecture, (
+    assert "`real-project.md` (what that felt like)" in architecture, (
         "the reading order's names are not code spans any more, so this guard is not what holds them"
     )
 

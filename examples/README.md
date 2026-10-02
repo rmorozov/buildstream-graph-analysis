@@ -63,8 +63,9 @@ opportunities: a scheduling bottleneck (a 4-way fan-out constrained by
 oversized step on the critical path). `optimized/` is a second, complete
 BuildStream project - the same shape with both fixes applied - so the pair
 can be run through `bga compare` as a real before/after. See
-`docs/guides/optimization-walkthrough.md` for the full worked walkthrough (every
-command and its real output) and `docs/backlog/scenarios/UX-0005-optimization-walkthrough-tutorial.md`
+`docs/guides/real-project.md` for the worked walkthrough on a real build,
+`docs/audits/optimization-walkthrough-04.md` for this example's original
+transcript, and `docs/backlog/scenarios/UX-0005-optimization-walkthrough-tutorial.md`
 for the task this was built for.
 
 ```

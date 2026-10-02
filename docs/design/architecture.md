@@ -488,9 +488,8 @@ artifact.
 - **`docs/backlog/tasks/`** + `docs/backlog/progress-tracker.md` — **closed** historical spec-compliance backlog (P0-P4). Read only for archaeology.
 - **`docs/spec/ingestion-pipeline.md`** — real data flow from a `bst` invocation to `bga`-ingestible input.
 - **`docs/guides/real-project.md`** — the end-to-end user-facing walkthrough on a real project: capture → read → go inside → join → act → gate, with real output at every step and an explicit list of what the tool refuses to say.
-- **`docs/guides/optimization-walkthrough.md`** — a full worked example using the tool for real.
 - **`docs/audits/case-study-06-macro-micro.md`** — the harder companion: a real macro-then-micro cycle on `examples/06-macro-micro-optimization`, written up as the case where the tool does *not* guide you, with every command and output pasted.
-- **`docs/design/directions.md`** — where the tool should go next, argued separately for its two real usage scenarios (local optimization helper, and CI analytics/gate). Reading order: `architecture.md` (what it is) → `optimization-walkthrough.md` (what that felt like) → `directions.md` (what to do about it).
+- **`docs/design/directions.md`** — where the tool should go next, argued separately for its two real usage scenarios (local optimization helper, and CI analytics/gate). Reading order: `architecture.md` (what it is) → `real-project.md` (what that felt like) → `directions.md` (what to do about it).
 - **`docs/contributing/fixing-guide.md`** — mandatory session-start discipline (verification rules) for either backlog.
 - **`docs/guides/jobserver.md`** — when `--jobserver auto` pays: the measured extremes, its cost, and the builder count to pair it with.
 - **`docs/guides/cli.md`** — CLI reference/usage examples.

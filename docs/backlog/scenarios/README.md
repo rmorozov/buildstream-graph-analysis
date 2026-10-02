@@ -50,6 +50,7 @@ task file, which is the only place it ever lived twice.
 | UX-1275 | [the page says 2,300 elements wait rather than compute, and nothing says what they wait in](UX-1275-a-binary-that-waits-is-told-from-one-that-computes.md) | analysis | Medium | R1, R2 | 🔴 Not Started |
 | UX-1276 | [every saving is in build seconds, and the lead asks what it is worth to the team](UX-1276-a-saving-is-priced-in-agent-hours-a-day.md) | viewer | Medium | R8, R5 | 🔴 Not Started |
 | UX-1277 | [findings do not say whether they are new, still open or gone since the run before](UX-1277-a-finding-says-whether-it-is-new-since-the-baseline.md) | analysis | Medium | R4, R8, R1 | 🔴 Not Started |
+| UX-1278 | [the verification log re-grounds at round 165's merge](UX-1278-the-verification-log-re-grounds-at-round-165.md) | contracts | Medium | whoever reads the log next | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

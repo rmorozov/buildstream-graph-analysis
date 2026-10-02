@@ -787,8 +787,8 @@ EXPORT_BUDGET_B = 8 * 1024 * 1024
 #: so the stylesheet, `index.html`, the gzipped viewer module and its
 #: loader. The procedure and every earlier value are
 #: `test_the_report_you_can_attach.py`'s note on this name.
-#: Owner-call default (UX-1267..UX-1277): merged 165,620 B; the walk's rail mark, sweep dots and export rate 166,128 B.
-PAGE_BUDGET_B = 166_150
+#: Owner-call default (UX-1267..UX-1277): merged 165,620 B; the walk's rail mark, sweep dots and export rate 166,217 B.
+PAGE_BUDGET_B = 166_250
 # The trace is the one part that can be dropped without losing the
 # report, so it is the one part with its own ceiling.
 #

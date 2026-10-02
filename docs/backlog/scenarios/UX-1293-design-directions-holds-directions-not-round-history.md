@@ -47,7 +47,7 @@ docs/design/architecture.md  "Real extensions beyond the original spec": 75 `| U
 
 ```text
 $ grep '^## ' docs/design/directions.md | sed 's/:.*//' | tr '\n' ' '
-## Direction 1 ... ## Direction 20 - 20 headings, 1-20 in order, nothing else
+Direction 1 ... Direction 20 - 20 `##` headings, 1-20 in order, nothing else
 $ wc -l docs/design/directions.md docs/audits/directions-history.md
   2416 directions.md   370 directions-history.md (6-line header + the six chapters)
 moved chapters: 365 lines in the original (with their trailing blanks), 364 + header after (EOF blank)

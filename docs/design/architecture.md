@@ -424,6 +424,16 @@ with the tables above destroys the one thing the entry is for
 (`UX-653`). The newest entry is the exception: every round that
 re-grounds the document rewrites it.
 
+Updated 2026-10-02 (after `UX-1293`), covering three changes to this
+document in round 167. The status table of Done rows becomes a link to
+the backlog index (`UX-1293`); the `analyze/v7` row names
+`omitted_structural_opportunities` and `cumulative_saving_us`, which
+only that table carried; the retired walkthrough's link points at
+`guides/real-project.md` (`UX-1292`). No contract moved. The figures
+are re-grounded in `bga analyze --schema`
+(`analyze/v7`: **65 top-level properties**) and `bga.contracts.ids()`:
+**28 emitted ids**.
+
 Updated 2026-10-02 (after `UX-1278`), covering three changes to this
 document in rounds 163 and 165. The contract registry's headline id moves to
 `analyze/v7`, and `analyze/v6` joins the rows read and never written:

@@ -1161,7 +1161,7 @@ the blocks a reader meets first, and `certified_headroom`, the number
 Key Findings leads with, had never been in the population at all. It was
 302 such keys when that was filed and 305 when it landed. One level and
 no further: `blast_radius_distribution.deciles` is in the population and
-its own nine buckets are not. The surface is **620 keys** today, and
+its own nine buckets are not. The surface is **624 keys** today, and
 that figure is derived from the walk rather than typed here.
 
 So the statement of coverage, which is now a statement and not a
@@ -1261,6 +1261,7 @@ can look one up.
 | `assessed_dependencies`, `dependency_read_share` | A row of `element_join`: how many of this element's dependencies Plane 2 could judge — the ones it saw opened plus the ones it saw nothing from — and how many of those were read. What `unused_dependencies` is a list *of*. A dependency with no observed opens at all is uncovered and in neither, so the share is absent rather than 1.0. |
 | `phase`, `elapsed_us` | A row of `pipeline_overhead`: the named stage of the run, and the wall-clock it spanned. |
 | `finding_id` | In a `headline.top_actions` row, the finding the action's reasoning is in — so the headline's advice can be read back to the evidence that chose it. |
+| `replayed_delta_us` | `UX-1276`: in the builders row of `headline.top_actions`, the replayed wall at this run's builders minus at the count the step quotes (`capacity_recommendation.sweep`) — a replay with no contention, not a measured saving. |
 | `first` | In a `batch_opportunities.serialized_pairs` row, the element that ran first of a pair that shares a dependency chain; `then` is the other. The pair is why they cannot be batched. |
 | `shared_consumers` | In a `consolidation_candidates` row, the elements that always consume the candidate group together — the reason it is a group. |
 | `utilization_envelope`, `capacity_cores`, `busy_cores`, `busy_share` | Cores busy over the build against the smaller of `builders x max-jobs` and the host's cores (`UX-676`). The capacity is the smaller because a four-core host can never deliver sixteen, and a share against a number nothing can reach is not a verdict. `busy_cores` is the interval's own reading; `busy_share` is it over `capacity_cores`. |
@@ -1344,6 +1345,7 @@ can look one up.
 | `resource_shortfall` | Present instead of `cores_busy` and `peak_rss_bytes` where no run in the class carries them (`UX-296`). |
 | `bga_tail_us` | What the tool itself spent after the build, summed from that snapshot's `tail.json` — per run in `snapshots`, as a distribution in `host_classes` and `blended` (`UX-1078`). Absent before the file existed. |
 | `build_wall_us` | The build subprocess's own wall, from the same `tail.json`: the figure `bga_tail_us` sits beside (`UX-1078`). |
+| `build_rate`, `per_day` | `UX-1276`: builds of this project a day, as `.bga/config`'s hand-edited `builds_per_day` declares it, with `source` saying so — never counted from snapshot stamps, which count captures. Absent when undeclared; the decision panel prices a saving in agent-hours a day only beside it. |
 
 `capacity-model/v1`:
 

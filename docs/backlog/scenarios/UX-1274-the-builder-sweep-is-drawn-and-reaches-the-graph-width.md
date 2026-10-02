@@ -2,7 +2,7 @@
 
 **Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-164 view UI re-review on a 2,402-element two-plane page (2026-10-02), brainstorm B1 | **Serves:** R1, R5, R8 | **Topic:** analysis | **Area:** bga, bga/viewer | **Shape:** mechanical | **Reading:** container
 
-**Guard:** none — open, no guard named yet
+**Guard:** `tests/unit/test_the_builder_sweep_is_drawn.py` (the 2,402-element two-plane page, built by `pages.two_plane_run`; Chromium 1440x900 and 390x844; node probe of `sizingCard`)
 
 ## Motivation
 
@@ -36,3 +36,36 @@ UX-861's policy (UX-1259); trying configurations on a real host.
 ## Acceptance Test
 
 On this page the sweep reaches at least 16 builders, its curve is drawn with one mark per point, no sentence calls the range's top a knee, and the decision names a replayed wall for a builder count above 4. Mutation: restore the 2x range, and the guard reds.
+
+## Outcome
+
+Gap measured (base `b35c30e31`; the Motivation's page rebuilt: `gen-synthetic --store --seed 1 --layers 40 --width 60
+--workload binaries`, `capture report --json` on the newest snapshot, `analyze <run> --plane2 plane2.json --format json`):
+
+```text
+                         before                                      after
+sweep range              1..8 (max(4 builders, 4 cores) x 2)         1..32 (min(max(8, 8, widest stage 60), 32))
+graph constraint         allows 8, "the sweep's knee is at 8          allows 30, "the sweep's knee is at 30 builders"
+                         builders, the top of the range swept"
+capacity_recommendation  no curve                                    sweep: 32 replayed walls, 187.9 min at 1 .. 6.2 min at 32
+decision's first step    "Measure builders above the host's          "...with bga sweep; the replay puts 30 builders at
+                         4-core cap with bga sweep"                  6.4 min (replayed, no contention)"
+macro_micro              graph allows 2, swept 1..8                  unchanged: allows 2, sweep 8 points, decision row 1 is core.bst
+```
+
+Close measured: analyze's added replay time on that page, `time_sweep.py` (one subprocess per run, old range patched in,
+3 alternating reps):
+
+```text
+old 3.83 4.00 4.99 median 4.00s
+new 5.32 4.65 4.92 median 4.92s
+added 0.92s
+```
+
+`test_the_builder_sweep_is_drawn.py`: 8 passed in 31.4s (the page built once per module, one browser for both widths).
+
+| Mutation | Reddened | Count |
+|---|---|---|
+| `sweep_top` back to `min(max(builders, host_cores) * 2, 32)` | `test_the_sweep_reaches_past_the_host_to_sixteen` | 1 failed, 7 passed |
+| `knee_reason`'s edge branch off (`if False:`) + card's `"the graph allows #"` unconditional | `test_a_knee_at_the_range_top_is_no_knee`, `test_the_sizing_card_says_no_knee_at_the_top[8]` | 2 failed, 2 passed |
+| `_capacity_step`'s replayed tail dropped | decision step (payload), the curve test at 1440 and 390 (step text), the unit step test | 4 failed, 4 passed |

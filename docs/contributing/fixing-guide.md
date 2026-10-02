@@ -240,6 +240,7 @@ bga/report/            text.py, json.py, ci_comment.py - renderers · _shared.py
 bga/compare.py         two runs, the noise band, the verdict, the culprits
 bga/blast.py           what rebuilds if one resource changes
 bga/correlate.py       the two planes joined on element uid
+bga/sweep_curve.py     the builder sweep's range, its curve, a knee or the range's edge
 bga/whatif.py          the projection for a chosen set of fixes (UX-230)
 bga/junction_cost.py   N variant builds priced against one junctioned invocation
 bga/cache_trend.py     a series of runs, not a pair
@@ -247,6 +248,7 @@ bga/cache_effectiveness.py  the cache's own numbers
 bga/cache_capacity.py  what the cache was configured to hold (UX-896)
 bga/artifact_weight.py what one element's artifact weighs, walked from the CAS (UX-907)
 bga/store_aggregate.py the store as a distribution, per host class (UX-234)
+bga/build_rate.py      the builds a day `.bga/config` declares, for agent-hours
 bga/capacity_model.py  Allen-Cunneen M/G/c over that distribution, each
                        assumption recorded where the arithmetic uses it (UX-595)
 bga/run_store.py       .bga/runs, the @last/@prev aliases, prune

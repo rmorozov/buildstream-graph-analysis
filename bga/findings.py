@@ -36,6 +36,7 @@ import statistics
 from typing import Optional
 
 from . import shown as qty
+from . import sweep_curve
 from .cache_effectiveness import (
     HEALTHY_HIT_RATIO,
     POOR_HIT_RATIO,
@@ -2611,18 +2612,21 @@ def _capacity_step(result: AnalysisResult) -> tuple[str, str]:
     recommendation = getattr(result, 'capacity_recommendation', None) or {}
     binding = recommendation.get('binding_constraint')
     row = next((c for c in recommendation.get('constraints') or [] if c.get('name') == binding), {})
+    # UX-1274: the replayed wall at the knee, beside whichever constraint binds.
+    replayed = sweep_curve.replayed_clause(recommendation)
+    tail = f"; {replayed}" if replayed else ""
     if binding == 'host_cores':
         cores = recommendation.get('host_cpu_count')
         return (
             f"Builders are held at the host's {plural(cores, 'core')} by policy while the CPU could feed "
-            f"{row.get('clamped_from')}: measure above that cap with bga sweep",
-            f"Measure builders above the host's {cores}-core cap with bga sweep",
+            f"{row.get('clamped_from')}: measure above that cap with bga sweep{tail}",
+            f"Measure builders above the host's {cores}-core cap with bga sweep{tail}",
         )
     if binding and recommendation.get('recommended_builders') is not None:
         builders = recommendation['recommended_builders']
         return (
-            f"{binding} binds at {plural(builders, 'builder')}: run with {builders} and measure it",
-            f"Run with {plural(builders, 'builder')} and measure it",
+            f"{binding} binds at {plural(builders, 'builder')}: run with {builders} and measure it{tail}",
+            f"Run with {plural(builders, 'builder')} and measure it{tail}",
         )
     from .report._shared import resolve_attribution_hint
 
@@ -2639,6 +2643,10 @@ def _builders_actions(result: AnalysisResult, by_id: dict) -> list[dict]:
     # UX-1256: the capacity finding's own step where it has one; the derived step otherwise.
     said = ((by_id.get('capacity-recommendation') or {}).get('step') or {}).get('text')
     action = {'step': said.rstrip('.') if said else _capacity_step(result)[1]}
+    # UX-1276: the replayed wall the step's clause gains, priced per day where a rate is declared.
+    delta = sweep_curve.replayed_delta_us(getattr(result, 'capacity_recommendation', None) or {})
+    if delta:
+        action['replayed_delta_us'] = delta
     if finding:
         action['finding_id'] = finding
     return [action]

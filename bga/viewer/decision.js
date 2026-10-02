@@ -248,11 +248,13 @@ export function renderProvenanceRecords(payload, root, schema = null) {
  */
 export function renderWhyRanked(payload, action, options = {}) {
   const uid = action?.element_uid;
-  if (!uid) return null;
-  const facts = elementFacts(payload).get(uid);
+  // `UX-1258`: a step with no element is explained by its finding's own facts.
+  const key = uid ?? action?.finding_id;
+  if (!key) return null;
+  const facts = uid ? elementFacts(payload).get(uid) : stepFacts(payload, action.finding_id);
   const record = (payload?.provenance ?? []).find(
     (entry) => entry?.claim === action?.finding_id) ?? null;
-  const history = options.store
+  const history = uid && options.store
     ? renderElementHistory(options.store, uid, options.schema ?? null) : null;
   // `elementFacts` touches a record for every uid a source *names*, so
   // a top action alone produces an empty one. The fold needs something
@@ -263,10 +265,12 @@ export function renderWhyRanked(payload, action, options = {}) {
     (finding) => !options.said?.has(finding.id));
   const ownRule = record && options.ranking !== action?.finding_id;
   if (!rows.length && !findings.length && !ownRule && !history) return null;
+  // A step whose own finding has no facts draws nothing rather than borrowing another's.
+  if (!uid && !rows.length) return null;
 
   const details = document.createElement("details");
   details.className = "why-ranked";
-  details.setAttribute("data-why", uid);
+  details.setAttribute("data-why", key);
   const summary = document.createElement("summary");
   summary.textContent = options.rank
     ? `Why #${options.rank}` : "Why this one";
@@ -288,14 +292,14 @@ export function renderWhyRanked(payload, action, options = {}) {
     const list = document.createElement("dl");
     list.className = "pairs why-facts";
     for (const row of rows) {
-      const term = document.createElement("dt");
-      term.textContent = row.label;
+      // A row with no label is a second value under the term above it.
+      if (row.label) list.append(el("dt", {}, row.label));
       const value = document.createElement("dd");
       value.className = "num";
       value.setAttribute("data-field", row.path);
       value.setAttribute("data-raw", String(row.value));
       value.textContent = factText(row);
-      list.append(term, value);
+      list.append(value);
     }
     details.append(list);
   }
@@ -337,6 +341,17 @@ function renderSaidOnce(common) {
 }
 
 /** One fact, in the unit the source declared it in. */
+/** `UX-1258`: a step's facts from its own finding; only the capacity recommendation has any, one term per constraint. */
+function stepFacts(payload, findingId) {
+  const constraints = findingId === "capacity-recommendation" ? payload?.capacity_recommendation?.constraints : null;
+  const rows = (constraints ?? []).flatMap((row) => {
+    const at = `capacity_recommendation.constraints[name=${row.name}]`;
+    return [{ label: `${shownValue(row.name)} allows`, path: `${at}.allows`, value: row.allows, kind: "count" },
+            { label: null, path: `${at}.reason`, value: row.reason }];
+  });
+  return { rows, findings: [] };
+}
+
 function factText(row) {
   return shownValue(row.value, row.kind);
 }
@@ -779,7 +794,7 @@ export function renderDecision(payload, investigate = null, copy = null,
       list.append(actionRow(action, investigate, renderWhyRanked(
         payload, action,
         { ...options, rank: index + 1, ranking: shared && claim,
-          said: new Set(common.map((entry) => entry.finding.id)) })));
+          said: new Set(common.map((entry) => entry.finding.id)) }), options.store?.build_rate));
     }
     section.append(list);
     if (common.length) section.append(renderSaidOnce(common));
@@ -880,7 +895,16 @@ function followsFrom(name, payload, reportSchema) {
   return named;
 }
 
-function actionRow(action, investigate, whyBlock = null) {
+/** `UX-1276`: one build's saving as agent-hours a day at the store's declared rate; null with no rate. */
+function agentHours(field, savingUs, rate) {
+  if (typeof savingUs !== "number" || typeof rate?.per_day !== "number") return null;
+  const hours = savingUs / 1e6 * rate.per_day / 3600;
+  return el("span", { class: "worth num", "data-field": `${field}.agent_hours`, "data-raw": String(hours) },
+    `≈ ${hours >= 10 ? tally(Math.round(hours)) : Number(hours.toPrecision(2))} agent-hours/day `
+    + `(${tally(rate.per_day)} builds/day, ${rate.source})`);
+}
+
+function actionRow(action, investigate, whyBlock = null, rate = null) {
   const row = document.createElement("li");
   row.className = "action";
   row.setAttribute("data-element", action.element_uid ?? "");
@@ -907,6 +931,14 @@ function actionRow(action, investigate, whyBlock = null) {
     worth.setAttribute("data-raw", String(action.saving_us));
     worth.textContent = `saves ${seconds(action.saving_us)}`;
     row.append(worth);
+    const perDay = agentHours("saving_us", action.saving_us, rate);
+    if (perDay) row.append(perDay);
+  } else if (typeof action.replayed_delta_us === "number") {
+    // UX-1274's replayed gain: a replay, said as one, beside its price a day.
+    row.append(el("span", { class: "worth num", "data-field": "replayed_delta_us",
+      "data-raw": String(action.replayed_delta_us) }, `replays ${seconds(action.replayed_delta_us)} shorter`));
+    const perDay = agentHours("replayed_delta_us", action.replayed_delta_us, rate);
+    if (perDay) row.append(perDay);
   } else if (typeof action.downstream_count === "number") {
     const reach = document.createElement("span");
     reach.className = "worth num";

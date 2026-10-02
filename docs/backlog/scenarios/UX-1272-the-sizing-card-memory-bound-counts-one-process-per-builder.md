@@ -2,7 +2,7 @@
 
 **Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-164 view UI re-review on a 2,402-element two-plane page (2026-10-02), finding R3 | **Serves:** R5 | **Topic:** analysis | **Area:** bga, bga/viewer | **Shape:** mechanical | **Reading:** container
 
-**Guard:** none — open, no guard named yet
+**Guard:** `tests/unit/test_an_agent_sizing_card_reads_its_sources.py` (the 2,402-element page's sizing inputs through `sizingCard` by node probe, process-peak row "not a bound"; `macro_micro`'s envelope basis in Chromium 1440x900 and 390x844)
 
 ## Motivation
 
@@ -36,3 +36,29 @@ New memory sampling (host series); the cores and builders lines.
 ## Acceptance Test
 
 On this page the memory line does not say "at most" over builders x process peak; where a concurrent bound is published, its value is at least that product. Mutation: restore "at most", and the guard reds.
+
+## Outcome
+
+Gap measured (base `b35c30e31`; the Motivation's page rebuilt as in UX-1274's Outcome, `analyze --format json`'s
+`agent_sizing.memory`, and the card drawn from it):
+
+```text
+                before                                                    after
+page payload    {basis: process_peak, bytes: 268431360, builders: 4}     + bound: none
+page card       "Memory: at most 256.0 MiB, if all 4 builders peak        "Memory: 4 builders × the largest single process (64.0 MiB) =
+                together at 64.0 MiB (process peak)"                      256.0 MiB; not a bound: an element ran several processes at
+                                                                          once and their summed memory was not recorded"
+macro_micro     basis envelope, "at most ... (memory envelope)"           + bound: upper; the row unchanged
+```
+
+Close measured: `test_an_agent_sizing_card_reads_its_sources.py` 9 passed in 3.5s. No concurrent bound is published,
+so the Acceptance Test's second clause has no value to check.
+
+| Mutation | Reddened | Count |
+|---|---|---|
+| the process-peak row reads "Memory: at least ..." | `test_the_peak_row_says_it_is_no_bound` (the page case) | 1 failed, 8 passed |
+| `sizingCard` memory row unconditionally "at most" (`m.bound === "upper"` -> `true`) | the same | 1 failed, 8 passed |
+| every basis takes the process-peak row (`-> false`) | `test_the_card_leads_the_machine_chapter_with_one_link_a_row` [1440, 390] (envelope) | 2 failed, 7 passed |
+
+Deviation: the Decision's "at least" (`bound: lower`) is not a floor either - a builder on a lighter element need not
+reach the largest process's peak - so the process-peak basis states its product and says it bounds nothing (`bound: none`).

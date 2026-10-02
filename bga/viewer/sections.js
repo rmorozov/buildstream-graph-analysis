@@ -502,14 +502,21 @@ function sizingCard(value, hint) {
     src ? el("a", { href: `#${src}`, "data-section-link": src }, title(src)) : null);
   const { builders: b = {}, cores: c, memory: m } = value;
   const of = (n, text) => (typeof n === "number" ? text.replace("#", tally(n)) : null);
+  // UX-1274: a ceiling at the sweep's top is where the range stopped, not a knee.
+  const edge = typeof b.swept_to === "number" && b.graph_ceiling >= b.swept_to;
   return el("section", { "data-section": "agent_sizing", "data-rail": heading("agent_sizing", hint).rail },
     sectionHead("agent_sizing", hint), el("ul", {},
-    row("builders", "Builders: " + [of(b.recommended, "# recommended"), of(b.graph_ceiling, "the graph allows #"),
+    row("builders", "Builders: " + [of(b.recommended, "# recommended"), of(b.graph_ceiling, edge ? "no knee within #" : "the graph allows #"),
       of(b.observed, "this run had #")].filter(Boolean).join("; "), b.source),
     c ? row("cores", `Cores: ${c.average.toFixed(2)}${typeof c.host === "number" ? ` of ${tally(c.host)}` : ""} busy on average`, c.source) : null,
     c?.peak_source ? row("cores_peak", `Cores: ${c.peak.toFixed(2)} busy at p95`, c.peak_source) : null,
-    m ? row("memory", `Memory: at most ${bytes(m.bytes)}, if all ${tally(m.builders)} builders peak together at `
-      + `${bytes(m.per_element_bytes)} (${m.basis === "envelope" ? "memory envelope" : "process peak"})`, m.source) : null),
+    // UX-1272: an element's envelope peak is a ceiling; one process's peak times builders bounds nothing.
+    m ? row("memory", m.bound === "upper"
+      ? `Memory: at most ${bytes(m.bytes)}, if all ${tally(m.builders)} builders peak together at `
+        + `${bytes(m.per_element_bytes)} (memory envelope)`
+      : `Memory: ${tally(m.builders)} builders × the largest single process (${bytes(m.per_element_bytes)}) = `
+        + `${bytes(m.bytes)}; not a bound: an element ran several processes at once and their summed memory `
+        + `was not recorded`, m.source) : null),
     // The recommendation's caveat is drawn once, in the section the builders row links.
     value.absence ? el("p", { class: "empty-population" }, value.absence) : null);
 }

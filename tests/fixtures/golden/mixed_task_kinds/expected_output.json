@@ -443,6 +443,7 @@
         "builders": {
             "recommended": null,
             "graph_ceiling": null,
+            "swept_to": null,
             "observed": 2,
             "source": null
         },

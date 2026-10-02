@@ -3871,6 +3871,17 @@ _ANALYZE_HINTS = {
                 "measured peak RSS per element and a host "
                 "memory total.",
             },
+            # UX-1274: the curve the knee is read off, drawn as a series under the recommendation.
+            "sweep": {
+                GROWS: False,
+                "maxItems": 32,
+                "items": {QUANTITY: "duration_us", "description": "The replayed wall at this many builders."},
+                SERIES: "builder",
+                QUANTITY: "duration_us",
+                "description": "The replayed wall at 1, 2, … builders, up to the larger of twice the "
+                "builders, twice the host's cores and the graph's widest stage, capped at 32. A replay of "
+                "observed durations with no contention: what the schedule could do, not this host.",
+            },
             "sweep_binding": {
                 "description": "Which of the sweep's own two "
                 "capacities — the graph's knee or "
@@ -3893,7 +3904,11 @@ _ANALYZE_HINTS = {
                         QUANTITY: "count",
                         "description": "Builders the capacity recommendation settles on.",
                     },
-                    "graph_ceiling": {QUANTITY: "count", "description": "Builders the sweep's knee allows."},
+                    "graph_ceiling": {
+                        QUANTITY: "count",
+                        "description": "Builders the sweep's knee allows; at the most builders swept, no knee within the range.",
+                    },
+                    "swept_to": {QUANTITY: "count", "description": "The most builders the sweep replayed."},
                     "observed": {QUANTITY: "count", "description": "Builders this run was given."},
                 },
             },
@@ -3906,12 +3921,19 @@ _ANALYZE_HINTS = {
                 },
             },
             "memory": {
-                "description": "At most: the largest per-element peak RSS times the builders, as if all peak at once.",
+                "description": "The largest peak RSS times the builders: at most, from an element's whole peak; "
+                "no bound from one process's, since an element runs several at once and their sum is unrecorded.",
                 "properties": {
+                    "bound": {
+                        "description": "Upper for the memory envelope's element peak; none for a single process's."
+                    },
                     "basis": {
                         "description": "Envelope when read from the host's memory envelope; process peak when from Plane 2's per-element peaks."
                     },
-                    "per_element_bytes": {QUANTITY: "bytes", "description": "The largest element's peak RSS."},
+                    "per_element_bytes": {
+                        QUANTITY: "bytes",
+                        "description": "The largest element's peak RSS, or the largest single process's.",
+                    },
                     "builders": {QUANTITY: "count", "description": "The builders it is multiplied by."},
                     "bytes": {QUANTITY: "bytes", "description": "Per-element peak times the builders."},
                 },
@@ -4870,6 +4892,11 @@ _ANALYZE_HINTS = {
                         "step": {
                             "description": "A capacity-bound run's builders "
                             "step, leading the list in place of an element.",
+                        },
+                        "replayed_delta_us": {
+                            QUANTITY: "duration_us",
+                            "description": "The builders step's replayed wall at this run's builders minus at "
+                            "the count it quotes: a replay with no contention, not a measured saving.",
                         },
                     },
                 },
@@ -6423,6 +6450,14 @@ _STORE_AGGREGATE_HINTS = {
 
 _STORE_HINTS = {
     "total_bytes": {QUANTITY: "bytes", "description": "What the stored snapshots occupy on disk, together."},
+    # UX-1276: a permitted key (additionalProperties), absent unless `.bga/config` declares `builds_per_day`.
+    "build_rate": {
+        "description": "Builds a day, as declared, so a saving reads in agent-hours a day. Absent when undeclared.",
+        "properties": {
+            "per_day": {QUANTITY: "rate_per_day", "description": "Builds of this project a day, as declared."},
+            "source": {"description": "Where the rate came from: declared in `.bga/config`, never counted."},
+        },
+    },
     "count": {
         QUANTITY: "count",
         "description": "Snapshots held. The store's own size, whether or not `snapshots` lists all of them.",
@@ -6888,6 +6923,7 @@ _SCHEMAS = {
         "the alias `@last`/`@prev` resolution would give it, and why it "
         "is not a measurement if it is not one. Incomplete captures are "
         "listed rather than hidden — they occupy the disk.",
+        optional={"build_rate": "object"},
         hints=_STORE_HINTS,
     ),
     STORE_AGGREGATE: lambda: _document(

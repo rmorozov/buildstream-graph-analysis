@@ -578,7 +578,9 @@ class TestTheRealPagesDrawThem:
     def test_the_width_series_is_drawn(self, booted, page):
         series = booted[page]["series"]
         assert series, f"{page}: no series drawn"
-        assert all(one["unit"] == "level" for one in series), series
+        # UX-1274: the builder sweep is a second series where Plane 2 is in hand.
+        assert any(one["unit"] == "level" for one in series), series
+        assert {one["unit"] for one in series} <= {"level", "builder"}, series
         assert all(one["drawn"] == "true" for one in series), series
 
     def test_the_two_populations_draw_in_their_units(self, booted):

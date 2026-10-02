@@ -5329,8 +5329,7 @@ _ANALYZE_HINTS = {
             },
             "oversubscription_evidence": {
                 "description": "What that hint rests on, including the case where there was not enough "
-                "to say. HIGH_SLOT_OCCUPANCY is builder slots full and is no hint on its own; "
-                "HIGH_CPU_UTILIZATION needs Plane 2's cores busy."
+                "to say. Full builder slots alone are no hint; high CPU use needs Plane 2's cores busy."
             },
             "max_observed_concurrency": {
                 QUANTITY: "count",

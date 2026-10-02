@@ -22,7 +22,7 @@ import { SCALE, GRADE_ANNOTATION, GRADE_EXHIBIT, exhibitAxis, exhibitTwin,
 // one. `controls.js` imports nothing, which is why this module may use
 // it where it may not use `app.js` - see the note below.
 import { commandLine, identify, labelFor } from "./controls.js";
-import { TERMS, tally } from "./format.js";
+import { TERMS, el, tally } from "./format.js";
 import { plural } from "./tables.js";
 // `UX-337`: the primitives the chapters share. Extracted because the
 // chapters were *not* acyclic without them - see `primitives.js`.
@@ -732,24 +732,13 @@ export function renderBlastAnswer(result) {
 
 // The waterfall, in the order the time is spent. Each entry names the
 // published field it reads; nothing here adds, subtracts or divides.
-const WATERFALL = [
-  { key: "untracked_head_us", label: TERMS.untracked_head_us, from: "attribution" },
-  { key: "execution_on_chain_us", label: TERMS.execution_on_chain_us, from: "attribution" },
-  { key: "dependency_wait_us", label: TERMS.dependency_wait_us, from: "attribution" },
-  { key: "resource_wait_us", label: TERMS.resource_wait_us, from: "attribution" },
-  { key: "scheduler_wait_us", label: TERMS.scheduler_wait_us, from: "attribution" },
-  { key: "retry_wait_us", label: TERMS.retry_wait_us, from: "attribution" },
-  { key: "idle_us", label: TERMS.idle_us, from: "attribution" },
-  { key: "untracked_tail_us", label: TERMS.untracked_tail_us, from: "attribution" },
-];
+const WATERFALL = ["untracked_head_us", "execution_on_chain_us", "dependency_wait_us", "resource_wait_us",
+  "scheduler_wait_us", "retry_wait_us", "idle_us", "untracked_tail_us"]
+  .map((key) => ({ key, label: TERMS[key], from: "attribution" }));
 
 // The certified floors, read the same way.
-const FLOORS = [
-  { key: "t_infinity_observed", label: TERMS.t_infinity_observed },
-  { key: "lb", label: TERMS.lb },
-  { key: "t_c", label: TERMS.t_c },
-  { key: "certified_headroom", label: TERMS.certified_headroom },
-];
+const FLOORS = ["t_infinity_observed", "lb", "t_c", "certified_headroom"]
+  .map((key) => ({ key, label: TERMS[key] }));
 
 
 export function renderOverview(payload) {
@@ -816,18 +805,9 @@ export function renderOverview(payload) {
       }));
     }
     // `UX-1269`: the waits, the chain and the floors' gaps drawn together; folded, as the 390 travel budget is spent.
-    const relate = document.createElement("details");
-    relate.className = "overview-relation";
-    relate.setAttribute("data-fold", "overview-relation");
-    const said = document.createElement("summary");
-    said.textContent = "How these figures relate";
-    const para = (role, text) => {
-      const p = document.createElement("p");
-      p.setAttribute("data-role", role);
-      p.textContent = text;
-      return p;
-    };
-    relate.append(said,
+    const para = (role, text) => el("p", { "data-role": role }, text);
+    const relate = el("details", { class: "overview-relation", "data-fold": "overview-relation" },
+      el("summary", {}, "How these figures relate"),
       para("chain-relation", `${TERMS.execution_on_chain_us} is the path that set this finish; `
         + `${TERMS.t_infinity_observed} is the graph's longest.`),
       para("wait-relation", `${TERMS.scheduling_gap_us} is the wall clock beyond ${TERMS.t_infinity_observed}; `

@@ -268,13 +268,8 @@ export function renderWhyRanked(payload, action, options = {}) {
   // A step whose own finding has no facts draws nothing rather than borrowing another's.
   if (!uid && !rows.length) return null;
 
-  const details = document.createElement("details");
-  details.className = "why-ranked";
-  details.setAttribute("data-why", key);
-  const summary = document.createElement("summary");
-  summary.textContent = options.rank
-    ? `Why #${options.rank}` : "Why this one";
-  details.append(summary);
+  const details = el("details", { class: "why-ranked", "data-why": key },
+    el("summary", {}, options.rank ? `Why #${options.rank}` : "Why this one"));
 
   // The rule that ranked it, from the finding's own record - unless
   // every action shares that record, in which case `renderDecision`
@@ -289,28 +284,14 @@ export function renderWhyRanked(payload, action, options = {}) {
 
   // What this run measured about it, each value beside its path.
   if (rows.length) {
-    const list = document.createElement("dl");
-    list.className = "pairs why-facts";
-    for (const row of rows) {
-      // A row with no label is a second value under the term above it.
-      if (row.label) list.append(el("dt", {}, row.label));
-      const value = document.createElement("dd");
-      value.className = "num";
-      value.setAttribute("data-field", row.path);
-      value.setAttribute("data-raw", String(row.value));
-      value.textContent = factText(row);
-      list.append(value);
-    }
-    details.append(list);
+    // A row with no label is a second value under the term above it.
+    details.append(el("dl", { class: "pairs why-facts" }, rows.flatMap((row) => [row.label ? el("dt", {}, row.label) : null,
+      el("dd", { class: "num", "data-field": row.path, "data-raw": String(row.value) }, factText(row))])));
   }
 
   // The findings that name it - references, not restatements.
   for (const finding of findings) {
-    const line = document.createElement("p");
-    line.className = "muted why-finding";
-    line.setAttribute("data-finding", finding.id ?? "");
-    line.append(findingLink(finding));
-    details.append(line);
+    details.append(el("p", { class: "muted why-finding", "data-finding": finding.id ?? "" }, findingLink(finding)));
   }
 
   if (history) details.append(history);
@@ -320,24 +301,14 @@ export function renderWhyRanked(payload, action, options = {}) {
 /** `UX-1146`: the findings several Why folds share, each said once. */
 function renderSaidOnce(common) {
   // Folded like the Why folds it came out of; the label is its count (§6e.13).
-  const box = document.createElement("details");
-  box.className = "why-shared";
-  const summary = document.createElement("summary");
   // `UX-357` (§3a.1): one level, the findings are its rows.
-  box.setAttribute("data-levels", "1");
-  box.setAttribute("data-rows", String(common.length));
-  summary.textContent = `What they share \u00b7 1 level, ${plural(common.length, "row")}`;
-  box.append(summary);
-  for (const { finding, ranks } of common) {
-    const line = document.createElement("p");
-    line.className = "muted why-finding";
-    line.setAttribute("data-finding", finding.id ?? "");
-    line.setAttribute("data-ranks", ranks.join(" "));
-    const which = ranks.map((rank) => `#${rank}`);
-    line.append(`${which.slice(0, -1).join(", ")} and ${which.at(-1)}: `, findingLink(finding));
-    box.append(line);
-  }
-  return box;
+  return el("details", { class: "why-shared", "data-levels": "1", "data-rows": String(common.length) },
+    el("summary", {}, `What they share \u00b7 1 level, ${plural(common.length, "row")}`),
+    common.map(({ finding, ranks }) => {
+      const which = ranks.map((rank) => `#${rank}`);
+      return el("p", { class: "muted why-finding", "data-finding": finding.id ?? "", "data-ranks": ranks.join(" ") },
+        `${which.slice(0, -1).join(", ")} and ${which.at(-1)}: `, findingLink(finding));
+    }));
 }
 
 /** One fact, in the unit the source declared it in. */
@@ -913,39 +884,22 @@ function actionRow(action, investigate, whyBlock = null, rate = null) {
   // UX-216: the decision panel names an element; naming it and not
   // linking it is the gap this item closes.
   if (action.element_uid) {
-    const name = document.createElement("a");
-    name.setAttribute("href", `#${elementAnchor(action.element_uid)}`);
-    const code = document.createElement("code");
-    code.textContent = action.element_uid;
-    name.append(code);
-    row.append(name);
+    row.append(el("a", { href: `#${elementAnchor(action.element_uid)}` }, el("code", {}, action.element_uid)));
   } else if (action.step) {
     // `UX-1244`: a capacity-bound run's builders step names no element.
     row.append(el("span", { "data-field": "step" }, action.step));
   }
 
-  if (typeof action.saving_us === "number") {
-    const worth = document.createElement("span");
-    worth.className = "worth num";
-    worth.setAttribute("data-field", "saving_us");
-    worth.setAttribute("data-raw", String(action.saving_us));
-    worth.textContent = `saves ${seconds(action.saving_us)}`;
-    row.append(worth);
-    const perDay = agentHours("saving_us", action.saving_us, rate);
+  // UX-1274: a replayed gain is said as a replay and priced a day as a saving is; a reach is not priced.
+  const [field, text] = typeof action.saving_us === "number" ? ["saving_us", `saves ${seconds(action.saving_us)}`]
+    : typeof action.replayed_delta_us === "number"
+      ? ["replayed_delta_us", `replays ${seconds(action.replayed_delta_us)} shorter`]
+      : typeof action.downstream_count === "number"
+        ? ["downstream_count", `${tally(action.downstream_count)} downstream`] : [];
+  if (field) {
+    row.append(el("span", { class: "worth num", "data-field": field, "data-raw": String(action[field]) }, text));
+    const perDay = field !== "downstream_count" && agentHours(field, action[field], rate);
     if (perDay) row.append(perDay);
-  } else if (typeof action.replayed_delta_us === "number") {
-    // UX-1274's replayed gain: a replay, said as one, beside its price a day.
-    row.append(el("span", { class: "worth num", "data-field": "replayed_delta_us",
-      "data-raw": String(action.replayed_delta_us) }, `replays ${seconds(action.replayed_delta_us)} shorter`));
-    const perDay = agentHours("replayed_delta_us", action.replayed_delta_us, rate);
-    if (perDay) row.append(perDay);
-  } else if (typeof action.downstream_count === "number") {
-    const reach = document.createElement("span");
-    reach.className = "worth num";
-    reach.setAttribute("data-field", "downstream_count");
-    reach.setAttribute("data-raw", String(action.downstream_count));
-    reach.textContent = `${tally(action.downstream_count)} downstream`;
-    row.append(reach);
   }
 
   // `UX-1019`: **one "why" control.** `whyBlock` (`renderWhyRanked`)

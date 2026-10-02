@@ -142,7 +142,8 @@ from .schema_hints import (
 # array of level *numbers* - always `[0 … n-1]`, the row number - and is
 # an array of rows naming each level's members. A consumer indexing it
 # as integers breaks, which is what a version move is for.
-ANALYZE = "analyze/v6"
+# `UX-1247`: v7 - `by_binary` is ranked rows of CPU, wall, calls and elements, not a calls map.
+ANALYZE = "analyze/v7"
 COMPARE = "compare/v2"
 BLAST = "blast/v2"
 STORE = "store/v1"
@@ -153,7 +154,16 @@ STORE = "store/v1"
 # reads a `v2` analyze document by name - the keys this item renamed
 # resolve through `guessQuantity` rather than through a declaration, so
 # an old snapshot still renders, with the fallback saying so.
-SUPERSEDED = ("analyze/v5", "analyze/v4", "analyze/v3", "analyze/v2", "compare/v1", "blast/v1", "correlate/v1")
+SUPERSEDED = (
+    "analyze/v6",
+    "analyze/v5",
+    "analyze/v4",
+    "analyze/v3",
+    "analyze/v2",
+    "compare/v1",
+    "blast/v1",
+    "correlate/v1",
+)
 # UX-234: the store as a distribution rather than as a list. Beside
 # `store/v1` rather than inside it: a listing is one row per snapshot
 # and this is one row per *host class*, and a consumer wanting the
@@ -351,6 +361,8 @@ _ANALYZE_OPTIONAL = {
     # the Plane 1 sweep with Plane 2's draw, and `capacity_verdict` -
     # "was the capacity right?" - is already here for it to sit beside.
     "capacity_recommendation": "object",
+    # UX-1254: on every full report; with one plane it carries its absence sentence.
+    "agent_sizing": "object",
     # UX-676: the same axis in cores rather than job slots, and the two
     # populations of window that violate it. Not gated on Plane 2 the
     # way `capacity_recommendation` above is - the host is sampled on
@@ -398,8 +410,8 @@ _ANALYZE_OPTIONAL = {
     # `UX-370`: what Plane 2 saw the build run, in calls and in CPU.
     # Projected from the Plane 2 report beside the join, so present on
     # exactly the runs the join is - additive, so `analyze/v4` does not
-    # bump.
-    "by_binary": "object",
+    # bump. `UX-1247` made `by_binary` rows: `analyze/v7`.
+    "by_binary": "array",
     "binary_cost": "array",
     "configure_phase": "object",
     # `UX-383`: the run-level halves of the three blocks `UX-370` left
@@ -1123,6 +1135,8 @@ ANALYZE_FULL_KEYS = (
     # tables are conditional: they are populations, and an empty one is
     # a run with no violating window rather than a shortened document.
     "utilization_envelope",
+    # `UX-1254`: on every full report; with one plane it carries its absence sentence.
+    "agent_sizing",
 )
 
 # UX-215: the keys a full report carries only when `--plane2` was
@@ -1212,7 +1226,12 @@ _COMPARE_REQUIRED = {
 # live id stops a document a consumer already wrote from validating.
 # The guarantee is the emitter's, held against the real payload by
 # `tests/unit/test_a_required_set_grew_under_an_unchanged_id.py`.
-_COMPARE_ALWAYS_WRITTEN = ("verdict_provenance", "build_class_comparison", "baseline_band_sources")
+_COMPARE_ALWAYS_WRITTEN = (
+    "verdict_provenance",
+    "build_class_comparison",
+    "baseline_band_sources",
+    "total_duration_delta_share",
+)
 
 # UX-221: `element_diff` has been emitted since UX-79 and declared by
 # nothing, so `UX-190`'s contract never covered it and `bga view` had no
@@ -1248,6 +1267,8 @@ _COMPARE_OPTIONAL = {
     # `_COMPARE_ALWAYS_WRITTEN` rather than required - the same third
     # state the two keys above are in.
     "baseline_band_sources": "array",
+    # `UX-1257`: the wall delta over the baseline's wall-clock; `null` with no baseline total.
+    "total_duration_delta_share": "number",
 }
 
 _BLAST_REQUIRED = {
@@ -3723,7 +3744,8 @@ _ANALYZE_HINTS = {
                         "key": "name",
                         "title": "Constraint",
                         "sortable": True,
-                        "description": "`graph`, `CPU` or `memory` — which of the four inputs this ceiling comes from.",
+                        "description": "The graph, the CPU, the host's cores or memory — which of the four inputs "
+                        "this ceiling comes from. The host's cores is the CPU figure capped at the core count.",
                     },
                     {"key": "allows", "title": "Builders it allows", "quantity": "count", "sortable": True},
                     {
@@ -3736,7 +3758,7 @@ _ANALYZE_HINTS = {
                         "title": "Before clamping",
                         "quantity": "count",
                         "sortable": True,
-                        "description": "Present only on the CPU row, "
+                        "description": "Present only on the host's cores row, "
                         "and only when the derived figure "
                         "exceeded the host's cores — the "
                         "unclamped value `allows` was capped "
@@ -3853,6 +3875,45 @@ _ANALYZE_HINTS = {
             },
         },
     },
+    # UX-1254: copied from the sections each field names in `source`, never computed.
+    "agent_sizing": {
+        QUESTION: 'What does this run want from this host?',
+        RAIL: 'act',
+        "description": "Builders, cores and memory in one place, each read off the section it links.",
+        "properties": {
+            "builders": {
+                "description": "Recommended, the graph's ceiling, and what this run had.",
+                "properties": {
+                    "recommended": {
+                        QUANTITY: "count",
+                        "description": "Builders the capacity recommendation settles on.",
+                    },
+                    "graph_ceiling": {QUANTITY: "count", "description": "Builders the sweep's knee allows."},
+                    "observed": {QUANTITY: "count", "description": "Builders this run was given."},
+                },
+            },
+            "cores": {
+                "description": "Cores busy on average, and the p95 peak where the host was sampled.",
+                "properties": {
+                    "average": {QUANTITY: "ratio", "description": "Plane 2's cores busy."},
+                    "peak": {QUANTITY: "ratio", "description": "The host series' p95."},
+                    "host": {QUANTITY: "count", "description": "Cores the host reports having."},
+                },
+            },
+            "memory": {
+                "description": "At most: the largest per-element peak RSS times the builders, as if all peak at once.",
+                "properties": {
+                    "basis": {
+                        "description": "Envelope when read from the host's memory envelope; process peak when from Plane 2's per-element peaks."
+                    },
+                    "per_element_bytes": {QUANTITY: "bytes", "description": "The largest element's peak RSS."},
+                    "builders": {QUANTITY: "count", "description": "The builders it is multiplied by."},
+                    "bytes": {QUANTITY: "bytes", "description": "Per-element peak times the builders."},
+                },
+            },
+            "absence": {"description": "Which of cores and memory this run did not measure, and why."},
+        },
+    },
     "capacity_verdict": {
         QUESTION: 'Was the capacity right for this run?',
         RAIL: 'prove',
@@ -3931,7 +3992,8 @@ _ANALYZE_HINTS = {
     "violations": {
         QUESTION: 'What did not add up?',
         RAIL: 'prove',
-        GROWS: "ordering/clamp violations, one per offending dependency edge or resource check (no cap observed)",
+        GROWS: "ordering/clamp violations, one per offending dependency edge or resource check (no cap observed), "
+        "and at most one verdict_disagreement per bga.consistency.PAIRS row",
         "items": {"type": "object"},
     },
     # `UX-344`: every claim's chain, once, beside the claims.
@@ -4416,6 +4478,20 @@ _ANALYZE_HINTS = {
                 # published path, so a projection would have to drop
                 # numbers or invent paths for them.
                 "evidence": {"type": ["object", "null"], "properties": EVIDENCE_QUANTITIES},
+                # UX-1256: what to do about it, from the hint or next step that already said so.
+                "step": {
+                    "type": "object",
+                    "description": "What to do about this finding: a sentence, "
+                    "and the `bga` command line that runs it where one does — or "
+                    "why the finding has none.",
+                    "properties": {
+                        "text": {"type": "string"},
+                        "command": {"type": "string"},
+                        "why_none": {"type": "string"},
+                    },
+                    "oneOf": [{"required": ["text"]}, {"required": ["why_none"]}],
+                    "additionalProperties": False,
+                },
                 "copy_text": {
                     "description": "This finding as plain text: its "
                     "title, its evidence in declared "
@@ -4786,6 +4862,10 @@ _ANALYZE_HINTS = {
                             "rebuilds — the cost of "
                             "touching it, beside the gain.",
                         },
+                        "step": {
+                            "description": "A capacity-bound run's builders "
+                            "step, leading the list in place of an element.",
+                        },
                     },
                 },
             },
@@ -4808,18 +4888,42 @@ _ANALYZE_HINTS = {
     # three are that answer, declared so the generic renderer draws
     # them as quantities rather than as a wall of bare integers.
     "by_binary": {
-        QUESTION: 'What did this build actually run, and how often?',
+        QUESTION: 'What did this build actually run, and what did each binary cost?',
         RAIL: 'act',
         KEYED_BY: KEYED_BY_BINARY,
-        QUANTITY: "count",
         GROWS: "distinct binaries Plane 2 saw exec (real grower, no "
-        "cap in the payload; structured.js's table/map bound "
-        "applies on the page)",
-        "description": "Every binary Plane 2 saw exec, and how many "
-        "times the whole run ran it. The frequency half "
-        "of the question; binary cost is the time "
-        "half, per element.",
-        "additionalProperties": {QUANTITY: "count", "title": "Calls in run"},
+        "cap in the payload; structured.js's table bound applies "
+        "on the page)",
+        COLUMNS: [
+            "binary",
+            {"key": "cpu_us", "title": "CPU"},
+            {"key": "wall_us", "title": "Wall"},
+            {"key": "calls", "title": "Calls in run"},
+            {"key": "elements", "title": "Elements"},
+        ],
+        "description": "Every binary Plane 2 saw exec, ranked by the "
+        "CPU it cost the whole run: its CPU and wall summed over "
+        "binary cost's rows, how many times the run ran it, and in "
+        "how many elements. Binary cost is the per-element "
+        "drill-down.",
+        "items": {
+            "properties": {
+                "binary": {"description": "The executable name, as it was exec'd."},
+                "cpu_us": {
+                    QUANTITY: "duration_us",
+                    "description": "CPU across every element's calls: the "
+                    "sum of its binary cost rows. Absent when the Plane 2 "
+                    "report published only top-5 rankings, or no element "
+                    "it measured ran it.",
+                },
+                "wall_us": {
+                    QUANTITY: "duration_us",
+                    "description": "Wall-clock those calls spanned, summed the same way; absent with CPU.",
+                },
+                "calls": {QUANTITY: "count", "description": "How many times the whole run ran it."},
+                "elements": {QUANTITY: "count", "description": "How many elements ran it; absent with CPU."},
+            },
+        },
     },
     "binary_cost": {
         QUESTION: 'Which binaries cost this build its time?',
@@ -5229,12 +5333,13 @@ _ANALYZE_HINTS = {
                 "this accounting, not the capacity verdict."
             },
             "oversubscription_evidence": {
-                "description": "What that hint rests on, including the case where there was not enough to say."
+                "description": "What that hint rests on, including the case where there was not enough "
+                "to say. Full builder slots alone are no hint; high CPU use needs Plane 2's cores busy."
             },
             "max_observed_concurrency": {
                 QUANTITY: "count",
                 "title": "Peak tasks at once",
-                "description": "The most tasks seen running together in this accounting's own view of the run.",
+                "description": "The most task intervals that overlap at one instant.",
             },
             "useful_share": {
                 INLINE: "name",
@@ -5661,6 +5766,11 @@ _CONFIDENCE = {
 
 
 _COMPARE_HINTS = {
+    "total_duration_delta_share": {
+        QUANTITY: "share",
+        DIRECTION: "lower_is_better",
+        "description": "The wall-clock change as a share of the baseline's wall-clock. Negative is faster.",
+    },
     # `UX-610`: the same shape `analyze/v5` publishes a claim's chain
     # in, so a consumer that learned to read one has learned to read
     # this. Its own description, because these paths walk `compare/v2`

@@ -59,6 +59,9 @@ MARKERS = ("never written", "only ever *read*", "superseded")
 #: today. `test_the_exemption_still_earns_itself` holds it to that.
 DATED = {"directions.md": "for what the tool is today"}
 
+#: The heading past which a document is its own dated log (`architecture.md`'s).
+DATED_LOG = "\n## Verification Log\n"
+
 
 def _superseded():
     from bga import contracts
@@ -104,7 +107,8 @@ def _findings():
     for path in _documents():
         if path.name in DATED:
             continue
-        for start, block in _blocks(path.read_text(encoding="utf-8")):
+        # `UX-1247`: a Verification Log is a dated record, append-only by `UX-653` - out, like `docs/audits/`.
+        for start, block in _blocks(path.read_text(encoding="utf-8").split(DATED_LOG, 1)[0]):
             for offset, line in enumerate(block):
                 # A **table row** answers for itself; a paragraph
                 # answers as a whole. Found by a mutation that

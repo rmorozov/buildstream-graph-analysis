@@ -5,6 +5,7 @@ from typing import Optional
 from .. import findings as findings_mod
 from .. import provenance, schemas, sources
 from .. import shown as qty
+from ..consistency import verdict_violations
 from ..findings import compute_findings, compute_headline, compute_next_steps, render_findings
 from ..floors.cpu import ASSUMPTIONS as cpu_floor_assumptions
 from ..ingest.models import AnalysisResult
@@ -197,6 +198,8 @@ def _format_violation_summary(violation: dict) -> str:
             f"declared memory budget of {violation.get('memory_budget_mb')}MB - risk of "
             f"swap, a qualitatively worse failure mode than CPU contention, see UX-21"
         )
+    if vtype == 'verdict_disagreement':
+        return f"verdicts disagree: {violation.get('detail')}"
     if vtype == 'floor_below_longest_task':
         return (
             f"I3 violated: T-infinity,observed "
@@ -365,7 +368,7 @@ def _format_next_steps(result: AnalysisResult) -> list[str]:
     return lines + [""]
 
 
-def _format_confidence_and_violations(result: AnalysisResult) -> list[str]:
+def _format_confidence_and_violations(result: AnalysisResult, headline: Optional[dict] = None) -> list[str]:
     """Confidence/violations block (P4-02 requirement 1) - previously
     result.confidence/.violations (Part 33's hard/soft gates, P1-13) were
     fully populated but never printed in text output at all, only
@@ -385,7 +388,7 @@ def _format_confidence_and_violations(result: AnalysisResult) -> list[str]:
 
     lines.extend(_format_timestamp_resolution(result))
 
-    violations = result.violations or []
+    violations = list(result.violations or []) + verdict_violations(result, headline)
     if violations:
         lines.append(f"Violations ({len(violations)}):")
         for violation in violations:
@@ -686,8 +689,9 @@ def _render_key_findings_section(result: AnalysisResult, section, by_kind, full_
         lines.extend(_format_key_findings(result, explain=explain))
         # UX-596: beside the savings it converts, and only when a rate
         # was supplied.
-        lines.extend(_format_in_your_units(result, compute_findings(result)))
-        lines.extend(_format_confidence_and_violations(result))
+        findings = compute_findings(result)
+        lines.extend(_format_in_your_units(result, findings))
+        lines.extend(_format_confidence_and_violations(result, compute_headline(result, findings)))
     return lines
 
 

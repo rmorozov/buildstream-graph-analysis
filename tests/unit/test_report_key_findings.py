@@ -146,7 +146,7 @@ def test_key_findings_names_the_correct_dominant_wait_category(analyzed_result):
     output = format_text(analyzed_result)
     key_findings_section = output.split("Certified Floors:")[0]
     # `UX-365`: the superlative names the population it is over.
-    assert "Biggest wait category" in key_findings_section
+    assert "the biggest wait category" in key_findings_section
     assert "is dependency wait" in key_findings_section
     # Not any of the other categories, which are all much smaller here.
     assert "is resource wait" not in key_findings_section
@@ -199,8 +199,7 @@ def test_key_findings_shows_confidence_headline(analyzed_result):
 def test_key_findings_shows_certified_headroom_in_plain_language(analyzed_result):
     output = format_text(analyzed_result)
     key_findings_section = output.split("Certified Floors:")[0]
-    assert "Certified headroom" in key_findings_section
-    assert "available" in key_findings_section
+    assert "of certified headroom at most" in key_findings_section
 
 
 # --- UX-02: efficiency_score --------------------------------------------
@@ -220,7 +219,7 @@ def test_low_confidence_efficiency_score_carries_a_caveat(analyzed_result):
     assert analyzed_result.confidence["primary"] < 0.8
     output = format_text(analyzed_result)
     key_findings_section = output.split("Certified Floors:")[0]
-    assert "Efficiency score:" in key_findings_section
+    assert "efficiency score —" in key_findings_section
     assert "low-confidence data" in key_findings_section
 
 
@@ -249,7 +248,7 @@ def test_fully_packed_high_confidence_run_scores_high_with_no_caveat():
     assert result.confidence["primary"] >= 0.8
     output = format_text(result)
     key_findings_section = output.split("Certified Floors:")[0]
-    assert "Efficiency score: 100.0% (scheduling is near the certified floor for this graph" in key_findings_section
+    assert "100.0% efficiency score — scheduling is near the certified floor" in key_findings_section
     assert "low-confidence" not in key_findings_section
 
 

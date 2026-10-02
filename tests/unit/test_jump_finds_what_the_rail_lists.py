@@ -92,7 +92,9 @@ _LAND = r"""
   const section = parseFloat(getComputedStyle(at?.closest("section[data-section]") ?? document.body).scrollMarginTop);
   const tools = at?.tagName === "TR" ? at.closest("table")?.parentNode?.querySelector(":scope > .table-tools") : null;
   const stuck = tools && getComputedStyle(tools).position === "sticky" ? tools.getBoundingClientRect().bottom : 0;
-  return { kind: KIND, key, top: Math.round(at?.getBoundingClientRect().top ?? -1),
+  const table = at?.tagName === "TR" ? at.closest("table") : null;
+  const shown = table ? [...table.querySelectorAll(":scope > tbody > tr")].filter((r) => r.offsetParent).length : null;
+  return { kind: KIND, key, stuck: Math.round(stuck), shown, top: Math.round(at?.getBoundingClientRect().top ?? -1),
            margin: Math.round(Math.max(section, stuck)), section: Math.round(section),
            tag: at?.tagName ?? null, hash: location.hash.split("~")[0] };
 })()
@@ -159,4 +161,7 @@ class TestJumpFindsWhatTheRailLists:
             assert abs(target["top"] - target["margin"]) <= 8, str(target)
         # `UX-1225`: a binary lands on its own table filtered to it, so its tools sit above the row, not over it.
         assert all(t["hash"] == "#by_binary" for t in landed if t["tag"] == "TR"), landed
-        assert any(t["tag"] == "TR" for t in landed), landed
+        rows = [t for t in landed if t["tag"] == "TR"]
+        assert rows, landed
+        # `UX-1235`: the stuck tools are measured, not the hash: their bottom clears the row, one row is shown.
+        assert all(0 < t["stuck"] <= t["top"] + 1 and t["shown"] == 1 for t in rows), rows

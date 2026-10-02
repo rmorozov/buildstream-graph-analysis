@@ -4,8 +4,10 @@ import json as _json
 from typing import Optional
 
 from .. import producer, provenance, schemas
+from ..consistency import verdict_violations
 from ..findings import compute_findings, compute_headline, compute_next_steps, finding_copy_text, reader_index
 from ..ingest.models import AnalysisResult
+from ..plane2 import binary_totals
 from ._shared import (
     ATTRIBUTION_CATEGORY_HINTS_BY_KEY,
     GRAPH_SIGNAL_KEYS,
@@ -315,6 +317,12 @@ def _add_capacity_recommendation(data, result, section, by_kind):
         data['capacity_recommendation'] = result.capacity_recommendation
 
 
+def _add_agent_sizing(data, result, section, by_kind):
+    # UX-1254: published with one plane too - its absence sentence is the Plane 1-only answer.
+    if section is None and getattr(result, 'agent_sizing', None):
+        data['agent_sizing'] = result.agent_sizing
+
+
 def _add_utilization_envelope(data, result, section, by_kind):
     # UX-676: the same question in cores. Published whenever the section
     # was computed at all, including when it computed to a named
@@ -429,7 +437,9 @@ def _add_violations(data, result, section, by_kind):
     if section is None and hasattr(result, 'violations'):
         # Always include, even when empty - an empty list means "checked,
         # none found", which is different from the key being absent.
-        data['violations'] = result.violations
+        # UX-1253: plus the verdicts that contradict each other, a copy so
+        # `result.violations` stays the analyzer's.
+        data['violations'] = list(result.violations or []) + verdict_violations(result, data.get('headline'))
 
 
 def _add_model(data, result, section, by_kind):
@@ -531,8 +541,10 @@ def _add_plane2_join(data, result, section, by_kind):
     # Plane 2 report published it, which is why this sits beside
     # the join rather than in `correlate`. Absent without
     # `--plane2` for the same reason the join is.
-    if native_report.get('by_binary'):
-        data['by_binary'] = dict(native_report['by_binary'])
+    # `UX-1247`: per binary, ranked by CPU; `binary_cost` is the drill-down.
+    totals = binary_totals(native_report)
+    if totals:
+        data['by_binary'] = totals
     rows = _binary_rows(native_report.get('binary_cost'))
     if rows:
         data['binary_cost'] = rows
@@ -636,6 +648,7 @@ _SECTIONS = (
     _add_capacity_verdict,
     _add_duration_resolution,
     _add_capacity_recommendation,
+    _add_agent_sizing,
     _add_utilization_envelope,
     _add_plane2_coverage,
     _add_plane2_absence,

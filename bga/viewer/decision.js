@@ -12,7 +12,7 @@
  */
 import { commandLine, identify, labelFor } from "./controls.js";
 import {
-  SVG, svg, seconds, mib, bar, OVERVIEW_SHOWN, elementAnchor, plainValue,
+  SVG, svg, seconds, mib, bar, OVERVIEW_SHOWN, elementAnchor, findingAnchor, plainValue,
 } from "./primitives.js";
 import {
   SCALE, GRADE_ANNOTATION, GRADE_EXHIBIT, exhibitAxis, exhibitTwin,
@@ -21,14 +21,14 @@ import {
 // to take this import unaliased - the export concatenates the modules
 // into one scope and drops the `import` line, so an alias resolves to
 // a name nothing declares.
-import { TERMS, childNode, el, findingLink, heading, hintsOf, pathLabel, quantity, quantityAt, title } from "./format.js";
+import { READER_LABELS, TERMS, childNode, el, findingLink, heading, hintsOf, pathLabel, quantity, quantityAt, tally, title } from "./format.js";
 import {
   resolvePath, elementFacts, elementHistory, renderElementHistory,
 } from "./element.js";
 // `UX-643`: the fold `UX-347` built, driven by the choice this module
 // already collects. The role decides what is promoted; `chapters.js`
 // owns how a thing folds and this module does not learn a second way.
-import { applyRole } from "./chapters.js";
+import { applyRole, compareDelta } from "./chapters.js";
 import { plural } from "./tables.js";
 
 // ------------------------------------------------- UX-207: the decision
@@ -341,9 +341,11 @@ function factText(row) {
   return shownValue(row.value, row.kind);
 }
 
-// `UX-1140`: a number through the element card's formatter; anything else verbatim.
+// `UX-1140`: a number through the element card's formatter; a key through its reader label (`UX-1246`); anything else verbatim.
 function shownValue(value, kind) {
-  return typeof value === "number" ? quantity(value, kind) : plainValue(value);
+  if (typeof value === "number") return quantity(value, kind);
+  const said = plainValue(value);
+  return Object.hasOwn(READER_LABELS, said) ? READER_LABELS[said] : said;
 }
 
 /**
@@ -692,6 +694,13 @@ export function renderDecision(payload, investigate = null, copy = null,
   sentence.setAttribute("data-field", "headline.sentence");
   sentence.textContent = headline.sentence ?? "";
   section.append(sentence);
+  // `UX-1257`: the delta, linking the compare chapter that leads with it and its verdict; drawn once each.
+  if ("comparison" in options) {
+    const delta = compareDelta(options.comparison);
+    const absent = options.comparison || options.refused ? null : "No earlier run to compare against.";
+    if (delta) section.append(el("p", { "data-role": "compare-lead" }, el("a", { href: "#chapter-compare" }, delta)));
+    else if (absent) section.append(el("p", { "data-role": "compare-lead" }, absent));
+  }
 
   // `UX-372`: and, for a reader who says who they are, their own
   // biggest lever. Below the diagnosis, which is true for everyone.
@@ -879,12 +888,17 @@ function actionRow(action, investigate, whyBlock = null) {
 
   // UX-216: the decision panel names an element; naming it and not
   // linking it is the gap this item closes.
-  const name = document.createElement("a");
-  name.setAttribute("href", `#${elementAnchor(action.element_uid ?? "")}`);
-  const code = document.createElement("code");
-  code.textContent = action.element_uid ?? "";
-  name.append(code);
-  row.append(name);
+  if (action.element_uid) {
+    const name = document.createElement("a");
+    name.setAttribute("href", `#${elementAnchor(action.element_uid)}`);
+    const code = document.createElement("code");
+    code.textContent = action.element_uid;
+    name.append(code);
+    row.append(name);
+  } else if (action.step) {
+    // `UX-1244`: a capacity-bound run's builders step names no element.
+    row.append(el("span", { "data-field": "step" }, action.step));
+  }
 
   if (typeof action.saving_us === "number") {
     const worth = document.createElement("span");
@@ -898,7 +912,7 @@ function actionRow(action, investigate, whyBlock = null) {
     reach.className = "worth num";
     reach.setAttribute("data-field", "downstream_count");
     reach.setAttribute("data-raw", String(action.downstream_count));
-    reach.textContent = `${action.downstream_count} downstream`;
+    reach.textContent = `${tally(action.downstream_count)} downstream`;
     row.append(reach);
   }
 
@@ -909,13 +923,14 @@ function actionRow(action, investigate, whyBlock = null) {
   if (!whyBlock) {
     const why = document.createElement("a");
     why.className = "why";
-    why.setAttribute("href", "#findings");
+    why.setAttribute("href", action.element_uid || !action.finding_id
+      ? "#findings" : `#${findingAnchor(action.finding_id)}`);
     why.textContent = "why";
     row.append(why);
   }
 
   // UX-204's transport, where there is a timeline behind it.
-  if (investigate) {
+  if (investigate && action.element_uid) {
     const button = investigate(action);
     if (button) row.append(button);
   }

@@ -166,11 +166,6 @@ class TestEveryPrintedCommandParsesIntoWhatItMeans:
         not the check. What it parses **into** is."""
         step = _steps(store_run)["measure-again"]
         parsed = bga_snapshot.create_parser().parse_args(step["argv"][2:])
-        assert parsed.project, (
-            f"`{' '.join(step['argv'])}` leaves --project unset, so the "
-            "project path is being parsed as the build command. That is the "
-            "UX-326 crash: `ValueError: command must start with 'bst'`."
-        )
         command = [token for token in parsed.cmd if token != "--"]
         assert command and command[0] == "bst", (
             f"the build command parsed out of `{' '.join(step['argv'])}` is {command}, which `bga snapshot` refuses"

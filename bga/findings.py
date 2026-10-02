@@ -32,6 +32,7 @@ numbers behind the sentence, so a consumer never has to parse `title`.
 
 import collections
 import os
+import statistics
 from typing import Optional
 
 from . import shown as qty
@@ -137,6 +138,10 @@ FINDING_READERS = {
     # `UX-860`: the envelope's own overcommit test, half of which is
     # swap - previously a word in the headline sentence and nowhere else.
     "swap-observed": "capacity-operator",
+    # UX-1255: Plane 2's binary, job and configure findings - each a recipe's to change.
+    "costliest-binary": "recipe-author",
+    "jobs-waiting": "recipe-author",
+    "configure-share": "recipe-author",
     # UX-680: R4, the task's own; R5's section needs Plane 2 and half (a) fires without it.
     "remote-execution-whatif": "ci-gatekeeper",
 }
@@ -236,6 +241,10 @@ OPPORTUNITY_FLOOR_PCT = 1.0
 # "how long do I take".
 CHAIN_BOUND_RATIO = 0.9
 
+# UX-1253: at or above this share of wall-clock the resource floor LB is the
+# wall, so the run is bound by its capacity rather than by its schedule.
+CAPACITY_BOUND_SHARE = 0.95
+
 # UX-70: at or above this share of zero-slack elements the graph is a
 # mesh of near-equal chains rather than one chain, and "optimize the top
 # element" stops being meaningful advice on its own. Named by UX-229,
@@ -249,8 +258,9 @@ MESH_ZERO_SLACK_SHARE = 0.5
 # rather than surviving only as a clause of one finding's title.
 DIAGNOSIS_CHAIN_BOUND = 'chain_bound'
 DIAGNOSIS_SCHEDULER_BOUND = 'scheduler_bound'
+DIAGNOSIS_CAPACITY_BOUND = 'capacity_bound'
 DIAGNOSIS_INCONCLUSIVE = 'inconclusive'
-DIAGNOSES = (DIAGNOSIS_CHAIN_BOUND, DIAGNOSIS_SCHEDULER_BOUND, DIAGNOSIS_INCONCLUSIVE)
+DIAGNOSES = (DIAGNOSIS_CHAIN_BOUND, DIAGNOSIS_SCHEDULER_BOUND, DIAGNOSIS_CAPACITY_BOUND, DIAGNOSIS_INCONCLUSIVE)
 
 # One wording, read by the text report, the JSON and the page. The
 # clause `_time_concentration_findings` used to spell out itself is now
@@ -274,6 +284,9 @@ DIAGNOSIS_SENTENCES = {
     "is {ratio} of the time tasks were running, below the {bound} "
     "chain-bound line, so the time is going somewhere other than the "
     "chain.",
+    DIAGNOSIS_CAPACITY_BOUND: "This build is capacity-bound, not scheduler-bound: the resource floor "
+    "is {ratio} of wall-clock, at or above the {bound} capacity-bound line, "
+    "so its builder slots set the wall, not the chain or the scheduler. {step}.",
     DIAGNOSIS_INCONCLUSIVE: "Neither the chain nor the scheduler can be named the constraint: "
     "this run did not record the durations the comparison needs.",
 }
@@ -381,7 +394,10 @@ def _finding(
     detail: Optional[list[str]] = None,
     elements: Optional[list[str]] = None,
     evidence: Optional[dict] = None,
+    *,
+    step: dict,
 ) -> dict:
+    # `step` has no default: a finding without one is a TypeError, not a silent gap (UX-1256).
     return {
         'id': id,
         'severity': severity,
@@ -389,7 +405,24 @@ def _finding(
         'detail': detail or [],
         'elements': elements or [],
         'evidence': evidence or {},
+        'step': step,
     }
+
+
+def _step(text: str, command: Optional[list[str]] = None) -> dict:
+    """What to do about a finding, and the command line where one exists."""
+    return {'text': text, 'command': ' '.join(command)} if command else {'text': text}
+
+
+def _none(why: str) -> dict:
+    """A finding with no step says why it has none."""
+    return {'why_none': why}
+
+
+def _run_command(result, *argv: str) -> Optional[list[str]]:
+    """`bga <argv> <run>`, naming the run as `compute_next_steps` does; None without a run path."""
+    run_dir = ((getattr(result, 'run_instance', None) or {}).get('run_dir') or '').strip()
+    return ['bga', *argv, run_token(run_dir)] if run_dir else None
 
 
 def _cache_findings(result: AnalysisResult) -> list[dict]:
@@ -442,16 +475,19 @@ def _cache_findings(result: AnalysisResult) -> list[dict]:
             _finding(
                 'cache-hit-ratio',
                 SEVERITY_INFO,
-                f"Caches off: all {built} element{'' if built == 1 else 's'} built from source, none reused — "
-                f"this is the nightly scenario, so a {qty.share(0)} hit ratio is the intent "
-                f"rather than a finding",
-                detail=detail,
+                f"{qty.share(0)} cache hits — caches off: all {built} element{'' if built == 1 else 's'} "
+                f"built from source, none reused",
+                detail=[
+                    "    This is the nightly scenario, so a 0% hit ratio is the intent rather than a finding",
+                    *detail,
+                ],
                 evidence={
                     'hit_share': hit_share,
                     'built_elements': built,
                     'cached_elements': cached,
                     'run_mode': 'full',
                 },
+                step=_none("a caches-off run reuses nothing by design"),
             )
         ]
 
@@ -477,14 +513,23 @@ def _cache_findings(result: AnalysisResult) -> list[dict]:
         _finding(
             'cache-hit-ratio',
             severity,
-            f"Cache hit ratio: {qty.share(hit_share)} ({cached} cached, {built} rebuilt) — {verdict}",
-            detail=detail,
+            f"{qty.share(hit_share)} cache hit ratio ({cached} cached, {built} rebuilt)",
+            detail=[f"    {verdict[:1].upper()}{verdict[1:]}", *detail],
             evidence={
                 'hit_share': hit_share,
                 'built_elements': built,
                 'cached_elements': cached,
                 'target_closure_hit_share': closure.get('hit_share'),
             },
+            step=(
+                _none("the cache did most of the work")
+                if severity == SEVERITY_INFO
+                else _step(
+                    "Find what moved the cache key near the root: most of this build should not have run."
+                    if severity == SEVERITY_HIGH
+                    else "Check what invalidated the elements that rebuilt."
+                )
+            ),
         )
     )
 
@@ -519,10 +564,12 @@ def _cache_findings(result: AnalysisResult) -> list[dict]:
             _finding(
                 'cache-transfer-cost',
                 SEVERITY_MEDIUM,
-                f"{qty.share(share)} of wall-clock was artifact transfer ({parts}) — "
-                f"this build spent it moving artifacts rather than making them"
-                f"{rate_clause}",
+                f"{qty.share(share)} of wall-clock was artifact transfer ({parts})",
+                detail=[f"    This build spent it moving artifacts rather than making them{rate_clause}"],
                 evidence=evidence,
+                step=_step(
+                    "Check the link to the artifact cache and the objects each pull moves: this time went to transfer."
+                ),
             )
         )
     findings.extend(capacity_findings)
@@ -546,15 +593,17 @@ def _cache_capacity_findings(capacity: dict) -> list[dict]:
             _finding(
                 'cache-capacity',
                 SEVERITY_MEDIUM,
-                f"The cache quota ({capacity['quota_declared']}) is "
-                f"{human_bytes(over_volume)} larger than the volume under it can "
-                f"give — the cache will be evicted by the disk filling up rather "
-                f"than by the quota, so the quota is not the ceiling it looks like",
+                f"{human_bytes(over_volume)} more cache quota ({capacity['quota_declared']}) than the volume can give",
+                detail=[
+                    "    The disk filling up will evict the cache before the quota does, so the quota "
+                    "is not the ceiling it looks like"
+                ],
                 evidence={
                     'quota_bytes': capacity.get('quota_bytes'),
                     'volume_total_bytes': capacity.get('volume_total_bytes'),
                     'quota_over_volume_bytes': over_volume,
                 },
+                step=_step("Lower the cache quota to what the volume holds, or grow the volume."),
             )
         )
     if capacity.get('at_low_watermark'):
@@ -567,12 +616,13 @@ def _cache_capacity_findings(capacity: dict) -> list[dict]:
             _finding(
                 'cache-capacity',
                 SEVERITY_HIGH,
-                f"The cache holds {human_bytes(capacity['cache_used_bytes'])} of a "
-                f"{capacity['quota_declared']} quota ({qty.share(capacity['used_share'])}, "
-                f"{state}) — past the "
-                f"{qty.share(capacity['low_watermark_share'])} low watermark, so "
-                f"BuildStream is evicting, and an element that rebuilt here may have "
-                f"had its artifact removed rather than its cache key moved",
+                f"{qty.share(capacity['used_share'])} of the {capacity['quota_declared']} cache quota is used, "
+                f"past the {qty.share(capacity['low_watermark_share'])} low watermark",
+                detail=[
+                    f"    {human_bytes(capacity['cache_used_bytes'])} held, {state}: BuildStream is evicting, "
+                    f"and an element that rebuilt here may have had its artifact removed rather than its "
+                    f"cache key moved"
+                ],
                 evidence={
                     'cache_used_bytes': capacity.get('cache_used_bytes'),
                     'quota_bytes': capacity.get('quota_bytes'),
@@ -580,6 +630,7 @@ def _cache_capacity_findings(capacity: dict) -> list[dict]:
                     'headroom_bytes': capacity.get('headroom_bytes'),
                     'low_watermark_share': capacity.get('low_watermark_share'),
                 },
+                step=_step("Raise the cache quota or free the volume: BuildStream is evicting artifacts."),
             )
         )
     return findings
@@ -619,11 +670,11 @@ def _artifact_weight_findings(weights: dict) -> list[dict]:
         _finding(
             'artifact-weight',
             SEVERITY_INFO,
-            f"The heaviest artifact this run put in the cache is "
-            f"{top['element']} at {human_bytes(top['files_bytes'])} — walked from "
-            f"the CAS, so it is that artifact's own weight rather than a proxy "
-            f"for it",
-            detail=detail,
+            f"{human_bytes(top['files_bytes'])} is the heaviest artifact this run put in the cache",
+            detail=[
+                f"    {top['element']}, walked from the CAS: that artifact's own weight rather than a proxy for it",
+                *detail,
+            ],
             elements=[row['element'] for row in heaviest],
             evidence={
                 'source': weights.get('source'),
@@ -634,6 +685,7 @@ def _artifact_weight_findings(weights: dict) -> list[dict]:
                 'shared_bytes': shared,
                 'heaviest': heaviest,
             },
+            step=_none("a weight to size the cache by, not a defect"),
         )
     ]
 
@@ -721,6 +773,7 @@ def _run_blocking_findings(result: AnalysisResult) -> list[dict]:
                     'interrupted': bool(build_failed.get('interrupted')),
                     'suspended': suspended,
                 },
+                step=_step("Capture a build that runs to completion: no figure here describes a finished build."),
             )
         )
 
@@ -736,11 +789,14 @@ def _run_blocking_findings(result: AnalysisResult) -> list[dict]:
             _finding(
                 'failed-task-time',
                 SEVERITY_HIGH,
-                f"failed {plural(failed_count, 'task attempt')} contributed "
-                f"{qty.duration(failed_us)} of EXECUTION_ON_CHAIN — real time the build "
-                "spent producing nothing. Counted as execution, not as waste, because "
-                "reclassifying it would move the attribution identity (I4)",
+                f"{qty.duration(failed_us)} of the critical path went to "
+                f"{plural(failed_count, 'failed task attempt')} that produced nothing",
+                detail=[
+                    "    Counted as execution, not as waste, because reclassifying it would move "
+                    "the attribution identity (I4)"
+                ],
                 evidence={'failed_task_us': failed_us, 'failed_task_count': failed_count},
+                step=_step("Find why the attempts failed: their time is on the chain and produced nothing."),
             )
         )
 
@@ -756,18 +812,19 @@ def _run_context_findings(result: AnalysisResult) -> list[dict]:
     # numbers, because it changes what they are *about*.
     if confidence.get('run_mode') == 'incremental':
         cached = confidence.get('critical_path_cached') or []
-        detail = f", {len(cached)} of them on the critical path" if cached else ""
         findings.append(
             _finding(
                 'run-mode-incremental',
                 SEVERITY_INFO,
-                "Incremental run (caches on): BuildStream skipped elements it "
-                f"had already built{detail}. Coverage and the floors below "
-                "describe the work this run actually did, not the whole project — "
-                "compare against another incremental run, not against a "
-                "caches-off nightly",
+                f"{plural(len(cached), 'critical-path element')} skipped as already built — incremental run"
+                if cached
+                else "Incremental run: BuildStream skipped elements it had already built",
+                detail=[
+                    "    Coverage and the floors below describe the work this run actually did, not the whole project"
+                ],
                 elements=list(cached),
                 evidence={'run_mode': 'incremental', 'critical_path_cached': len(cached)},
+                step=_step("Compare it against another incremental run, not against a caches-off nightly."),
             )
         )
 
@@ -785,8 +842,17 @@ def _run_context_findings(result: AnalysisResult) -> list[dict]:
             _finding(
                 'confidence',
                 SEVERITY_INFO if band == 'high' else SEVERITY_MEDIUM,
-                f"Confidence: {qty.share(primary)} ({band}){suffix}",
+                f"{qty.share(primary)} confidence ({band}){suffix}",
                 evidence={'primary': primary, 'band': band, 'violation_count': len(violations)},
+                step=(
+                    _none("high confidence: nothing to correct")
+                    if band == 'high'
+                    else _step(
+                        "Read the violations before trusting the figures."
+                        if violations
+                        else "Treat the figures as approximate."
+                    )
+                ),
             )
         )
     return findings
@@ -811,7 +877,7 @@ def _time_concentration_findings(
     total = result.total_duration_us or 0
     top = heavy[:TIME_CONCENTRATION_SHOWN_MAX]
     share = sum(d['duration_us'] for d in top) / path_us
-    verdict = " — this build is chain-bound, not scheduler-bound" if chain_bound else ""
+    verdict = " — chain-bound, not scheduler-bound" if chain_bound else ""
     detail: list[str] = []
     width = max(len(d['element_uid']) for d in top)
     rows = []
@@ -853,11 +919,12 @@ def _time_concentration_findings(
         _finding(
             'time-concentration',
             SEVERITY_HIGH,
-            f"Where the time is: {len(top)} element{'' if len(top) == 1 else 's'} are "
-            f"{qty.share(share)} of the {qty.duration(path_us)} critical path{verdict}",
+            f"{qty.share(share)} of the {qty.duration(path_us)} critical path is "
+            f"{plural(len(top), 'element')}{verdict}",
             detail=detail,
             elements=[d['element_uid'] for d in top],
             evidence={'path_us': path_us, 'share_of_path': share, 'chain_bound': chain_bound, 'rows': rows},
+            step=_step("Make these elements faster, or take them off the chain: the critical path is made of them."),
         )
     ]
 
@@ -899,12 +966,11 @@ def _time_concentration_findings(
                 _finding(
                     'mesh-graph',
                     SEVERITY_INFO,
-                    f"Note: {qty.share(density)} of elements have zero slack, "
-                    f"{off_path} of them off the critical path — this graph is "
-                    "a mesh of near-equal chains, so savings on one element are "
-                    "often capped by the next chain rather than by its own "
-                    "duration",
+                    f"{qty.share(density)} of elements have zero slack, {off_path} off the "
+                    "critical path — a mesh of near-equal chains",
+                    detail=["      A saving on one element is often capped by the next chain, not by its own duration"],
                     evidence={'zero_slack_share': density, 'zero_slack_off_path': off_path},
+                    step=_none("how far a saving reaches, not a defect"),
                 )
             )
         else:
@@ -912,10 +978,10 @@ def _time_concentration_findings(
                 _finding(
                     'chain-graph',
                     SEVERITY_INFO,
-                    f"Note: {qty.share(density)} of elements have zero slack, all on "
-                    "the critical path — no second chain of equal length, so a "
-                    "saving on any of them is worth its own duration",
+                    f"{qty.share(density)} of elements have zero slack, all on the critical "
+                    "path — a saving is worth its own duration",
                     evidence={'zero_slack_share': density, 'zero_slack_off_path': 0},
+                    step=_none("how far a saving reaches, not a defect"),
                 )
             )
         # Rendered inside the table it qualifies, where it has always been.
@@ -986,10 +1052,9 @@ def _graph_shape_findings(result: AnalysisResult) -> list[dict]:
         _finding(
             'graph-width',
             SEVERITY_INFO,
-            f"The graph is {len(depth):,} elements in {stages:,} dependency "
-            f"stages, and its widest stage holds {widest:,} — so no more than "
-            f"{widest:,} can ever be building at once, whatever the capacity",
+            f"{plural(widest, 'element')} at most can ever build at once — the widest of {stages:,} dependency stages",
             evidence={'element_count': len(depth), 'dependency_stages': stages, 'widest_stage': widest},
+            step=_none("a ceiling the dependency graph sets; only its dependencies move it"),
         )
     ]
 
@@ -1065,11 +1130,16 @@ def _shared_source_findings(result: AnalysisResult) -> list[dict]:
     if not headline:
         return []
     top = (blast.get('rows') or [{}])[0]
+    reach, of = top.get('blast_count'), blast.get('element_count')
     return [
         _finding(
             'shared-source-blast',
             SEVERITY_MEDIUM,
-            f"Shared source: {headline[:1].lower()}{headline[1:]}",
+            # The repository URL and the because-clause are the detail line (UX-1248).
+            f"{reach:,} of {of:,} elements rebuild on any commit to one shared source"
+            if reach is not None and of
+            else "One shared source decides most of this build's rebuilds",
+            detail=[f"    {headline}"],
             evidence={
                 'resource': top.get('identity'),
                 'kind': top.get('kind'),
@@ -1080,7 +1150,12 @@ def _shared_source_findings(result: AnalysisResult) -> list[dict]:
                 'measured_us': top.get('measured_us'),
             },
             elements=top.get('direct_elements') or [],
+            step=_step(
+                "Narrow which elements take this source, or key it per element, so a change stops rebuilding the rest."
+            ),
         )
+        # The section leads with the same sentence; the card links there rather than drawing it twice.
+        | {'section': 'resource_blast'}
     ]
 
 
@@ -1110,7 +1185,8 @@ def _memory_finding(result: AnalysisResult) -> list[dict]:
         _finding(
             'memory-envelope',
             severity,
-            f"Memory: {lines[0]}",
+            (parts := lines[0].split('; ', 1))[0],
+            detail=[f"    {parts[1]}"] if len(parts) > 1 else None,
             evidence={
                 'builders': at_observed['builders'],
                 'envelope_bytes': at_observed['envelope_bytes'],
@@ -1120,6 +1196,15 @@ def _memory_finding(result: AnalysisResult) -> list[dict]:
                 'first_builders_that_does_not_fit': ceiling,
                 'elements_measured': envelope['elements_measured'],
             },
+            step=(
+                _none("memory does not bind at this setting")
+                if severity == SEVERITY_INFO
+                else _step(
+                    f"Lower --builders below {at_observed['builders']}: the measured peaks do not fit in RAM."
+                    if severity == SEVERITY_HIGH
+                    else f"Keep --builders at {at_observed['builders']}: one more would swap."
+                )
+            ),
         )
     ]
 
@@ -1203,7 +1288,9 @@ def _capacity_recommendation_finding(result: AnalysisResult) -> list[dict]:
     # than leaving the clamp implicit in the number alone.
     binding_row = next(c for c in recommendation['constraints'] if c['name'] == binding)
     clamped_from = binding_row.get('clamped_from')
-    clamp_note = f" (the host's cores bound it, not the raw {clamped_from})" if clamped_from else ""
+    clamp_note = f"; the CPU alone could feed {clamped_from}" if clamped_from else ""
+    # UX-1246: a host-core cap is named as the cap, never as CPU binding.
+    cap = f"the host's {plural(recommendation['host_cpu_count'], 'core')} cap it" if binding == 'host_cores' else ""
     if recommended > builders:
         # Deliberately weaker than "raise it to N". Measured on a
         # reconstructed macro-fixed `examples/06` where this block said
@@ -1217,28 +1304,35 @@ def _capacity_recommendation_finding(result: AnalysisResult) -> list[dict]:
         # it, and saying otherwise would be UX-14's caveat with the
         # caveat removed.
         verdict = (
-            f"{binding} binds first, at {recommended}{clamp_note} — nothing "
+            f"{cap or f'{binding} binds first,'} at {recommended}{clamp_note} — nothing "
             f"measured here rules out {plural(recommended - builders, 'more builder')}, "
             f"which is a hypothesis to time rather than a "
             f"setting to apply"
         )
+        short = "time it before keeping it"
         severity = SEVERITY_MEDIUM
     elif recommended < builders:
         verdict = (
-            f"{binding} binds at {recommended}{clamp_note}, below the "
+            f"{cap or f'{binding} binds'} at {recommended}{clamp_note}, below the "
             f"{builders} configured — more builders contend rather than "
             f"overlap here"
         )
+        short = f"below the {builders} configured"
         severity = SEVERITY_HIGH
     else:
         verdict = (
-            f"{binding} binds at exactly {recommended}{clamp_note} — this "
+            f"{cap or f'{binding} binds'} at exactly {recommended}{clamp_note} — this "
             f"run is already at the setting its own measurements support"
         )
+        short = "the setting this run supports"
         severity = SEVERITY_INFO
 
     # UX-1143: the section's own lead sentence first, so the text report and the page say one thing.
     detail = [f"    {recommendation['verdict']}"] if recommendation.get('verdict') else []
+    # UX-1248: the title keeps the number and the cap; the setting and the verdict's reason read here.
+    detail.append(
+        f"    {setting} on {plural(recommendation['host_cpu_count'], 'core')}: {verdict.split(' — ', 1)[-1]}."
+    )
     detail += [
         f"    {constraint['name']} allows {constraint['allows']}: {constraint['reason']}"
         for constraint in recommendation['constraints']
@@ -1279,7 +1373,7 @@ def _capacity_recommendation_finding(result: AnalysisResult) -> list[dict]:
         _finding(
             'capacity-recommendation',
             severity,
-            f"Capacity: {setting} on {(n := recommendation['host_cpu_count'])} core{'' if n == 1 else 's'}: {verdict}",
+            f"{plural(recommended, 'builder')}: {cap or f'{binding} binds'}{clamp_note} — {short}",
             detail=detail,
             elements=pinned,
             evidence={
@@ -1299,6 +1393,21 @@ def _capacity_recommendation_finding(result: AnalysisResult) -> list[dict]:
                 'sweep_memory_builders': recommendation.get('sweep_memory_builders'),
                 'sweep_binding': recommendation.get('sweep_binding'),
             },
+            step=(
+                _step(f"Remove `notparallel` from {pinned[0]} or raise its job count before raising anything.")
+                if pinned
+                # UX-1244: a host-core cap's step is measuring past the cap, the decision panel's builders step.
+                else _step(f"{_capacity_step(result)[1]}.", _run_command(result, 'sweep'))
+                if binding == 'host_cores'
+                else _step(
+                    f"Time a build at --builders {recommended} against this one before keeping it.",
+                    _run_command(result, 'sweep'),
+                )
+                if recommended > builders
+                else _step(f"Lower --builders to {recommended}.")
+                if recommended < builders
+                else _none("this run is at the setting its measurements support")
+            ),
         )
         # UX-1143: the page section drawing this evidence; the card links there rather than repeating it.
         | {'section': 'capacity_recommendation'}
@@ -1326,14 +1435,13 @@ def _swap_observed_finding(result: AnalysisResult) -> list[dict]:
     start = min(row['start_offset_us'] for row in rows)
     end = max(row['start_offset_us'] + row['duration_us'] for row in rows)
     elements = sorted({entry['element'] for row in rows for entry in row.get('building') or ()})
-    building = f", while building {', '.join(elements)}" if elements else ""
     return [
         _finding(
             'swap-observed',
             SEVERITY_HIGH,
-            f"Swap: {plural(len(rows), 'window')} wrote {plural(total_pages, 'page')} to "
-            f"swap, {qty.duration(start)}-{qty.duration(end)} into the build"
-            f"{building}",
+            f"{plural(total_pages, 'page')} written to swap in {plural(len(rows), 'window')}, "
+            f"{qty.duration(start)}-{qty.duration(end)} into the build",
+            detail=[f"    While building {', '.join(elements)}"] if elements else None,
             elements=elements,
             evidence={
                 'swapped_out_pages': total_pages,
@@ -1341,6 +1449,7 @@ def _swap_observed_finding(result: AnalysisResult) -> list[dict]:
                 'swap_start_offset_us': start,
                 'swap_end_offset_us': end,
             },
+            step=_step("Lower --builders or the per-element job count until the concurrent set fits in RAM."),
         )
     ]
 
@@ -1400,24 +1509,18 @@ def _remote_execution_findings(result: AnalysisResult) -> list[dict]:
     if unbounded and offload:
         detail.append(f"    {REMOTE_EXECUTION_NOT_ADDITIVE_SENTENCE}")
         title = (
-            f"Remote execution, priced two ways: unbounded builders "
-            f"{qty.seconds(_s(unbounded['wall_us_before']))} -> "
-            f"{qty.seconds(_s(unbounded['wall_us_after']))}, compiler offload "
-            f"{qty.seconds(_s(offload['wall_us_before']))} -> "
-            f"{qty.seconds(_s(offload['wall_us_after']))} — not additive"
+            f"{qty.seconds(_s(unbounded['wall_us_after']))} with unbounded builders and "
+            f"{qty.seconds(_s(offload['wall_us_after']))} with compiler offload — remote execution, not additive"
         )
     elif unbounded:
         title = (
-            f"Remote execution (builder cap only, no Plane 2 "
-            f"per-binary cost): unbounded builders "
-            f"{qty.seconds(_s(unbounded['wall_us_before']))} -> "
-            f"{qty.seconds(_s(unbounded['wall_us_after']))}"
+            f"{qty.seconds(_s(unbounded['wall_us_after']))} with unbounded builders, from "
+            f"{qty.seconds(_s(unbounded['wall_us_before']))} — remote execution, no per-binary cost"
         )
     elif offload:
         title = (
-            f"Remote execution (compiler offload only): "
-            f"{qty.seconds(_s(offload['wall_us_before']))} -> "
-            f"{qty.seconds(_s(offload['wall_us_after']))} critical path"
+            f"{qty.seconds(_s(offload['wall_us_after']))} critical path with compiler offload, from "
+            f"{qty.seconds(_s(offload['wall_us_before']))} — remote execution"
         )
     else:
         # Unreachable: the early return above already excludes
@@ -1450,6 +1553,7 @@ def _remote_execution_findings(result: AnalysisResult) -> list[dict]:
             title,
             detail=detail,
             evidence=evidence,
+            step=_none("a projection of two purchases, not a defect in this run"),
         )
     ]
 
@@ -1521,10 +1625,13 @@ def _opportunity_findings(result: AnalysisResult, chain_bound: bool) -> list[dic
             _finding(
                 'execution-bound',
                 SEVERITY_HIGH,
-                f"Biggest wait category: this build is execution-bound — "
-                f"no wait category exceeds {OPPORTUNITY_FLOOR_PCT:.0f}% of "
-                f"wall-clock time, so there is no scheduling gap to close",
+                f"{pct:.1f}% of wall-clock time is the biggest wait category, under "
+                f"{OPPORTUNITY_FLOOR_PCT:.0f}% — this build is execution-bound",
+                detail=["    No wait category is large enough to leave a scheduling gap to close"],
                 evidence={'largest_wait_category': top_category, 'largest_wait_share': pct / 100},
+                step=_step(
+                    "Make the elements on the critical path faster, or take them off it: the scheduler has no room left."
+                ),
             )
         ] + concentration
     if top_duration_us <= 0:
@@ -1559,9 +1666,13 @@ def _opportunity_findings(result: AnalysisResult, chain_bound: bool) -> list[dic
             # it named 2.72s while `joint-saving` three rows below was worth
             # 23.1s and claimed nothing. Naming the population is the whole
             # fix: the measurement was never wrong, the scope was.
-            f"Biggest wait category: {pct:.1f}% of wall-clock time is {label} ({qty.duration(top_duration_us)})",
-            detail=[f"    -> {hint}"] if hint else None,
-            evidence={'category': top_category, 'category_us': top_duration_us, 'share': pct / 100, 'hint': hint},
+            f"{pct:.1f}% of wall-clock time is {label} ({qty.duration(top_duration_us)}) — the biggest wait category",
+            evidence={'category': top_category, 'category_us': top_duration_us, 'share': pct / 100},
+            step=(
+                _step(hint, _run_command(result, 'sweep') if top_category == 'resource_wait_us' else None)
+                if hint
+                else _none(f"no remedy is recorded for {label}")
+            ),
         )
     ]
 
@@ -1603,9 +1714,9 @@ def _outlook_findings(result: AnalysisResult) -> list[dict]:
             _finding(
                 'joint-saving',
                 SEVERITY_HIGH,
-                f"Together, the top {len(joint['elements'])} are worth "
-                f"{qty.duration(joint_us)} ({qty.share(joint_us / total)} of the build) — "
-                f"{relation}",
+                f"{qty.duration(joint_us)} ({qty.share(joint_us / total)} of the build) is what the top "
+                f"{len(joint['elements'])} are worth together",
+                detail=[f"    That is {relation}"],
                 elements=list(joint['elements']),
                 evidence={
                     'joint_saving_us': joint_us,
@@ -1613,6 +1724,10 @@ def _outlook_findings(result: AnalysisResult) -> list[dict]:
                     'savings_add': joint.get('savings_add'),
                     'relation': kind,
                 },
+                step=_step(
+                    f"Start with {joint['elements'][0]}, then the rest.",
+                    _run_command(result, 'blast', joint['elements'][0]),
+                ),
             )
         )
 
@@ -1621,7 +1736,7 @@ def _outlook_findings(result: AnalysisResult) -> list[dict]:
         shown = horizon[:HORIZON_STEPS_SHOWN]
         steps = " -> ".join(f"{step['element_uid']} ({qty.duration(step['makespan_after_us'])})" for step in shown)
         last = shown[-1]
-        detail = []
+        detail = [f"    In this order: {steps}"]
         if total:
             detail.append(
                 f"    The last of those leaves "
@@ -1632,10 +1747,14 @@ def _outlook_findings(result: AnalysisResult) -> list[dict]:
             _finding(
                 'optimization-horizon',
                 SEVERITY_HIGH,
-                f"Work them in this order (by what a fix is worth, not by size), with what the build drops to: {steps}",
+                f"{len(shown)} fixes, in order of what each is worth, take the build to "
+                f"{qty.duration(last['makespan_after_us'])}",
                 detail=detail,
                 elements=[step['element_uid'] for step in shown],
                 evidence={'steps': shown},
+                step=_step(
+                    f"Start with {shown[0]['element_uid']}.", _run_command(result, 'blast', shown[0]['element_uid'])
+                ),
             )
         )
 
@@ -1648,10 +1767,11 @@ def _outlook_findings(result: AnalysisResult) -> list[dict]:
             _finding(
                 'latent-heavies',
                 SEVERITY_MEDIUM,
-                f"Waiting off the critical path, worth nothing to fix today: "
-                f"{named}{more} — they bound how far shortening the chain can go",
+                f"{plural(len(latent), 'element')} off the critical path, worth nothing to fix today",
+                detail=[f"    {named}{more} — they bound how far shortening the chain can go"],
                 elements=[e['element_uid'] for e in shown],
                 evidence={'latent_heavies': latent},
+                step=_step("Shorten the chain first: these wait off it."),
             )
         )
 
@@ -1760,7 +1880,7 @@ def _ranking_findings(result: AnalysisResult, chain_bound: bool) -> list[dict]:
             entry = blast_radius.get(elem_uid, {})
             count = entry.get('downstream_count', 0)
             detail.append(
-                f"    {i}. {elem_uid} ({count} downstream elements"
+                f"    {i}. {elem_uid} ({count:,} downstream elements"
                 f"{_blast_scale(count, distribution)})"
                 f"{structural_kind_tag(entry)}"
             )
@@ -1788,6 +1908,7 @@ def _ranking_findings(result: AnalysisResult, chain_bound: bool) -> list[dict]:
                 # population published twice - `UX-288`'s rule - and the
                 # deepest shape in the document for the sake of it.
                 evidence=({'blast_radius_distribution': distribution} if distribution else {}),
+                step=_step(f"Shorten {shown[0]} first.", _run_command(result, 'blast', shown[0])),
             )
         )
 
@@ -1803,10 +1924,17 @@ def _ranking_findings(result: AnalysisResult, chain_bound: bool) -> list[dict]:
             _finding(
                 'blast-radius-reach',
                 SEVERITY_MEDIUM,
-                f"What a change to these rebuilds: {named} — the cost of "
-                f"touching them is not their own duration but everything "
-                f"downstream that has to be built again",
+                f"{(blast_radius.get(reaching[0]) or {}).get('downstream_count') or 0:,} downstream elements "
+                f"rebuild on a change to the widest-reaching element",
+                detail=[
+                    f"    {named} — the cost of touching them is not their own duration but everything "
+                    f"downstream that has to be built again"
+                ],
                 elements=list(reaching[:BLAST_RADIUS_SHOWN]),
+                step=_step(
+                    f"See what a change to {reaching[0]} rebuilds before touching it.",
+                    _run_command(result, 'blast', reaching[0]),
+                ),
             )
         )
 
@@ -1817,10 +1945,15 @@ def _ranking_findings(result: AnalysisResult, chain_bound: bool) -> list[dict]:
             _finding(
                 'blast-radius-structural',
                 SEVERITY_INFO,
-                f"Reaching most of the graph by design: {named} — structural "
-                f"elements ({', '.join(sorted({(blast_radius.get(u) or {}).get('element_kind', 'unknown') for u in structural}))}) "
-                f"whose dependents are the graph's shape, not a task",
+                f"{plural(len(structural), 'structural element')} {'reaches' if len(structural) == 1 else 'reach'} "
+                "most of the graph by design",
+                detail=[
+                    f"    {named} — "
+                    f"{', '.join(sorted({(blast_radius.get(u) or {}).get('element_kind', 'unknown') for u in structural}))}"
+                    f", whose dependents are the graph's shape, not a task"
+                ],
                 elements=list(structural[:BLAST_RADIUS_SHOWN]),
+                step=_none("structural elements: their reach is the graph's shape"),
             )
         )
 
@@ -1835,8 +1968,10 @@ def _ranking_findings(result: AnalysisResult, chain_bound: bool) -> list[dict]:
             _finding(
                 'blast-radius-foundation',
                 SEVERITY_INFO,
-                f"Declared foundation, excluded from the ranking: {named}",
+                f"{plural(len(foundation), 'declared foundation element')} excluded from the ranking",
+                detail=[f"    {named}"],
                 elements=list(foundation[:BLAST_RADIUS_SHOWN]),
+                step=_none("declared foundation, excluded by the project's own declaration"),
             )
         )
 
@@ -1878,8 +2013,11 @@ def _foundation_candidates(blast_radius: dict, distribution: Optional[dict], ord
         _finding(
             'foundation-candidates',
             SEVERITY_INFO,
-            f"Wide reach, not declared foundation — declare or dismiss: {named}",
+            f"{plural(len(candidates), 'element')} {'reaches' if len(candidates) == 1 else 'reach'} widely, "
+            "not declared foundation — declare or dismiss",
+            detail=[f"    {named}"],
             elements=list(candidates[:BLAST_RADIUS_SHOWN]),
+            step=_step("Declare each as foundation, or dismiss it."),
         )
     ]
 
@@ -1911,8 +2049,8 @@ def _fan_in_findings(result: AnalysisResult) -> list[dict]:
             entry = fan_in.get(uid, {})
             count = entry.get('transitive_count', 0)
             detail.append(
-                f"    {index}. {uid} ({count} upstream, "
-                f"{entry.get('direct_count', 0)} named directly"
+                f"    {index}. {uid} ({count:,} upstream, "
+                f"{entry.get('direct_count', 0):,} named directly"
                 f"{_blast_scale(count, distribution)})"
                 f"{structural_kind_tag(entry)}"
             )
@@ -1926,6 +2064,7 @@ def _fan_in_findings(result: AnalysisResult) -> list[dict]:
                 detail=detail,
                 elements=list(shown),
                 evidence=({'fan_in_distribution': distribution} if distribution else {}),
+                step=_none("a ranking of what each element pulls in, not a defect"),
             )
         )
 
@@ -1949,17 +2088,21 @@ def _fan_in_findings(result: AnalysisResult) -> list[dict]:
     )
     if structural:
         named = ", ".join(
-            f"{uid} ({fan_in[uid]['transitive_count']} upstream)" for uid in structural[:BLAST_RADIUS_SHOWN]
+            f"{uid} ({fan_in[uid]['transitive_count']:,} upstream)" for uid in structural[:BLAST_RADIUS_SHOWN]
         )
         findings.append(
             _finding(
                 'fan-in-structural',
                 SEVERITY_INFO,
-                f"Pulling in most of the graph by design: {named} — "
-                f"structural elements "
-                f"({', '.join(sorted({fan_in[uid].get('element_kind', 'unknown') for uid in structural}))})"
-                f" whose dependencies are the graph's shape, not a task",
+                f"{plural(len(structural), 'structural element')} {'pulls' if len(structural) == 1 else 'pull'} "
+                "in most of the graph by design",
+                detail=[
+                    f"    {named} — "
+                    f"{', '.join(sorted({fan_in[uid].get('element_kind', 'unknown') for uid in structural}))}"
+                    f", whose dependencies are the graph's shape, not a task"
+                ],
                 elements=list(structural[:BLAST_RADIUS_SHOWN]),
+                step=_none("structural elements: their dependencies are the graph's shape"),
             )
         )
 
@@ -1968,14 +2111,16 @@ def _fan_in_findings(result: AnalysisResult) -> list[dict]:
     # (`bga/graph/fan_in.py`) - this just says so.
     if foundation:
         named = ", ".join(
-            f"{uid} ({fan_in[uid]['transitive_count']} upstream)" for uid in foundation[:BLAST_RADIUS_SHOWN]
+            f"{uid} ({fan_in[uid]['transitive_count']:,} upstream)" for uid in foundation[:BLAST_RADIUS_SHOWN]
         )
         findings.append(
             _finding(
                 'fan-in-foundation',
                 SEVERITY_INFO,
-                f"Declared foundation, excluded from the ranking: {named}",
+                f"{plural(len(foundation), 'declared foundation element')} excluded from the upstream ranking",
+                detail=[f"    {named}"],
                 elements=list(foundation[:BLAST_RADIUS_SHOWN]),
+                step=_none("declared foundation, excluded by the project's own declaration"),
             )
         )
     return findings
@@ -2068,6 +2213,7 @@ def _criticality_findings(result: AnalysisResult) -> list[dict]:
             detail=detail,
             elements=[uid for uid, _d in nonzero],
             evidence={'criticality_probability': dict(nonzero)},
+            step=_none("a probability ranking, not a defect"),
         )
     ]
 
@@ -2083,9 +2229,10 @@ def _floor_findings(result: AnalysisResult) -> list[dict]:
             _finding(
                 'certified-headroom',
                 SEVERITY_MEDIUM,
-                f"Certified headroom: up to {qty.duration(headroom)} available "
+                f"{qty.duration(headroom)} of certified headroom at most "
                 f"(T∞={qty.duration(t_inf)}, LB={qty.duration(lb_val)})",
                 evidence={'certified_headroom_us': headroom, 't_infinity_us': t_inf, 'lb_us': lb_val},
+                step=_step("Run the sweep to see which capacity reaches the floor.", _run_command(result, 'sweep')),
             )
         )
     # UX-02: never presented alone without the "not work-minimality"
@@ -2093,7 +2240,6 @@ def _floor_findings(result: AnalysisResult) -> list[dict]:
     # explicit caveat rather than false precision.
     efficiency_score = floors.get('efficiency_score')
     if efficiency_score is not None:
-        band = efficiency_band(efficiency_score)
         primary = (result.confidence or {}).get('primary')
         caveat = ""
         if primary is not None and primary < _CONFIDENCE_HIGH:
@@ -2102,11 +2248,106 @@ def _floor_findings(result: AnalysisResult) -> list[dict]:
             _finding(
                 'efficiency-score',
                 SEVERITY_INFO,
-                f"Efficiency score: {qty.share(efficiency_score)} ({band}){caveat}",
+                f"{qty.share(efficiency_score)} efficiency score — "
+                + (
+                    "scheduling is near the certified floor"
+                    if efficiency_score >= _EFFICIENCY_HIGH
+                    else "worth checking certified headroom"
+                    if efficiency_score >= _EFFICIENCY_MEDIUM
+                    else "significant scheduling headroom"
+                )
+                + caveat,
                 evidence={'efficiency_score': efficiency_score, 'low_confidence': bool(caveat)},
+                step=_step(
+                    "Change the graph or the work itself, not the scheduler."
+                    if efficiency_score >= _EFFICIENCY_HIGH
+                    else "Read the certified headroom for the scheduling gain left."
+                ),
             )
         )
     return findings
+
+
+# UX-1255: the bounds Plane 2's findings clear. A binary below Plane 1's
+# opportunity floor is noise; configure past a tenth of CPU is named.
+PLANE2_BINARY_FLOOR_SHARE = OPPORTUNITY_FLOOR_PCT / 100
+PLANE2_CONFIGURE_SHARE = 0.10
+
+
+def _plane2_findings(result: AnalysisResult) -> list[dict]:
+    """UX-1255: the costliest binary, elements waiting on their jobs, and configure - only where Plane 2 ran."""
+    report = getattr(result, 'plane2_report', None) or {}
+    if not report:
+        return []
+    from .plane2 import binary_totals
+
+    out = []
+    rows = [row for row in binary_totals(report) if row.get('cpu_us') is not None]
+    measured = sum(row['cpu_us'] for row in rows)
+    if rows and measured and rows[0]['cpu_us'] / measured >= PLANE2_BINARY_FLOOR_SHARE:
+        top = rows[0]
+        reach = plural(top['elements'], 'element', shown=f"{top['elements']:,}")
+        out.append(
+            _finding(
+                'costliest-binary',
+                SEVERITY_INFO,
+                f"{qty.duration(top['cpu_us'])} of CPU in {top['binary']}, the costliest of "
+                f"{len(rows):,} binaries, across {reach}",
+                evidence={
+                    'binary': top['binary'],
+                    'cpu_us': top['cpu_us'],
+                    'share': round(top['cpu_us'] / measured, 3),
+                },
+                step=_step(f"Start with {top['binary']}: no other binary spent as much CPU."),
+            )
+            | {'section': 'by_binary'}
+        )
+    # Each element's own CPU over its own wall (the join's `cores_busy`), on correlate's compute-bound line.
+    from .correlate import _COMPUTE_BOUND_CORES, _plane2_view
+
+    waiting = [
+        row
+        for row in _plane2_view(report).values()
+        if (row.get('requested_jobs') or 0) > 1
+        and row.get('cores_busy') is not None
+        and row['cores_busy'] < _COMPUTE_BOUND_CORES
+    ]
+    if waiting:
+        jobs = sorted(row['requested_jobs'] for row in waiting)
+        asked = f"{jobs[0]}" if jobs[0] == jobs[-1] else f"{jobs[0]}-{jobs[-1]}"
+        median = statistics.median(row['cores_busy'] for row in waiting)
+        out.append(
+            _finding(
+                'jobs-waiting',
+                SEVERITY_MEDIUM,
+                f"{len(waiting):,} elements asked for {asked} jobs and ran at a median {median:.2f} cores busy: "
+                "waiting, not computing",
+                evidence={
+                    'element_count': len(waiting),
+                    'median_cores_busy': round(median, 2),
+                    'requested_jobs': jobs[-1],
+                },
+                step=_step("Find what these elements wait on before raising their job count."),
+            )
+            | {'section': 'element_join'}
+        )
+    phase = report.get('configure_phase') or {}
+    if phase.get('available') and (phase.get('configure_share') or 0) >= PLANE2_CONFIGURE_SHARE:
+        out.append(
+            _finding(
+                'configure-share',
+                SEVERITY_MEDIUM,
+                f"{qty.share(phase['configure_share'])} of CPU is configure: "
+                f"{qty.duration(phase.get('configure_cpu_us'))} before any build step ran",
+                evidence={
+                    'configure_share': phase['configure_share'],
+                    'configure_cpu_us': phase.get('configure_cpu_us'),
+                },
+                step=_step("Cache or skip configure in the elements that spend most on it."),
+            )
+            | {'section': 'configure_phase'}
+        )
+    return out
 
 
 def _by_severity(findings: list[dict]) -> list[dict]:
@@ -2123,6 +2364,31 @@ def _by_severity(findings: list[dict]) -> list[dict]:
         return _LEAD_ORDER.index(severity) if severity in _LEAD_ORDER else len(_LEAD_ORDER)
 
     return [finding for group in sorted(groups, key=rank) for finding in group]
+
+
+def _said_once(findings: list[dict]) -> list[dict]:
+    """`UX-1249`: a finding listing the elements a more severe one listed becomes a line of that one."""
+    kept: list[dict] = []
+    first: dict = {}
+    served = collections.Counter(FINDING_READERS.get(f['id']) for f in findings)
+    for finding in findings:
+        key = frozenset(finding.get('elements') or ())
+        # One shared element is two claims about it; a shared list is one claim said twice.
+        earlier = first.get(key) if len(key) > 1 else None
+        # A reader's only finding stays a finding: folding it would leave that reader no lead.
+        sole = served[FINDING_READERS.get(finding['id'])] == 1
+        if earlier is not None and not sole and _rank(earlier) < _rank(finding):
+            earlier['detail'] = [*earlier['detail'], f"    {finding['title']}"]
+            served[FINDING_READERS.get(finding['id'])] -= 1
+            continue
+        first.setdefault(key, finding)
+        kept.append(finding)
+    return kept
+
+
+def _rank(finding: dict) -> int:
+    severity = finding.get('severity')
+    return _LEAD_ORDER.index(severity) if severity in _LEAD_ORDER else len(_LEAD_ORDER)
 
 
 def compute_findings(result: AnalysisResult) -> list[dict]:
@@ -2187,6 +2453,8 @@ def compute_findings(result: AnalysisResult) -> list[dict]:
     # `UX-860`: beside the fleet's other R5 findings, after capacity -
     # the reader has met the configuration before meeting what it cost.
     findings.extend(_swap_observed_finding(result))
+    # UX-1255: Plane 2's own measurements, beside the fleet findings that read it.
+    findings.extend(_plane2_findings(result))
     # `UX-680`: beside the capacity/sweep findings it reads alongside -
     # `ci-gatekeeper`, not `capacity-operator`, because half (a) fires
     # without Plane 2 and R5's page section cannot.
@@ -2197,7 +2465,7 @@ def compute_findings(result: AnalysisResult) -> list[dict]:
     # rather than about this run - the reader has met the run's own
     # numbers by the time they reach "and one repo rebuilds all of it".
     findings.extend(_shared_source_findings(result))
-    findings = _by_severity(findings)
+    findings = _said_once(_by_severity(findings))
     # `UX-372`: and who each is for. Stamped here rather than at the
     # nineteen construction sites, for the reason `FINDING_READERS`
     # gives - and after the whole list exists, so the map is applied to
@@ -2286,13 +2554,65 @@ def diagnose(result: AnalysisResult) -> dict:
     against, source = _diagnosis_denominator(result, total)
     ratio = t_infinity / against
     name = DIAGNOSIS_CHAIN_BOUND if ratio >= CHAIN_BOUND_RATIO else DIAGNOSIS_SCHEDULER_BOUND
+    if ratio < CHAIN_BOUND_RATIO and _capacity_is_the_wall(floors, total, t_infinity):
+        name = DIAGNOSIS_CAPACITY_BOUND
+    if name == DIAGNOSIS_CAPACITY_BOUND:
+        sentence = DIAGNOSIS_SENTENCES[name].format(
+            ratio=qty.share(floors['lb'] / total), bound=qty.share(CAPACITY_BOUND_SHARE), step=_capacity_step(result)[0]
+        )
+    else:
+        sentence = DIAGNOSIS_SENTENCES[name].format(ratio=qty.share(ratio), bound=qty.share(CHAIN_BOUND_RATIO))
     return {
         'diagnosis': name,
         'chain_share': ratio,
         'chain_bound_share': CHAIN_BOUND_RATIO,
         'chain_share_of': source,
-        'sentence': DIAGNOSIS_SENTENCES[name].format(ratio=qty.share(ratio), bound=qty.share(CHAIN_BOUND_RATIO)),
+        'sentence': sentence,
     }
+
+
+def _capacity_is_the_wall(floors: dict, total: int, t_infinity: int) -> bool:
+    """LB within `CAPACITY_BOUND_SHARE` of the wall and longer than the chain (UX-1244)."""
+    lb = floors.get('lb') or 0
+    return lb / total >= CAPACITY_BOUND_SHARE and lb > t_infinity
+
+
+def _capacity_step(result: AnalysisResult) -> tuple[str, str]:
+    """`(sentence, action)` for the builders step: the recommendation's, else the RESOURCE WAIT hint."""
+    recommendation = getattr(result, 'capacity_recommendation', None) or {}
+    binding = recommendation.get('binding_constraint')
+    row = next((c for c in recommendation.get('constraints') or [] if c.get('name') == binding), {})
+    if binding == 'host_cores':
+        cores = recommendation.get('host_cpu_count')
+        return (
+            f"Builders are held at the host's {plural(cores, 'core')} by policy while the CPU could feed "
+            f"{row.get('clamped_from')}: measure above that cap with bga sweep",
+            f"Measure builders above the host's {cores}-core cap with bga sweep",
+        )
+    if binding and recommendation.get('recommended_builders') is not None:
+        builders = recommendation['recommended_builders']
+        return (
+            f"{binding} binds at {plural(builders, 'builder')}: run with {builders} and measure it",
+            f"Run with {plural(builders, 'builder')} and measure it",
+        )
+    from .report._shared import resolve_attribution_hint
+
+    hint = _plane2_capacity_hint(result, 'resource_wait_us') or resolve_attribution_hint(
+        'resource_wait_us', getattr(result, 'capacity_verdict', None)
+    )
+    hint = (hint or "time more builders with bga sweep").replace('`', '').rstrip('.')
+    return f"The step this run supports is a builders step, measured: {hint}", hint
+
+
+def _builders_actions(result: AnalysisResult, by_id: dict) -> list[dict]:
+    """The decision's first action on a capacity-bound run: the builders step, and the finding reasoning it."""
+    finding = next((fid for fid in ('capacity-recommendation', 'wait-category') if fid in by_id), None)
+    # UX-1256: the capacity finding's own step where it has one; the derived step otherwise.
+    said = ((by_id.get('capacity-recommendation') or {}).get('step') or {}).get('text')
+    action = {'step': said.rstrip('.') if said else _capacity_step(result)[1]}
+    if finding:
+        action['finding_id'] = finding
+    return [action]
 
 
 def _top_actions(result: AnalysisResult, findings: list[dict]) -> list[dict]:
@@ -2305,6 +2625,8 @@ def _top_actions(result: AnalysisResult, findings: list[dict]) -> list[dict]:
     """
     by_id = findings_by_id(findings)
     actions: list[dict] = []
+    # UX-1244: a capacity-bound run leads with its builders step, before any element.
+    builders = _builders_actions(result, by_id) if diagnose(result)['diagnosis'] == DIAGNOSIS_CAPACITY_BOUND else []
 
     concentration = by_id.get('time-concentration')
     for row in ((concentration or {}).get('evidence') or {}).get('rows') or []:
@@ -2331,7 +2653,7 @@ def _top_actions(result: AnalysisResult, findings: list[dict]) -> list[dict]:
                     'downstream_count': (blast.get(uid) or {}).get('downstream_count', 0),
                 }
             )
-    return actions[:TOP_ACTIONS_SHOWN]
+    return (builders + actions)[:TOP_ACTIONS_SHOWN]
 
 
 def compute_headline(result: AnalysisResult, findings: Optional[list[dict]] = None) -> dict:
@@ -2434,6 +2756,16 @@ def _store_paths(run_dir: str):
     return os.sep.join(parts[:-4]) or '.', True
 
 
+def run_token(run_dir: str) -> str:
+    """`@<stamp>` for a store run, so a step runs from the project and on any machine; else the path."""
+    from . import run_store
+
+    if not _store_paths(run_dir)[1]:
+        return run_dir
+    token = '@' + os.path.normpath(run_dir).split(os.sep)[-2]
+    return token if run_store.is_alias(token) else run_dir
+
+
 def _store_run_modes(project: str) -> list[tuple]:
     """`(stamp, run_mode)` per run in the store, oldest first.
 
@@ -2521,6 +2853,7 @@ def compute_next_steps(result: AnalysisResult, headline: Optional[dict] = None) 
         # spelled approximately is worse than no step.
         return []
     project, in_store = _store_paths(run_dir)
+    run = run_token(run_dir)
     actions = headline.get('top_actions') or []
     top = actions[0] if actions else None
     steps: list[dict] = []
@@ -2552,7 +2885,7 @@ def compute_next_steps(result: AnalysisResult, headline: Optional[dict] = None) 
                     + (f", {qty.share(share)} of it" if share else "")
                     + " — the build cannot finish sooner than this chain."
                 ),
-                'argv': ['bga', 'blast', longest['element_uid'], run_dir],
+                'argv': ['bga', 'blast', longest['element_uid'], run],
                 'follows_from': 'critical_path_detail',
             }
         )
@@ -2570,7 +2903,7 @@ def compute_next_steps(result: AnalysisResult, headline: Optional[dict] = None) 
                     + (f", worth {qty.duration(worth)}" if worth and worth >= 100_000 else "")
                     + " — this is what changing it rebuilds."
                 ),
-                'argv': ['bga', 'blast', uid, run_dir],
+                'argv': ['bga', 'blast', uid, run],
                 'follows_from': top.get('finding_id') or 'headline.top_actions',
             }
         )
@@ -2585,18 +2918,18 @@ def compute_next_steps(result: AnalysisResult, headline: Optional[dict] = None) 
                         f"Plane 2 measured this run, so the join can say "
                         f"whether {uid} is compute-bound or under-parallelized."
                     ),
-                    'argv': ['bga', 'correlate', run_dir],
+                    'argv': ['bga', 'correlate', run],
                     'follows_from': 'plane2_coverage',
                 }
             )
 
-    if headline.get('diagnosis') == DIAGNOSIS_SCHEDULER_BOUND:
+    if headline.get('diagnosis') in (DIAGNOSIS_SCHEDULER_BOUND, DIAGNOSIS_CAPACITY_BOUND):
         gap = headline.get('scheduling_gap_us')
         steps.append(
             {
                 'id': 'sweep-the-capacity',
                 'reason': (
-                    "This build is scheduler-bound"
+                    f"This build is {headline['diagnosis'].replace('_', '-')}"
                     # Only where the number would say something: a gap that
                     # rounds to "0.0s" reads as a contradiction of the
                     # sentence it is supposed to support.
@@ -2607,7 +2940,7 @@ def compute_next_steps(result: AnalysisResult, headline: Optional[dict] = None) 
                     )
                     + " — the sweep says what more builders would buy."
                 ),
-                'argv': ['bga', 'sweep', run_dir],
+                'argv': ['bga', 'sweep', run],
                 'follows_from': 'headline.diagnosis',
             }
         )
@@ -2629,8 +2962,8 @@ def compute_next_steps(result: AnalysisResult, headline: Optional[dict] = None) 
             steps.append(
                 {
                     'id': 'measure-again',
-                    'reason': "Make the change, then capture it the same way.",
-                    'argv': ['bga', 'snapshot', '--project', project, '--', 'bst', 'build', *targets],
+                    'reason': f"Make the change, then capture it the same way — run it in {project}.",
+                    'argv': ['bga', 'snapshot', '--', 'bst', 'build', *targets],
                     'follows_from': 'run_instance.targets',
                 }
             )
@@ -2686,7 +3019,13 @@ def render_findings(findings: list[dict]) -> list[str]:
     """
     lines: list[str] = []
     for finding in findings:
-        lines.append(f"{finding.get('indent', '  ')}{finding['title']}")
+        indent = finding.get('indent', '  ')
+        lines.append(f"{indent}{finding['title']}")
+        step = finding.get('step') or {}
+        if step.get('text'):
+            lines.append(f"{indent}  -> {step['text']}")
+            if step.get('command'):
+                lines.append(f"{indent}     {step['command']}")
         lines.extend(finding.get('detail') or [])
     return lines
 

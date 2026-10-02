@@ -204,7 +204,7 @@ class TestTheIntegrationIsInert:
             cwd=os.getcwd(),
         )
         assert result.returncode == 0, result.stderr
-        assert json.loads(result.stdout)["schema"] == "analyze/v6"
+        assert json.loads(result.stdout)["schema"] == "analyze/v7"
 
 
 class TestThroughArgcompleteItself:

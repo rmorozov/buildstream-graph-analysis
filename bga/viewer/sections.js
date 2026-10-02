@@ -116,6 +116,50 @@ export function renderFindingEvidence(evidence, node = undefined, said = new Set
 const elementLink = (uid) => el("a", { href: `#${cssId(uid)}`, "data-element": uid },
                                 el("code", {}, uid));
 
+// UX-1249: each element a detail line names becomes its link there, once; `named` collects them.
+function linkNames(line, uids, named) {
+  const sorted = [...uids].filter((uid) => uid).sort((a, b) => b.length - a.length);
+  if (!sorted.length) return [line];
+  const quoted = sorted.map((uid) => uid.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+  const parts = [];
+  let last = 0;
+  for (const match of line.matchAll(new RegExp(`(?<![\\w./-])(?:${quoted.join("|")})(?![\\w/-])`, "g"))) {
+    if (named.has(match[0])) continue;
+    named.add(match[0]);
+    parts.push(line.slice(last, match.index), elementLink(match[0]));
+    last = match.index + match[0].length;
+  }
+  parts.push(line.slice(last));
+  return parts.filter((part) => part !== "");
+}
+
+// UX-1249: detail rows that differ only in the one element each names are one row naming them all.
+function mergeRows(lines, uids) {
+  const out = [], at = new Map();
+  for (const line of lines) {
+    const own = uids.filter((uid) => uid && new RegExp(
+      `(?<![\\w./-])${uid.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?![\\w/-])`).test(line));
+    const rest = own.length === 1 ? line.replace(own[0], "\u0000").replace(/\s+/g, " ").trim() : null;
+    if (rest !== null && at.has(rest)) at.get(rest).names.push(own[0]);
+    else if (rest !== null) out.push(at.set(rest, { line, rest, names: [own[0]] }).get(rest));
+    else out.push({ line });
+  }
+  return out.map((row) => (row.names?.length > 1 ? row.rest.replace("\u0000", row.names.join(", ")) : row.line));
+}
+
+// UX-1256's `step`: what to do, or why there is nothing to.
+function renderStep(step, uids, named) {
+  if (step?.text) {
+    return el("p", { class: "step" }, "Next: ", ...linkNames(step.text, uids, named),
+              step.command ? " " : null, step.command ? el("code", {}, step.command) : null);
+  }
+  return step?.why_none ? el("p", { class: "step muted" }, `No step: ${step.why_none}`) : null;
+}
+
+// UX-1249: an Info finding with no step, its notes with it, folds under "Also noted".
+const noted = (finding) => String(finding.severity ?? "info").toLowerCase() === "info"
+  && !finding.step?.text;
+
 export function renderFindings(findings, investigate = null, node = undefined,
                                root = undefined, payload = undefined) {
   const section = el("section", { "data-section": "findings" },
@@ -125,7 +169,19 @@ export function renderFindings(findings, investigate = null, node = undefined,
   let ranked = null;
   // `UX-1156`: a detail line `attribution` draws as its bucket's advice is said there.
   const advised = Object.values(payload?.attribution_hints ?? {});
-  findings.forEach((finding, index) => {
+  const groups = [];
+  for (const finding of findings) {
+    if (finding.indent && groups.length) groups.at(-1).push(finding);
+    else groups.push([finding]);
+  }
+  const quiet = groups.filter((group) => group.every(noted));
+  const ordered = [...groups.filter((group) => !group.every(noted)), ...quiet].flat();
+  const folded = new Set(quiet.flat());
+  const also = folded.size
+    ? el("details", { class: "also-noted", "data-fold": "also-noted" },
+         el("summary", {}, `Also noted · ${folded.size}`))
+    : null;
+  ordered.forEach((finding, index) => {
     const severity = String(finding.severity ?? "info").toLowerCase();
     // UX-1148: an indented finding is a note on the card above, not a rank of its own.
     const noteOf = finding.indent && ranked ? ranked : null;
@@ -146,9 +202,14 @@ export function renderFindings(findings, investigate = null, node = undefined,
     // UX-921: `_hydrate` appends the rest once; a second call no-ops.
     article._hydrate = () => {
       // UX-1136: native `append` prints a null child as the text "null"; `el` skips it.
+      const named = new Set();
+      const linkable = finding.elements?.length > bound ? [] : (finding.elements ?? []);
+      const lines = mergeRows((drawnIn ? [] : detail).filter((line) => !advised.includes(line)), linkable)
+        .map((line) => el("p", { class: "detail muted" }, ...linkNames(line, linkable, named)));
+      const step = renderStep(finding.step, linkable, named);
+      const unnamed = linkable.filter((uid) => !named.has(uid));
       article.append(...[
-        ...(drawnIn ? [] : detail).filter((line) => !advised.includes(line))
-          .map((line) => el("p", { class: "detail muted" }, line)),
+        ...lines,
         drawnIn
           ? el("p", { class: "section-link" }, "The evidence: ",
                el("a", { href: `#${drawnIn}`, "data-section-link": drawnIn },
@@ -161,11 +222,11 @@ export function renderFindings(findings, investigate = null, node = undefined,
         // Review (#297): the bounded list keeps each shown name a link.
         finding.elements?.length > bound
           ? foldedList("elements", finding.elements, elementLink)
-          : finding.elements && finding.elements.length
+          : unnamed.length
           ? el("p", { class: "muted" },
-              ...finding.elements.flatMap((uid, i) => [
-                i ? ", " : "", elementLink(uid)]))
+              ...unnamed.flatMap((uid, i) => [i ? ", " : "", elementLink(uid)]))
           : null,
+        step,
         // `UX-1157`: the door and its list are two children, so spread.
         ...[drawnIn ? null : renderFindingEvidence(finding.evidence, evidenceNode,
                                                    new Set(detail.map((line) => line.trim())))].flat(),
@@ -189,8 +250,9 @@ export function renderFindings(findings, investigate = null, node = undefined,
       article._hydrate = null;
     };
     if (index < bound) article._hydrate();
-    section.append(article);
+    (folded.has(finding) ? also : section).append(article);
   });
+  if (also) section.append(also);
   //: `UX-413`: cards are bounded like rows - see `boundCards`.
   const control = boundCards(section, "article.finding", bound, "finding");
   // UX-921: Show all hydrates every shell too - already-hydrated cards
@@ -434,6 +496,24 @@ function isEmptyPopulation(value) {
   return value === null || value === undefined;
 }
 
+/** `UX-1254`: each row a published value and a link to the section it was read off. */
+function sizingCard(value, hint) {
+  const row = (field, said, src) => el("li", { "data-field": field }, said, src ? " \u2014 " : null,
+    src ? el("a", { href: `#${src}`, "data-section-link": src }, title(src)) : null);
+  const { builders: b = {}, cores: c, memory: m } = value;
+  const of = (n, text) => (typeof n === "number" ? text.replace("#", tally(n)) : null);
+  return el("section", { "data-section": "agent_sizing", "data-rail": heading("agent_sizing", hint).rail },
+    sectionHead("agent_sizing", hint), el("ul", {},
+    row("builders", "Builders: " + [of(b.recommended, "# recommended"), of(b.graph_ceiling, "the graph allows #"),
+      of(b.observed, "this run had #")].filter(Boolean).join("; "), b.source),
+    c ? row("cores", `Cores: ${c.average.toFixed(2)}${typeof c.host === "number" ? ` of ${tally(c.host)}` : ""} busy on average`, c.source) : null,
+    c?.peak_source ? row("cores_peak", `Cores: ${c.peak.toFixed(2)} busy at p95`, c.peak_source) : null,
+    m ? row("memory", `Memory: at most ${bytes(m.bytes)}, if all ${tally(m.builders)} builders peak together at `
+      + `${bytes(m.per_element_bytes)} (${m.basis === "envelope" ? "memory envelope" : "process peak"})`, m.source) : null),
+    // The recommendation's caveat is drawn once, in the section the builders row links.
+    value.absence ? el("p", { class: "empty-population" }, value.absence) : null);
+}
+
 /** The heading, the sentence, and the one line that says it is empty. */
 function renderEmptySection(key, hint, node, sentence = null) {
   const info = heading(key, hint);
@@ -481,6 +561,20 @@ function mapTitles(key, hint, node) {
   };
 }
 
+/** `UX-1199`: a binary the cost table holds links to its rows there. */
+function linkCosted(cells, payload) {
+  const costed = new Set((payload?.binary_cost ?? []).map((row) => row.binary));
+  for (const cell of cells) {
+    const raw = cell.getAttribute("data-raw");
+    if (!costed.has(raw)) continue;
+    const query = `binary:${raw}`;
+    const link = el("a", { href: joinHash("binary_cost", new URLSearchParams({ "f.binary_cost": query }).toString()),
+                           title: `${raw}'s rows in binary cost` }, raw);
+    link.addEventListener?.("click", () => filterSection(document, "binary_cost", query));
+    cell.replaceChildren(link);
+  }
+}
+
 function mapSectionLabels(box, key, hint, node, payload, titles) {
   const table = box.querySelector?.("table");
   if (!table) return box;
@@ -501,18 +595,10 @@ function mapSectionLabels(box, key, hint, node, payload, titles) {
   }
   const keys = columnCells(table, "key");
   const op = taskUidKeyed ? statedOp(keys, hint) : null;
-  // `UX-1199`: a binary the cost table holds links to its rows there.
-  const costed = new Set(hint[KEYED_BY] === KEYED_BY_BINARY ? (payload?.binary_cost ?? []).map((row) => row.binary) : []);
+  if (hint[KEYED_BY] === KEYED_BY_BINARY) linkCosted(keys, payload);
   for (const cell of keys) {
     const raw = cell.getAttribute("data-raw");
     cell.setAttribute("data-key", raw);
-    if (costed.has(raw)) {
-      const query = `binary:${raw}`;
-      const link = el("a", { href: joinHash("binary_cost", new URLSearchParams({ "f.binary_cost": query }).toString()),
-                             title: `${raw}'s rows in binary cost` }, raw);
-      link.addEventListener?.("click", () => filterSection(document, "binary_cost", query));
-      cell.replaceChildren(link);
-    }
     if (!taskUidKeyed) continue;
     const shown = keyAsShown(raw, hint);
     if (!shown) continue;
@@ -557,6 +643,7 @@ export function renderSection(key, value, hint = {}, node = undefined,
     value = Object.fromEntries(
       Object.entries(value).filter(([name]) => !(name in elsewhere)));
   }
+  if (key === "agent_sizing" && value) return sizingCard(value, hint);
   // `UX-536`: **a join with no Plane 2 in it is not a measurement of
   // zero.** The evidence line already says these words on the same
   // condition; the section presenting the zeros said nothing, under a
@@ -604,7 +691,11 @@ export function renderSection(key, value, hint = {}, node = undefined,
         && value.every((item) => item && typeof item === "object"
                                  && !Array.isArray(item))) {
       if (oneRecord(value, hint, node)) return renderPairs(key, value[0], hint, node);
-      return renderTable(key, value, hint, node);
+      const drawn = renderTable(key, value, hint, node);
+      // `UX-1247`: by_binary's rows link to binary_cost, as its map keys did.
+      const table = hint[KEYED_BY] === KEYED_BY_BINARY ? drawn.querySelector?.("table") : null;
+      if (table) linkCosted(columnCells(table, KEYED_BY_BINARY), payload);
+      return drawn;
     }
     const body = control === CONTROLS.INLINE_LIST
       ? el("p", {}, el("code", {}, value.join(", ")))
@@ -786,27 +877,20 @@ export const SECTION_ANSWERS = {
         ? (lost === 0 ? "; none went unmeasured." : `; ${lost} could not be read.`) : ".");
   },
   binary_cost(rows, payload) {
-    if (!Array.isArray(rows) || !rows.length) return null;
-    const by = new Map();
-    const elements = new Set();
-    for (const row of rows) {
-      const one = by.get(row.binary) ?? { cpu: 0, calls: 0, elements: 0 };
-      one.cpu += Number(row.cpu_us) || 0;
-      one.calls += Number(row.calls) || 0;
-      one.elements += 1;
-      by.set(row.binary, one);
-      elements.add(row.element);
+    // UX-1247: the answer is by_binary's first row, the analyzer's own ranking.
+    const totals = payload?.by_binary;
+    if (!Array.isArray(rows) || !rows.length || !Array.isArray(totals) || !totals.length) return null;
+    const top = totals[0];
+    const elements = new Set(rows.map((row) => row.element)).size;
+    if (typeof top.cpu_us !== "number") {
+      return `${many(totals.length, "binary", "binaries")} ran; ${top.binary} ran the most, `
+        + `${many(top.calls, "call")}.`;
     }
-    const [name, top] = [...by].sort(
-      (a, b) => b[1].cpu - a[1].cpu || b[1].calls - a[1].calls)[0];
-    const cost = `${many(top.calls, "call")}, `
-      + `${quantity(top.cpu, "duration_us")} of CPU`;
-    // UX-1183: the capture's count, not the rows kept.
-    const ran = Object.keys(payload?.by_binary ?? {}).length || by.size;
-    return ran === 1
-      ? `One binary, ${name}, ran in ${many(top.elements, "element")}: ${cost}.`
-      : `${many(ran, "binary", "binaries")} ran in `
-        + `${many(elements.size, "element")}; ${name} cost the most, `
+    const cost = `${many(top.calls, "call")}, ${quantity(top.cpu_us, "duration_us")} of CPU`;
+    return totals.length === 1
+      ? `One binary, ${top.binary}, ran in ${many(top.elements, "element")}: ${cost}.`
+      : `${many(totals.length, "binary", "binaries")} ran in `
+        + `${many(elements, "element")}; ${top.binary} cost the most, `
         + `${cost} in ${many(top.elements, "element")}.`;
   },
   peak_memory(value, payload) {

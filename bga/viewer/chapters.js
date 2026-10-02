@@ -71,6 +71,29 @@ function largest(map, field) {
   return best;
 }
 
+const BAND = {
+  no_significant_change: "inside the noise band",
+  within_observed_range: "outside the noise band, inside the baseline runs' range",
+  improved: "outside the noise band: improved",
+  regressed: "outside the noise band: regressed",
+};
+
+/** `UX-1257`: the wall delta against the run before, published fields only; the decision panel's link. */
+export function compareDelta(comparison) {
+  const share = comparison?.total_duration_delta_share;
+  const delta = comparison?.deltas?.total_duration_us;
+  if (typeof share !== "number" || typeof delta !== "number" || !BAND[comparison?.verdict_kind]) return null;
+  const pct = (share * 100).toFixed(1).replace(/^-(0\.0)$/, "$1");
+  return `${share > 0 && pct !== "0.0" ? "+" : ""}${pct}% (${duration(Math.abs(delta))} `
+    + `${delta < 0 ? "faster" : "slower"}) than the run before`;
+}
+
+/** `UX-1257`: the delta and its band verdict, the compare chapter's lead. */
+export function compareLead(comparison) {
+  const delta = compareDelta(comparison);
+  return delta && `${delta}, ${BAND[comparison.verdict_kind]}.`;
+}
+
 // The chapters, in the order the document reads. Each names the
 // question it answers, and holds the sections that answer it.
 export const CHAPTERS = [
@@ -124,17 +147,8 @@ export const CHAPTERS = [
     // Only rendered when there is something to compare against, so the
     // chapter is absent on a first run rather than empty.
     sections: ["culprits", "band", "store-trend"],
-    // Absent on a first run, so the sentence is too rather than
-    // reading "no change" over a comparison that was never made.
-    answer(payload) {
-      const verdict = payload?.comparison?.verdict ?? payload?.verdict;
-      const delta = payload?.comparison?.delta_us ?? payload?.delta_us;
-      if (!verdict) return null;
-      return `${title(String(verdict))}`
-        + (typeof delta === "number" ? `, ${duration(Math.abs(delta))} `
-            + `${delta < 0 ? "faster" : "slower"}` : "")
-        + " than the baseline.";
-    },
+    // `UX-1257`: from `compare.json`, never the analyze payload.
+    answer: (payload, comparison) => compareLead(comparison),
   },
   {
     id: "time",
@@ -175,7 +189,8 @@ export const CHAPTERS = [
     // and an unchaptered section is one the guard reddens on - which is
     // what put it here rather than at the foot of the page under
     // "Everything else".
-    sections: ["occupancy", "utilisation", "floors", "capacity_verdict",
+    // UX-1254: the sizing card first - the chapter's answer for an agent's operator.
+    sections: ["agent_sizing", "occupancy", "utilisation", "floors", "capacity_verdict",
                // `UX-344`: how much was runnable and not running is a
                // fact about the machine, not about an element - the one
                // lifted table whose rail points at the wrong chapter.
@@ -346,7 +361,7 @@ function isTransient(node) {
  * among its neighbours; those are two separate claims and only the
  * first one is this function's.
  */
-export function chapters(root, doc, payload) {
+export function chapters(root, doc, payload, comparison = null) {
   if (!root || !doc) return [];
   const boxes = openBoxes(root);
   const loose = [...(root.children ?? [])].filter(
@@ -365,7 +380,7 @@ export function chapters(root, doc, payload) {
     let box = boxes.get(chapter.id);
     if (!members.length && !box) continue;
     if (!box) {
-      box = makeBox(chapter, doc, payload, chapter.id === CHAPTERS[0].id);
+      box = makeBox(chapter, doc, payload, chapter.id === CHAPTERS[0].id, comparison);
       boxes.set(chapter.id, box);
     }
     for (const node of members) {
@@ -449,7 +464,7 @@ function ordered(chapter, members) {
   return [...declared, ...members.filter((node) => at(node) < 0)];
 }
 
-function makeBox(chapter, doc, payload, first) {
+function makeBox(chapter, doc, payload, first, comparison) {
   const box = doc.createElement("section");
   box.className = "chapter";
   box.setAttribute("data-chapter", chapter.id);
@@ -472,7 +487,7 @@ function makeBox(chapter, doc, payload, first) {
   // other one opens to this much: its question, one line answering it,
   // and a control saying how many sections are behind it.
   box.setAttribute("data-open", String(Boolean(first)));
-  const said = safely(chapter, payload);
+  const said = safely(chapter, payload, comparison);
   if (said) {
     const line = doc.createElement("p");
     line.className = "chapter-answer";
@@ -503,10 +518,10 @@ function makeBox(chapter, doc, payload, first) {
  * that says so by saying nothing, which is the honest answer for a
  * payload whose fields are absent.
  */
-function safely(chapter, payload) {
+function safely(chapter, payload, comparison) {
   if (typeof chapter.answer !== "function" || !payload) return null;
   try {
-    const said = chapter.answer(payload);
+    const said = chapter.answer(payload, comparison);
     return typeof said === "string" && said.trim() ? said : null;
   } catch (error) {
     return null;

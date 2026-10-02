@@ -13,7 +13,7 @@ CPU reconciliation itself (I9) is tests/unit/test_cpu_reconciliation.py
 (P3-06) - not duplicated here.
 """
 
-from bga.utilisation import CPUBucket, analyze_utilization
+from bga.utilisation import CPUBucket, analyze_utilization, oversubscription_evidence
 
 # A minimal, real-shaped resource_oversubscription violation dict, the
 # same shape bga/analyzer.py's _check_process_oversubscription (UX-12)
@@ -30,13 +30,12 @@ _OVERSUBSCRIPTION_VIOLATION = {
 }
 
 
-def _interval(uid, cpu_usage_us, concurrent_tasks=None):
+def _interval(uid, cpu_usage_us, start_us=0):
     return {
         "task_key": uid,
-        "start_us": 0,
-        "end_us": cpu_usage_us,
+        "start_us": start_us,
+        "end_us": start_us + cpu_usage_us,
         "cpu_usage_us": cpu_usage_us,
-        "concurrent_tasks": concurrent_tasks or [uid],
     }
 
 
@@ -89,17 +88,29 @@ def test_unused_capacity_is_idle_no_tasks():
     assert result.buckets[CPUBucket.IDLE_NO_TASKS] == 4000
 
 
-def test_max_observed_concurrency_tracks_the_largest_concurrent_set():
+def test_two_overlapping_tasks_peak_at_two():
+    """UX-1245: the peak is a sweep over intervals; a one-item list per task read 1 on every run."""
     result = analyze_utilization(
         cpu_accounting={"effective_cpus": 4},
         wall_clock_us=10000,
         task_intervals=[
-            _interval("a.bst", 5000, concurrent_tasks=["a.bst", "b.bst", "c.bst"]),
-            _interval("b.bst", 5000, concurrent_tasks=["a.bst", "b.bst", "c.bst"]),
+            _interval("a.bst", 5000),
+            _interval("b.bst", 5000, start_us=2000),
+            _interval("c.bst", 1000, start_us=7000),
         ],
         occupancy_segments=[],
     )
-    assert result.max_observed_concurrency == 3
+    assert result.max_observed_concurrency == 2
+
+
+def test_a_task_starting_as_another_ends_does_not_overlap():
+    result = analyze_utilization(
+        cpu_accounting={"effective_cpus": 4},
+        wall_clock_us=10000,
+        task_intervals=[_interval("a.bst", 5000), _interval("b.bst", 5000, start_us=5000)],
+        occupancy_segments=[],
+    )
+    assert result.max_observed_concurrency == 1
 
 
 # --- Oversubscription evidence (Part 30.3) ---
@@ -114,7 +125,7 @@ def test_config_oversubscription_alone_is_only_low_evidence():
         cpu_accounting={"effective_cpus": 2},
         wall_clock_us=100000,
         oversubscription_violation=_OVERSUBSCRIPTION_VIOLATION,
-        task_intervals=[_interval("a.bst", 1000, concurrent_tasks=["a.bst"])],
+        task_intervals=[_interval("a.bst", 1000)],
         occupancy_segments=[],
     )
     assert result.potential_oversubscription is True
@@ -132,22 +143,32 @@ def test_config_oversubscription_delegates_not_recomputes():
         cpu_accounting={"effective_cpus": 2},
         wall_clock_us=100000,
         oversubscription_violation=None,
-        task_intervals=[_interval("a.bst", 1000, concurrent_tasks=["a.bst"])],
+        task_intervals=[_interval("a.bst", 1000)],
         occupancy_segments=[],
     )
     assert result.potential_oversubscription is False
     assert result.oversubscription_evidence == "INSUFFICIENT_EVIDENCE"
 
 
-def test_high_utilization_is_strong_evidence():
+def test_full_slots_alone_are_slot_occupancy_not_oversubscription():
+    """UX-1245: slot-time over capacity is builder occupancy; it never says CPU."""
     result = analyze_utilization(
         cpu_accounting={"effective_cpus": 1},
         wall_clock_us=10000,
         task_intervals=[_interval("a.bst", 9800)],
         occupancy_segments=[],
     )
-    assert result.potential_oversubscription is True
-    assert result.oversubscription_evidence == "HIGH_CPU_UTILIZATION"
+    assert result.potential_oversubscription is False
+    assert result.oversubscription_evidence == "HIGH_SLOT_OCCUPANCY"
+
+
+def test_full_slots_with_plane_2_cores_mostly_idle_is_not_oversubscription():
+    """UX-1245's page: slots full, 0.86 of 4 cores busy, peak 4 tasks on 4 cores."""
+    assert oversubscription_evidence(0.97, 0.86, 4, peak=4) == (False, "HIGH_SLOT_OCCUPANCY")
+
+
+def test_plane_2_cores_busy_at_the_host_is_high_cpu_use():
+    assert oversubscription_evidence(0.97, 3.9, 4, peak=4) == (True, "HIGH_CPU_UTILIZATION")
 
 
 def test_concurrency_exceeding_effective_cpus_is_strong_evidence():
@@ -155,7 +176,9 @@ def test_concurrency_exceeding_effective_cpus_is_strong_evidence():
         cpu_accounting={"effective_cpus": 2},
         wall_clock_us=10000,
         task_intervals=[
-            _interval("a.bst", 1000, concurrent_tasks=["a.bst", "b.bst", "c.bst"]),
+            _interval("a.bst", 1000),
+            _interval("b.bst", 1000, start_us=200),
+            _interval("c.bst", 1000, start_us=400),
         ],
         occupancy_segments=[],
     )
@@ -167,7 +190,7 @@ def test_no_config_signal_and_no_observed_evidence_is_insufficient():
     result = analyze_utilization(
         cpu_accounting={"effective_cpus": 4},
         wall_clock_us=100000,
-        task_intervals=[_interval("a.bst", 1000, concurrent_tasks=["a.bst"])],
+        task_intervals=[_interval("a.bst", 1000)],
         occupancy_segments=[],
     )
     assert result.potential_oversubscription is False
@@ -283,15 +306,34 @@ def test_builders_is_never_a_valid_effective_cpus_source():
 
 def test_delegated_oversubscription_plus_observed_evidence_is_stronger_than_low():
     """A delegated config violation alongside real observed corroboration
-    (high utilization here) must surface the stronger evidence label, not
+    (concurrency over cores here) must surface the stronger evidence label, not
     downgrade to LOW - LOW is reserved for config-alone."""
     result = analyze_utilization(
         cpu_accounting=None,
         wall_clock_us=10000,
         host_cpu_count=1,
         oversubscription_violation=_OVERSUBSCRIPTION_VIOLATION,
-        task_intervals=[_interval("a.bst", 9800)],
+        task_intervals=[_interval("a.bst", 4000), _interval("b.bst", 4000, start_us=1000)],
         occupancy_segments=[],
     )
     assert result.potential_oversubscription is True
-    assert result.oversubscription_evidence == "HIGH_CPU_UTILIZATION"
+    assert result.oversubscription_evidence == "CONCURRENT_TASKS_EXCEED_CPUS"
+
+
+def test_attached_plane_2_cores_busy_rewrites_the_evidence():
+    """UX-1245: the CPU half is written where Plane 2 is joined, after analyze()."""
+    from types import SimpleNamespace
+
+    from bga.cli import _reread_oversubscription
+
+    util = {
+        "cpu_accounting_available": True,
+        "effective_cpus": 4.0,
+        "useful_share": 0.99,
+        "max_observed_concurrency": 4,
+        "potential_oversubscription": False,
+        "oversubscription_evidence": "HIGH_SLOT_OCCUPANCY",
+    }
+    result = SimpleNamespace(utilisation=util, plane2_capacity={"cores_busy": 3.9})
+    _reread_oversubscription(SimpleNamespace(violations=[]), result)
+    assert (util["potential_oversubscription"], util["oversubscription_evidence"]) == (True, "HIGH_CPU_UTILIZATION")

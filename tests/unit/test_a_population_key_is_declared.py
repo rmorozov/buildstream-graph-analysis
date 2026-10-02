@@ -171,9 +171,9 @@ _RANKS = r"""
   out.leaves = rows(leaves).map((tr) => [tr.getAttribute("data-element"),
     tr.querySelector('td[data-column="deferral_risk"]')?.getAttribute("data-raw") ?? null]);
   const head = (t, column) => t?.querySelector(`thead th[data-column="${column}"]`);
-  out.calls = head(table("by_binary"), "value")?.textContent.replace(/[▲▼↑↓▾▸]/g, "").trim() ?? null;
+  out.calls = head(table("by_binary"), "calls")?.textContent.replace(/[▲▼↑↓▾▸]/g, "").trim() ?? null;
   out.links = rows(table("by_binary")).map((tr) => [tr.getAttribute("data-binary"),
-    tr.querySelector('td[data-column="key"] > a')?.getAttribute("href") ?? null]);
+    tr.querySelector('td[data-column="binary"] > a')?.getAttribute("href") ?? null]);
   out.cpu = rows(table("binary_cost"))[0]?.querySelector('td[data-column="cpu_us"]')?.getAttribute("data-raw") ?? null;
   const chains = table("serial_chains");
   out.rankQuantity = head(chains, "rank")?.getAttribute("data-quantity") ?? null;

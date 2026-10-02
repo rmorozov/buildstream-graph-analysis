@@ -731,7 +731,9 @@ export function buildTable(key, rows, hint = {}, node = undefined,
       const cell = [...tr.children].find(
         (td) => td.getAttribute("data-column") === uidColumn);
       if (!cell) continue;
-      const raw = cell.getAttribute("data-raw") || cell.textContent;
+      // `UX-1244`: an empty raw is a row naming no element (a builders step), never the word "none".
+      const raw = cell.hasAttribute("data-raw") ? cell.getAttribute("data-raw") : cell.textContent;
+      if (!raw) continue;
       const uid = uidColumn === taskColumn ? taskUid(raw).element : raw;
       tr.setAttribute("data-element", uid);
       cell.append(el("a", { class: "inspect", href: `#${cssId(uid)}`,

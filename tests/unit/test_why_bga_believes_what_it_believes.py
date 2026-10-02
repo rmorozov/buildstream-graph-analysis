@@ -255,7 +255,7 @@ class TestTheComparisonCitesTheCandidatesChain:
         comparison quoting it - and following them against the wrong
         document is the failure this field exists to prevent."""
         record = comparison.to_dict()["candidate_diagnosis"]["provenance"]
-        assert record["document"] == "analyze/v6"
+        assert record["document"] == "analyze/v7"
         for entry in record["evidence"]:
             assert provenance.resolve(comparison.to_dict(), entry["path"]) is provenance.UNRESOLVED
             assert provenance.resolve(golden, entry["path"]) == entry["value"]
@@ -368,7 +368,7 @@ class TestBothRenderersReadTheSameObject:
 
     def test_the_chain_appears_under_the_claim_it_explains(self):
         explained = _bga(["analyze", GOLDEN, "--explain"]).splitlines()
-        titles = [i for i, line in enumerate(explained) if line.startswith("  Confidence: ")]
+        titles = [i for i, line in enumerate(explained) if line.startswith("  ") and "% confidence (" in line]
         assert titles, explained[:40]
         assert explained[titles[0] + 1].strip().startswith("why:")
 

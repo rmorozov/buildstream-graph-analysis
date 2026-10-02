@@ -552,6 +552,9 @@ never silently folded into an unestimated blast.
 | `capacity-recommendation` | varies | the joint `--builders` × `--max-jobs` answer (`UX-116`): the sweep's scheduling knee, Plane 2's measured cores-busy, the `UX-104` memory ceiling and the host's cores, intersected, with the **binding** constraint named and the others shown beneath it. `high` when the run is configured above what its own measurements support, `medium` when there is room to grow, `info` when it is already at its ceiling. Needs `--plane2` |
 | `memory-envelope` | varies | what this build's measured per-element peak RSS implies for `--builders` against the host's RAM — `high` when the current builders count does not fit, `medium` when one more would not, `info` otherwise. Needs `--plane2` and a capture that recorded the host's memory (`UX-104`) |
 | `swap-observed` | high | pages were written to swap while the host's CPU was oversampled — the window span and the elements building in it, from `overcommitted_intervals`' own `swapped_out` count (`UX-676`, `UX-860`). Needs a capture with a host CPU series that recorded a rising `pswpout` |
+| `costliest-binary` | info | the binary that spent the most CPU, `by_binary[0]`, when its share of measured CPU clears the 1% opportunity floor (`UX-1255`). Needs `--plane2` with per-element binaries |
+| `jobs-waiting` | medium | elements that asked for more than one job and ran under 1.25 cores busy, each element's own CPU over its own wall — the line `bga correlate` calls waiting, not computing — counted, with their median (`UX-1255`). Needs `--plane2` |
+| `configure-share` | medium | configure is at least 10% of measured CPU, from `configure_phase` (`UX-1255`). Needs `--plane2` |
 | `remote-execution-whatif` | info | what remote execution would buy, priced two ways and never summed (`UX-680`): `bga sweep`'s own unbounded-builder row (BuildStream REAPI moves whole sandboxes, so it removes the builder cap) and Plane 2's compiler/linker CPU on the critical path (compiler-level RE like recc/reclient moves compiles out of the sandbox, so it removes compile seconds from the agent). `evidence.additive` is always `false` - both remove the same critical-path seconds. The compiler-offload half needs `--plane2` and a capture with `binary_cost`; without one, only the builder-cap half publishes |
 | `shared-source-blast` | medium | one repository's ref decides most of this build's rebuilds: any commit to it rebuilds N of M elements, because its direct elements key on its ref rather than on the files they stage (`UX-171`). Needs a run whose `sources.json` the extraction wrote |
 
@@ -1063,7 +1066,7 @@ Every machine-readable output declares its own shape as its **first
 key**:
 
 ```bash
-bga analyze RUN/ --format json | head -2      # "schema": "analyze/v6"
+bga analyze RUN/ --format json | head -2      # "schema": "analyze/v7"
 bga compare A B --format json                 # "schema": "compare/v2"
 bga blast TARGET --format json                # "schema": "blast/v2"
 bga correlate RUN/ --format json              # "schema": "correlate/v2"
@@ -1081,7 +1084,7 @@ bga compare --schema | jq '.required'
 **The versioning rule**: a field rename or removal bumps the version —
 and so does a key entering `required` under a live id (`UX-629`),
 because the document you wrote last week stops validating against the
-id you pinned. A *permitted* addition does not, so pin `analyze/v6` and
+id you pinned. A *permitted* addition does not, so pin `analyze/v7` and
 your consumer keeps working while the tool grows.
 
 A key the tool writes on **every** document is therefore declared
@@ -1092,14 +1095,17 @@ the real payload instead of by validation:
 
 ```bash
 bga compare --schema | jq '."bga:always_written"'
-# ["verdict_provenance", "build_class_comparison", "baseline_band_sources"]
+# ["verdict_provenance", "build_class_comparison", "baseline_band_sources", "total_duration_delta_share"]
 ```
 
 `compare/v2`'s `verdict_provenance` is the worked example. `UX-610`
 made it required under an unmoved id, taking the required set from 14
 to 15, and every `compare/v2` document written before it stopped
 validating; it is permitted-and-always-written now, so those documents
-validate again and the id did not have to move.
+validate again and the id did not have to move. The newest,
+`total_duration_delta_share` (`UX-1257`), is the wall-clock delta as a
+share of the baseline's — negative is faster, `null` with no baseline
+total — and is what `bga view`'s compare chapter leads with.
 
 ### Which keys the prose names, and which it does not (`UX-628`)
 
@@ -1124,7 +1130,7 @@ sentence is checked against is **0 undocumented keys**.
 A row is found **at any depth**, and by any of the three things that
 declare one: an array's `items`, the `bga:columns` an array node
 carries, and a dict's `additionalProperties.properties`. The first two
-are needed, and `UX-655` measured why — `analyze/v6`'s
+are needed, and `UX-655` measured why — `analyze/v7`'s
 `parallelism.levels` has no `type` and no `items` at all, so its
 columns are the whole statement of what one of its rows holds, and
 `level` and `width` are in no `items` anywhere. Depth is the same
@@ -1148,7 +1154,7 @@ the blocks a reader meets first, and `certified_headroom`, the number
 Key Findings leads with, had never been in the population at all. It was
 302 such keys when that was filed and 305 when it landed. One level and
 no further: `blast_radius_distribution.deciles` is in the population and
-its own nine buckets are not. The surface is **607 keys** today, and
+its own nine buckets are not. The surface is **611 keys** today, and
 that figure is derived from the walk rather than typed here.
 
 So the statement of coverage, which is now a statement and not a
@@ -1181,7 +1187,7 @@ promise:
   `requested_at_us` and `requested_at_source` are held by prose alone.
 
 A section subcommand (`bga floors`, `bga graph`, …) emits the same
-`analyze/v6` document restricted to its own keys, with a `section` key
+`analyze/v7` document restricted to its own keys, with a `section` key
 naming the restriction — so a missing key can be told from a removed
 one.
 
@@ -1192,7 +1198,7 @@ what its schema says it is. `--schema` stays the complete list and the
 source of truth for types; these rows are so a reader holding a payload
 can look one up.
 
-`analyze/v6` — the run-level blocks:
+`analyze/v7` — the run-level blocks:
 
 | key | what it is |
 |---|---|
@@ -1219,7 +1225,7 @@ can look one up.
 | `unused_dependencies`, `redundancy_count`, `worst_redundancy`, `native_findings` | The Plane 2 half of an `element_join` row: declared-and-never-read dependencies, how often this element repeated work it had already done, the repetition it paid most for, and the producer's own per-element tags. |
 | `edges`, `projection` | Inside a `restructuring` finding: the declared build edges Plane 2 measured never-read, and the replay with those edges removed (`replayed_baseline_us`, `projected_us`, `saving_us`). Evidence, not a verdict. |
 
-`analyze/v6` — inside a `findings`, `next_steps`, `readers`,
+`analyze/v7` — inside a `findings`, `next_steps`, `readers`,
 `provenance` or `binary_cost` row:
 
 | key | what it is |
@@ -1234,7 +1240,7 @@ can look one up.
 | `claim` | Which claim a `provenance` entry explains — a finding id, or `diagnosis` for the headline. |
 | `calls`, `cpu_time`, `cpu_share`, `wall_us` | Per binary, in `binary_cost`: how many times this element ran it, the CPU it took, that CPU as a share of the element's measured CPU, and the wall-clock those calls spanned. |
 
-`analyze/v6` — inside a row of a block below the top level (`UX-655`):
+`analyze/v7` — inside a row of a block below the top level (`UX-655`):
 
 | key | what it is |
 |---|---|
@@ -1360,7 +1366,7 @@ leads with. Those scalars were outside the guard's population until
 `UX-909`: 305 of them, including every `floors` key `UX-891` added.
 They are one line each here, on the same terms as the rows above.
 
-`analyze/v6` — `floors`, the lower bounds this run certifies:
+`analyze/v7` — `floors`, the lower bounds this run certifies:
 
 | key | what it is |
 |---|---|
@@ -1372,7 +1378,7 @@ They are one line each here, on the same terms as the rows above.
 | `cold_duration_sources`, `cold_critical_path_duration_sources` | Where each cold duration came from, by tier; the second narrowed to the elements on the cold path. |
 | `capacity_model_note` | What these floors certify against, in words — and what they do not. |
 
-`analyze/v6` — the run-level blocks' own scalars:
+`analyze/v7` — the run-level blocks' own scalars:
 
 | key | what it is |
 |---|---|
@@ -1388,7 +1394,7 @@ They are one line each here, on the same terms as the rows above.
 | `total_us`, `fraction_of_horizon` | In `pipeline_overhead`: time BuildStream spent outside any element — loading, resolving, cache queries — and that time as a share of the run. No builder count reduces it. |
 | `chain_bound_share`, `chain_share_of`, `certified_headroom_us`, `scheduling_gap_us` | In `headline`: the threshold `chain_share` is compared against, which span it is a share of (`task_horizon`, published rather than left to guess), the headroom repeated from `floors` so the decision needs no second lookup, and wall-clock beyond the critical path. |
 
-`analyze/v6` — the graph's shape, in `graph_metrics`, `graph_summary`
+`analyze/v7` — the graph's shape, in `graph_metrics`, `graph_summary`
 and `parallelism`:
 
 | key | what it is |
@@ -1404,7 +1410,7 @@ and `parallelism`:
 | `critical_path_us`, `total_improvable_time_us` | In `sensitivity`: the chain's duration, which the savings are measured against, and how much of it sits in elements that could move. |
 | `deepest_depth`, `deepest_path`, `deeper_than_three`, `deeper_than_three_share` | In `document_shape`, measured on the document as published: how far down its deepest leaf sits, one path that reaches it (`[]` for a list step), and the leaves more than three levels down as a count and a share. |
 
-`analyze/v6` — `cache`, what this run built and what it restored:
+`analyze/v7` — `cache`, what this run built and what it restored:
 
 | key | what it is |
 |---|---|
@@ -1414,7 +1420,7 @@ and `parallelism`:
 | `transfer_bytes`, `transfer_rate_bytes_per_s` | What the host moved while the build ran, and `transfer_bytes.total` over `transfer_window_us`. BuildStream reports no byte count, so these are the host's own interface counters over the build's span: on a shared machine an upper bound, loopback excluded. The rate says whether more bandwidth would help or the object count would be slow on any link. |
 | `target_closure` | The same question restricted to what the target actually needs. |
 
-`analyze/v6` — `utilisation`, where the run's slot-time went:
+`analyze/v7` — `utilisation`, where the run's slot-time went:
 
 | key | what it is |
 |---|---|
@@ -1426,7 +1432,7 @@ and `parallelism`:
 | `max_observed_concurrency` | The most tasks seen running together in this accounting's own view of the run. |
 | `idle_share`, `wasted_share` | Slot-time with nothing to run — bounded below by the graph's shape, so never entirely recoverable — and slot-time spent on work then thrown away. The second is the recoverable share. |
 
-`analyze/v6` — `utilization_envelope`, cores busy from the host's own
+`analyze/v7` — `utilization_envelope`, cores busy from the host's own
 `/proc/stat` series:
 
 | key | what it is |
@@ -1437,7 +1443,7 @@ and `parallelism`:
 | `busy_share_p50`, `busy_share_p95` | Both against the capacity that could actually be reached. |
 | `underutilized_share`, `overcommitted_share` | Share of the sampled build holding at least one idle core while Plane 1 says there was work, and share with load above the core count or a page written to swap. |
 
-`analyze/v6` — `confidence`, `capacity_verdict` and
+`analyze/v7` — `confidence`, `capacity_verdict` and
 `capacity_recommendation`:
 
 | key | what it is |
@@ -1449,8 +1455,9 @@ and `parallelism`:
 | `explained_untracked_us` | How much of the untracked time this report can account for. |
 | `undersubscribed`, `skipped_inputs` | In `capacity_verdict`: whether the host could have served more parallelism than the run asked for, and the missing inputs named — so a reader can supply them rather than guess why the check said nothing. A check that did not run is inert, not passing. |
 | `binding_constraint`, `builders_change` | In `capacity_recommendation`: the name of the smallest of the four constraints, which is the one that changes what to do, and `recommended_builders` minus `builders`, signed. Negative means the run asked for more than something can serve. |
+| `agent_sizing` | Builders, cores and memory for this host in one block, each value with the `source` section it was read off (`UX-1254`). Cores and memory are `null` without Plane 2, and `absence` says so. Memory is an upper bound: every builder peaking at once. |
 
-`analyze/v6` — the two-plane blocks:
+`analyze/v7` — the two-plane blocks:
 
 | key | what it is |
 |---|---|
@@ -1486,7 +1493,7 @@ three:
 
 | key | what it is |
 |---|---|
-| `t_c` | In `baseline`, `candidate` and `deltas` (and `analyze/v6`'s `floors`): the makespan a replay of that run's recorded work produces, and its signed change. |
+| `t_c` | In `baseline`, `candidate` and `deltas` (and `analyze/v7`'s `floors`): the makespan a replay of that run's recorded work produces, and its signed change. |
 | `contention_us`, `serialization_us` | In `deltas`: change in time lost waiting for a busy resource, and change in time independent work spent running one after another. |
 | `efficiency_share` | Change in makespan against the certified floor. Each run is measured against its own floor, so this compares two ratios and not two durations. |
 | `inefficiency_ratio` | Change in the gate's ratio — the figure `--fail-on` thresholds are read against. |
@@ -1550,7 +1557,7 @@ Three rules decide what it will and will not say:
   producer stamp counted separately as an explicit unknown. Unlike a
   host class, two contract sets are not two populations: what decides
   whether runs can be pooled is movement in the contracts this document
-  *reads* (`analyze/v6`, `store/v1`), never the package version — the
+  *reads* (`analyze/v7`, `store/v1`), never the package version — the
   rule `bga compare` already applies to a pair.
 
 Percentiles are **nearest-rank**: for `n` sorted samples, `p` is the
@@ -1776,7 +1783,7 @@ claim:
 - `document` — which schema the paths walk. Load-bearing when a record
   travels: `bga compare --format json` carries the candidate run's
   chain at `candidate_diagnosis`, and its paths resolve against that
-  run's `analyze/v6`, not against the comparison.
+  run's `analyze/v7`, not against the comparison.
 
 A top action's provenance is a **pointer** (`see`) at the finding's
 record, because the action is already a reference to that finding.
@@ -1895,7 +1902,7 @@ renders no picker at all.
 array, a table with these columns — and renders from that. Two things
 follow, and both are deliberate:
 
-- A field added to `analyze/v6` appears in the viewer with **no change
+- A field added to `analyze/v7` appears in the viewer with **no change
   to the viewer**.
 - Anything the viewer should show has to enter the published schema
   first, where `--format json`, CI and every external consumer get it
@@ -1953,7 +1960,7 @@ Above the sections, two things a list of tables could not say:
 
 **Every number in both is read from a published field.** Nothing is
 computed in the browser; the one division in the waterfall is a CSS
-width. A gap the JSON does not carry enters `analyze/v6` first, where
+width. A gap the JSON does not carry enters `analyze/v7` first, where
 `--format json`, CI and every other consumer get it too — which is why
 `confidence.band`, `run_instance.incomplete_reason` and
 `plane2_coverage` are fields rather than viewer logic.
@@ -1988,7 +1995,7 @@ export does not have one.
 ### What the page opens with (`UX-207`)
 
 The first screen is a **decision**, and everything below it is the
-evidence for that decision. `analyze/v6` publishes a `headline` block —
+evidence for that decision. `analyze/v7` publishes a `headline` block —
 the diagnosis (`chain_bound`, `scheduler_bound` or `inconclusive`), the
 ratio it was decided by, what the opportunity is worth, and the three
 elements to look at first, each pointing at the finding that reasons
@@ -2047,11 +2054,11 @@ clone has, advising a `compare` that store refused with exit 6.
 ```text
 Next:
   layer02/mod001.bst is the longest thing on the critical path at 14.4s, 54% of it - the build cannot finish sooner than this chain.
-    bga blast layer02/mod001.bst /tmp/bga-demo/.bga/runs/20260303T091500Z/run
+    bga blast layer02/mod001.bst @20260303T091500Z
   layer02/mod001.bst is the first thing to fix, worth 6.6s - this is what changing it rebuilds.
-    bga blast layer02/mod001.bst /tmp/bga-demo/.bga/runs/20260303T091500Z/run
-  Make the change, then capture it the same way.
-    bga snapshot --project /tmp/bga-demo -- bst build all.bst
+    bga blast layer02/mod001.bst @20260303T091500Z
+  Make the change, then capture it the same way - run it in /tmp/bga-demo.
+    bga snapshot -- bst build all.bst
   Whether it helped, judged against this store's noise - run it in /tmp/bga-demo.
     bga compare @prev @last
 ```
@@ -2628,7 +2635,7 @@ rather than overlap. The CPU ceiling is `host_cores × builders ÷
 cores_busy` — measured draw per concurrently-building element, not an
 assumption — and the memory ceiling comes from the envelope below.
 
-**Reading it as data.** The block is a key of `analyze/v6`, so a CI job
+**Reading it as data.** The block is a key of `analyze/v7`, so a CI job
 asks for it the same way it asks for anything else:
 
 ```bash
@@ -2738,7 +2745,7 @@ bga sweep tests/fixtures/macro_micro/run --format json | jq '.knee_points'
 | `binding_constraints` (`UX-678`) | per resource, which of `knee_points` or `memory_knee_points` is the tighter ceiling, as `{name, builders}`. `{}` under the same condition as `memory_knee_points` |
 
 **The same two figures, on `capacity_recommendation` (`UX-678`).** The
-block above (`analyze/v6`) runs this same memory-aware sweep for its
+block above (`analyze/v7`) runs this same memory-aware sweep for its
 own `PROCESS` knee and carries the answer as `sweep_memory_builders`
 (the `memory_knee_points` value) and `sweep_binding` (the
 `binding_constraints` entry) - absent under the same condition. It sits
@@ -2754,7 +2761,7 @@ the required keys of. `UX-328` found that while enrolling three others,
 said what was true in the meantime, and filed the contract this is.
 
 **Where it appears.** In the text report, under the headline. It is
-**not** a key of `analyze/v6` — `bga analyze -f json` does not carry it
+**not** a key of `analyze/v7` — `bga analyze -f json` does not carry it
 (`UX-275`).
 
 ### The memory envelope (`UX-104`)

@@ -268,7 +268,9 @@ class TestSwapIsAFinding:
             "swap_start_offset_us": rows[0]["start_offset_us"],
             "swap_end_offset_us": (rows[0]["start_offset_us"] + rows[0]["duration_us"]),
         }
-        assert "a.bst" in f["title"] and "9" in f["title"]
+        assert "a.bst" in (f["title"] + " " + " ".join(f["detail"])) and "9" in (
+            f["title"] + " " + " ".join(f["detail"])
+        )
 
     def test_no_swap_is_no_finding(self):
         assert self._finding_for([]) == []

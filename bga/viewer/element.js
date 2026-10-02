@@ -232,6 +232,7 @@ export function elementFacts(payload) {
   for (const [array, idKey, fields] of SOURCES) {
     const rows = array.split(".").reduce((node, key) => node?.[key], payload);
     for (const entry of rows ?? []) {
+      if (entry[idKey] === undefined) continue;   // a builders action names no element
       const record = facts.has(entry[idKey]) || array !== "element_join"
         ? touch(entry[idKey]) : null;      // the join follows, never leads
       if (!record) continue;

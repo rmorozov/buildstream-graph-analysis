@@ -2113,6 +2113,7 @@ lives in `agent-runs.md`'s rows, counted per round from there.
 | [159](../audits/round-159.md) | round 158's walk residue - `UX-1194`-`UX-1205`, twelve rows in two waves (owner: full Blocks lists with bounds raised by the measured delta, `UX-1205` rides bst-tests); 12/12 verified PASS; the review's five tasks all answered; walk N1-N8 fixed in three residue tracks; the residue filed as `UX-1206`-`UX-1217` |
 | [160](../audits/round-160.md) | round 159's walk residue - `UX-1206`-`UX-1217`, twelve rows in two architect waves (owner: `UX-1214` publishes every direct list, `depends_on:` and `blocks:` exact, the transitive `downstream:` dropped); verifiers 10 PASS and `UX-1208` FAIL (fixed); the review's five tasks all answered; walk N1-N8 fixed in five residue tracks; the residue filed as `UX-1219`-`UX-1232` |
 | [161](../audits/round-161.md) | round 160's walk residue - `UX-1219`-`UX-1232` in four tracks, with the owner's `UX-1233` (page budget 165,000 B) and `UX-1234` (shared titles); verifiers 15 PASS; the residue filed as `UX-1235`, `UX-1236` |
+| [163](../audits/round-163.md) | the round-162 review's rows - `UX-1235`, `UX-1236`, `UX-1244`-`UX-1257` in eleven opus and two sonnet tracks (a capacity-bound run reads `capacity_bound`, `analyze/v7`'s per-binary totals, Plane 2 findings, the sizing card, the compare lead); three owner calls pending (`UX-1254` 872 controls, `UX-1249` 13,500 words, `UX-1244` the host-core cap); the residue filed as `UX-1258`-`UX-1267` |
 
 ## Verification Log
 

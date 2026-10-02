@@ -1203,10 +1203,21 @@ MEDIUM = (
     "tests/unit/test_a_press_at_390_opens_no_keyboard.py",  #    3.3s
     # `UX-1224`.
     "tests/unit/test_a_printed_filtered_table_states_its_filter.py",  #   11.2s
-    # `UX-1234`.
-    "tests/unit/test_a_shared_title_is_the_reader_s_word.py",  #    8.4s
+    # `UX-1234`; a 30-layer page since `UX-1244`.
+    "tests/unit/test_a_shared_title_is_the_reader_s_word.py",  #   12.3s
     # `UX-1223`.
     "tests/unit/test_all_rows_after_top_10_keeps_the_chain_order.py",  #    7.7s
     # `UX-1227`.
     "tests/unit/test_the_palette_arrows_start_at_the_ends.py",  #    0.9s
+    # Round 163's merged tree, alone in one process (pytest wall).
+    # `UX-1251`.
+    "tests/unit/test_a_segment_label_never_overprints_its_neighbour.py",  #    4.4s
+    # `UX-1254`.
+    "tests/unit/test_an_agent_sizing_card_reads_its_sources.py",  #    3.3s
+    # `UX-1249`.
+    "tests/unit/test_findings_say_each_thing_once.py",  #    5.3s
+    # `UX-1257`.
+    "tests/unit/test_the_compare_chapter_leads_with_the_delta.py",  #    3.6s
+    # `UX-1252`.
+    "tests/unit/test_an_all_clear_run_is_one_sentence.py",  #    4.9s
 )

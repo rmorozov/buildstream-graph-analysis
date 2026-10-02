@@ -15,6 +15,7 @@ the incident that produced it, and the incidents are why the rules are trusted (
 | Replace the placeholder; a removed comment is not an implementation | — |
 | Stay inside the declared scope; a bug you notice becomes a row | — |
 | Touching the page? Run the styleguide's seven questions | `test_the_page_conforms_to_its_sections.py` |
+| A finding title opens with its number, in 100 characters (styleguide §4g item 9) | `test_a_finding_title_leads_with_its_number.py` |
 | Never delete, weaken or skip a test to make a change pass | `.claude/hooks/keep-the-guards-able-to-fail.sh` |
 | A drift you notice is a line, anything else a row | `test_a_bookkeeping_finding_is_one_line.py` |
 

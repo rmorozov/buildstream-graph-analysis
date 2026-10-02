@@ -28,6 +28,7 @@ from typing import NoReturn, Optional
 
 from . import __version__, contracts, schemas
 from . import plane2 as plane2_shape
+from . import shown as qty
 from .analyzer import (
     MODELLED_AXIS_CLAUSE,
     UNMODELED_AXIS_CLAUSE,
@@ -165,10 +166,27 @@ def _add_cpu_floor(result, native_report: dict, context) -> None:
     source = 'a declared CPU budget' if cpu_floor['lb_cpu_cores_source'] == 'cpu_budget' else "the host's"
     floors['capacity_model_note'] = (floors.get('capacity_model_note') or '') + (
         f" This run also has a CPU floor, beside LB and not folded into "
-        f"it: {cpu_floor['lb_cpu_us'] / 1e6:.2f} s, the CPU this capture "
+        f"it: {qty.duration(cpu_floor['lb_cpu_us'])}, the CPU this capture "
         f"measured over {cpu_floor['lb_cpu_governing_cores']} governing "
         f"cores ({source}) — {binds} is the "
         f"binding one."
+    )
+
+
+def _reread_oversubscription(analyzer, result) -> None:
+    """UX-1245: Plane 2's cores busy is the CPU evidence; slot occupancy alone never was."""
+    from bga.utilisation import oversubscription_evidence
+
+    util = getattr(result, 'utilisation', None)
+    if not util or not util.get('cpu_accounting_available'):
+        return
+    config = any(v.get('type') == 'resource_oversubscription' for v in getattr(analyzer, 'violations', None) or [])
+    util['potential_oversubscription'], util['oversubscription_evidence'] = oversubscription_evidence(
+        util.get('useful_share'),
+        (result.plane2_capacity or {}).get('cores_busy'),
+        util.get('effective_cpus'),
+        peak=util.get('max_observed_concurrency') or 0,
+        config_violation=config,
     )
 
 
@@ -234,6 +252,7 @@ def _attach_plane2_capacity(args: argparse.Namespace, analyzer, result) -> None:
             native_report, plane2_shape.resolved_widths(os.path.join(str(run_dir), 'graph.json'))
         )
     result.plane2_capacity = summarize_plane2_capacity(native_report, host_cpu_count)
+    _reread_oversubscription(analyzer, result)
     # UX-202: how much of the build Plane 2 actually saw, published
     # rather than left in the native report. The evidence header states
     # what a capture can support before any number is believed, and
@@ -690,6 +709,12 @@ def analyzed_with_analyzer(args: argparse.Namespace, section: Optional[str] = No
     else:
         result = analyzer.analyze(run_dir, section=section)
     _attach_plane2_capacity(args, analyzer, result)
+    from bga.correlate import compute_agent_sizing
+
+    # UX-1254: after the recommendation and envelope it reads, never recomputing either.
+    result.agent_sizing = compute_agent_sizing(
+        result, getattr(getattr(analyzer, 'run_context', None), 'max_jobs', None)
+    )
     _attach_resource_blast(run_dir, analyzer, result)
     # UX-680: after Plane 2 is attached, so the compiler-offload half
     # can read `result.plane2_report` when there is one.

@@ -137,6 +137,8 @@ FILE_WRITTEN = {
     # `UX-641` an eighth: the shape before `parallelism.levels` named
     # the elements on each level instead of the row number.
     "analyze/v5": "an older store's report.json, before UX-641",
+    # `UX-1247` a ninth: the shape before `by_binary` was ranked rows.
+    "analyze/v6": "an older store's report.json, before UX-1247",
     "compare/v1": "an older store's comparison",
     "blast/v1": "an older store's blast answer",
     "correlate/v1": "an older store's two-plane join",
@@ -351,6 +353,7 @@ class TestTheUnionIsTheInventory:
             "analyze/v3",
             "analyze/v4",
             "analyze/v5",
+            "analyze/v6",
             "blast/v1",
             "compare/v1",
             "correlate/v1",
@@ -443,6 +446,7 @@ class TestTheDocumentSaysWhatTheToolDoes:
             "twenty-five": 25,
             "twenty-six": 26,
             "twenty-seven": 27,
+            "twenty-eight": 28,
         }
         claimed = re.search(r"\b(" + "|".join(words) + r")\b ids", block, re.I)
         assert claimed, "the block no longer states a count at all"

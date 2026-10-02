@@ -324,8 +324,9 @@ class TestTheSweepReachesEveryPopulation:
         assert drawn == {"record", "map"}, drawn
         maps = [k for k in swept["swept"] if swept["shape"][k] == "map"]
         assert len(maps) >= 5, maps
-        for named in ("by_binary", "wall_clock_share_us"):
-            assert named in maps, maps
+        # `UX-1247`: by_binary is rows since analyze/v7, so it sweeps as a record.
+        assert "wall_clock_share_us" in maps, maps
+        assert swept["shape"].get("by_binary") == "record", swept["shape"].get("by_binary")
 
     def test_the_threshold_is_the_one_this_sweep_was_sized_for(self):
         """`MANY` is three times the threshold *as measured*, not three

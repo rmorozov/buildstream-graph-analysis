@@ -181,6 +181,45 @@ class UtilizationResult:
         }
 
 
+# Full slots are occupancy; only Plane 2's cores busy says CPU (UX-1245).
+_SATURATION = 0.95
+
+
+def peak_concurrency(task_intervals: list[dict]) -> int:
+    """Most task intervals open at one instant; an end and a start at the same time do not overlap."""
+    spans = [(i.get("start_us"), i.get("end_us")) for i in task_intervals]
+    spans = [(a, b) for a, b in spans if a is not None and b is not None and b > a]
+    events = sorted([(a, 1) for a, _ in spans] + [(b, -1) for _, b in spans])
+    peak = running = 0
+    for _, step in events:
+        running += step
+        peak = max(peak, running)
+    return peak
+
+
+def oversubscription_evidence(
+    slot_share: Optional[float],
+    cores_busy: Optional[float],
+    effective_cpus: Optional[float],
+    *,
+    peak: int = 0,
+    config_violation: bool = False,
+) -> tuple[bool, str]:
+    """`(potential_oversubscription, evidence)` - full slots alone are HIGH_SLOT_OCCUPANCY, never oversubscription."""
+    if not effective_cpus:
+        return False, "INSUFFICIENT_EVIDENCE"
+    evidence, observed = "INSUFFICIENT_EVIDENCE", False
+    if slot_share is not None and slot_share >= _SATURATION:
+        evidence = "HIGH_SLOT_OCCUPANCY"
+    if cores_busy is not None and cores_busy >= _SATURATION * effective_cpus:
+        evidence, observed = "HIGH_CPU_UTILIZATION", True
+    if peak > effective_cpus:
+        evidence, observed = "CONCURRENT_TASKS_EXCEED_CPUS", True
+    if config_violation and not observed:
+        evidence = "LOW"
+    return observed or config_violation, evidence
+
+
 class UtilizationAnalyzer:
     """
     CPU utilization analyzer implementing Part 30 and M4.
@@ -395,9 +434,7 @@ class UtilizationAnalyzer:
             )
             self.intervals.append(cpu_interval)
 
-            # Track max concurrency
-            concurrency = len(interval.get("concurrent_tasks", [task_key]))
-            self.max_observed_concurrency = max(self.max_observed_concurrency, concurrency)
+        self.max_observed_concurrency = peak_concurrency(task_intervals)
 
     def _compute_bucket_totals(self) -> None:
         """Compute total CPU-microseconds per bucket."""
@@ -514,8 +551,9 @@ class UtilizationAnalyzer:
         1. Configuration: delegated to bga/analyzer.py's own
            `_check_process_oversubscription` (UX-12) - see
            `oversubscription_violation` below.
-        2. Observed: high CPU utilization
-        3. Duration degradation with concurrency
+        2. Observed: Plane 2 cores busy, which only `cli._attach_plane2_capacity`
+           has - here full slots read HIGH_SLOT_OCCUPANCY, never CPU
+        3. Observed: peak task concurrency over effective_cpus
 
         Evidence sources 2/3 compare against effective_cpus - without a
         real capacity value (P1-33/UX-17), there is nothing to compare
@@ -544,37 +582,19 @@ class UtilizationAnalyzer:
                 None if it didn't fire (including when the inputs it
                 needs, e.g. `native_max_jobs`, simply weren't captured).
         """
-        self.potential_oversubscription = False
-        self.oversubscription_evidence = "INSUFFICIENT_EVIDENCE"
+        self.potential_oversubscription, self.oversubscription_evidence = oversubscription_evidence(
+            self.useful_share_of_capacity(),
+            None,
+            self.effective_cpus,
+            peak=self.max_observed_concurrency,
+            config_violation=oversubscription_violation is not None,
+        )
 
-        if not self.cpu_accounting_available:
-            return
-
-        config_oversubscription = oversubscription_violation is not None
-        if config_oversubscription:
-            self.potential_oversubscription = True
-
-        # Check observed evidence
-        observed_evidence = False
-
-        # Evidence 1: High observed CPU utilization
-        if self.capacity_cpu_us > 0:
-            useful_cpu = self.buckets.get(CPUBucket.USEFUL, 0)
-            utilization = useful_cpu / self.capacity_cpu_us
-            if utilization >= 0.95:  # 95%+ utilization suggests saturation
-                observed_evidence = True
-                self.oversubscription_evidence = "HIGH_CPU_UTILIZATION"
-                self.potential_oversubscription = True
-
-        # Evidence 2: Max concurrency exceeds effective CPUs
-        if self.max_observed_concurrency > self.effective_cpus:
-            observed_evidence = True
-            self.oversubscription_evidence = "CONCURRENT_TASKS_EXCEED_CPUS"
-            self.potential_oversubscription = True
-
-        # If only configuration suggests oversubscription but no observed evidence
-        if config_oversubscription and not observed_evidence:
-            self.oversubscription_evidence = "LOW"
+    def useful_share_of_capacity(self) -> float:
+        """Useful slot-time over core capacity - builder occupancy, not CPU."""
+        if not self.capacity_cpu_us:
+            return 0.0
+        return self.buckets.get(CPUBucket.USEFUL, 0) / self.capacity_cpu_us
 
     def _reconcile(self) -> None:
         """

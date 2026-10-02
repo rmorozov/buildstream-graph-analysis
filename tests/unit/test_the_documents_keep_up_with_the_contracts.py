@@ -575,13 +575,13 @@ class TestThePopulationIsKeysAndNotIds:
         """
         from bga import schemas
 
-        row = schemas.schema("analyze/v6")["properties"]["parallelism"]["properties"]["levels"]
+        row = schemas.schema("analyze/v7")["properties"]["parallelism"]["properties"]["levels"]
         declared = [column["key"] for column in row["bga:columns"]]
         assert declared, "parallelism.levels declares no columns to reach"
         surface = _consumer_surface()
-        missing = [key for key in declared if "analyze/v6" not in surface.get(key, ())]
+        missing = [key for key in declared if "analyze/v7" not in surface.get(key, ())]
         assert missing == [], (
-            f"key(s) of an analyze/v6 row the consumer surface does not "
+            f"key(s) of an analyze/v7 row the consumer surface does not "
             f"reach: {missing}. A consumer indexing parallelism.levels reads "
             f"exactly these, so a key of one going undocumented is invisible "
             f"to every clause above (UX-655)"
@@ -596,7 +596,7 @@ class TestThePopulationIsKeysAndNotIds:
         and reading columns is re-decided rather than inherited."""
         from bga import schemas
 
-        row = schemas.schema("analyze/v6")["properties"]["parallelism"]["properties"]["levels"]
+        row = schemas.schema("analyze/v7")["properties"]["parallelism"]["properties"]["levels"]
         assert "items" not in row and "type" not in row, (
             "parallelism.levels declares items or a type now, so bga:columns "
             "is no longer the only thing that reaches its row"
@@ -616,7 +616,7 @@ class TestThePopulationIsKeysAndNotIds:
                     items_only(value, found)
             return found
 
-        assert {"level", "width"}.isdisjoint(items_only(schemas.schema("analyze/v6"), set())), (
+        assert {"level", "width"}.isdisjoint(items_only(schemas.schema("analyze/v7"), set())), (
             "an items-only walk reaches level or width, so reading "
             "bga:columns is not what carries this row and the clause above "
             "would pass without it"

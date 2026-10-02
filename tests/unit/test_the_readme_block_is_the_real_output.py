@@ -219,12 +219,13 @@ class TestTheBoundSentenceNamesItsThreshold:
         the run is *not* chain-bound - so no single capture publishes
         both, and the golden run used to publish both only because its
         verdict came from BuildStream's startup rather than its graph.
-        `shared_base_wide` is scheduler-bound by shape."""
+        `a_chain_beside_a_crowd` is scheduler-bound by shape (`shared_base_wide`
+        reads capacity-bound since `UX-1244`: LB 98.3% of its wall)."""
         from bga import findings
 
         rules = [
             rule
-            for rule in _rules_for_the_fixture() + _rules_for_the_fixture("tests/fixtures/shared_base_wide/run")
+            for rule in _rules_for_the_fixture() + _rules_for_the_fixture("tests/fixtures/a_chain_beside_a_crowd/run")
             if rule.get("name") == "CHAIN_BOUND_RATIO"
         ]
         assert len(rules) >= 2, ("the fixture no longer exercises both rules that gate on this constant", rules)

@@ -64,8 +64,9 @@ _TASK_HORIZON_KEYS = (
 #: reusing its numbers, which are for the *exported, compacted* page.
 #: Headroom measured against this file's own shapes: 38 elements ->
 #: 73,518 B; 202 elements -> 218,344 B (`--durations`, see Outcome).
+#: `UX-1256`: 60 -> 131,400: round 163's merged max 130,571 B plus the old bound's 754 B of slack.
 DATA_BUDGETS = (
-    (60, 130_000),
+    (60, 131_400),
     (250, 280_000),
 )
 

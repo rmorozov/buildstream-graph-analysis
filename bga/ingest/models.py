@@ -682,6 +682,8 @@ class AnalysisResult:
     # Populated only alongside `plane2_capacity`, on the same bar UX-83
     # uses: a recommendation without a measured `cores_busy` is a guess.
     capacity_recommendation: dict = field(default_factory=dict)
+    # UX-1254: builders, cores and memory in one card, read off the sections above.
+    agent_sizing: dict = field(default_factory=dict)
     # UX-1005 track A: a builder count and a pool size, each with the
     # reading it came from - builders from the replay's ready-set
     # width, the pool from UX-1004's recorded knee. Set by

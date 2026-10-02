@@ -31,6 +31,8 @@ import pytest
 from tests.fixtures import topologies as topo
 
 DEPENDENTS = 6
+#: `UX-1244`: idle before each start, so two lanes are scheduler-bound, not capacity-bound (98.3% floor).
+IDLE_GAP_US = 500_000
 
 
 def _payload(tmp_path, topology, name):
@@ -74,7 +76,7 @@ def below_capacity(tmp_path_factory):
     lane rather than for the base, so the scheduler binds the run."""
     return _payload(
         tmp_path_factory.mktemp("below_capacity"),
-        topo.shared_base_wide(dependents=DEPENDENTS, lanes=2, base_kind="manual"),
+        topo.shared_base_wide(dependents=DEPENDENTS, lanes=2, base_kind="manual", gap_us=IDLE_GAP_US),
         "below_capacity",
     )
 
@@ -115,8 +117,10 @@ class TestTheChainBoundRunPublishesTheReach:
         assert "blast-radius-reach" in found, sorted(found)
         finding = found["blast-radius-reach"]
         assert finding["elements"] == ["toolchain.bst"], finding["elements"]
-        assert "toolchain.bst" in finding["title"]
-        assert f"{DEPENDENTS} downstream" in finding["title"], finding["title"]
+        assert "toolchain.bst" in (finding["title"] + " " + " ".join(finding["detail"]))
+        assert f"{DEPENDENTS} downstream" in (finding["title"] + " " + " ".join(finding["detail"])), (
+            finding["title"] + " " + " ".join(finding["detail"])
+        )
 
     def test_the_recipe_author_leads_with_it(self, at_capacity):
         """Not "the payload contains it" - `UX-372`'s rule is that a
@@ -149,7 +153,7 @@ class TestTheChainBoundRunPublishesTheReach:
 class TestTheSameGraphBelowCapacity:
     def test_the_same_graph_below_capacity_ranks_instead(self, below_capacity):
         """The other half of the pair. Same elements, same dependencies,
-        same durations; only `max_jobs` moved."""
+        same durations; only `max_jobs` and the lanes' idle moved."""
         found = _by_id(below_capacity)
         assert "blast-radius-ranking" in found, sorted(found)
         assert "blast-radius-reach" not in found, sorted(found)
@@ -165,10 +169,10 @@ class TestTheSameGraphBelowCapacity:
         deliberately have no structural element at all.
         """
         seen = {}
-        for label, lanes in (("chain", DEPENDENTS), ("sched", 2)):
+        for label, lanes, gap in (("chain", DEPENDENTS, 0), ("sched", 2, IDLE_GAP_US)):
             payload = _payload(
                 tmp_path_factory.mktemp(f"struct_{label}"),
-                topo.shared_base_wide(dependents=DEPENDENTS, lanes=lanes),
+                topo.shared_base_wide(dependents=DEPENDENTS, lanes=lanes, gap_us=gap),
                 f"struct_{label}",
             )
             found = _by_id(payload)

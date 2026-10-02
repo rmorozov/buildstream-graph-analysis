@@ -317,8 +317,13 @@ def shared_base_wide(
     tie_ratio: float = 0.97,
     lanes: int = 2,
     base_kind: str = "import",
+    gap_us: int = 0,
 ) -> Topology:
     """T1: one structural base, N dependents of unequal weight.
+
+    `gap_us` idles each lane before every dependent it starts: with it the
+    lanes are not saturated, so a short-laned run is scheduler-bound rather
+    than capacity-bound (`UX-1244`).
 
     Reaches `blast-radius-ranking`, `blast-radius-structural` and
     `criticality`.
@@ -377,8 +382,8 @@ def shared_base_wide(
         dependencies.append(_dependency(base, uid))
         lane = lane_free.index(min(lane_free))
         duration = int(heavy_us * weights[i])
-        spans.append(_span(uid, lane_free[lane], duration))
-        lane_free[lane] += duration
+        spans.append(_span(uid, lane_free[lane] + gap_us, duration))
+        lane_free[lane] += gap_us + duration
     return _build(elements, dependencies, spans, wall_end_us=max(lane_free), max_jobs=lanes)
 
 

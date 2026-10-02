@@ -423,7 +423,10 @@ label.copy-as > input { min-width: 0; min-height: 0; margin: 0; }
 .join-evidence > p { margin: var(--space-2) 0 var(--space-1); }
 
 .finding .title { font-weight: 600; }
-.finding .detail { margin: var(--space-1) 0 0; }
+.finding .detail, .finding .step { margin: var(--space-1) 0 0; }
+.finding .step code { overflow-wrap: anywhere; }
+/* UX-1249: Info findings with no step, after the actionable ones. */
+details.also-noted { margin: var(--space-3) 0 0; }
 .badge {
   font-size: var(--font-small); letter-spacing: .04em;
   color: var(--muted); margin-right: var(--space-2);
@@ -478,7 +481,6 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
   .draw-axis:not([data-layout]) { height: 3.2em; }
   .draw-tick:nth-child(even) { top: 1.6em; }
   .decomposition .draw-axis, .draw-axis[data-layout] { height: auto; flex-wrap: wrap; }
-  .decomposition .draw-tick { position: relative; display: table; top: 0; }
   .chapter-head { flex-wrap: wrap; }
   .chapter-head > h2 { order: 1; flex-basis: 100%; }
 }
@@ -1433,6 +1435,11 @@ button.json-toggle:hover { color: var(--fg); }
 }
 /* `UX-1153`: a part's label shifts by its own position, so it never leaves the bar. */
 .decomposition .draw-tick { transform: translateX(calc(var(--at, 50) * -1%)); }
+/* `UX-1251`: a decomposition's labels stack one per line under their segment's start, so none can overprint. */
+.decomposition .draw-axis { height: auto; }
+.decomposition .draw-tick { position: relative; display: table; left: calc(var(--at, 0) * 1%) !important; top: 0;
+  border-left: 3px solid var(--line); padding-left: var(--space-1); }
+.decomposition .draw-tick[data-tone="lead"] { border-left-color: var(--accent-mark); }
 /* `UX-1157`: the label names its part; a reader-mark suffix only widened it into its neighbour. */
 .decomposition .draw-tick::after, .draw-tick[data-mark*=" "]::after { content: none; }
 /* `UX-674`: a single middle tick between two edge ticks lays out in
@@ -1513,3 +1520,9 @@ p.run-advice {
 .run-picker select, .run-picker option { font-size: var(--font-small); }
 .run-picker select { width: 100%; margin-top: var(--space-1); }
 .run-picker button { margin-top: var(--space-1); margin-right: var(--space-1); }
+
+/* `UX-1252`: "· save trace" is one line. */
+#actions-fallback, #actions-download { white-space: nowrap; }
+#actions-fallback > a, #actions-download > a { display: inline; }
+dl.pairs > dt[data-none] + dd > .description { display: block; margin: var(--space-1) 0 0; }
+dl.pairs > dt[data-none] + dd > .description::before { content: attr(data-label) ": "; }

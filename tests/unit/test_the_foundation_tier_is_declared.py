@@ -93,7 +93,7 @@ class TestExampleSix:
         found = _finding(MACRO_MICRO, "blast-radius-foundation")
         assert found is not None
         assert found["elements"] == ["toolchain.bst"]
-        assert "downstream" in found["title"]
+        assert "downstream" in (found["title"] + " " + " ".join(found["detail"]))
 
     def test_a_name_not_in_the_graph_is_a_diagnostic_not_a_crash(self, tmp_path, monkeypatch):
         """Runs the real `extract_run`, `extract_graph` monkeypatched
@@ -171,7 +171,7 @@ class TestSyntheticGraphShapeMirrorsTheKindException:
         )
         tier = next(f for f in found if f["id"] == "blast-radius-foundation")
         assert tier["elements"] == ["toolchain.bst"]
-        assert "900" in tier["title"]
+        assert "900" in (tier["title"] + " " + " ".join(tier["detail"]))
         # `UX-344`: no second copy of the population inside the finding.
         assert "blast_radius" not in (tier.get("evidence") or {})
 
@@ -210,7 +210,7 @@ class TestSyntheticGraphShapeMirrorsTheKindException:
         )
         candidates = next(f for f in found if f["id"] == "foundation-candidates")
         assert "toolchain.bst" in candidates["elements"]
-        assert "declare or dismiss" in candidates["title"]
+        assert "declare or dismiss" in (candidates["title"] + " " + " ".join(candidates["detail"]))
         assert "core.bst" not in candidates["elements"], "300 is under the p95 threshold and should not be proposed"
 
     def test_a_declared_element_is_never_proposed_as_a_candidate(self):

@@ -35,7 +35,7 @@ _JUMP = """(async () => {
     await turn(600);
     landed[key] = { hash: location.hash.split("~")[0], by_binary: read("by_binary") };
   }
-  document.querySelector(`#by_binary tr[data-binary="${unmounted}"] td[data-column="key"] a`)?.click();
+  document.querySelector(`#by_binary tr[data-binary="${unmounted}"] td[data-column="binary"] a`)?.click();
   await turn(300);
   return { landed, unmounted, linked: read("binary_cost") };
 })()"""
@@ -61,7 +61,7 @@ def test_a_jump_to_a_binary_lands_on_it(page):
     for width, read in got.items():
         assert len(read["landed"]) == 2, (width, read)
         for key, landed in read["landed"].items():
-            assert key in report["by_binary"], (width, read)
+            assert key in {row["binary"] for row in report["by_binary"]}, (width, read)
             assert landed == {"hash": "#by_binary", "by_binary": ["1 matched", f"binary:{key}"]}, (width, read)
         key = read["unmounted"]
         assert ran[key] > 1 and read["linked"] == [f"{ran[key]:,} matched", f"binary:{key}"], (width, read)

@@ -26,19 +26,28 @@ _JUMP = r"""
   });
   // An entry of the page's own, so a Back that keeps no place stays on the page to be read.
   history.pushState(null, "", location.href);
+  const length = history.length;
   scrollTo(0, 6000);
   await rest();
+  // A section first rendered where this lands trades its 600 px placeholder for its size, and anchoring moves; land again.
+  if (Math.round(scrollY) !== 6000) { scrollTo(0, 6000); await rest(); }
   const y = Math.round(scrollY);
   while (scrollY > 0) { scrollBy(0, -400); await rest(); }
   document.querySelector(".toc-title").click();
   await wait(300);
   const box = document.getElementById("jump");
-  box.value = "layer12/mod030";
+  box.value = MODE === "binary" ? "lognormal-00" : "layer12/mod030";
   box.dispatchEvent(new Event("input"));
   await wait(200);
-  document.querySelector(MODE === "jump" ? '.jump-hits [data-jump="layer12/mod030.bst"]' : '.jump-hits [data-action="focus"]').click();
+  const pick = { jump: '[data-jump="layer12/mod030.bst"]', focus: '[data-action="focus"]', binary: "[data-jump^='lognormal-']" };
+  document.querySelector(`.jump-hits ${pick[MODE]}`).click();
   await wait(1500);
   const after = Math.round(scrollY);
+  const pushed = history.length - length;
+  const row = MODE === "binary" ? document.querySelector("#by_binary [data-binary]") : null;
+  const tools = row?.closest("table")?.parentNode?.querySelector(":scope > .table-tools");
+  const land = row && tools ? { stuck: Math.round(tools.getBoundingClientRect().bottom), top: Math.round(row.getBoundingClientRect().top),
+    shown: [...row.closest("table").querySelectorAll(":scope > tbody > tr")].filter((r) => r.offsetParent).length } : null;
   await traverse(() => history.back());
   const back = Math.round(scrollY);
   const rail = document.querySelector(".toc").getAttribute("data-folded");
@@ -47,7 +56,7 @@ _JUMP = r"""
     const r = node?.getBoundingClientRect();
     return Boolean(r) && r.bottom > 0 && r.top < innerHeight;
   };
-  return { y, after, back, rail, forward: Math.round(scrollY),
+  return { y, after, pushed, land, hash: location.hash, back, rail, forward: Math.round(scrollY),
            focus: document.getElementById("report").getAttribute("data-focus"),
            card: seen(document.getElementById("element-layer12-mod030-bst")),
            bar: seen(document.querySelector("[data-role=focus-bar]")) };
@@ -66,6 +75,17 @@ def big(tmp_path_factory):
 
 
 @pytest.fixture(scope="module")
+def big_binaries(tmp_path_factory):
+    import tools.bga_view as view
+
+    into = tmp_path_factory.mktemp("jump-back-binaries")
+    page = into / "page.html"
+    shape = ("--workload", "binaries", "--layers", "20", "--width", "60")
+    view.export(str(pages.two_plane_run(into, shape)), str(page))
+    return page.as_uri()
+
+
+@pytest.fixture(scope="module")
 def browser():
     if chrome is None:
         pytest.skip(NO_BROWSER)
@@ -74,12 +94,18 @@ def browser():
 
 
 @needs_browser
-@pytest.mark.parametrize("mode", ["jump", "focus"])
-def test_the_narrow_rail_jump_box_keeps_the_place_read(browser, big, mode):
-    got = browser.measure(big, _JUMP.replace("MODE", f'"{mode}"'), width=390, height=844)
+@pytest.mark.parametrize("mode", ["jump", "focus", "binary"])
+def test_the_narrow_rail_jump_box_keeps_the_place_read(browser, big, big_binaries, mode):
+    got = browser.measure(
+        big_binaries if mode == "binary" else big, _JUMP.replace("MODE", f'"{mode}"'), width=390, height=844
+    )
     assert got["y"] == 6000 and abs(got["back"] - got["y"]) <= 1, got
     assert got["rail"] == "true", got
-    if mode == "jump":
+    if mode == "binary":
+        assert got["pushed"] == 1 and got["hash"].startswith("#by_binary"), got
+        land = got["land"]
+        assert land and 0 < land["stuck"] <= land["top"] + 1 and land["shown"] == 1, got
+    elif mode == "jump":
         assert got["card"], got
     else:
         assert got["focus"] == "layer12/mod030.bst" and got["bar"], got

@@ -104,7 +104,7 @@ class TestWhichConstraintBinds:
             native_max_jobs=4,
         )
 
-        cpu = next(c for c in recommendation['constraints'] if c['name'] == 'CPU')
+        cpu = next(c for c in recommendation['constraints'] if c['name'] == 'host_cores')
         # 0.5 cores per element, 8 cores -> 16, clamped to the 8 the host has.
         assert cpu['allows'] == 8
         assert cpu['clamped_from'] == 16
@@ -137,8 +137,56 @@ class TestWhichConstraintBinds:
             native_max_jobs=16,
         )
 
-        assert recommendation['binding_constraint'] == 'CPU'
+        assert recommendation['binding_constraint'] == 'host_cores'
         assert recommendation['recommended_builders'] == 8
+
+    def test_a_host_core_cap_binds_as_host_cores_not_cpu(self):
+        """`UX-1246`'s page: 0.86 of 4 cores busy, the CPU could feed 18, the host's 4 cores cap it."""
+        recommendation = compute_capacity_recommendation(
+            _plane2(cores_busy=0.86, host=4), _envelope(11), knee=8, builders=4, native_max_jobs=4
+        )
+
+        assert recommendation['binding_constraint'] == 'host_cores'
+        assert recommendation['constraints'][1]['clamped_from'] == 18
+        assert "the host's 4 cores cap it; the CPU alone could feed 18" in recommendation['verdict']
+
+    def test_cores_busy_at_the_host_still_binds_as_cpu(self):
+        recommendation = compute_capacity_recommendation(
+            _plane2(cores_busy=3.9, host=4), _envelope(11), knee=8, builders=4, native_max_jobs=4
+        )
+
+        assert recommendation['binding_constraint'] == 'CPU'
+        assert "cap it" not in recommendation['verdict']
+
+    def test_macro_micro_clamped_row_reads_host_cores(self):
+        """The committed fixture's 1.60 of 4 cores: the clamped row, not the binding one."""
+        import json
+        import subprocess
+        import sys
+        from pathlib import Path
+
+        fixture = Path(__file__).resolve().parents[1] / "fixtures" / "macro_micro"
+        done = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "bga.cli",
+                "analyze",
+                str(fixture / "run"),
+                "--plane2",
+                str(fixture / "plane2.json"),
+                "--format",
+                "json",
+            ],
+            capture_output=True,
+            text=True,
+            check=True,
+            cwd=Path(__file__).resolve().parents[2],
+        )
+        rows = {c['name']: c for c in json.loads(done.stdout)['capacity_recommendation']['constraints']}
+
+        assert rows['host_cores']['clamped_from'] == 9
+        assert 'CPU' not in rows
 
 
 class TestWhatItRefusesToSay:
@@ -171,7 +219,7 @@ class TestWhatItRefusesToSay:
         from what was measured."""
         recommendation = compute_capacity_recommendation(_plane2(cores_busy=1.0, host=8), {}, knee=6, builders=2)
 
-        assert [c['name'] for c in recommendation['constraints']] == ['graph', 'CPU']
+        assert [c['name'] for c in recommendation['constraints']] == ['graph', 'host_cores']
         assert recommendation['binding_constraint'] == 'graph'
 
     def test_a_knee_at_the_top_of_the_swept_range_says_so(self):
@@ -210,8 +258,20 @@ class TestTheFinding:
 
         finding = _capacity_recommendation_finding(self._result(recommendation))[0]
 
-        assert "the host's cores bound it, not the raw 64" in finding['title']
-        assert "CPU binds at 8" in finding['title']
+        assert finding['title'].startswith("8 builders: the host's 8 cores cap it; the CPU alone could feed 64")
+        assert "CPU binds" not in finding['title']
+        assert finding['evidence']['binding_constraint'] == 'host_cores'
+
+    def test_a_host_core_cap_never_says_cpu_binds(self):
+        """`UX-1246`: 0.86 of 4 cores busy is not CPU binding; the title says what 18 is."""
+        recommendation = compute_capacity_recommendation(
+            _plane2(cores_busy=0.86, host=4), _envelope(11), knee=8, builders=4, native_max_jobs=4
+        )
+
+        finding = _capacity_recommendation_finding(self._result(recommendation))[0]
+
+        assert finding['title'].startswith("4 builders: the host's 4 cores cap it; the CPU alone could feed 18")
+        assert "CPU binds" not in finding['title'] + recommendation['verdict']
 
     def test_the_title_names_the_setting_the_constraint_and_the_verdict(self):
         recommendation = compute_capacity_recommendation(
@@ -221,8 +281,8 @@ class TestTheFinding:
         finding = _capacity_recommendation_finding(self._result(recommendation))[0]
 
         assert finding['id'] == 'capacity-recommendation'
-        assert "builders 4 x max-jobs 4 on 4 cores" in finding['title']
-        assert "CPU binds at exactly 4" in finding['title']
+        assert finding['title'].startswith("4 builders: CPU binds")
+        assert "builders 4 x max-jobs 4 on 4 cores" in finding['detail'][1]
 
     def test_an_unrecorded_max_jobs_is_named_rather_than_dropped(self):
         """The question is the joint one. "builders 4" reads as a complete
@@ -233,7 +293,7 @@ class TestTheFinding:
 
         finding = _capacity_recommendation_finding(self._result(recommendation))[0]
 
-        assert "max-jobs unrecorded" in finding['title']
+        assert "max-jobs unrecorded" in finding['detail'][1]
 
     def test_every_constraint_is_shown_beneath_the_verdict(self):
         """The binding one is the answer; the others are why it binds, and
@@ -287,7 +347,7 @@ class TestTheFinding:
         finding = _capacity_recommendation_finding(self._result(recommendation))[0]
 
         assert finding['severity'] == 'info'
-        assert "already at the setting its own measurements support" in finding['title']
+        assert "already at the setting its own measurements support" in finding['detail'][1]
 
     def test_a_setting_above_what_the_run_supports_is_the_loudest(self):
         """Configured higher than anything measured supports is the one
@@ -299,7 +359,7 @@ class TestTheFinding:
         finding = _capacity_recommendation_finding(self._result(recommendation))[0]
 
         assert finding['severity'] == 'high'
-        assert "contend rather than overlap" in finding['title']
+        assert "contend rather than overlap" in finding['detail'][1]
 
 
 class TestRoomToGrowIsAHypothesis:
@@ -322,7 +382,7 @@ class TestRoomToGrowIsAHypothesis:
             compute_capacity_recommendation(_plane2(cores_busy=1.0, host=8), _envelope(11), knee=6, builders=2)
         )
 
-        assert "hypothesis to time rather than a setting to apply" in finding['title']
+        assert "hypothesis to time rather than a setting to apply" in finding['detail'][1]
 
     def test_headroom_carries_the_reason_both_ceilings_are_optimistic(self):
         finding = self._finding(

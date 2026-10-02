@@ -303,6 +303,7 @@ export function exhibitAxis(doc, ticks) {
     const label = box(doc, "span", {
       class: "draw-tick", "data-mark": tick.name, "data-at": at,
     }, tick.label);
+    if (tick.lead) label.setAttribute("data-tone", "lead");
     // `left`/`margin-left` are positions, not a colour or a size
     // (§4.5's tokens govern those); a per-mark percentage cannot be a
     // class.
@@ -885,7 +886,7 @@ export function decomposition(parts, {
   // reader wants live - and `at` is still summed over *all* the parts
   // before it, so a tick sits where its part actually starts.
   const ticks = named.map((part, index) => ({
-    name: part.key, label: `${part.label} ${format(part.value)}`,
+    name: part.key, label: `${part.label} ${format(part.value)}`, lead: index === 0,
     share: Number(part.value) / whole,
     at: (named.slice(0, index).reduce(
       (sum, before) => sum + Number(before.value), 0) / whole) * 100,

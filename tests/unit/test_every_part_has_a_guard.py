@@ -64,6 +64,8 @@ ANALYSIS_ADDITIONS = {
     "capacity_verdict",
     "plane2_capacity",
     "capacity_recommendation",
+    # `UX-1254`: the sizing card, read off the sections above.
+    "agent_sizing",
     # `UX-676`: cores busy against this run's caps, and the two windows
     # that violate it. Additive like the rest - 32.4 predates the host
     # CPU series entirely (`UX-675`).

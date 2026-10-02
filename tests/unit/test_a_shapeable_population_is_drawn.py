@@ -94,22 +94,10 @@ SHAPES = {
         "control - one instrument over two populations, which is why "
         "the mirror cost no new shape.",
     ),
-    "by_binary": (
-        None,
-        "A ranked map - one call count per binary name. `UX-411` "
-        "decided it gets no fifth instrument: the four each answer a "
-        "question no other one does (how did it change, how is it "
-        "spread, what is it made of, where does it sit), and *which "
-        "is biggest* is already answered by a mechanism the page has "
-        "everywhere - a sortable table with a Top-N preset, a filter "
-        "and `columnStrip` as its annotation-grade shape. A second "
-        "answer to an answered question is what `UX-305`'s emphasis "
-        "budget forbids. See RANKED_MAP below.",
-    ),
     "wall_clock_share_us": (
         None,
-        "The same shape as `by_binary` - one duration per task uid, "
-        "ranked - and the same decision, for the same reasons: "
+        "A ranked map - one duration per task uid - and `UX-411`'s "
+        "decision, for the same reasons `by_binary` had until `UX-1247` made it rows: "
         "`UX-411` closed as a decision, not as a fifth shape. The "
         "population grows with the payload rather than with the run, "
         "so a drawn bar per key is unbounded by construction, which "
@@ -248,7 +236,7 @@ class TestTheCensusIsTheAnswer:
         "somebody will decide this" is the shape of the silence this
         census replaced.
         """
-        for key in ("by_binary", "wall_clock_share_us"):
+        for key in ("wall_clock_share_us",):
             instrument, why = SHAPES[key]
             assert instrument is None, (key, instrument)
             assert "UX-411" in why, why

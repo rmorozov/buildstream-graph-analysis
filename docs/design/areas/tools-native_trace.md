@@ -42,7 +42,7 @@ pool (`open_jobserver`/`close_jobserver`, `PoolController`, `Broker`,
 ledger (the raw-row reader, the per-element/summary reductions,
 `jobserver_auth_style`), and `tools/bst_native_build_tracer.py` is its
 only caller. `report_block()` is the one function that crosses back:
-every `jobserver*` key `analyze/v6` publishes, built from inputs the
+every `jobserver*` key `analyze/v7` publishes, built from inputs the
 tracer already had to read (the wrapper-policy probe reaches
 `bga.progress`; the raw log's pid/tool maps need the tracer's own
 stream parser) rather than re-read inside the package. The package

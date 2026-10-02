@@ -1,8 +1,10 @@
 """UX-1234: the critical-path probability column and its card field read "On the path"; Element durations reads "Element duration" (one title per field: `duration_us` holds "Duration").
 
-Read on the 1,202-element two-plane page (`gen-synthetic --seed 1 --store
---layers 20 --width 60`), Critical path view: column head and card label of
-each; the old words (`probability`, `durations`) still parse as that column.
+Read on the 1,802-element two-plane page (`gen-synthetic --seed 1 --store
+--layers 30 --width 60`), Critical path view: column head and on-demand card
+label of each; the old words (`probability`, `durations`) still parse as that
+column. 30 layers, so the chain outruns the ranked sections and its tail
+elements open on-demand cards (`UX-1244`: at 20 every chain row has a ranked one).
 """
 
 import json
@@ -61,7 +63,7 @@ def test_the_column_and_the_card_read_on_the_path_and_duration(tmp_path):
     import tools.bga_view as view
 
     page = tmp_path / "big.html"
-    view.export(str(pages.two_plane_run(tmp_path, ("--layers", "20", "--width", "60"), name="big")), str(page))
+    view.export(str(pages.two_plane_run(tmp_path, ("--layers", "30", "--width", "60"), name="big")), str(page))
     with Browser(chrome) as browser:
         got = browser.measure(page.as_uri(), _READ, 1440, 900)
     assert got["heads"]["probability"] == got["card"]["probability"] == "On the path", got

@@ -2094,12 +2094,7 @@ class BuildEfficiencyAnalyzer:
                 return {
                     "absence": "this analysis has no run context, graph or run directory to read a host series against"
                 }
-            return {
-                "absence": "this capture has no host memory series — "
-                "it was taken before host memory sampling "
-                "was added, or the host exposes no "
-                "/proc/meminfo"
-            }
+            return {"absence": "this capture has no host CPU series — it was taken before host sampling was added"}
         tasks = [
             {
                 "element": task.task_key.element_uid,
@@ -2161,7 +2156,6 @@ class BuildEfficiencyAnalyzer:
                 'start_us': task.start_us,
                 'end_us': task.finish_us,
                 'cpu_usage_us': task.dur_us,
-                'concurrent_tasks': [str(task.task_key)],
                 # UX-48: `[ready_us, start_us)` is the window in which
                 # this task was dependency-ready but had not been
                 # dispatched - the evidence that distinguishes idle

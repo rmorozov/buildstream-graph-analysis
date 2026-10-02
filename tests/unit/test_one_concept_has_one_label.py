@@ -25,8 +25,8 @@ NOT_TWO_PLANE = "only the two-plane page carries every concept"
 _STYLEGUIDE = (REPO / "docs" / "design" / "styleguide.md").read_text(encoding="utf-8")
 
 #: `[key, label]` for every labelled value: a keyed `dt`, the `dt`
-#: before a `dd[data-field]`, a waterfall row, a drawing tick (its
-#: value stripped).
+#: before a `dd[data-field]`, a folded zero row's span, a waterfall
+#: row, a drawing tick (its value stripped).
 _COLLECT = r"""
 (() => {
   const pairs = [];
@@ -36,6 +36,9 @@ _COLLECT = r"""
     const dt = dd.previousElementSibling;
     if (dt && dt.tagName === 'DT') pairs.push([dd.getAttribute('data-field'), dt.textContent]);
   }
+  // `UX-1252`: a folded run of zero rows keeps each label, as a span in its one sentence.
+  for (const span of document.querySelectorAll('dt[data-none] + dd > span[data-key]'))
+    pairs.push([span.getAttribute('data-key'), span.textContent.replace(/[,.]\s*$/, '')]);
   for (const row of document.querySelectorAll('.wf-row[data-field]'))
     pairs.push([row.getAttribute('data-field'), row.querySelector('.wf-label')?.textContent ?? '']);
   for (const tick of document.querySelectorAll('.draw-tick[data-mark]'))

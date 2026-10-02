@@ -1151,6 +1151,12 @@ _RECOMMENDATION_SWEEP_HEADROOM = 2
 _RECOMMENDATION_SWEEP_CAP = 32
 
 
+def _allows_clause(constraint: dict) -> str:
+    if constraint['name'] == 'host_cores':
+        return f"the host's cores allow {constraint['allows']}"
+    return f"the {constraint['name']} allows {constraint['allows']}"
+
+
 def capacity_verdict_sentence(
     builders: int, host_cores: int, cores_busy: float, constraints: list, binding: dict
 ) -> str:
@@ -1162,22 +1168,22 @@ def capacity_verdict_sentence(
         action = f"Try {_count(recommended, 'builder')}, up from {builders}"
     else:
         action = f"Lower builders from {builders} to {recommended}"
-    if binding['name'] == 'CPU':
-        per = cores_busy / builders
-        clamped_from = binding.get('clamped_from')
-        if clamped_from:
-            why = (
-                f"each building element drew {per:.2f} cores, so the CPU alone could feed {clamped_from}, "
-                f"but builders are capped at the host's {_count(host_cores, 'core')} — that cap, not load, binds"
-            )
-        else:
-            why = f"each building element drew {per:.2f} cores, so the host's {_count(host_cores, 'core')} feed {recommended}"
+    per = cores_busy / builders
+    if binding['name'] == 'host_cores':
+        why = (
+            f"the host's {_count(host_cores, 'core')} cap it; the CPU alone could feed "
+            f"{binding['clamped_from']}, at {per:.2f} cores per building element"
+        )
+    elif binding['name'] == 'CPU':
+        why = (
+            f"each building element drew {per:.2f} cores, so the host's {_count(host_cores, 'core')} feed {recommended}"
+        )
     elif binding['name'] == 'graph':
         why = f"the graph binds — the sweep's knee is at {_count(recommended, 'builder')}"
     else:
         why = f"{binding['name']} binds at {recommended}"
     others = [c for c in constraints if c is not binding]
-    rest = "; " + ", ".join(f"the {c['name']} allows {c['allows']}" for c in others) if others else ""
+    rest = "; " + ", ".join(_allows_clause(c) for c in others) if others else ""
     tail = " — a hypothesis to time, not a setting to apply" if recommended > builders else ""
     return f"{action}: {why}{rest}{tail}."
 
@@ -1251,7 +1257,8 @@ def compute_capacity_recommendation(
         if clamped_from:
             cpu_allows = host_cores
         constraint = {
-            'name': 'CPU',
+            # UX-1246: a clamped row is bound by UX-861's host-core policy, not by a CPU measurement.
+            'name': 'host_cores' if clamped_from else 'CPU',
             'allows': cpu_allows,
             'reason': (
                 f"{cores_busy:.2f} of {host_cores} core{'' if host_cores == 1 else 's'} "
@@ -1274,7 +1281,8 @@ def compute_capacity_recommendation(
 
     if not constraints:
         return {}
-    binding = min(constraints, key=lambda c: (c['allows'], c['name']))
+    # The CPU-derived row wins a tie, as 'CPU' did by sorting first.
+    binding = min(constraints, key=lambda c: (c['allows'], c['name'] not in ('CPU', 'host_cores'), c['name']))
     pinned = (plane2_capacity or {}).get('pinned_elements') or []
     return {
         'verdict': capacity_verdict_sentence(builders, host_cores, cores_busy, constraints, binding),
@@ -1298,6 +1306,59 @@ def compute_capacity_recommendation(
             "in, one recommendation out — no configuration was tried."
         ),
     }
+
+
+def compute_agent_sizing(result, builders: Optional[int] = None) -> dict:
+    """UX-1254: builders, cores and memory for this build on this host, each read off the section it links."""
+    rec = getattr(result, 'capacity_recommendation', None) or {}
+    plane2 = getattr(result, 'plane2_capacity', None) or {}
+    envelope = getattr(result, 'memory_envelope', None) or {}
+    host = getattr(result, 'utilization_envelope', None) or {}
+    graph = next((c['allows'] for c in rec.get('constraints') or [] if c.get('name') == 'graph'), None)
+    observed = rec.get('builders') or builders
+    recommended = rec.get('recommended_builders')
+    sized = {
+        'recommended': recommended,
+        'graph_ceiling': graph,
+        'observed': observed,
+        'source': 'capacity_recommendation' if rec else None,
+    }
+    cores = None
+    if plane2.get('cores_busy') is not None:
+        peak = host.get('busy_cores_p95') if host.get('available') else None
+        cores = {
+            'average': plane2['cores_busy'],
+            'peak': peak,
+            'host': plane2.get('host_cpu_count'),
+            'source': 'capacity_recommendation' if rec else 'cpu_time',
+            'peak_source': 'utilization_envelope' if peak is not None else None,
+        }
+    memory = None
+    # The envelope needs the host's RAM; the per-element peak does not, so a capture without it still sizes.
+    per_element, basis = envelope.get('largest_element_peak_bytes'), 'envelope'
+    if not per_element:
+        per_element = resource_profile(getattr(result, 'plane2_report', None) or {}).get('peak_rss_bytes')
+        basis = 'process_peak'
+    count = recommended or observed
+    if per_element and count:
+        # An upper bound: as if every builder held the largest peak at once.
+        memory = {
+            'per_element_bytes': per_element,
+            'builders': count,
+            'bytes': per_element * count,
+            'basis': basis,
+            'source': 'peak_memory',
+        }
+    missing = [name for name, value in (('cores', cores), ('memory', memory)) if value is None]
+    absence = None
+    if missing:
+        two = len(missing) == 2
+        if getattr(result, 'plane2_report', None) is None:
+            why = f"{'need' if two else 'needs'} Plane 2, which this run did not capture"
+        else:
+            why = f"{'were' if two else 'was'} not measured by this capture"
+        absence = f"{' and '.join(missing).capitalize()} {why}."
+    return {'builders': sized, 'cores': cores, 'memory': memory, 'absence': absence}
 
 
 def compute_ready_set_width(replay_scheduler) -> Optional[int]:
@@ -1688,7 +1749,7 @@ def compute_jobserver_block(
     """UX-847: `analyze/v6`'s additive `jobserver` block, pure over
     Plane 2's tracer report and Plane 1's element population. `None`
     when this run's Plane 2 report carries no mode - a run without
-    `--jobserver` produces today's `analyze/v6` byte for byte.
+    `--jobserver` produces today's `analyze/v7` byte for byte.
     """
     if not native_report or not native_report.get("jobserver"):
         return None

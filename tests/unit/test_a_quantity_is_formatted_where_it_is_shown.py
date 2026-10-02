@@ -28,13 +28,17 @@ _MEASURE = r"""
   await new Promise((done) => setTimeout(done, 50));
   const skip = "code, pre, kbd, samp, script, style, svg, textarea, select, option, td";
   const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
-  const raw = [], glued = [];
+  const raw = [], glued = [], bare = [], secs = [], grouped = [];
   for (let node = walker.nextNode(); node; node = walker.nextNode()) {
     const parent = node.parentElement;
     if (!parent || parent.closest(skip)) continue;
     const where = `${parent.tagName.toLowerCase()}@${parent.closest("[id]")?.id}: ${node.data.trim().slice(0, 80)}`;
     if (/\d+\.\d{5,}/.test(node.data)) raw.push(where);
     if (/(?<![\w.])\d+(?:\.\d+)?(?:ms|s)(?=$|[\s,;:)\]]|\.(?:\s|$))/.test(node.data)) glued.push(where);
+    // `UX-1252`: a count of four or more digits carries its separator; a prose duration is the row's format.
+    if (/(?<![\w.,:\/#@-])\d{4,}(?![-\w]|[.,:]\d)/.test(node.data)) bare.push(where);
+    if (/(?<![\w.,])\d{1,3}(?:,\d{3})+(?![\d.])/.test(node.data)) grouped.push(where);
+    if (/(?<![\w.])\d+\.\d\d s\b/.test(node.data)) secs.push(where);
   }
   const values = [...document.querySelectorAll(
     "#decision dl.why-facts > dd, dl.evidence-refs > dd")];
@@ -45,7 +49,7 @@ _MEASURE = r"""
       (dd) => dd.firstChild?.textContent ?? ""),
   }));
   return {
-    raw, glued, cards, values: values.length,
+    raw, glued, bare, secs, grouped, cards, values: values.length,
     // A formatted value still carries the published number beside it.
     kept: values.filter((dd) => dd.hasAttribute("data-raw")).length,
   };
@@ -82,11 +86,17 @@ def _disagreements(cards):
 _SYNTHETIC = ("--layers", "8", "--width", "14")
 
 
-@pytest.fixture(scope="module", params=["golden", "macro_micro", "two_plane"])
+#: `UX-1252`: 1,200 elements, the smallest seeded shape whose blast ranking reaches four digits.
+_COUNTED = ("--layers", "40", "--width", "30", "--builders", "4")
+
+
+@pytest.fixture(scope="module", params=["golden", "macro_micro", "two_plane", "counted"])
 def measured(request, tmp_path_factory):
     into = tmp_path_factory.mktemp(f"u1140-{request.param}")
     if request.param == "two_plane":
         uri = pages.in_place_uri(pages.two_plane_run(into, shape=_SYNTHETIC), into)
+    elif request.param == "counted":
+        uri = pages.export_uri(pages.scale_run(into, shape=_COUNTED), into)
     else:
         uri = pages.export_uri(pages.FIXTURES[request.param], into)
     with Browser(chrome) as opened:
@@ -111,6 +121,18 @@ class TestQuantities:
         label, result = measured
         for width, got in result.items():
             assert got["glued"] == [], (label, width, len(got["glued"]), got["glued"][:5])
+
+    def test_no_count_lacks_its_separator(self, measured):
+        label, result = measured
+        for width, got in result.items():
+            assert got["bare"] == [], (label, width, len(got["bare"]), got["bare"][:5])
+            if label == "counted":
+                assert got["grouped"], (label, width)
+
+    def test_no_prose_duration_is_raw_seconds(self, measured):
+        label, result = measured
+        for width, got in result.items():
+            assert got["secs"] == [], (label, width, got["secs"][:5])
 
     def test_a_title_quantity_reads_as_its_pair(self, measured):
         label, result = measured

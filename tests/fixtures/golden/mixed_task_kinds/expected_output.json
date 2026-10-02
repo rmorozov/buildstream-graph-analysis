@@ -1,5 +1,5 @@
 {
-    "schema": "analyze/v6",
+    "schema": "analyze/v7",
     "run_id": "golden-fixture-manifest-hash-v1",
     "total_duration_us": 16000,
     "section": null,
@@ -7,19 +7,19 @@
         {
             "id": "wait-category",
             "severity": "high",
-            "title": "Biggest wait category: 12.5% of wall-clock time is untracked tail (2 ms)",
-            "detail": [
-                "    -> real time after the last tracked task finished \u2014 outside per-task tracking, not a scheduling issue"
-            ],
+            "title": "12.5% of wall-clock time is untracked tail (2 ms) \u2014 the biggest wait category",
+            "detail": [],
             "elements": [],
             "evidence": {
                 "category": "untracked_tail_us",
                 "category_us": 2000,
-                "share": 0.125,
-                "hint": "real time after the last tracked task finished \u2014 outside per-task tracking, not a scheduling issue"
+                "share": 0.125
+            },
+            "step": {
+                "text": "real time after the last tracked task finished \u2014 outside per-task tracking, not a scheduling issue"
             },
             "reader": "local-optimizer",
-            "copy_text": "BGA finding: Biggest wait category: 12.5% of wall-clock time is untracked tail (2 ms)\n      -> real time after the last tracked task finished \u2014 outside per-task tracking, not a scheduling issue\n  category untracked_tail_us\n  category_us 2 ms\n  share 12.5%\n  hint real time after the last tracked task finished \u2014 outside per-task tracking, not a scheduling issue\n  Run: golden-fixture-manifest-hash-v1",
+            "copy_text": "BGA finding: 12.5% of wall-clock time is untracked tail (2 ms) \u2014 the biggest wait category\n  category untracked_tail_us\n  category_us 2 ms\n  share 12.5%\n  Run: golden-fixture-manifest-hash-v1",
             "trace_query": "resource-queues",
             "trace_queries": [
                 "resource-queues",
@@ -29,7 +29,7 @@
         {
             "id": "time-concentration",
             "severity": "high",
-            "title": "Where the time is: 3 elements are 100.0% of the 14 ms critical path \u2014 this build is chain-bound, not scheduler-bound",
+            "title": "100.0% of the 14 ms critical path is 3 elements \u2014 chain-bound, not scheduler-bound",
             "detail": [
                 "    base.bst      6 ms ( 42.9% of path)  -> fixing it saves 6 ms (37.5% of the build)",
                 "    lib.bst       5 ms ( 35.7% of path)  -> fixing it saves 5 ms (31.2% of the build)",
@@ -65,30 +65,38 @@
                     }
                 ]
             },
+            "step": {
+                "text": "Make these elements faster, or take them off the chain: the critical path is made of them."
+            },
             "reader": "local-optimizer",
-            "copy_text": "BGA finding: Where the time is: 3 elements are 100.0% of the 14 ms critical path \u2014 this build is chain-bound, not scheduler-bound\n      base.bst      6 ms ( 42.9% of path)  -> fixing it saves 6 ms (37.5% of the build)\n      lib.bst       5 ms ( 35.7% of path)  -> fixing it saves 5 ms (31.2% of the build)\n      app.bst       3 ms ( 21.4% of path)  -> fixing it saves 3 ms (18.8% of the build)\n  path_us 14 ms\n  share_of_path 100.0%\n  chain_bound True\n  Elements: base.bst, lib.bst, app.bst\n  Next: bga blast base.bst <run>\n  Run: golden-fixture-manifest-hash-v1",
+            "copy_text": "BGA finding: 100.0% of the 14 ms critical path is 3 elements \u2014 chain-bound, not scheduler-bound\n      base.bst      6 ms ( 42.9% of path)  -> fixing it saves 6 ms (37.5% of the build)\n      lib.bst       5 ms ( 35.7% of path)  -> fixing it saves 5 ms (31.2% of the build)\n      app.bst       3 ms ( 21.4% of path)  -> fixing it saves 3 ms (18.8% of the build)\n  path_us 14 ms\n  share_of_path 100.0%\n  chain_bound True\n  Elements: base.bst, lib.bst, app.bst\n  Next: bga blast base.bst <run>\n  Run: golden-fixture-manifest-hash-v1",
             "trace_query": "cost-by-executable"
         },
         {
             "id": "chain-graph",
             "severity": "info",
-            "title": "Note: 75.0% of elements have zero slack, all on the critical path \u2014 no second chain of equal length, so a saving on any of them is worth its own duration",
+            "title": "75.0% of elements have zero slack, all on the critical path \u2014 a saving is worth its own duration",
             "detail": [],
             "elements": [],
             "evidence": {
                 "zero_slack_share": 0.75,
                 "zero_slack_off_path": 0
             },
+            "step": {
+                "why_none": "how far a saving reaches, not a defect"
+            },
             "indent": "    ",
             "reader": "graph-owner",
-            "copy_text": "BGA finding: Note: 75.0% of elements have zero slack, all on the critical path \u2014 no second chain of equal length, so a saving on any of them is worth its own duration\n  zero_slack_share 75.0%\n  zero_slack_off_path 0\n  Run: golden-fixture-manifest-hash-v1",
+            "copy_text": "BGA finding: 75.0% of elements have zero slack, all on the critical path \u2014 a saving is worth its own duration\n  zero_slack_share 75.0%\n  zero_slack_off_path 0\n  Run: golden-fixture-manifest-hash-v1",
             "trace_query": "graph-levels"
         },
         {
             "id": "joint-saving",
             "severity": "high",
-            "title": "Together, the top 3 are worth 11 ms (68.8% of the build) \u2014 exactly the sum of their individual savings, so they are separate pieces of work that do not overlap",
-            "detail": [],
+            "title": "11 ms (68.8% of the build) is what the top 3 are worth together",
+            "detail": [
+                "    That is exactly the sum of their individual savings, so they are separate pieces of work that do not overlap"
+            ],
             "elements": [
                 "base.bst",
                 "lib.bst",
@@ -100,15 +108,20 @@
                 "savings_add": true,
                 "relation": "add"
             },
+            "step": {
+                "text": "Start with base.bst, then the rest.",
+                "command": "bga blast base.bst <run>"
+            },
             "reader": "local-optimizer",
-            "copy_text": "BGA finding: Together, the top 3 are worth 11 ms (68.8% of the build) \u2014 exactly the sum of their individual savings, so they are separate pieces of work that do not overlap\n  joint_saving_us 11 ms\n  sum_of_individual_us 11 ms\n  savings_add True\n  relation add\n  Elements: base.bst, lib.bst, extra.bst\n  Run: golden-fixture-manifest-hash-v1",
+            "copy_text": "BGA finding: 11 ms (68.8% of the build) is what the top 3 are worth together\n      That is exactly the sum of their individual savings, so they are separate pieces of work that do not overlap\n  joint_saving_us 11 ms\n  sum_of_individual_us 11 ms\n  savings_add True\n  relation add\n  Elements: base.bst, lib.bst, extra.bst\n  Run: golden-fixture-manifest-hash-v1",
             "trace_query": "waited-on-flow"
         },
         {
             "id": "optimization-horizon",
             "severity": "high",
-            "title": "Work them in this order (by what a fix is worth, not by size), with what the build drops to: base.bst (8 ms) -> lib.bst (4 ms) -> extra.bst (3 ms)",
+            "title": "3 fixes, in order of what each is worth, take the build to 3 ms",
             "detail": [
+                "    In this order: base.bst (8 ms) -> lib.bst (4 ms) -> extra.bst (3 ms)",
                 "    The last of those leaves 68.8% of the build removed, projected from this run without building again"
             ],
             "elements": [
@@ -143,29 +156,40 @@
                     }
                 ]
             },
+            "step": {
+                "text": "Start with base.bst.",
+                "command": "bga blast base.bst <run>"
+            },
             "reader": "local-optimizer",
-            "copy_text": "BGA finding: Work them in this order (by what a fix is worth, not by size), with what the build drops to: base.bst (8 ms) -> lib.bst (4 ms) -> extra.bst (3 ms)\n      The last of those leaves 68.8% of the build removed, projected from this run without building again\n  Elements: base.bst, lib.bst, extra.bst\n  Run: golden-fixture-manifest-hash-v1",
+            "copy_text": "BGA finding: 3 fixes, in order of what each is worth, take the build to 3 ms\n      In this order: base.bst (8 ms) -> lib.bst (4 ms) -> extra.bst (3 ms)\n      The last of those leaves 68.8% of the build removed, projected from this run without building again\n  Elements: base.bst, lib.bst, extra.bst\n  Run: golden-fixture-manifest-hash-v1",
             "trace_query": "time-by-kind"
         },
         {
             "id": "blast-radius-reach",
             "severity": "medium",
-            "title": "What a change to these rebuilds: base.bst (2 downstream), lib.bst (1 downstream) \u2014 the cost of touching them is not their own duration but everything downstream that has to be built again",
-            "detail": [],
+            "title": "2 downstream elements rebuild on a change to the widest-reaching element",
+            "detail": [
+                "    base.bst (2 downstream), lib.bst (1 downstream) \u2014 the cost of touching them is not their own duration but everything downstream that has to be built again"
+            ],
             "elements": [
                 "base.bst",
                 "lib.bst"
             ],
             "evidence": {},
+            "step": {
+                "text": "See what a change to base.bst rebuilds before touching it.",
+                "command": "bga blast base.bst <run>"
+            },
             "reader": "recipe-author",
-            "copy_text": "BGA finding: What a change to these rebuilds: base.bst (2 downstream), lib.bst (1 downstream) \u2014 the cost of touching them is not their own duration but everything downstream that has to be built again\n  Elements: base.bst, lib.bst\n  Run: golden-fixture-manifest-hash-v1",
+            "copy_text": "BGA finding: 2 downstream elements rebuild on a change to the widest-reaching element\n      base.bst (2 downstream), lib.bst (1 downstream) \u2014 the cost of touching them is not their own duration but everything downstream that has to be built again\n  Elements: base.bst, lib.bst\n  Run: golden-fixture-manifest-hash-v1",
             "trace_query": "dependency-wait"
         },
         {
             "id": "latent-heavies",
             "severity": "medium",
-            "title": "Waiting off the critical path, worth nothing to fix today: extra.bst (4 ms) \u2014 they bound how far shortening the chain can go",
+            "title": "1 element off the critical path, worth nothing to fix today",
             "detail": [
+                "    extra.bst (4 ms) \u2014 they bound how far shortening the chain can go",
                 "    (structural projections over this run's measured durations, where \"fixed\" means the element becomes instant \u2014 a re-capture is still the ground truth)"
             ],
             "elements": [
@@ -179,8 +203,11 @@
                     }
                 ]
             },
+            "step": {
+                "text": "Shorten the chain first: these wait off it."
+            },
             "reader": "recipe-author",
-            "copy_text": "BGA finding: Waiting off the critical path, worth nothing to fix today: extra.bst (4 ms) \u2014 they bound how far shortening the chain can go\n      (structural projections over this run's measured durations, where \"fixed\" means the element becomes instant \u2014 a re-capture is still the ground truth)\n  Elements: extra.bst\n  Run: golden-fixture-manifest-hash-v1",
+            "copy_text": "BGA finding: 1 element off the critical path, worth nothing to fix today\n      extra.bst (4 ms) \u2014 they bound how far shortening the chain can go\n      (structural projections over this run's measured durations, where \"fixed\" means the element becomes instant \u2014 a re-capture is still the ground truth)\n  Elements: extra.bst\n  Run: golden-fixture-manifest-hash-v1",
             "trace_query": "element-commands",
             "trace_queries": [
                 "element-commands",
@@ -200,6 +227,9 @@
                 "lib.bst"
             ],
             "evidence": {},
+            "step": {
+                "why_none": "a ranking of what each element pulls in, not a defect"
+            },
             "reader": "graph-owner",
             "copy_text": "BGA finding: Elements that pull in the most, by upstream closure\n      1. app.bst (2 upstream, 1 named directly)\n      2. lib.bst (1 upstream, 1 named directly)\n  Elements: app.bst, lib.bst\n  Run: golden-fixture-manifest-hash-v1",
             "trace_query": "dependency-wait"
@@ -207,7 +237,7 @@
         {
             "id": "graph-width",
             "severity": "info",
-            "title": "The graph is 4 elements in 3 dependency stages, and its widest stage holds 2 \u2014 so no more than 2 can ever be building at once, whatever the capacity",
+            "title": "2 elements at most can ever build at once \u2014 the widest of 3 dependency stages",
             "detail": [],
             "elements": [],
             "evidence": {
@@ -215,14 +245,17 @@
                 "dependency_stages": 3,
                 "widest_stage": 2
             },
+            "step": {
+                "why_none": "a ceiling the dependency graph sets; only its dependencies move it"
+            },
             "reader": "graph-owner",
-            "copy_text": "BGA finding: The graph is 4 elements in 3 dependency stages, and its widest stage holds 2 \u2014 so no more than 2 can ever be building at once, whatever the capacity\n  element_count 4\n  dependency_stages 3\n  widest_stage 2\n  Run: golden-fixture-manifest-hash-v1",
+            "copy_text": "BGA finding: 2 elements at most can ever build at once \u2014 the widest of 3 dependency stages\n  element_count 4\n  dependency_stages 3\n  widest_stage 2\n  Run: golden-fixture-manifest-hash-v1",
             "trace_query": "graph-levels"
         },
         {
             "id": "confidence",
             "severity": "info",
-            "title": "Confidence: 87.5% (high)",
+            "title": "87.5% confidence (high)",
             "detail": [],
             "elements": [],
             "evidence": {
@@ -230,14 +263,17 @@
                 "band": "high",
                 "violation_count": 0
             },
+            "step": {
+                "why_none": "high confidence: nothing to correct"
+            },
             "reader": "ci-gatekeeper",
-            "copy_text": "BGA finding: Confidence: 87.5% (high)\n  primary 87.5%\n  band high\n  violation_count 0\n  Run: golden-fixture-manifest-hash-v1",
+            "copy_text": "BGA finding: 87.5% confidence (high)\n  primary 87.5%\n  band high\n  violation_count 0\n  Run: golden-fixture-manifest-hash-v1",
             "trace_query": null
         },
         {
             "id": "remote-execution-whatif",
             "severity": "info",
-            "title": "Remote execution (builder cap only, no Plane 2 per-binary cost): unbounded builders 14 ms -> 14 ms",
+            "title": "14 ms with unbounded builders, from 14 ms \u2014 remote execution, no per-binary cost",
             "detail": [
                 "    Unbounded builders (REAPI moves whole sandboxes): 14 ms -> 14 ms (0 ms); assumes staging and wait per element unchanged, workers never queue"
             ],
@@ -253,22 +289,28 @@
                     "assumption": "staging and wait per element unchanged, workers never queue"
                 }
             },
+            "step": {
+                "why_none": "a projection of two purchases, not a defect in this run"
+            },
             "reader": "ci-gatekeeper",
-            "copy_text": "BGA finding: Remote execution (builder cap only, no Plane 2 per-binary cost): unbounded builders 14 ms -> 14 ms\n      Unbounded builders (REAPI moves whole sandboxes): 14 ms -> 14 ms (0 ms); assumes staging and wait per element unchanged, workers never queue\n  additive False\n  why_not_additive Not additive: both remove the same critical-path seconds, so buying both is not buying their sum.\n  Run: golden-fixture-manifest-hash-v1",
+            "copy_text": "BGA finding: 14 ms with unbounded builders, from 14 ms \u2014 remote execution, no per-binary cost\n      Unbounded builders (REAPI moves whole sandboxes): 14 ms -> 14 ms (0 ms); assumes staging and wait per element unchanged, workers never queue\n  additive False\n  why_not_additive Not additive: both remove the same critical-path seconds, so buying both is not buying their sum.\n  Run: golden-fixture-manifest-hash-v1",
             "trace_query": null
         },
         {
             "id": "efficiency-score",
             "severity": "info",
-            "title": "Efficiency score: 100.0% (scheduling is near the certified floor for this graph \u2014 further gains need the graph or the work itself to change, not the scheduler (see Dispatch Occupancy and Critical Path))",
+            "title": "100.0% efficiency score \u2014 scheduling is near the certified floor",
             "detail": [],
             "elements": [],
             "evidence": {
                 "efficiency_score": 1.0,
                 "low_confidence": false
             },
+            "step": {
+                "text": "Change the graph or the work itself, not the scheduler."
+            },
             "reader": "ci-gatekeeper",
-            "copy_text": "BGA finding: Efficiency score: 100.0% (scheduling is near the certified floor for this graph \u2014 further gains need the graph or the work itself to change, not the scheduler (see Dispatch Occupancy and Critical Path))\n  efficiency_score 100.0%\n  low_confidence False\n  Run: golden-fixture-manifest-hash-v1",
+            "copy_text": "BGA finding: 100.0% efficiency score \u2014 scheduling is near the certified floor\n  efficiency_score 100.0%\n  low_confidence False\n  Run: golden-fixture-manifest-hash-v1",
             "trace_query": "cpu-versus-wall"
         }
     ],
@@ -397,9 +439,20 @@
             "governing core count (host_cpu_count/cpu_budget)"
         ]
     },
+    "agent_sizing": {
+        "builders": {
+            "recommended": null,
+            "graph_ceiling": null,
+            "observed": 2,
+            "source": null
+        },
+        "cores": null,
+        "memory": null,
+        "absence": "Cores and memory need Plane 2, which this run did not capture."
+    },
     "utilization_envelope": {
         "available": false,
-        "absence": "this capture has no host memory series \u2014 it was taken before host memory sampling was added, or the host exposes no /proc/meminfo"
+        "absence": "this capture has no host CPU series \u2014 it was taken before host sampling was added"
     },
     "plane2_absence": "Plane 2 was not captured for this run, so there is no per-process detail. `bga snapshot -- bst build TARGET` captures both planes.",
     "attribution": {
@@ -859,7 +912,7 @@
         "reconciliation_error_share": 0.0,
         "potential_oversubscription": false,
         "oversubscription_evidence": "INSUFFICIENT_EVIDENCE",
-        "max_observed_concurrency": 1,
+        "max_observed_concurrency": 2,
         "useful_share": 0.5625,
         "idle_share": 0.4375,
         "wasted_share": 0.0
@@ -898,7 +951,7 @@
         {
             "claim": "diagnosis",
             "kind": "diagnosis",
-            "document": "analyze/v6",
+            "document": "analyze/v7",
             "evidence": [
                 {
                     "path": "floors.t_infinity_observed",
@@ -917,6 +970,12 @@
                     "resolved": true,
                     "value": 1.0,
                     "quantity": "share"
+                },
+                {
+                    "path": "floors.lb",
+                    "resolved": true,
+                    "value": 14000,
+                    "quantity": "duration_us"
                 }
             ],
             "rule": {
@@ -934,7 +993,7 @@
         {
             "claim": "wait-category",
             "kind": "finding",
-            "document": "analyze/v6",
+            "document": "analyze/v7",
             "evidence": [
                 {
                     "path": "attribution.untracked_tail_us",
@@ -967,7 +1026,7 @@
         {
             "claim": "time-concentration",
             "kind": "finding",
-            "document": "analyze/v6",
+            "document": "analyze/v7",
             "evidence": [
                 {
                     "path": "total_duration_us",
@@ -996,7 +1055,7 @@
         {
             "claim": "chain-graph",
             "kind": "finding",
-            "document": "analyze/v6",
+            "document": "analyze/v7",
             "evidence": [
                 {
                     "path": "elements.zero_slack_share",
@@ -1020,7 +1079,7 @@
         {
             "claim": "joint-saving",
             "kind": "finding",
-            "document": "analyze/v6",
+            "document": "analyze/v7",
             "evidence": [
                 {
                     "path": "joint_saving.joint_saving_us",
@@ -1065,7 +1124,7 @@
         {
             "claim": "optimization-horizon",
             "kind": "finding",
-            "document": "analyze/v6",
+            "document": "analyze/v7",
             "evidence": [
                 {
                     "path": "optimization_horizon[0].makespan_after_us",
@@ -1100,7 +1159,7 @@
         {
             "claim": "blast-radius-reach",
             "kind": "finding",
-            "document": "analyze/v6",
+            "document": "analyze/v7",
             "evidence": [
                 {
                     "path": "elements.blast_radius[base.bst].downstream_count",
@@ -1129,7 +1188,7 @@
         {
             "claim": "latent-heavies",
             "kind": "finding",
-            "document": "analyze/v6",
+            "document": "analyze/v7",
             "evidence": [
                 {
                     "path": "latent_heavies[0].duration_us",
@@ -1156,7 +1215,7 @@
         {
             "claim": "fan-in-ranking",
             "kind": "finding",
-            "document": "analyze/v6",
+            "document": "analyze/v7",
             "evidence": [
                 {
                     "path": "elements.fan_in[app.bst].transitive_count",
@@ -1185,7 +1244,7 @@
         {
             "claim": "graph-width",
             "kind": "finding",
-            "document": "analyze/v6",
+            "document": "analyze/v7",
             "evidence": [],
             "rule": {
                 "name": null,
@@ -1201,7 +1260,7 @@
         {
             "claim": "confidence",
             "kind": "finding",
-            "document": "analyze/v6",
+            "document": "analyze/v7",
             "evidence": [
                 {
                     "path": "confidence.primary",
@@ -1240,7 +1299,7 @@
         {
             "claim": "remote-execution-whatif",
             "kind": "finding",
-            "document": "analyze/v6",
+            "document": "analyze/v7",
             "evidence": [],
             "rule": {
                 "name": null,
@@ -1256,7 +1315,7 @@
         {
             "claim": "efficiency-score",
             "kind": "finding",
-            "document": "analyze/v6",
+            "document": "analyze/v7",
             "evidence": [
                 {
                     "path": "floors.efficiency_score",
@@ -1288,10 +1347,10 @@
         }
     ],
     "document_shape": {
-        "leaves": 865,
+        "leaves": 895,
         "deepest_depth": 7,
         "deepest_path": "findings.[].evidence.steps.[].entering.[]",
-        "deeper_than_three": 450,
-        "deeper_than_three_share": 0.5202312138728323
+        "deeper_than_three": 472,
+        "deeper_than_three_share": 0.5273743016759777
     }
 }

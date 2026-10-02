@@ -39,6 +39,7 @@ meaningful once the document they point into exists.
 
 from typing import Any, Optional
 
+from . import correlate as _correlate
 from . import findings as _findings
 from . import schemas as _schemas
 from . import shown as qty
@@ -326,6 +327,20 @@ def _diagnosis_rule(claim, document):
     name = resolve(document, "headline.diagnosis")
     if ratio is UNRESOLVED or ratio is None:
         return _unconditional("Neither branch could be taken: this run did not record both durations the ratio needs.")
+    if name == _findings.DIAGNOSIS_CAPACITY_BOUND:
+        lb, wall = resolve(document, "floors.lb"), resolve(document, "total_duration_us")
+        share = lb / wall if isinstance(lb, (int, float)) and isinstance(wall, (int, float)) and wall else None
+        return _rule(
+            "CAPACITY_BOUND_SHARE",
+            _findings.CAPACITY_BOUND_SHARE,
+            ">=",
+            None,
+            f"The critical path is {qty.share(ratio)} of the task horizon, below the "
+            f"{qty.share(_findings.CHAIN_BOUND_RATIO)} chain-bound line, and the resource floor is "
+            f"{qty.share(share)} of wall-clock, at or above the "
+            f"{qty.share(_findings.CAPACITY_BOUND_SHARE)} line and longer than the critical path, "
+            f"so this build is capacity-bound.",
+        )
     fired = ">=" if name == _findings.DIAGNOSIS_CHAIN_BOUND else "<"
     # UX-674 (styleguide §4b, extended to sentences): `fired` and `name`
     # stay raw in the *rule* - `comparison` and the diagnosis value are
@@ -550,7 +565,11 @@ def _fan_in_paths(claim: dict, document: dict) -> tuple[str, ...]:
 
 
 _CLAIMS = {
-    "diagnosis": (("floors.t_infinity_observed", "total_duration_us", "headline.chain_share"), _diagnosis_rule, ()),
+    "diagnosis": (
+        ("floors.t_infinity_observed", "total_duration_us", "headline.chain_share", "floors.lb"),
+        _diagnosis_rule,
+        (),
+    ),
     "build-failed": (
         ("violations[type=build_failed].failed_count", "violations[type=build_failed].interrupted"),
         _unconditional(
@@ -718,6 +737,43 @@ _CLAIMS = {
             "Published whenever an overcommitted window's own `swapped_out` "
             "count is over zero — the span and the pages are the finding's "
             "own `evidence`."
+        ),
+        (),
+    ),
+    # UX-1255: Plane 2's three cite no path: a citation would serve their sections to R2 in
+    # `schemas._SECTION_READERS`, a page-role change; their figures are the finding's own evidence.
+    "costliest-binary": (
+        (),
+        _rule(
+            "PLANE2_BINARY_FLOOR_SHARE",
+            _findings.PLANE2_BINARY_FLOOR_SHARE,
+            ">=",
+            None,
+            "The costliest binary's share of measured CPU clears Plane 1's opportunity floor.",
+        ),
+        (),
+    ),
+    "jobs-waiting": (
+        (),
+        _rule(
+            "_COMPUTE_BOUND_CORES",
+            _correlate._COMPUTE_BOUND_CORES,
+            "<",
+            None,
+            "An element that asked for more than one job ran under this many cores busy, "
+            "its own CPU over its own wall - the line `bga correlate` calls waiting, not computing.",
+            module="bga/correlate.py",
+        ),
+        (),
+    ),
+    "configure-share": (
+        (),
+        _rule(
+            "PLANE2_CONFIGURE_SHARE",
+            _findings.PLANE2_CONFIGURE_SHARE,
+            ">=",
+            "configure_phase.configure_share",
+            "Configure's share of measured CPU reaches this line.",
         ),
         (),
     ),

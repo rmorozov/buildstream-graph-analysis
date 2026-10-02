@@ -1,8 +1,8 @@
 # UX-1248: finding titles run to 276 characters and bury the number they lead with
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-162 view UI review on a 2,402-element two-plane page (2026-10-01), finding M3 | **Serves:** R1, R8 | **Topic:** viewer | **Area:** bga, bga/viewer | **Shape:** judgement | **Reading:** container
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the round-162 view UI review on a 2,402-element two-plane page (2026-10-01), finding M3 | **Serves:** R1, R8 | **Topic:** viewer | **Area:** bga, bga/viewer | **Shape:** mechanical | **Reading:** container
 
-**Guard:** none — open, no guard named yet
+**Guard:** test_a_finding_title_leads_with_its_number.py
 
 ## Motivation
 
@@ -13,6 +13,20 @@ The 14 finding titles measure 29 to 276 characters; seven are over 150, i.e. two
 ## Decomposition
 
 Input classes: the 2,402-element two-plane page, `golden` and `macro_micro`, at 1440 and 390.
+
+## Decision
+
+Architect, round 163 (2026-10-01):
+
+```text
+Route:     styleguide §4g "A finding title": ≤100 chars, measured number first, because-clause and URL to detail, cross-reference names the section by its heading and sets `section`. ~14 titles rewritten.
+Rejected:  assert in _finding (data-dependent, crashes real runs); truncation (loses the claim).
+Files:     docs/design/styleguide.md (+ Rules at a glance row), docs/contributing/rules.md, bga/findings.py title f-strings (_shared_source_findings :1052, efficiency).
+Guard:     tests/unit/test_a_finding_title_leads_with_its_number.py — golden, macro_micro, gen-synthetic seed 1 (Large): len ≤100, no ://, a title with a digit opens with a number, a capitalised multi-word span is a schema heading.
+Mutation:  restore the shared-source title.
+Class:     product
+Split:     after 1256 in the same worktree; leave capacity-recommendation title to 1246.
+```
 
 ## Required Fix
 
@@ -25,3 +39,47 @@ Finding order and grouping (`UX-1249`).
 ## Acceptance Test
 
 Every finding title on this page, golden and macro_micro is at most 100 characters and no title names a section by a word no heading carries. Mutation: restore the shared-source title, and the guard reds.
+
+## Outcome (2026-10-01)
+
+### The gap, measured
+
+`titles.py` (scratchpad): `bga analyze --format json` on golden, `macro_micro`
+(snapshot copy, Plane 2 beside it), `gen-synthetic --seed 1` (1,202 elements)
+and `pages.shared_resource_run(resources=3)`, base `59eab8ee`:
+
+```text
+golden: 12 findings, max 202, over 100: 8
+macro_micro: 17 findings, max 217, over 100: 13
+scale seed 1: 12 findings, max 201, over 100: 6
+shared source: 18 findings, max 236, over 100: 14
+```
+
+### The close, measured
+
+```text
+golden: 12 findings, max 96, over 100: 0
+macro_micro: 17 findings, max 144, over 100: 1
+scale seed 1: 12 findings, max 83, over 100: 0
+shared source: 18 findings, max 144, over 100: 1
+```
+
+The one left is `capacity-recommendation`, UX-1246's. Styleguide §4g item 9
+and its Rules-at-a-glance row, a `rules.md` row; every title template but
+`build-failed` and `capacity-recommendation` rewritten, the clause each shed
+now a detail line.
+
+### Mutations verified red and reverted (4)
+
+| # | mutation | reddened |
+|---|---|---|
+| M1 | shared-source title restored (`Shared source: {headline}`) | length and opens-with-number clauses, 2 failed |
+| M2 | efficiency title says `see Dispatch Occupancy` | capitalised-name clause, 1 failed |
+| M3 | `Biggest wait category: {pct}% ...` | opens-with-number clause, 1 failed |
+| M4 | shared-source title ends `https://h` | no-URL clause, 1 failed |
+
+### Deviation from the Required Fix
+
+No title cross-references a section any more, so none sets `section`. Not
+rewritten, off every input here: `build-failed` (its shouted `THIS BUILD`
+headline and `suspend.describe`).

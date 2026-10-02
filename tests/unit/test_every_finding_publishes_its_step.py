@@ -5,12 +5,13 @@ import io
 import json
 import pathlib
 import re
+from types import SimpleNamespace
 
 import pytest
 
 from bga import findings, schemas
 from bga.cli import main
-from bga.report._shared import resolve_attribution_hint, resource_wait_advice
+from bga.report._shared import RESOURCE_WAIT_SATURATED, resolve_attribution_hint, resource_wait_advice
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 RUNS = {
@@ -71,6 +72,30 @@ def test_no_finding_says_an_enum_word_or_a_bare_flag(document):
 def test_every_resource_wait_hint_is_in_reader_words(verdict):
     hint = resolve_attribution_hint("resource_wait_us", verdict)
     assert not ENUM_WORD.search(hint) and not BARE_CAPACITY.search(hint), hint
+
+
+def _occupied(builders, **busy):
+    occupancy = {f"Resource.{name}": share for name, share in busy.items()}
+    peak = dict.fromkeys(occupancy, 1)
+    return SimpleNamespace(
+        occupancy={"resource_occupancy": occupancy, "peak_resource_occupancy": peak},
+        agent_sizing={"builders": {"observed": builders}},
+    )
+
+
+@pytest.mark.parametrize(
+    ("run", "said"),
+    [
+        (_occupied(8, PROCESS=0.5, UPLOAD=0.2), RESOURCE_WAIT_SATURATED),
+        (_occupied(None, UPLOAD=1.0), RESOURCE_WAIT_SATURATED),
+        (_occupied(None, PROCESS=1.0), RESOURCE_WAIT_SATURATED),
+        (_occupied(8, PROCESS=7.0), RESOURCE_WAIT_SATURATED),
+        (_occupied(8, PROCESS=7.6, UPLOAD=1.0), "builder slots were saturated (7.60 of 8 busy on average)"),
+    ],
+)
+def test_only_a_configured_capacity_past_the_threshold_is_called_saturated(run, said):
+    """UX-1271: a peak is not a capacity, and 7.0 of 8 busy is not saturated."""
+    assert findings._saturated_resource(run) == said
 
 
 def test_a_fixture_leads_with_resource_wait():

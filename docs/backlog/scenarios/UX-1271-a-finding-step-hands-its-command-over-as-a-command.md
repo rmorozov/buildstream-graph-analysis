@@ -68,9 +68,13 @@ help depends on …, so this hint is unconditioned
 command: bga sweep tests/fixtures/shared_base_wide/run
 ```
 
-The saturated resource is the busiest of `occupancy.resource_occupancy` against
-its capacity (configured builders for PROCESS, else the peak), named builder,
-download or upload slots. The three resource-wait hints in `_shared.py` start
+Builder slots are named saturated only when the run's configured builders
+(`agent_sizing.builders.observed`, else the recommendation's) were >= 90% busy
+on average (`SATURATED_SHARE`); otherwise, and for downloads and uploads, which
+record no configured capacity, the step keeps the neutral opening. A first cut
+ranked mean against a non-PROCESS peak, which measures peakiness: the verifier's
+stub, 0.5 of 8 builders beside UPLOAD 0.2 of peak 1, read "upload slots were
+saturated (0.20 of 1 busy)". The three resource-wait hints in `_shared.py` start
 "builder slots, downloads or uploads were saturated"; the default advises
 "try `bga analyze --capacity N` with a higher N, or `bga sweep` to find the real
 knee point". `_capacity_step`'s fallback therefore reads (backticks stripped):
@@ -84,7 +88,7 @@ The 1440 no-wrap check on the 2,402-element page is the walker's. A scrolling
 controls against the 1,192 budget (+2 copy controls); the bound is §3e's, not
 raised here.
 
-### Mutations verified red and reverted (8)
+### Mutations verified red and reverted (11)
 
 | # | mutation | reddened |
 |---|---|---|
@@ -93,6 +97,9 @@ raised here.
 | M3 | "(PROCESS/DOWNLOAD/UPLOAD)" into the unknown-capacity advice | wording guard, 4 failed, 12 passed |
 | M4 | "a resource (PROCESS/DOWNLOAD/UPLOAD) was saturated" restored | wording guard, 6 failed, 10 passed |
 | M5 | default advice "try --capacity N with a higher N" | every-hint clause, 1 failed, 15 passed |
-| M6 | step names `PROCESS`, not builder slots | resolved-hint + wording `[shared_base_wide]`, 2 failed, 14 passed |
+| M6 | step names `PROCESS`, not builder slots (first cut) | resolved-hint + wording `[shared_base_wide]`, 2 failed, 14 passed |
 | M7 | the sweep clause back in the step sentence | resolved-hint `[shared_base_wide]`, 1 failed, 15 passed |
 | M8 | `code.next-command` out of the ring rule | selector + tab-ring clauses, 2 failed, 8 passed |
+| M9 | no threshold | saturation stubs (0.5/8, 7.0/8), 2 failed, 19 passed |
+| M10 | threshold 0.8 | 7.0/8 stub, 1 failed, 20 passed |
+| M11 | builders default to 1 when none configured | PROCESS-peak stub, 1 failed, 20 passed |

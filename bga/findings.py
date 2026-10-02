@@ -1678,27 +1678,25 @@ def _opportunity_findings(result: AnalysisResult, chain_bound: bool) -> list[dic
     ]
 
 
-_RESOURCE_WORDS = {'PROCESS': 'builder slots', 'DOWNLOAD': 'download slots', 'UPLOAD': 'upload slots'}
+#: UX-1271: a resource is named saturated only this busy on average against its configured capacity.
+SATURATED_SHARE = 0.9
 
 
 def _saturated_resource(result: AnalysisResult) -> str:
-    """The busiest resource against its capacity, in reader words, from the run's occupancy."""
+    """Builder slots, when the run's configured builders were >= SATURATED_SHARE busy; else the neutral opening.
+
+    Only builders have a configured capacity on the result; a peak is not a capacity.
+    """
     from .report._shared import RESOURCE_WAIT_SATURATED
 
-    occupancy = getattr(result, 'occupancy', None) or {}
-    mean = occupancy.get('resource_occupancy') or {}
-    peak = occupancy.get('peak_resource_occupancy') or {}
-    builders = (getattr(result, 'capacity_recommendation', None) or {}).get('builders')
-    rows = []
-    for key, busy in mean.items():
-        name = str(key).rsplit('.', 1)[-1]
-        capacity = (builders if name == 'PROCESS' else None) or peak.get(key)
-        if name in _RESOURCE_WORDS and capacity:
-            rows.append((busy / capacity, busy, capacity, name))
-    if not rows:
+    builders = ((getattr(result, 'agent_sizing', None) or {}).get('builders') or {}).get('observed') or (
+        getattr(result, 'capacity_recommendation', None) or {}
+    ).get('builders')
+    mean = (getattr(result, 'occupancy', None) or {}).get('resource_occupancy') or {}
+    busy = next((v for k, v in mean.items() if str(k).rsplit('.', 1)[-1] == 'PROCESS'), None)
+    if not builders or busy is None or busy / builders < SATURATED_SHARE:
         return RESOURCE_WAIT_SATURATED
-    _, busy, capacity, name = max(rows)
-    return f"{_RESOURCE_WORDS[name]} were saturated ({busy:.2f} of {capacity:g} busy on average)"
+    return f"builder slots were saturated ({busy:.2f} of {builders:g} busy on average)"
 
 
 def _and(names: list[str]) -> str:

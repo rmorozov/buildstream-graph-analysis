@@ -1437,8 +1437,8 @@ button.json-toggle:hover { color: var(--fg); }
 .decomposition .draw-tick { transform: translateX(calc(var(--at, 50) * -1%)); }
 /* `UX-1251`: a decomposition's labels stack one per line under their segment's start, so none can overprint. */
 .decomposition .draw-axis { height: auto; }
-.decomposition .draw-tick { position: relative; display: table; left: auto !important; top: 0; margin-left: calc(var(--at, 0) * 1%);
-  border-left: 3px solid var(--line); padding-left: 0.3em; }
+.decomposition .draw-tick { position: relative; display: table; left: calc(var(--at, 0) * 1%) !important; top: 0;
+  border-left: 3px solid var(--line); padding-left: var(--space-1); }
 .decomposition .draw-tick[data-tone="lead"] { border-left-color: var(--accent-mark); }
 /* `UX-1157`: the label names its part; a reader-mark suffix only widened it into its neighbour. */
 .decomposition .draw-tick::after, .draw-tick[data-mark*=" "]::after { content: none; }

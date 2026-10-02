@@ -397,6 +397,7 @@ the measurements:
    | 8 drawing marks | accent-mark | fill | `.band-strip` `.trend-band` `.trend-point` `.spark-point` `.decomposition-part:first-of-type` `.interval-mark` |
    | 8 drawing marks | accent-mark | stroke | `.spark-line` `.density-tick` `.trend-median` |
    | 8 drawing marks | accent-mark | background | `.wf-fill` `.horizon-bar` |
+   | 8 drawing marks | accent-mark | border | `.decomposition .draw-tick[data-tone="lead"]` |
 3. **Status tones are reserved and never alone.** good/warn/bad
    carry a shape, marker or label in the same element, always —
    `UX-212`'s rule, promoted from the trend dots to the whole page.

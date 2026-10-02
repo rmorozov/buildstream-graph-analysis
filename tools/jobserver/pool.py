@@ -104,6 +104,16 @@ def open_jobserver(n: int, scratch: str, seed: Optional[int] = None) -> tuple[st
     return path, fd, tokens
 
 
+def _readable_tokens(fd: int) -> int:
+    """Tokens in the FIFO no client has read (`FIONREAD`), `0` when unreadable."""
+    readable = array.array("i", [0])
+    try:
+        fcntl.ioctl(fd, termios.FIONREAD, readable, True)
+    except OSError:
+        return 0
+    return readable[0]
+
+
 def close_jobserver(path: Optional[str], fd: Optional[int]) -> None:
     """UX-841: `open_jobserver`'s pair - close the fd, then remove the FIFO."""
     if fd is not None:
@@ -373,6 +383,10 @@ class PoolController:
         `+` lands, gated by the ceiling."""
         self._below_streak += 1
         if self._below_streak >= 2 and self.pool < self.ceiling - 1:
+            # UX-1134: a `+` while tokens sit unread widens the pool before the phase that will use it is measured.
+            idle = _readable_tokens(self.fd) if self.memory_gate else 0
+            if idle:
+                return "hold", f"tokens idle {idle}"
             withheld = self.memory_gate.withhold(self.pool) if self.memory_gate else None
             if withheld:
                 return "hold", withheld

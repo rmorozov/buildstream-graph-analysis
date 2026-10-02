@@ -61,6 +61,18 @@ per_job x (pool + running + 1 + 1) > MemAvailable + live) and `bga/correlate.py`
 when peak x (pool + 1) > MemTotal, fit = floor(MemTotal / peak) - 1); two copies because `bga/` does
 not import `tools/` (UX-325), a guard holds them equal. MemAvailable already counts reclaimable cache
 as free, so it is no margin of its own. At 31 GB / 2.8 GB: advice 10, gate 9-10 (MemAvailable < MemTotal).
+Revised 2026-10-02 (2): run 37016667967 failed the same at the same second, giant peak 12. Not the
+seed: `--jobserver auto --builders 8` hands the tracer `--jobserver 16 --jobserver-seed 8`
+(cli.py `_translate_capture_jobserver`), so the pool opens at 8, never `ceiling - 1`. The adds came
+before the giant compiled: with no sandbox live `withhold` returns `None`, and through bst's startup and
+cmake configure every live job is small, so two-tick underload adds took the pool 8 -> 15 in ~2 s, every
+`+` sitting unread in the FIFO. Fix: with the gate armed, `_handle_underload` holds `tokens idle N` while
+`FIONREAD` shows unread tokens - a `+` is added only when make has taken every one, so the compile opens
+at 9 jobs and each add meets `withhold`. Seeding at max_jobs - 1 is not taken: it moves the start 8 -> 7
+and leaves the pre-compile widening intact. Cost on short-job shapes: no pre-widening, so a wide phase
+ramps from the seed at one `+` per 250 ms tick after its first job ends (11-serial-giant's cc1 ~0.5 s):
+~0.5 + 7 x 0.25 = ~2.3 s on 16 cores; pairs/cap3 pass no `--builders`, seed 15, and never add. Residual:
+a cc1 younger than configure's largest finished job (~30 MB) can still pass one `+` in the first tick.
 
 ## Out of Scope
 
@@ -83,13 +95,8 @@ E   assert ('add' == 'hold'        (live 1 GB cc1 > every finished 4 MB job)
 2 failed, 1 passed
 ```
 
-Close measured: the same file on this branch, `3 passed in 0.41s`; the
-touching selection (`dev_touching.py --base c6c6e4ed --list`, 148 files,
-plus the guard) `1 failed, 3457 passed, 62 skipped in 138.59s` - the one
-red is `test_every_doc_path_a_help_string_names_exists` naming
-`docs/audits/mutation.md`, an ignored record the worktree lacks. One
-`withhold` on this host's `/proc` (129 entries): 0.99 ms mean of 20. The
-Graviton notice, on a scripted report:
+Close measured: `3 passed in 0.41s`; touching selection (148 files) `1 failed, 3457 passed` (an
+ignored record absent). One `withhold` on 129 `/proc` entries: 0.99 ms mean of 20. Scripted notice:
 `pool dynamic idle 0.00 starved 0.00 admit None wait 0.0s rank None psiw 0 rssw 7`.
 
 | mutation (tools/jobserver/memory.py) | reddened | run printed |
@@ -130,3 +137,22 @@ fits 12.5 GB, x 7 does not), the 2.7 GB / 31 GB line (`--jobserver 11`, wants 10
 | R3 correlate.py `host_memory // peak - MEMORY_RESERVE_JOBS` -> `host_memory // peak` | the 2.7 GB line, `..._is_bound` | 2 failed, 8 passed |
 | R4 memory.py `MEMORY_RESERVE_JOBS = 0` | the gate boundary, `..._hold_the_same_reserve` | 2 failed, 8 passed |
 | reverted from the copy | - | 10 passed |
+
+### Graviton reading, run 37016667967 (the reserve in, 9ad5ed7a)
+
+```text
+memgiant off | wall 559.32s cpu 3214s mem 21892M giant-peak 8 giant:373.8/8/7.9
+autocap-1 failed | 299.8 [00:04:53] build:giant.bst FAILURE Command failed | oom: 15 kill(s), Killed process 7926 (cc1) anon-rss:2678508kB
+autocap report: Peak Memory giant.bst 2795.8 MB; native parallelism giant.bst peak 12
+```
+
+Gap, the pool guard against `623ee0ec`: `test_with_no_sandbox_running_and_its_seed_unread_the_pool_stays_at_its_seed`
+`assert 15 == 8` (8 low ticks, seed 8 unread, no sandbox), `1 failed, 4 passed`; close `5 passed`.
+`graviton_arms.sh`'s `why` now adds `<arm> pool:: start S max M ticks T adds A rss-holds R idle-holds I
+withdraws W` from `$OUT/<arm>-<i>.json.jobserver_ledger.jsonl` (scripted ledger: `start 8 max 9 ticks 4 adds 1 ...`).
+
+| mutation (tools/jobserver/pool.py) | reddened | run printed |
+|---|---|---|
+| P1 `idle = ... if self.memory_gate else 0` -> `idle = 0` | `..._stays_at_its_seed` (`15 == 8`) | 1 failed, 4 passed |
+| P2 `_readable_tokens` returns `0` | `..._stays_at_its_seed` (`15 == 8`) | 1 failed, 4 passed |
+| reverted from the copy | - | 5 passed |

@@ -325,6 +325,8 @@ export const READER_LABELS = {
   scheduler_bound: "Scheduler-bound",
   capacity_bound: "Capacity-bound",
   task_horizon: "Time tasks were running",
+  // `UX-1273`: which ready work the ready queue counted.
+  builder_free: "Ready with a builder free", dependency_ready: "Ready on dependencies, builders full or free",
   wall_clock: "Wall clock",
   detected_host_cpu_count: "Detected host cores",
   declared_cpu_budget: "Declared CPU budget",

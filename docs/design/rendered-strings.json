@@ -232,7 +232,7 @@
   {
     "exception": null,
     "role": "heading",
-    "text": "How much ready work waited with a builder free?"
+    "text": "How much ready work had not started?"
   },
   {
     "exception": null,
@@ -817,7 +817,7 @@
   {
     "exception": null,
     "role": "rail-entry",
-    "text": "How much ready work waited with a builder free?"
+    "text": "How much ready work had not started?"
   },
   {
     "exception": null,

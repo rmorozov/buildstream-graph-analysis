@@ -125,6 +125,7 @@ CENSUS = (
     "tests/unit/test_a_committed_analysis_matches_the_analyzer.py",
     "tests/unit/test_a_derived_figure_is_printed_not_committed.py",
     "tests/unit/test_a_guard_reads_only_what_a_clone_has.py",
+    "tests/unit/test_a_case_carries_both_captures.py",
     "tests/unit/test_capture_ref_patterns.py",
     "tests/unit/test_every_direction_names_its_reader.py",
     "tests/unit/test_every_skill_directory_is_named_in_claude_md.py",

@@ -178,7 +178,8 @@ class TestTheSelectorStillSelects:
     # Round 163's merged tree (the round's guards over findings, the viewer and the schema): median 40, p90 66, max 189 over 795.
     # Round 165's merged tree (owner-call default; the round's guards over findings, the viewer and the sweep):
     # median 40, p90 66, max 193 over 803.
-    CEILING = {"median": 40, "p90": 66, "max": 193}
+    # `UX-902`'s census member adds one file to every selection: median 41, p90 67, max 194 over 806.
+    CEILING = {"median": 41, "p90": 67, "max": 194}
     POPULATION_FLOOR = 60
     #: `UX-645`: **13 census + 14 of your own**. The census floor is
     #: inside this bound because those files run - the figure is what
@@ -219,8 +220,10 @@ class TestTheSelectorStillSelects:
     #: Same arithmetic: 46 -> 47.
     #: `UX-1120` moved it 33 -> 34 (its guard walks every tracked `.py`).
     #: Same arithmetic: 47 -> 48.
-    HANDFUL = 48
-    CENSUS_FLOOR = 34
+    #: `UX-902` moved it 34 -> 35 (its guard lists `docs/cases/` with `git ls-files`).
+    #: Same arithmetic: 48 -> 49.
+    HANDFUL = 49
+    CENSUS_FLOOR = 35
 
     # Wide because the module's name is how a test invokes it, not
     # because the selector is wrong. `UX-606` argued each one.

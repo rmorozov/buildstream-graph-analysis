@@ -505,7 +505,7 @@ with the tables above destroys the one thing the entry is for
 (`UX-653`). The newest entry is the exception: every round that
 re-grounds the document rewrites it.
 
-Updated 2026-10-01 (after `UX-1247`), covering one change to this
+Updated 2026-10-02 (after `UX-1267`), covering two changes to this
 document in round 163. The contract registry's headline id moves to
 `analyze/v7`, and `analyze/v6` joins the rows read and never written:
 `by_binary` is ranked rows of CPU, wall, calls and elements

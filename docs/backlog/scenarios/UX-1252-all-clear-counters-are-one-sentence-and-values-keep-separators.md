@@ -88,3 +88,4 @@ macro_micro data half   100,278    100,229   100,000   (this tree's longer path;
 Deviation: a row carrying the run's advice (`attribution`'s buckets, `UX-390`) and a signed delta keep their rows; `decision.js`,
 outside the Decision's Files, printed the decision list's "2194 downstream"; a share (`#cache`'s `hit_share`, `reconciliation_error_share`) never folds; an opened
 folded sentence is its own line labelled by CSS `::before`, since a text label put `xl_both` at 13,237 words, over 13,200.
+Merged tree: two separate runs in one golden block drew two "None" terms and reddened `test_no_list_repeats_a_term[golden]`, so a block's clear rows fold into one sentence at the first one's place.

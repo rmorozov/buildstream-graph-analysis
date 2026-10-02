@@ -392,19 +392,17 @@ export function renderPairs(key, object, hint = {}, node = undefined,
     rows.push({ term, describe, empty: !advice && !direction && kind !== "share" && allClear(value),
                 dd: el("dd", {}, cell, describe, advice ? el("p", { class: "run-advice" }, advice) : null) });
   }
-  // `UX-1252` (styleguide §6e.12): a run of two or more zero or absent values is one sentence; JSON keeps each.
-  for (let i = 0; i < rows.length;) {
-    let end = i;
-    while (end < rows.length && rows[end].empty) end += 1;
-    if (end - i < 2) { list.append(rows[i].term, rows[i].dd); i += 1; continue; }
-    const run = rows.slice(i, end);
+  // `UX-1252` (styleguide §6e.12): a block's zero or absent values are one sentence, at the first one's place; JSON keeps each.
+  const run = rows.filter((r) => r.empty);
+  for (const row of rows) {
+    if (run.length < 2 || !row.empty) { list.append(row.term, row.dd); continue; }
+    if (row !== run[0]) continue;
     list.append(el("dt", { "data-none": run.map((r) => r.term.getAttribute("data-key")).join(" ") }, "None"),
                 el("dd", {}, ...run.map(({ term }, at) => el("span", {
                   "data-key": term.getAttribute("data-key"), "data-described": term.getAttribute("data-described"),
                   title: term.getAttribute("title") }, `${term.textContent}${at < run.length - 1 ? ", " : "."}`)),
                    // Opened, each sentence is its own line, labelled by CSS so the word count does not grow.
                    ...run.map(({ term, describe }) => (describe?.setAttribute("data-label", term.textContent), describe))));
-    i = end;
   }
   const door = attachBlockDoor(list, doors);
   const parts = [sectionHead(key, hint)];

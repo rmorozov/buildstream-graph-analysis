@@ -10,7 +10,7 @@ to instead of superseded:
 
 | document | what it records |
 |---|---|
-| [`architecture-review.md`](architecture-review.md) | every architecture and documentation review the `UX-241` cadence has called, newest last — **append-only**, so a superseded finding stays where it was written and the review after it says so |
+| [`architecture-review.md`](architecture-review.md) | every architecture and documentation review the `UX-241` cadence has called; its log table runs newest last, its sections do not (reviews 1-20 roughly in order, then 36 down to 21) — **append-only**, so a superseded finding stays where it was written and the review after it says so |
 | [`spec-compliance-review.md`](spec-compliance-review.md) | the original review of the tool against its specification, before the round sequence began |
 | [`walk-seed-1.md`](walk-seed-1.md) | `UX-685`'s first seeded walk — 1 element, Plane 2 absent, real Chrome; the seed names it and reruns it |
 | [`walk-seed-2.md`](walk-seed-2.md) | `UX-685`'s second seeded walk — the empty-population class, hook-only Plane 2, the static export |

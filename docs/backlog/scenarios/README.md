@@ -39,7 +39,6 @@ task file, which is the only place it ever lived twice.
 | UX-1296 | [`pilot.md` states a band threshold and an exit-6 behaviour the kit does not have](UX-1296-the-pilot-guide-states-a-band-threshold-and-an-exit-6-the-kit-does-not-have.md) | docs | High | R4 | 🔴 Not Started |
 | UX-1297 | [the pilot's workflow keeps no pull request's verdict, and its overhead control is in no file](UX-1297-the-pilot-workflow-keeps-no-pull-request-verdict.md) | docs | Medium | R4 | 🔴 Not Started |
 | UX-1298 | [`compare/v2` publishes where its band was read from and how many members it skipped for host](UX-1298-compare-publishes-where-its-band-came-from-and-what-it-skipped.md) | contracts | Medium | R4 | 🔴 Not Started |
-| UX-1299 | [three pointers name a place in the audit and design history that is no longer there](UX-1299-three-pointers-name-where-the-audit-history-used-to-be.md) | docs | Low | contributors | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

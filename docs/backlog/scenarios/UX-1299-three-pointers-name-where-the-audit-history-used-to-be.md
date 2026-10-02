@@ -1,8 +1,8 @@
 # UX-1299: three pointers name a place in the audit and design history that is no longer there
 
-**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** review 36, checklist items 3 and 5 (2026-10-02) | **Serves:** contributors | **Topic:** docs | **Area:** unassigned | **Shape:** judgement | **Reading:** container
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** — | **Found by:** review 36, checklist items 3 and 5 (2026-10-02) | **Serves:** contributors | **Topic:** docs | **Area:** unassigned | **Shape:** judgement | **Reading:** container
 
-**Guard:** none — open, no guard named yet
+**Guard:** none — three prose pointers; the review cadence (`UX-241`) is what reads them again
 
 ## Motivation
 
@@ -42,3 +42,20 @@ The three greps above return the corrected text;
 green.
 
 ## Outcome
+
+### After
+
+```text
+$ grep -n "round table" docs/audits/architecture-review.md | head -1
+5:`directions-history.md` (linked)'s round table (in
+$ grep -n "Direction 20\` in" docs/design/in-step-parallelism.md
+268:(`UX-841`..`UX-852`, round 118; status line under `## Direction 20` in `directions.md`).
+$ grep -c "its sections do not" docs/audits/README.md
+1
+```
+
+No guard and so no mutation: the three sentences are pointers, and a
+heading name replaces the line number that drifted. The Verification
+Log entry in `architecture.md` is re-grounded in this commit for round
+167, after `d8f78304` touched the document.
+

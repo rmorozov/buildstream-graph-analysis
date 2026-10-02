@@ -2,8 +2,8 @@
 
 A round type, and its log. Feature audits happen here on a cadence —
 twenty-eight rounds of them when `UX-241` was filed on 2026-08-23, and
-[`../design/directions.md`](../design/directions.md)'s round table has
-carried every round since — and documentation review did not, which is
+[`directions-history.md`](directions-history.md)'s round table (in
+`directions.md` until `UX-1293`) has carried every round since — and documentation review did not, which is
 why one drifted a whole axis and the other did not (`UX-241`).
 
 ## What a review is
@@ -1601,7 +1601,7 @@ prior=4 kept_total=5 tsv=...review default band 4
 
 ### One gap in this sweep
 
-`continuous-build-improvement.md` §4 (*25 versioned documents with
+`continuous-build-improvement.md` section 4 (*25 versioned documents with
 `--schema` behind each*) and §6 (*no percentage anywhere in the tree*)
 were read as records of its 2026-09-20 dateline, though its status line
 now reads *as of 2026-10-02*; `UX-895` has since measured +7.1% to +9.3%.

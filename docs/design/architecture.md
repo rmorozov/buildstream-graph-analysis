@@ -424,8 +424,8 @@ with the tables above destroys the one thing the entry is for
 (`UX-653`). The newest entry is the exception: every round that
 re-grounds the document rewrites it.
 
-Updated 2026-10-02 (after `UX-1293`), covering three changes to this
-document in round 167. The status table of Done rows becomes a link to
+Updated 2026-10-02 (after `UX-1299`), covering four changes to this
+document in round 167, the fourth this entry itself. The status table of Done rows becomes a link to
 the backlog index (`UX-1293`); the `analyze/v7` row names
 `omitted_structural_opportunities` and `cumulative_saving_us`, which
 only that table carried; the retired walkthrough's link points at

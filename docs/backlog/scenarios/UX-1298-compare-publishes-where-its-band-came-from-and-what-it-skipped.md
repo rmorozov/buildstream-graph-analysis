@@ -20,7 +20,7 @@ $ bga compare BASE CAND --format json --band-from-class 10 --bundles kept/review
   baseline_band_sources lists 3 stamps; "skipped" in the document: False; the tree's path: False
 ```
 
-`continuous-build-improvement.md` §5 fixes the order for every new
+`continuous-build-improvement.md` section 5 fixes the order for every new
 answer: a key in a published contract, then the report line. This one
 went report-first, so a JSON consumer of the gate cannot tell a band of
 three from a band that dropped seven for host.

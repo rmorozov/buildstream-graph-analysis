@@ -1050,7 +1050,7 @@ def _graph_shape_findings(result: AnalysisResult) -> list[dict]:
         _finding(
             'graph-width',
             SEVERITY_INFO,
-            f"The widest of {stages:,} dependency levels holds {widest:,} of {len(depth):,} elements",
+            f"{stages:,} dependency levels; the widest holds {widest:,} of {len(depth):,} elements",
             evidence={'element_count': len(depth), 'dependency_stages': stages, 'widest_stage': widest},
             step=_none("a shape the dependency graph has; only its dependencies move it"),
         )

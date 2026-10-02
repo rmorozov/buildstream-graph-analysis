@@ -263,7 +263,7 @@
         {
             "id": "graph-width",
             "severity": "info",
-            "title": "The widest of 10 dependency levels holds 2 of 11 elements",
+            "title": "10 dependency levels; the widest holds 2 of 11 elements",
             "detail": [],
             "elements": [],
             "evidence": {
@@ -275,7 +275,7 @@
                 "why_none": "a shape the dependency graph has; only its dependencies move it"
             },
             "reader": "graph-owner",
-            "copy_text": "BGA finding: The widest of 10 dependency levels holds 2 of 11 elements\n  element_count 11\n  dependency_stages 10\n  widest_stage 2\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
+            "copy_text": "BGA finding: 10 dependency levels; the widest holds 2 of 11 elements\n  element_count 11\n  dependency_stages 10\n  widest_stage 2\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
             "trace_query": "graph-levels"
         },
         {

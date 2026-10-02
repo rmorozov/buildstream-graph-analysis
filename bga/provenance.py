@@ -739,6 +739,42 @@ _CLAIMS = {
         ),
         (),
     ),
+    # UX-1255: Plane 2's three. The binary and configure cite no path: a citation would serve their sections
+    # to R2 in `schemas._SECTION_READERS`, a page-role change; their figures are the finding's own evidence.
+    "costliest-binary": (
+        (),
+        _rule(
+            "PLANE2_BINARY_FLOOR_SHARE",
+            _findings.PLANE2_BINARY_FLOOR_SHARE,
+            ">=",
+            None,
+            "The costliest binary's share of measured CPU clears Plane 1's opportunity floor.",
+        ),
+        (),
+    ),
+    "jobs-waiting": (
+        ("capacity_recommendation.cores_busy", "capacity_recommendation.builders"),
+        _rule(
+            "PLANE2_WAITING_OF_REQUESTED",
+            _findings.PLANE2_WAITING_OF_REQUESTED,
+            "<",
+            None,
+            "Cores busy per builder is under this fraction of an element's requested jobs, "
+            "with no graph knee below the builders.",
+        ),
+        (),
+    ),
+    "configure-share": (
+        (),
+        _rule(
+            "PLANE2_CONFIGURE_SHARE",
+            _findings.PLANE2_CONFIGURE_SHARE,
+            ">=",
+            "configure_phase.configure_share",
+            "Configure's share of measured CPU reaches this line.",
+        ),
+        (),
+    ),
     # `UX-680`: **no evidence path**, for `graph-width`'s reason - both
     # halves live in `findings[].evidence.{unbounded_builders,
     # compiler_offload}`, nested under the finding rather than at a

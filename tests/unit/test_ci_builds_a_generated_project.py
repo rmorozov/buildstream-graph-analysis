@@ -157,7 +157,16 @@ class TestTheCensusCanBeToldAboutARunOutsideTheTree:
         capture host's own cache, and every committed capture predates
         the flag). If the pair stops being declared, a committed
         capture now produces one and the step's justification has
-        changed; the other two are not this step's to reach."""
-        assert set(census.UNREACHABLE) == {"build-failed", "failed-task-time", "swap-observed", "artifact-weight"}
+        changed; the other two are not this step's to reach, nor are
+        UX-1255's three Plane 2 findings."""
+        assert set(census.UNREACHABLE) == {
+            "build-failed",
+            "failed-task-time",
+            "swap-observed",
+            "artifact-weight",
+            "costliest-binary",
+            "configure-share",
+            "jobs-waiting",
+        }
         for name in census.UNREACHABLE:
             assert name in FINDING_READERS, name

@@ -95,8 +95,7 @@ E   assert ('add' == 'hold'        (live 1 GB cc1 > every finished 4 MB job)
 2 failed, 1 passed
 ```
 
-Close measured: `3 passed in 0.41s`; touching selection (148 files) `1 failed, 3457 passed` (an
-ignored record absent). One `withhold` on 129 `/proc` entries: 0.99 ms mean of 20. Scripted notice:
+Close measured: `3 passed in 0.41s`. One `withhold` on 129 `/proc` entries: 0.99 ms mean of 20. Scripted notice:
 `pool dynamic idle 0.00 starved 0.00 admit None wait 0.0s rank None psiw 0 rssw 7`.
 
 | mutation (tools/jobserver/memory.py) | reddened | run printed |
@@ -107,20 +106,13 @@ ignored record absent). One `withhold` on 129 `/proc` entries: 0.99 ms mean of 2
 
 Track B (advice), `tests/unit/test_the_auto_advice_names_its_memory_bound.py`: with peak 2.7 GB, pool 16, host 31 GB the Builders line names the bound and `--jobserver 11`; at 1.9 GB or with no memory reading the line is unchanged.
 
-| Mutation (B1) | Result |
-|---|---|
-| `>` flipped to `<` in `peak * pool_size > host_memory` | 2 failed, 2 passed |
-| `memory=` dropped | 1 failed, 3 passed |
-| `>` relaxed to `>=` | 1 failed, 3 passed (exactly host memory) |
-| revert | 4 passed |
+B1 mutations: `>` -> `<` 2 failed; `memory=` dropped 1 failed; `>` -> `>=` 1 failed; revert 4 passed.
 
 ### Graviton reading, run 37012305358
 
-Job 110854756306, memgiant, mem_lines 320000 (mixed8, job 110854756162: off8 145.08/141.05 s,
-auto8 116.33/116.56 s, rssw 0):
+Job 110854756306 (mixed8 off8 145.08/141.05 s, auto8 116.33/116.56 s, rssw 0):
 
 ```text
-memgiant off | wall 562.02s cpu 3194s mem 21449M giant-peak 8 ... giant:373.7/8/7.9
 autocap-1 failed | 298.1 [00:04:53] build:giant.bst FAILURE Command failed | oom: 15 kill(s), Out of memory: Killed process 7027 (cc1) total-vm:2993912kB, anon-rss:2684452kB
 autocap report: Peak Memory giant.bst 2795.4 MB; native parallelism giant.bst peak 11
 ```
@@ -156,3 +148,18 @@ withdraws W` from `$OUT/<arm>-<i>.json.jobserver_ledger.jsonl` (scripted ledger:
 | P1 `idle = ... if self.memory_gate else 0` -> `idle = 0` | `..._stays_at_its_seed` (`15 == 8`) | 1 failed, 4 passed |
 | P2 `_readable_tokens` returns `0` | `..._stays_at_its_seed` (`15 == 8`) | 1 failed, 4 passed |
 | reverted from the copy | - | 5 passed |
+
+### Graviton reading, runs 37022814276 and 37031346135 (the idle hold in, b1bfb7aa)
+
+```text
+widechain off  262.19/260.96/260.84 s  autocap 198.91/198.49/198.59 s  rssw 6      -24%
+mixed8    off8 144.52/141.17/141.20 s  auto8   118.48/118.44/118.40 s  rssw 2,3,0  -17%
+memgiant  autocap wall 562.87s cpu 3286s mem 26915M giant-peak 10 pool dynamic idle 1.00 ... rssw 1004 giant:372.6/10/8.1
+          off     wall 559.74s cpu 3185s mem 21557M giant-peak 8 giant:373.4/8/7.9
+```
+
+The Acceptance reading: the autocap arm completes at `mem_lines 320000` at 10 jobs with
+1004 memory holds, +0.6% wall against `off` (run 37031346135, read by the owner from the job
+log, 2026-10-02; the second repeat completed too). Both memgiant jobs then hit the runner's
+time on the third repeat with no annotation; that is UX-1281's. The win shapes keep their wins (widechain as round 152; mixed8
+auto8 +2 s against run 37012305358's 116.3-116.6 s).

@@ -11,7 +11,7 @@ name: CodSpeed runner probe
 on:
   workflow_dispatch:
   push:
-    branches: [claude/project-thread-bim9mu, claude/project-thread-pxl1wp, claude/open-backlog-batch-nwd5gk]
+    branches: [claude/project-thread-bim9mu, claude/project-thread-pxl1wp]
     paths: [.github/workflows/codspeed-probe.yml, examples/11-serial-giant/graviton_arms.sh]
 
 permissions:
@@ -26,7 +26,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        leg: [memgiant]
+        leg: [mixed8, twogiants, widechain, memgiant]
     steps:
       - uses: actions/checkout@v7
 
@@ -97,15 +97,8 @@ jobs:
           echo "$OUT"
           echo "::notice title=calibrate::$(echo "$OUT" | tr '\n' ' ')"
 
-      # UX-1134: the arms run in a cgroup 1 GB under the host, so a build that
-      # outgrows memory is killed inside it and the runner lives to report it.
       - name: Arms
-        run: |
-          CG=/sys/fs/cgroup/bga-arms
-          sudo -n mkdir -p "$CG"
-          echo $(( $(awk '/^MemTotal:/{print $2}' /proc/meminfo) * 1024 - 1073741824 )) | sudo -n tee "$CG/memory.max"
-          echo $$ | sudo -n tee "$CG/cgroup.procs"
-          OUT="$RUNNER_TEMP/arms" examples/11-serial-giant/graviton_arms.sh ${{ matrix.leg }}
+        run: OUT="$RUNNER_TEMP/arms" examples/11-serial-giant/graviton_arms.sh ${{ matrix.leg }}
 
       # UX-1132: the captures themselves, so a reading outlives its notices.
       - name: Keep the arms' captures

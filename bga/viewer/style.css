@@ -423,7 +423,10 @@ label.copy-as > input { min-width: 0; min-height: 0; margin: 0; }
 .join-evidence > p { margin: var(--space-2) 0 var(--space-1); }
 
 .finding .title { font-weight: 600; }
-.finding .detail { margin: var(--space-1) 0 0; }
+.finding .detail, .finding .step { margin: var(--space-1) 0 0; }
+.finding .step code { overflow-wrap: anywhere; }
+/* UX-1249: Info findings with no step, after the actionable ones. */
+details.also-noted { margin: var(--space-3) 0 0; }
 .badge {
   font-size: var(--font-small); letter-spacing: .04em;
   color: var(--muted); margin-right: var(--space-2);

@@ -2620,20 +2620,20 @@ def _capacity_step(result: AnalysisResult) -> tuple[str, str]:
     recommendation = getattr(result, 'capacity_recommendation', None) or {}
     binding = recommendation.get('binding_constraint')
     row = next((c for c in recommendation.get('constraints') or [] if c.get('name') == binding), {})
-    # UX-1274: the replayed wall at the knee, beside whichever constraint binds.
+    # UX-1274: the replayed wall at the knee, said once: on the step, not the sentence above it.
     replayed = sweep_curve.replayed_clause(recommendation)
     tail = f"; {replayed}" if replayed else ""
     if binding == 'host_cores':
         cores = recommendation.get('host_cpu_count')
         return (
             f"Builders are held at the host's {plural(cores, 'core')} by policy while the CPU could feed "
-            f"{row.get('clamped_from')}: measure above that cap with bga sweep{tail}",
+            f"{row.get('clamped_from')}: measure above that cap with bga sweep",
             f"Measure builders above the host's {cores}-core cap with bga sweep{tail}",
         )
     if binding and recommendation.get('recommended_builders') is not None:
         builders = recommendation['recommended_builders']
         return (
-            f"{binding} binds at {plural(builders, 'builder')}: run with {builders} and measure it{tail}",
+            f"{binding} binds at {plural(builders, 'builder')}: run with {builders} and measure it",
             f"Run with {plural(builders, 'builder')} and measure it{tail}",
         )
     from .report._shared import resolve_attribution_hint

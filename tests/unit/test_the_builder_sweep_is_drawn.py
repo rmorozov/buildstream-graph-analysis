@@ -107,7 +107,9 @@ def test_the_step_quotes_the_wall_at_the_knee():
     }
     assert sweep_curve.replayed_clause(rec) == "the replay puts 6 builders at 1.7 min (replayed, no contention)"
     run = type("Run", (), {"capacity_recommendation": rec})()
-    assert all("the replay puts 6 builders at 1.7 min" in part for part in _capacity_step(run))
+    sentence, action = _capacity_step(run)
+    # Said once: the step carries the replayed wall, the diagnosis sentence above it does not.
+    assert "the replay puts 6 builders at 1.7 min" in action and "the replay puts" not in sentence
 
 
 _PROBE = """

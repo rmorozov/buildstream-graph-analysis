@@ -42,6 +42,10 @@ task file, which is the only place it ever lived twice.
 | UX-1267 | [ranked element cards never show the map rows ("On the path")](UX-1267-ranked-element-cards-never-show-the-map-rows.md) | viewer | Medium | R1, R5 | 🔴 Not Started |
 | UX-1268 | [a capacity-bound run reads "capacity matched demand", and the check does not see it](UX-1268-a-capacity-bound-run-reads-capacity-matched-demand.md) | analysis | Medium | R1, R5 | 🔴 Not Started |
 | UX-1269 | [one wait quantity carries four names, and two glosses contradict their source](UX-1269-one-quantity-under-four-names-on-the-capacity-page.md) | viewer | Low | R1 | 🔴 Not Started |
+| UX-1270 | [the all-clear group is labelled "None" and swallows a "no" or a 0 ms that answers the question](UX-1270-an-all-clear-group-keeps-a-no-that-answers.md) | viewer | Medium | R1, R5 | 🔴 Not Started |
+| UX-1271 | [a finding's Next line runs its command into prose, with no copy control, and the High step names enum words](UX-1271-a-finding-step-hands-its-command-over-as-a-command.md) | viewer | Medium | R1 | 🔴 Not Started |
+| UX-1272 | [the sizing card calls builders x one process's peak "at most", while an element runs many processes at once](UX-1272-the-sizing-card-memory-bound-counts-one-process-per-builder.md) | analysis | Medium | R5 | 🔴 Not Started |
+| UX-1273 | ["How much work was waiting to start?" excludes work waiting for a builder, so a capacity-bound run reads 1% queued](UX-1273-the-ready-queue-question-asks-what-it-does-not-count.md) | viewer | Low | R1, R5 | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

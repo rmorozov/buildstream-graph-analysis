@@ -1,6 +1,6 @@
 # UX-1262: `pages.export_uri` copies only the snapshot, so no page guard has ever rendered a comparison
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-163 verification of UX-1257 (2026-10-02) | **Serves:** R1, R4 | **Topic:** guards | **Area:** tests | **Shape:** judgement | **Reading:** container
+**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-163 verification of UX-1257 (2026-10-02) | **Serves:** R1, R4 | **Topic:** guards | **Area:** tests | **Shape:** mechanical | **Reading:** container
 
 **Guard:** none — open, no guard named yet
 

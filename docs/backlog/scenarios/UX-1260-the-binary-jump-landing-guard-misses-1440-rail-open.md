@@ -1,6 +1,6 @@
 # UX-1260: the binary-jump landing is unguarded at 1440 with the rail open, and UX-1236's several-candidates branch has no page
 
-**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-163 verification of UX-1235/UX-1236 (2026-10-02) | **Serves:** R1 | **Topic:** guards | **Area:** tests | **Shape:** judgement | **Reading:** container
+**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-163 verification of UX-1235/UX-1236 (2026-10-02) | **Serves:** R1 | **Topic:** guards | **Area:** tests | **Shape:** mechanical | **Reading:** container
 
 **Guard:** none — open, no guard named yet
 

@@ -1,6 +1,6 @@
 # UX-1277: findings do not say whether they are new, still open or gone since the run before
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-164 view UI re-review on a 2,402-element two-plane page (2026-10-02), brainstorm B4 | **Serves:** R4, R8, R1 | **Topic:** analysis | **Area:** bga, bga/viewer | **Shape:** judgement | **Reading:** container
+**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-164 view UI re-review on a 2,402-element two-plane page (2026-10-02), brainstorm B4 | **Serves:** R4, R8, R1 | **Topic:** analysis | **Area:** bga, bga/viewer | **Shape:** mechanical | **Reading:** container
 
 **Guard:** none — open, no guard named yet
 

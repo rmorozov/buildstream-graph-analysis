@@ -2370,12 +2370,16 @@ def _said_once(findings: list[dict]) -> list[dict]:
     """`UX-1249`: a finding listing the elements a more severe one listed becomes a line of that one."""
     kept: list[dict] = []
     first: dict = {}
+    served = collections.Counter(FINDING_READERS.get(f['id']) for f in findings)
     for finding in findings:
         key = frozenset(finding.get('elements') or ())
         # One shared element is two claims about it; a shared list is one claim said twice.
         earlier = first.get(key) if len(key) > 1 else None
-        if earlier is not None and _rank(earlier) < _rank(finding):
+        # A reader's only finding stays a finding: folding it would leave that reader no lead.
+        sole = served[FINDING_READERS.get(finding['id'])] == 1
+        if earlier is not None and not sole and _rank(earlier) < _rank(finding):
             earlier['detail'] = [*earlier['detail'], f"    {finding['title']}"]
+            served[FINDING_READERS.get(finding['id'])] -= 1
             continue
         first.setdefault(key, finding)
         kept.append(finding)

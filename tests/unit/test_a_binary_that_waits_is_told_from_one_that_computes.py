@@ -12,6 +12,7 @@ from types import SimpleNamespace
 
 import pytest
 
+from bga import shown
 from bga.cli import main
 from bga.findings import _plane2_findings
 from bga.plane2 import binary_totals
@@ -108,6 +109,19 @@ def test_the_waiting_step_names_the_waiting_elements_top_three_by_blocked_time()
         f for f in _plane2_findings(SimpleNamespace(plane2_report=_waiting_report())) if f["id"] == "jobs-waiting"
     ]
     assert re.findall(r"(\S+) \(", finding["step"]["text"]) == ["make", "sh", "ld"], finding["step"]
+
+
+def test_the_waiting_step_says_its_figures_are_the_waiting_elements_own():
+    """Round 165's walk: the step's blocked figures sum the waiting elements only, while by_binary's Blocked
+    column sums the run - so the step names its scope, and make reads w1+w2's 50 s, not the run's 550 s."""
+    report = _waiting_report()
+    report["binary_cost"]["busy.bst"]["binaries"].append(
+        {"binary": "make", "count": 1, "cpu_us": 1, "wall_s": 1.0, "blocked_us": 500_000_000}
+    )
+    (finding,) = [f for f in _plane2_findings(SimpleNamespace(plane2_report=report)) if f["id"] == "jobs-waiting"]
+    text = finding["step"]["text"]
+    assert f"make ({shown.duration(50_000_000)})" in text, text
+    assert "across these 2 waiting elements" in text, text
 
 
 def test_a_report_without_blocked_time_leaves_the_column_absent():

@@ -2295,9 +2295,10 @@ def _waiting_step(report: dict, elements) -> str:
         return "Find what these elements wait on before raising their job count."
     named = [f"{name} ({qty.duration(blocked[name])})" for name in top]
     listed = named[0] if len(named) == 1 else ", ".join(named[:-1]) + " and " + named[-1]
+    # Round 165's walk: the figures are summed over the waiting elements, not by_binary's whole run; say so.
     return (
-        f"Start with what {listed} wait on: the most time these elements spent alive, "
-        "off CPU and with no child running."
+        f"Start with what {listed} wait on: across these {plural(len(elements), 'waiting element')}, "
+        "the most time spent alive, off CPU and with no child running."
     )
 
 

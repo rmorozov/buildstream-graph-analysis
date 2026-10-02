@@ -5935,7 +5935,7 @@ _COMPARE_HINTS = {
                 "because the two runs recorded different planes.",
             },
             "not_compared_reason": {
-                "description": "Why `not_compared` is not empty, as one clause the page shows; null when it is.",
+                "description": "Why some findings were not compared, as one clause the page shows; null when all were.",
             },
         },
     },

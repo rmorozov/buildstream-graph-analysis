@@ -276,6 +276,19 @@ def test_the_builders_step_opens_its_own_why():
     assert blocks[1]["element"] == "layer00/mod010.bst" and blocks[1]["summary"] == "Why #2", blocks
 
 
+@needs_node
+def test_a_step_attributed_to_another_finding_borrows_no_constraints():
+    """`_builders_actions` names `wait-category` when no capacity finding exists: no fold of capacity rows under it."""
+    import copy
+
+    page = copy.deepcopy(_CAPACITY_PAGE)
+    page["headline"]["top_actions"][0]["finding_id"] = "wait-category"
+    page["provenance"].append({"claim": "wait-category", "rule": {"sentence": "Ranked by wait."}})
+    blocks = _render(page)["blocks"]
+    assert [block["element"] for block in blocks] == ["layer00/mod010.bst"], blocks
+    assert not any("capacity_recommendation" in row["field"] for block in blocks for row in block["rows"]), blocks
+
+
 class TestTheExportCarriesIt:
     def test_the_explanations_need_no_server(self, tmp_path):
         """The block is rendered from the inlined payload, so it works

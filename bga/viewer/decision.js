@@ -251,7 +251,7 @@ export function renderWhyRanked(payload, action, options = {}) {
   // `UX-1258`: a step with no element is explained by its finding's own facts.
   const key = uid ?? action?.finding_id;
   if (!key) return null;
-  const facts = uid ? elementFacts(payload).get(uid) : stepFacts(payload);
+  const facts = uid ? elementFacts(payload).get(uid) : stepFacts(payload, action.finding_id);
   const record = (payload?.provenance ?? []).find(
     (entry) => entry?.claim === action?.finding_id) ?? null;
   const history = uid && options.store
@@ -265,6 +265,8 @@ export function renderWhyRanked(payload, action, options = {}) {
     (finding) => !options.said?.has(finding.id));
   const ownRule = record && options.ranking !== action?.finding_id;
   if (!rows.length && !findings.length && !ownRule && !history) return null;
+  // A step whose own finding has no facts draws nothing rather than borrowing another's.
+  if (!uid && !rows.length) return null;
 
   const details = document.createElement("details");
   details.className = "why-ranked";
@@ -339,9 +341,10 @@ function renderSaidOnce(common) {
 }
 
 /** One fact, in the unit the source declared it in. */
-/** `UX-1258`: the builders step's facts, one term per constraint: what it allows, then why, each at its path. */
-function stepFacts(payload) {
-  const rows = (payload?.capacity_recommendation?.constraints ?? []).flatMap((row) => {
+/** `UX-1258`: a step's facts from its own finding; only the capacity recommendation has any, one term per constraint. */
+function stepFacts(payload, findingId) {
+  const constraints = findingId === "capacity-recommendation" ? payload?.capacity_recommendation?.constraints : null;
+  const rows = (constraints ?? []).flatMap((row) => {
     const at = `capacity_recommendation.constraints[name=${row.name}]`;
     return [{ label: `${shownValue(row.name)} allows`, path: `${at}.allows`, value: row.allows, kind: "count" },
             { label: null, path: `${at}.reason`, value: row.reason }];

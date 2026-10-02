@@ -2,7 +2,7 @@
 
 **Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-163 verification of UX-1244 (2026-10-02) | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** judgement | **Reading:** container
 
-**Guard:** `tests/unit/test_why_is_this_ranked_first.py::test_the_builders_step_opens_its_own_why` (the 2,402-element page's capacity block and top actions through `renderDecision`, node; golden's rows by the file's other eleven)
+**Guard:** `tests/unit/test_why_is_this_ranked_first.py::test_the_builders_step_opens_its_own_why` (the 2,402-element page's capacity block and top actions through `renderDecision`, node; golden's rows by the file's other eleven; a `wait-category` step folds nothing)
 
 ## Motivation
 
@@ -54,3 +54,8 @@ after     capacity-recommendation  Why #1  capacity_recommendation.constraints[n
 |---|---|---|
 | `if (!uid) return null` restored | `test_the_builders_step_opens_its_own_why` | 1 failed, 11 passed |
 | `stepFacts` reads no constraints (`([]).flatMap`) | the same | 1 failed, 11 passed |
+| `stepFacts` ignores the step's `finding_id` (capacity rows for any finding) | `test_a_step_attributed_to_another_finding_borrows_no_constraints` | 1 failed, 12 passed |
+| a factless element-less step still folds (`if (!uid && !rows.length)` off) | the same | 1 failed, 12 passed |
+
+Verifier fix: the facts come from the step's own finding - only `capacity-recommendation` has any - and a step attributed
+to `wait-category` (no capacity finding) draws no fold rather than another finding's constraints; 13 passed in 2.4s.

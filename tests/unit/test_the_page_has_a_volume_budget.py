@@ -394,7 +394,8 @@ BUDGETS = (
     # Controls 900 -> 1,020: 1,006 measured +10, rounded up; one Markdown box, then raise (Ruslan 19:26).
     # UX-1200b, Ruslan 05:49: px 44,629 -> 46,822, controls 1,020 -> 1,192 - xl_both's measured
     # +2,193 px, +172 controls; nodes stay 7,500 (the merged round reads 7,284).
-    (4_100, 46_822, 13_200, 1_192, 7_500),
+    # `UX-1267` (owner-call default): words 13,200 -> 13,600, nodes 7,500 -> 7,800 - ranked cards' map-row fold, xl_both 13,081 -> 13,540 words, 7,279 -> 7,799 nodes (with UX-1270).
+    (4_100, 46_822, 13_600, 1_192, 7_800),
 )
 
 

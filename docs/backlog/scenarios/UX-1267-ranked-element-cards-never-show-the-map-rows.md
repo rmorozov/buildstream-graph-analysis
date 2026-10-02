@@ -2,7 +2,7 @@
 
 **Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-163 verification of UX-1244 integration (2026-10-02) | **Serves:** R1, R5 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical | **Reading:** container
 
-**Guard:** none — open, no guard named yet
+**Guard:** `tests/unit/test_a_ranked_card_shows_the_map_rows.py`
 
 ## Motivation
 
@@ -34,3 +34,41 @@ The shared-title rule (UX-1234).
 ## Acceptance Test
 
 A ranked card on macro_micro shows "On the path". Mutation: drop the map rows from the card, and the guard reds.
+
+## Outcome
+
+### The gap, measured
+
+```text
+macro_micro, exported, first ranked card: no "On the path" dt - elementFacts rows only;
+the map rows reached on-demand cards alone
+```
+
+### The close, measured
+
+Ranked cards take `mapRows()` (factored out of `elementFactsFor`) in a closed
+`details[data-fold="element-maps"]`, "Across the run · 1 level, N rows".
+Volume, the budget's own `_LOOK`, opened page:
+
+```text
+              height px (bound)          words (bound)              DOM elements (bound)
+macro_micro   36,932 -> 37,519 (39,188)  13,286 -> 13,496 (13,500)  6,859 -> 7,114 (7,900)
+xl_both       43,692 -> 44,507 (46,822)  13,081 -> 13,540 (13,200)  7,279 -> 7,799 (7,500)
+"after" includes UX-1270 (+12 DOM elements on xl_both)
+```
+
+Height fits; a closed fold's text still counts. Owner-call default
+(reversible): xl_both words 13,200 -> 13,600, DOM elements 7,500 -> 7,800.
+macro_micro keeps its bounds with ~4 words of headroom; xl_both has 1 DOM element.
+
+```text
+$ python3 -m pytest -p no:xdist tests/unit/test_a_ranked_card_shows_the_map_rows.py -q
+1 passed
+```
+
+### Mutations verified red and reverted (2)
+
+| mutation in `bga/viewer/element.js` | reddened | count |
+|---|---|---|
+| `renderElementSections` passes `maps: []` (the Decision's) | `assert None is False` | 1 failed |
+| `elementSection` skips the fold (`record.maps?.length && false`) | `assert None is False` | 1 failed |

@@ -583,10 +583,12 @@ p.empty-population { margin: var(--space-1) 0 0; color: var(--muted); max-width:
    orientation, not severity. The marker is what carries it where color
    is unavailable (print, forced-colors, a monochrome screen). */
 /* One "you are here" across the rail: the chapter row and its section link. */
-button.toc-chapter-open[aria-current="location"],
-.toc a[data-current] { font-weight: 600; color: var(--fg); }
-/* Out of the text's flow: a marker that took width re-wrapped a long entry and moved the page under a restore. */
-.toc a[data-current]::before { content: "\25b8"; position: absolute; margin-left: -1em; }
+button.toc-chapter-open[aria-current="location"] { font-weight: 600; color: var(--fg); }
+/* A stroke, not a weight: a heavier face is wider and re-wraps a long entry as the mark moves. */
+.toc a[data-current] { color: var(--fg); -webkit-text-stroke: 0.04em currentColor; }
+/* Inside each link's own reserved padding: no wrap change when the mark moves, and no clip by the rail's overflow. */
+.toc a[data-toc] { position: relative; padding-left: 1em; }
+.toc a[data-current]::before { content: "\25b8"; position: absolute; left: 0; }
 /* `UX-1203`: the rail's tools at one size, each on one line. */
 .toc-controls { margin: var(--space-2) 0 0; display: flex; flex-wrap: wrap; align-items: center;
                 gap: var(--space-2); font-size: var(--font-small); }

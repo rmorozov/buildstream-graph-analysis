@@ -114,9 +114,20 @@ exited 0, and 4 with `PILOT_ENFORCE=on`.
 All 12 reverted from copies; the file read 11 passed, 4 skipped after.
 Flags are matched whole: `--host-sample` is a substring of the real
 flag and argparse accepts the prefix, so a substring test could not see A12.
-The three `TestReport` guards are not falsified: they skip until UX-1286.
+
+### On the merged tree, with UX-1286's real `--bundles` (integrator)
+
+The pending skip and its `KNOWN_SKIP_REASONS` entry are gone; the kit's
+assumed interface held (principals excluded by stamp: two kept + the
+candidate read `hold other 1 run`). File: 15 passed, 0 skipped.
+
+| # | mutation | reddened (`-k`) |
+|---|---|---|
+| R1 | kit: band refusal `-eq 8` -> `-eq 9` (no fallback comment) | slower candidate comments, 1 |
+| R2 | kit: enforce `-eq 4` -> `-eq 40` | enforcing re-applies, 1 |
+| R3 | `bga/cli.py`: `bundle.load_tree(...)` -> `pass` | five kept judge the band, 1 |
 
 ### Deviation from the Required Fix
 
-Fixture bundles are exported at test time from the golden fixture, not committed; the report half is unrun pending UX-1286.
-Two skip reasons declared in `tests/conftest.py`; the selector's max ceiling 194 -> 195 (`bga/cli.py`, this guard).
+Fixture bundles are exported at test time from the golden fixture, not committed; the report half ran once UX-1286 merged.
+The shellcheck skip reason stays in `tests/conftest.py` (the UX-1286 one left at merge); the selector's max ceiling 194 -> 195 (`bga/cli.py`, this guard).

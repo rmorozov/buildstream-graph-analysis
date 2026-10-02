@@ -4,8 +4,8 @@ The guide's switch table, the script's switch block and the workflow's
 `env:` name the same variables with the same defaults, every way round.
 Every `bga` command and flag the kit runs or the guide names exists. A
 dry run of `capture` then `report` - a stub standing in for the build -
-prints a ci-comment and exits 0 on a slower verdict; `--bundles` is
-`UX-1286`'s, and the parts needing it skip until `bga compare` has it.
+prints a ci-comment and exits 0 on a slower verdict, through
+`UX-1286`'s real `--bundles`.
 """
 
 import json
@@ -27,9 +27,6 @@ GUIDE = REPO / "docs/guides/pilot.md"
 GOLDEN = REPO / "tests/fixtures/golden/mixed_task_kinds"
 SECOND = 1_000_000
 
-#: Flags the kit targets before their row lands: (command, flag) -> row.
-PENDING = {("compare", "--bundles"): "UX-1286"}
-NO_BUNDLES = "pending UX-1286: bga compare has no --bundles yet"
 NO_SHELLCHECK = "shellcheck is not installed (pip install shellcheck-py)"
 
 sys.path.insert(0, str(REPO))
@@ -53,10 +50,6 @@ def _bga_help(*words) -> str:
 def _names(helptext: str, flag: str) -> bool:
     """The whole flag, not a prefix argparse would also accept."""
     return re.search(rf"{re.escape(flag)}(?![\w-])", helptext) is not None
-
-
-def _has_bundles() -> bool:
-    return _names(_bga_help("compare"), "--bundles")
 
 
 # --- the switch table, three ways ---
@@ -128,17 +121,11 @@ class TestEveryCommandExists:
         assert [s for s in sorted(called) if not re.search(rf"^\s+{s}\s", top, re.M)] == []
 
     def test_every_flag_the_guide_names_exists(self):
-        pending = []
         for _source, subs, flags in _named_invocations():
             words = subs if subs[:1] == ["capture"] else subs[:1]
             helptext = _bga_help(*words)
             for flag in flags:
-                if (words[0], flag) in PENDING and flag not in helptext:
-                    pending.append(flag)
-                    continue
                 assert _names(helptext, flag), f"bga {' '.join(words)} has no {flag}"
-        if pending:
-            pytest.skip(NO_BUNDLES)
 
 
 # --- the dry run ---
@@ -291,11 +278,6 @@ class TestCapture:
 
 class TestReport:
     """Two kept bundles plus a candidate 30% slower: the comment prints, the job passes."""
-
-    @pytest.fixture(autouse=True)
-    def _needs_bundles(self):
-        if not _has_bundles():
-            pytest.skip(NO_BUNDLES)
 
     def test_a_slower_candidate_comments_and_exits_0(self, pilot):
         pilot.keep("20260901T000000Z", 100)

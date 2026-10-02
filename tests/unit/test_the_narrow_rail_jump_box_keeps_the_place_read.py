@@ -29,6 +29,8 @@ _JUMP = r"""
   const length = history.length;
   scrollTo(0, 6000);
   await rest();
+  // A section first rendered where this lands trades its 600 px placeholder for its size, and anchoring moves; land again.
+  if (Math.round(scrollY) !== 6000) { scrollTo(0, 6000); await rest(); }
   const y = Math.round(scrollY);
   while (scrollY > 0) { scrollBy(0, -400); await rest(); }
   document.querySelector(".toc-title").click();

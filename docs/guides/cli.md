@@ -1452,6 +1452,7 @@ and `parallelism`:
 | `explained_untracked_us` | How much of the untracked time this report can account for. |
 | `undersubscribed`, `skipped_inputs` | In `capacity_verdict`: whether the host could have served more parallelism than the run asked for, and the missing inputs named — so a reader can supply them rather than guess why the check said nothing. A check that did not run is inert, not passing. |
 | `binding_constraint`, `builders_change` | In `capacity_recommendation`: the name of the smallest of the four constraints, which is the one that changes what to do, and `recommended_builders` minus `builders`, signed. Negative means the run asked for more than something can serve. |
+| `agent_sizing` | Builders, cores and memory for this host in one block, each value with the `source` section it was read off (`UX-1254`). Cores and memory are `null` without Plane 2, and `absence` says so. Memory is an upper bound: every builder peaking at once. |
 
 `analyze/v7` — the two-plane blocks:
 

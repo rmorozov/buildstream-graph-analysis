@@ -374,6 +374,15 @@ Error: 1 bundle refused, so nothing was written:
 *Kept, not current* — 2026-09-29, the same tree with a 300-byte cut of
 one bundle added as `ci/102/`. Cuts: none.
 
+`bga compare --band-from-class [N] --bundles DIR` reads the same tree
+the same way (`UX-1286`): the band's members are selected from it, with
+the host filter, through a temporary store deleted on exit, so a review
+runner needs no `project.conf` and keeps no `.bga`. A principal whose
+stamp is also in the tree does not vote on its own band; a bad bundle
+refuses the whole tree with exit `2` before anything is judged; and
+`--bundles` without `--band-from-class` is a usage error. The comment
+names the tree as the band's source.
+
 **`--resolve` rewrites pseudonyms back to real names, on this machine
 only** (`UX-1064`) — a fourth mode of the same mutually-exclusive group,
 for reading a reply that quotes an anonymized bundle's element names:
@@ -2991,7 +3000,7 @@ by `tests/unit/test_the_exit_table_derives_from_the_codes.py`.
 - `5`: `bga compare --fail-on-efficiency-regression`/`--min-efficiency`/`--fail-on-inefficient-additions` only - the build became meaningfully *less efficient*, whether or not it also got slower. Deliberately distinct from `4`: "slower" and "less efficient" are different verdicts and often different teams' problems (`UX-39`).
 - `6`: **refused as not comparable** - not a verdict about the build at all, which is why it does not share a code with one. Two commands return it: `bga compare`, when the two runs share fewer than half their element UIDs or one is a caches-off run and the other incremental (`UX-78`; `--allow-mismatch` overrides); `bga cache-trend`, when the series is not all of one project and target set, in which case the per-run rows still print and only the band verdict is withheld (`UX-111`); and `bga baseline`, when the assembled set's captures are not comparable to each other (`UX-96`).
 - `7`: `bga compare --require-efficiency-signal` only - an efficiency gate was requested but could not be evaluated, because a run has no `occupancy_share`. Like `6`, not a verdict about the build: `4` would say it got slower and `5` would say it got less efficient, and neither was determined (`UX-87`). Without `--require-efficiency-signal` the same situation exits `0`, prints an `Efficiency gate NOT APPLIED` line to stderr, and publishes `efficiency_gate_evaluated: false`.
-- `8`: `bga compare --band-from-class` only - a measured band was asked for and this store does not hold one, because fewer than three runs of the candidate's own class (`UX-898`) fall inside the window. A refusal to judge, like `6` and `7`, and for the same reason: the alternative is the fixed 1% rule, which five captures of one unchanged `freedesktop-sdk` commit spanned 33% against, so a gate that fell back to it would be gating on the cries-wolf comparison the band exists to replace (`UX-899`). Capture more runs of that class, widen the window, or drop the flag to accept the fixed rule.
+- `8`: `bga compare --band-from-class` only - a measured band was asked for and this store (or the `--bundles` tree, `UX-1286`) does not hold one, because fewer than three runs of the candidate's own class (`UX-898`), measured on its host (`UX-1285`: the refusal names how many were skipped for host; `--allow-cross-host` pools them), fall inside the window. A refusal to judge, like `6` and `7`, and for the same reason: the alternative is the fixed 1% rule, which five captures of one unchanged `freedesktop-sdk` commit spanned 33% against, so a gate that fell back to it would be gating on the cries-wolf comparison the band exists to replace (`UX-899`). Capture more runs of that class, widen the window, or drop the flag to accept the fixed rule.
 - `130`: **interrupted** (`UX-157`, `UX-163`). Ctrl-C during a capture is
   not a failure and not a verdict: whatever the build completed is kept,
   analyzed, and labelled as a build that did not finish. A comparison

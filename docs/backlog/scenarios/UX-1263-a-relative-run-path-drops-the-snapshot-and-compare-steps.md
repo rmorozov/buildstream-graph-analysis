@@ -12,6 +12,17 @@ A run passed as a relative path (`bga analyze .bga/runs/<stamp>/run`) keeps the 
 
 Input classes: the 2,402-element two-plane page, `golden` and `macro_micro`.
 
+## Decision
+
+Route:     `_store_paths` (bga/findings.py:2744) accepts the 4-part relative shape `.bga/runs/<stamp>/run` with project `.`, so run_token yields `@<stamp>`; stays a pure function of the path (no abspath, no cwd read).
+Rejected:  abspath in run_token (cwd-dependent result in a pure function); normalising at the CLI entry (every other spelling - `./x`, `../p/.bga/...` - already parses; one predicate is the bug).
+Files:     bga/findings.py (_store_paths only), tests/unit/test_a_next_step_names_the_run_by_its_snapshot.py
+Guard:     run_token('.bga/runs/<stamp>/run') == run_token('<abs>/.bga/runs/<stamp>/run') == '@<stamp>', and the headline's next steps are equal for both spellings on a store run.
+Mutation:  restore `len(parts) < 5`: the relative case returns the path and the guard reds.
+Class:     product
+Split:     one track; parallel with UX-1262.
+Question:  none
+
 ## Required Fix
 
 `run_token` resolves a relative store path to its `@stamp`.

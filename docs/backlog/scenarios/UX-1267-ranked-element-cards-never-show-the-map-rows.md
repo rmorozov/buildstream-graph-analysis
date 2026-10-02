@@ -12,6 +12,17 @@ Ranked element cards are built from elementFacts and never show the map rows ("O
 
 Input classes: the 2,402-element two-plane page, `golden` and `macro_micro`.
 
+## Decision
+
+Route:     Ranked cards take the ELEMENT_MAPS rows that elementFactsFor already merges, inside a closed details fold per card ("On the path" and the other map rows). The volume budget measures height with details as rendered (closed), so the cost is one summary line per card (24 cards). The bounds are not raised; the track measures macro_micro and xl_both before closing.
+Rejected:  rows open on the card: measured 40,222 against 39,188 and 50,061 against 46,822; raising the bounds: the owner's call, and the closed fold may fit without one; showing only "On the path": the on-demand card would still say more than a ranked one.
+Files:     bga/viewer/element.js (renderElementSections and elementSection: map rows from elementFactsFor into a fold), tests/unit/test_a_ranked_card_shows_the_map_rows.py (new), tests/tiers.py (register the new file)
+Guard:     tests/unit/test_a_ranked_card_shows_the_map_rows.py holds the claim that on macro_micro, the first ranked card's DOM carries a dt "On the path" whose dd data-path is elements.criticality_probability[<uid>].probability.
+Mutation:  in renderElementSections, pass the elementFacts record unmerged (skip the map rows): red.
+Class:     product
+Split:     viewer track; writes element.js only, disjoint from UX-1270 (pairs.js), so the two can run in parallel.
+Question:  Default taken; Ruslan may reverse: map rows go within the height bounds, in a closed fold. If the measured height is still over a bound, the track stops and asks rather than raising it.
+
 ## Required Fix
 
 A ranked card shows the map rows within the height bounds, or the bounds are raised on the owner's call.

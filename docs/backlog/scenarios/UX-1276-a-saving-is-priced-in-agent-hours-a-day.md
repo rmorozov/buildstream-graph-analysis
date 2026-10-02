@@ -14,6 +14,17 @@ The decision, horizon and what-if price fixes in seconds of one build (certified
 
 Input classes: the 2,402-element two-plane page, `golden` and `macro_micro`, at 1440 and 390.
 
+## Decision
+
+Route:     a declared `builds_per_day` in .bga/config (a hand-edited key, like public_junctions), read by a new bga/build_rate.py and carried on store/v1 as build_rate {per_day, source}; decision.js prints "≈ H agent-hours/day (R builds/day, declared in .bga/config)" beside each saving and beside UX-1274's replayed-wall delta, and no line when there is no rate.
+Rejected:  a rate from snapshot timestamps (it counts captures, not builds, and the owner's several hundred review builds a day are mostly not captured: a proxy); a new CLI flag (`--help` line cap; config is sticky per project); money (out of scope)
+Files:     bga/build_rate.py (new), tools/bga_snapshot.py (store_listing gains build_rate), bga/schemas.py (store/v1 build_rate, a permitted key so no version bump), bga/viewer/decision.js (actionRow worth), tests/unit/test_a_saving_is_priced_per_day.py
+Guard:     tests/unit/test_a_saving_is_priced_per_day.py: on a served store with builds_per_day declared, the decision's saving shows hours = seconds x rate / 3600 and names its source; without the key, no agent-hours text
+Mutation:  drop `source` from build_rate (or ignore the config key): the guard reds
+Class:     product
+Split:     one track, after UX-1274 in the same track
+Question:  Default taken; Ruslan may reverse: the rate comes only from a declared value, not from snapshot timestamps
+
 ## Required Fix
 
 With a build rate (from the store's snapshot timestamps, or declared), the page converts a saving and a capacity change into agent-hours per day beside the seconds, says where the rate came from, and omits the line when there is none.

@@ -12,6 +12,17 @@ On the 2,402-element two-snapshot synthetic page at 1440: the decision says "Sch
 
 Input classes: the 2,402-element two-plane page, `golden` and `macro_micro`.
 
+## Decision
+
+Route:     give each wait key one reader name in format.js TERMS; the decision's opportunity split (decision.js:723) states how scheduling gap relates to resource wait; the effective_cpus gloss defers to its source line; costliest-binary measures its share against capacity_cpu_us, and below OPPORTUNITY_FLOOR_PCT it takes `why_none` instead of "Start with".
+Rejected:  one shared name for scheduling_gap_us and resource_wait_us (42.5 vs 43.7 min: they are different quantities, so the fix states their relation and does not merge them); new figures (out of scope); a floor read against measured CPU (make is 100%-relative there, which is the bug)
+Files:     bga/viewer/format.js, bga/viewer/views.js (737-751 labels), bga/viewer/decision.js (opportunity split only), bga/schemas.py (utilisation.effective_cpus description, ~5259), bga/findings.py (costliest-binary, ~2290), tests/unit/test_a_wait_quantity_has_one_name.py
+Guard:     tests/unit/test_a_wait_quantity_has_one_name.py: on the 2,402-element two-plane page, no two drawn labels name the same key differently, the Effective CPUs gloss matches its source line, and costliest-binary carries step.why_none
+Mutation:  restore the "Scheduling gap" label beside the capacity-bound sentence; separately, read the share against `measured` again: each reds
+Class:     product
+Split:     one track. The costliest-binary clause writes the findings.py function the binaries group (UX-1275, UX-1261) reads, so merge it after that group or move the clause there
+Question:  none
+
 ## Required Fix
 
 Each of these quantities is named once in reader words with its relation to the others stated where two appear together; a gloss agrees with its source; a Plane 2 finding whose share of capacity is below Plane 1's opportunity floor carries no step to act on.

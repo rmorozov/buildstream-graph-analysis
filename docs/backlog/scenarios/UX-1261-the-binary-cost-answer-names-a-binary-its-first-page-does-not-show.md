@@ -12,6 +12,17 @@ The #binary_cost answer sentence names `make` over a pair table whose first page
 
 Input classes: the 2,402-element two-plane page, `golden` and `macro_micro`.
 
+## Decision
+
+Route:     leadWith (bga/viewer/sections.js) wraps the binary #binary_cost's answer names in a link to #by_binary filtered `binary:<name>` (UX-1225's jump landing, one row, whose own link drills into binary_cost); SECTION_ANSWERS stays string-valued.
+Rejected:  reordering binary_cost so the first page shows make (the table is element-keyed; its order is the reader's, not the answer's); linking to binary_cost filtered to make (the sentence's figures are by_binary's row, not binary_cost's); returning nodes from SECTION_ANSWERS (every answer test reads strings).
+Files:     bga/viewer/sections.js, tests/unit/test_a_jump_to_a_binary_lands_on_it.py
+Guard:     same 1,202-element `--workload binaries` page fixture, 1440 and 390: the answer's link is the named binary and one click reads by_binary's badge "1 matched" under `binary:<name>`.
+Mutation:  drop the link wrap in leadWith: no anchor in .section-answer, the guard reds.
+Class:     product
+Split:     one track; parallel with UX-1260 and UX-1275 (disjoint files).
+Question:  Default taken; Ruslan may reverse: link, not reorder.
+
 ## Required Fix
 
 The sentence links to #by_binary, or the table's first page shows the binary the sentence names.

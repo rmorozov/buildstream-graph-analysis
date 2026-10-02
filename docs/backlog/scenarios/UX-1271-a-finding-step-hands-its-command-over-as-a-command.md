@@ -14,6 +14,17 @@ UX-1256's steps render as one paragraph: "Next: a resource (PROCESS/DOWNLOAD/UPL
 
 Input classes: the 2,402-element two-plane page, `golden` and `macro_micro`, at 1440 and 390.
 
+## Decision
+
+Route:     Two parts. (1) renderStep in sections.js draws step.command through controls.js commandLine (code.next-command plus a copy-step button), in its own block under the "Next:" sentence, using tables.js copy as the writer. (2) The three resource_wait hints in _shared.py drop the PROCESS/DOWNLOAD/UPLOAD enum words and say `bga analyze --capacity N`; findings.py's wait-category step names the saturated resource in reader words (builder slots, downloads, uploads) from the run's capacity facts, and the trailing "`bga sweep`" moves out of the sentence into the command.
+Rejected:  CSS nowrap on the inline code: no copy control, and §1d's "one shared control" (UX-429) is broken again; rewriting the enum words in the viewer: the text report and JSON would keep them.
+Files:     bga/viewer/sections.js (renderStep), bga/viewer/style.css (step command block), bga/report/_shared.py (RESOURCE_WAIT hints), bga/findings.py (wait-category step text), tests/unit/test_a_command_renders_as_a_command.py, tests/unit/test_every_finding_publishes_its_step.py, tests/unit/test_capacity_aware_hints.py, tests/unit/test_plane2_conditioned_capacity_advice.py, tests/unit/test_sweep_knee_point.py (text pins), tests/fixtures/golden/mixed_task_kinds/expected_output.json, tests/fixtures/with_timeline/analyze.json (regenerated)
+Guard:     tests/unit/test_a_command_renders_as_a_command.py gains a findings site, holding the claim that a finding's step.command renders as code.next-command with a .copy-step sibling. tests/unit/test_every_finding_publishes_its_step.py holds the claim that, on golden, macro_micro and shared_base_wide, no finding title, detail or step contains PROCESS|DOWNLOAD|UPLOAD, or `--capacity` not preceded by `bga analyze`.
+Mutation:  in renderStep, replace the commandLine call with el("code", {}, step.command): the findings site goes red. Restore "(PROCESS/DOWNLOAD/UPLOAD)" in one hint: the wording guard goes red.
+Class:     product
+Split:     finding-text track, last. It writes findings.py and test_every_finding_publishes_its_step.py after UX-1264, UX-1265 and UX-1266. The walker checks for no wrap at 1440 on the 2,402-element page.
+Question:  none
+
 ## Required Fix
 
 A finding's step draws its command with the §1d shape (one monospace line, copy control) on its own line; the wait-category step names the saturated resource in reader words and the command a flag belongs to.

@@ -14,6 +14,17 @@ The compare chapter now leads with "-0.1% (2.5 s faster) than the run before, in
 
 Input classes: the 2,402-element two-plane page, `golden` and `macro_micro`, at 1440 and 390.
 
+## Decision
+
+Route:     `bga compare` publishes `findings_diff` {new, persisting (with age in consecutive snapshots, from the --baseline-run published analyses), resolved} keyed on finding `id`; the page marks each finding article (`data-finding-id`) new/persisting from compare.json after it loads, and lists resolved ones in one line under the findings - a post-render pass in chapters.js beside compareLead, not inside renderFindings.
+Rejected:  id + subject identity (needs a per-finding subject definition for ~40 ids; costliest-binary make->cc1 would read resolved+new); diffing in the viewer (UX-207: one decision-maker); marking inside renderFindings (UX-1271 rewrites its step half - a merge fight for no gain); a compare/v3 bump (additive key).
+Files:     bga/compare.py, bga/schemas.py (compare document findings_diff), bga/viewer/chapters.js, bga/viewer/app.js (one call after compare loads), tests/unit/test_a_finding_says_whether_it_is_new_since_the_baseline.py
+Guard:     export_uri(store=True) of a two_plane_run whose @prev published analysis is edited to hold one finding @last lacks and lack one @last holds: one article marked new, one resolved line naming the dropped id, the rest persisting; plus ids unique per document (the identity's precondition).
+Mutation:  drop the resolved line: the guard reds; key the diff on title instead of id: persisting count drops and it reds.
+Class:     product
+Split:     after UX-1262 (needs store=True); one track.
+Question:  Default taken; Ruslan may reverse: identity is finding id alone, compare stays compare/v2.
+
 ## Required Fix
 
 `bga compare` publishes the findings diff by finding id and subject (new, persisting with its age in snapshots, resolved); the page marks each finding's status and lists resolved ones in one line under the findings.

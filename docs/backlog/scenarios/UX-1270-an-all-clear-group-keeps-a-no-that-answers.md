@@ -22,6 +22,17 @@ UX-1252's grouping folds null, false and zero alike into one row whose label rea
 
 Input classes: the 2,402-element two-plane page, `golden` and `macro_micro`, at 1440 and 390.
 
+## Decision
+
+Route:     In pairs.js, split allClear into absent (null, empty list or map) and zero (0). A boolean never folds: every true/false keeps its own row, so false needs no "answers the question" classifier. The two groups are labelled "Not recorded:" and "Zero:", the "None" dt is gone, and §6e.12 in the styleguide is updated to match.
+Rejected:  a per-section list of verdict booleans in the schema: a classifier with a list to keep up, where "a boolean always keeps its row" is the same rule with nothing to maintain; one group re-labelled "None or zero": a reader still cannot tell a recorded zero from a missing field.
+Files:     bga/viewer/pairs.js (allClear and the grouping loop), docs/design/styleguide.md (§6e.12), tests/unit/test_an_all_clear_run_is_one_sentence.py
+Guard:     tests/unit/test_an_all_clear_run_is_one_sentence.py holds the claim that, on macro_micro and on a planted block {a: null, b: 0, c: false, d: 0, e: null}, c keeps its own row, null and 0 never share a dt, and no dt reads "None".
+Mutation:  in allClear, add `|| value === false` back to the absent group: red.
+Class:     product
+Split:     viewer track; writes pairs.js only, so it runs in parallel with UX-1267. A few more rows may move the volume budget: the track measures it, and over a bound it stops and asks.
+Question:  none (it follows the row's Required Fix: "every boolean keeps its row" is the mechanical reading of "a boolean that answers keeps its own row")
+
 ## Required Fix
 
 An absent field (null, empty) and a recorded zero or false group separately, each as one sentence that says which ("Not recorded: ...", "Zero: ..."); a boolean that answers the section's question, or a section's named verdict field, keeps its own row; no row is labelled "None".

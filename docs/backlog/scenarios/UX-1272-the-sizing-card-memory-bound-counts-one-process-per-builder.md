@@ -14,6 +14,17 @@ Page: `bga gen-synthetic <d> --store --seed 1 --layers 40 --width 60 --workload 
 
 Input classes: the 2,402-element two-plane page, `golden` and `macro_micro`, at 1440 and 390.
 
+## Decision
+
+Route:     the memory direction follows the basis. For `process_peak`, the line reads "at least N: B builders x the largest single process (P); an element ran several processes at once", and the payload gains `memory.bound: lower`. For `envelope` (a whole element's peak), "at most" stays, with `bound: upper`.
+Rejected:  processes-alive x process peak (33 x 64 MiB x 4 = 8.3 GiB, which treats every process as peaking together: a proxy that points the other way); per-element summed RSS (needs a concurrent RSS series Plane 2 does not record, which is the out-of-scope new sampling)
+Files:     bga/correlate.py (compute_agent_sizing, comment at ~1336 and the `bound` key), bga/schemas.py (agent_sizing.memory description and bound), bga/viewer/sections.js (sizingCard memory row), tests/unit/test_an_agent_sizing_card_reads_its_sources.py
+Guard:     tests/unit/test_an_agent_sizing_card_reads_its_sources.py: on the 2,402-element two-plane page (basis process_peak) the memory row does not contain "at most" and reads "at least" over builders x process peak; an envelope-basis fixture still reads "at most"
+Mutation:  restore the unconditional "Memory: at most" in sizingCard: the page case reds
+Class:     product
+Split:     one track. It shares sizingCard and compute_agent_sizing with UX-1274, so put it in UX-1274's track or merge it before that track
+Question:  Default taken; Ruslan may reverse: relabel as a lower bound instead of computing a concurrent quantity
+
 ## Required Fix
 
 The memory line reads as what it is (a per-process peak per builder, a lower bound) or is computed from a measured concurrent quantity (per-element peak of summed RSS across live processes, or processes alive at once x process peak) with its direction stated.

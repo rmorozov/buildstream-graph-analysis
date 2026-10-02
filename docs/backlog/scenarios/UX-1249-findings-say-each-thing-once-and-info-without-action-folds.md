@@ -80,3 +80,6 @@ Deviation: the dedup merges only a list of two or more elements into a **more se
 (its title becomes a detail line); an equal-set rule dropped `optimization-horizon` (same set as `joint-saving`) and
 `fan-in-foundation` (one element) from every fixture and reddened `test_every_finding_reaches_a_fixture.py` and
 `test_the_foundation_tier_is_declared.py`. Words bound raised 13,200 -> 13,500 for the drawn step (owner's call).
+
+Round 163 merge: linking each named element left three time-concentration rows reading one sentence
+(`test_each_sentence_is_drawn_once.py[macro_micro]`); `mergeRows` draws rows differing only in their element as one row naming each.

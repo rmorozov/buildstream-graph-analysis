@@ -133,6 +133,20 @@ function linkNames(line, uids, named) {
   return parts.filter((part) => part !== "");
 }
 
+// UX-1249: detail rows that differ only in the one element each names are one row naming them all.
+function mergeRows(lines, uids) {
+  const out = [], at = new Map();
+  for (const line of lines) {
+    const own = uids.filter((uid) => uid && new RegExp(
+      `(?<![\\w./-])${uid.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?![\\w/-])`).test(line));
+    const rest = own.length === 1 ? line.replace(own[0], "\u0000").replace(/\s+/g, " ").trim() : null;
+    if (rest !== null && at.has(rest)) at.get(rest).names.push(own[0]);
+    else if (rest !== null) out.push(at.set(rest, { line, rest, names: [own[0]] }).get(rest));
+    else out.push({ line });
+  }
+  return out.map((row) => (row.names?.length > 1 ? row.rest.replace("\u0000", row.names.join(", ")) : row.line));
+}
+
 // UX-1256's `step`: what to do, or why there is nothing to.
 function renderStep(step, uids, named) {
   if (step?.text) {
@@ -190,7 +204,7 @@ export function renderFindings(findings, investigate = null, node = undefined,
       // UX-1136: native `append` prints a null child as the text "null"; `el` skips it.
       const named = new Set();
       const linkable = finding.elements?.length > bound ? [] : (finding.elements ?? []);
-      const lines = (drawnIn ? [] : detail).filter((line) => !advised.includes(line))
+      const lines = mergeRows((drawnIn ? [] : detail).filter((line) => !advised.includes(line)), linkable)
         .map((line) => el("p", { class: "detail muted" }, ...linkNames(line, linkable, named)));
       const step = renderStep(finding.step, linkable, named);
       const unnamed = linkable.filter((uid) => !named.has(uid));

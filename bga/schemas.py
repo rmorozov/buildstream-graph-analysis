@@ -3744,8 +3744,8 @@ _ANALYZE_HINTS = {
                         "key": "name",
                         "title": "Constraint",
                         "sortable": True,
-                        "description": "`graph`, `CPU`, `host_cores` or `memory` — which of the four inputs "
-                        "this ceiling comes from. `host_cores` is the CPU figure capped at the host's cores.",
+                        "description": "The graph, the CPU, the host's cores or memory — which of the four inputs "
+                        "this ceiling comes from. The host's cores is the CPU figure capped at the core count.",
                     },
                     {"key": "allows", "title": "Builders it allows", "quantity": "count", "sortable": True},
                     {
@@ -3758,7 +3758,7 @@ _ANALYZE_HINTS = {
                         "title": "Before clamping",
                         "quantity": "count",
                         "sortable": True,
-                        "description": "Present only on the host_cores row, "
+                        "description": "Present only on the host's cores row, "
                         "and only when the derived figure "
                         "exceeded the host's cores — the "
                         "unclamped value `allows` was capped "

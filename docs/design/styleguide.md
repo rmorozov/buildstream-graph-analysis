@@ -797,7 +797,7 @@ in it hidden, and the class is bounded at both ends:
                  elements   landed   opened    words   controls    nodes
 scale               1,202    5,007   26,584    8,259        787    4,732
 xl                  4,002    4,937   27,230    8,275        812    4,960
-budget, to 4,100 elts          7,600   46,822   14,100      1,195    8,080
+budget, to 4,100 elts          7,600   46,822   14,100      1,195    8,085
 ```
 
 Height does not move at all — a bounded row costs no pixels, which is
@@ -942,7 +942,9 @@ Round 165's merge, five tracks each under alone: the small class's words
 13,500 -> 13,700 and controls 872 -> 874 (`macro_micro` 13,697, 874); the
 4,100 class's words 13,600 -> 14,100, nodes 7,800 -> 8,080 and controls
 1,192 -> 1,195 (`xl_both` 14,099 words; 8,079 nodes and 1,195 controls with
-`UX-1271`'s step copy controls) - the owner-call default, reversible.
+`UX-1271`'s step copy controls) - the owner-call default, reversible. The
+walk's sweep dots (knee, configured builders) take nodes to 8,085
+(`xl_both` 8,082).
 
 `UX-1152`'s card links read section titles, not ids; alone they took
 `macro_micro` to 38,201 px and 13,441 words. Round 154's merged tree,

@@ -399,8 +399,9 @@ BUDGETS = (
     # `UX-1267` (owner-call default): words 13,200 -> 13,600, nodes 7,500 -> 7,800 - ranked cards' map-row fold, xl_both 13,081 -> 13,540 words, 7,279 -> 7,799 nodes (with UX-1270).
     # Round 165's merge (owner-call default): words 13,600 -> 14,100, nodes 7,800 -> 8,070 - xl_both 14,099 words, 8,066
     # nodes; each track alone under (UX-1267/1270 13,540/7,799, UX-1272/1274/1276 13,367/7,486). With UX-1271's step
-    # copy controls: nodes 8,070 -> 8,080, controls 1,192 -> 1,195 (xl_both 8,079, 1,195).
-    (4_100, 46_822, 14_100, 1_195, 8_080),
+    # copy controls: nodes 8,070 -> 8,080, controls 1,192 -> 1,195 (xl_both 8,079, 1,195). The walk's sweep
+    # knee and configured-builders dots: nodes 8,080 -> 8,085 (xl_both 8,082).
+    (4_100, 46_822, 14_100, 1_195, 8_085),
 )
 
 

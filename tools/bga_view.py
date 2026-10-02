@@ -787,8 +787,8 @@ EXPORT_BUDGET_B = 8 * 1024 * 1024
 #: so the stylesheet, `index.html`, the gzipped viewer module and its
 #: loader. The procedure and every earlier value are
 #: `test_the_report_you_can_attach.py`'s note on this name.
-#: Round 165's merge, owner-call default: six tracks each under alone, merged 165,620 B with the rail marker fix.
-PAGE_BUDGET_B = 165_650
+#: Round 165, owner-call default: merged 165,620 B; the walk's fixes (rail mark, sweep dots, export rate) 166,128 B.
+PAGE_BUDGET_B = 166_150
 # The trace is the one part that can be dropped without losing the
 # report, so it is the one part with its own ceiling.
 #

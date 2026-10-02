@@ -124,4 +124,4 @@ def test_the_cli_spaces_its_unit(monkeypatch):
     monkeypatch.setattr(cpu, "compute_cpu_floor", lambda *_: dict(floor))
     result = SimpleNamespace(floors={"lb": 1})
     cli._add_cpu_floor(result, {}, None)
-    assert "1.50 s," in result.floors["capacity_model_note"], result.floors["capacity_model_note"]
+    assert "1.5 s," in result.floors["capacity_model_note"], result.floors["capacity_model_note"]

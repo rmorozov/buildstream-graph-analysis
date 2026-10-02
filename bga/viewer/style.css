@@ -1520,3 +1520,7 @@ p.run-advice {
 .run-picker select, .run-picker option { font-size: var(--font-small); }
 .run-picker select { width: 100%; margin-top: var(--space-1); }
 .run-picker button { margin-top: var(--space-1); margin-right: var(--space-1); }
+
+/* `UX-1252`: "· save trace" is one line. */
+#actions-fallback, #actions-download { white-space: nowrap; }
+#actions-fallback > a, #actions-download > a { display: inline; }

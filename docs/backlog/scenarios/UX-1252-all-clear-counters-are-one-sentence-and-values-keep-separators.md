@@ -2,7 +2,7 @@
 
 **Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-162 view UI review on a 2,402-element two-plane page (2026-10-01), finding L2 | **Serves:** R1, R5 | **Topic:** viewer | **Area:** bga, bga/viewer | **Shape:** mechanical | **Reading:** container
 
-**Guard:** none — open, no guard named yet
+**Guard:** `tests/unit/test_an_all_clear_run_is_one_sentence.py` (browser, `macro_micro` + served two-plane store) and `tests/unit/test_a_quantity_is_formatted_where_it_is_shown.py` (bare count, raw seconds; 1,200-element `counted` page)
 
 ## Motivation
 
@@ -43,3 +43,44 @@ The fields themselves; the JSON door keeps every one.
 ## Acceptance Test
 
 On this page no block shows two or more consecutive zero/none rows, no four-digit count lacks a separator, the cores question's absence names CPU, and no prose duration is a raw seconds float. Mutation: restore the rows, and the guard reds.
+
+## Outcome
+
+Gap measured (base `9a1c124f`; the Motivation's 2,402-element page rebuilt, `bga view @last --reanalyse --export`, and
+`macro_micro`; text nodes outside `code, pre, td`, details open, Chromium 1440x900 and 390x844, both widths alike):
+
+```text
+                                 2,402 before   2,402 after   macro_micro after
+dl.pairs clear rows running            17             0             0
+folded "None: ..." rows                 0             8            10
+bare 4+ digit counts                    9             0             0   (decision "2194 downstream" x2, blast x3, fan-in x3, "1978 upstream")
+"\d+.\d\d s" in prose                   1             0             0   (floors note "605.81 s" -> "10.1 min")
+cores absence             "no host memory series" -> "no host CPU series"
+served rail "· save trace", 1440    2 lines -> 1   (`.toc a { display: block }` put the link under its "·")
+```
+
+Close measured (`test_the_page_has_a_volume_budget.py`'s `_LOOK`, 1440x900, same paths before/after):
+
+```text
+                         before      after     bound
+macro_micro opened px    37,805     37,287    39,188
+macro_micro words        13,338     13,361    13,500   (textContent glued dt to dd: "elements0Hit" was one token; per text node 17,430 -> 17,416)
+macro_micro controls        872        872       872
+xl_both opened px        44,292     43,852    46,822
+xl_both words            13,160     13,190    13,200
+xl_both controls          1,190      1,190     1,192
+page bytes              162,460    162,936   165,000
+macro_micro data half   100,278    100,229   100,000   (this tree's longer path; -49 B, the absence sentence)
+```
+
+| Mutation | Reddened | Count |
+|---|---|---|
+| fold off (`empty: false` in `renderPairs`) | `test_no_block_draws_two_clear_rows_running` [macro_micro, two_plane] | 2 failed |
+| rail CSS removed (`nowrap` + inline link) | `test_the_rail_separator_keeps_its_link[two_plane]`, 2 lines at 1440 | 1 failed |
+| absence back to "host memory series" | `test_the_cores_absence_names_the_cpu_series` | 1 failed |
+| `{count:,}` -> `{count}` at the blast-radius line | `test_no_count_lacks_its_separator[counted]`, 3 bare | 1 failed, 3 passed |
+| `tally()` dropped from `decision.js`'s reach | `test_no_count_lacks_its_separator[counted]`, 2 bare | 1 failed, 3 passed |
+| `{lb_cpu_us / 1e6:.2f} s` restored in `cli.py` | `test_no_prose_duration_is_raw_seconds` [macro_micro, two_plane] | 2 failed, 2 passed |
+
+Deviation: a row carrying the run's advice (`attribution`'s buckets, `UX-390`) and a signed delta keep their rows; `decision.js`,
+outside the Decision's Files, printed the decision list's "2194 downstream"; textContent words +23 on `macro_micro`, under its bound.

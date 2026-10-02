@@ -91,6 +91,10 @@ _LABELS = """
                // the label to repeat; one whose value is a number does.
                numeric: numeric(node.nextElementSibling) });
   }
+  // `UX-1252`: a folded run of zero rows keeps each label, as a span in its one sentence.
+  for (const node of document.querySelectorAll("dt[data-none] + dd > span[data-key]")) {
+    out.push({ key: node.getAttribute("data-key"), label: own(node).replace(/[,.]$/, ""), numeric: true });
+  }
   for (const node of document.querySelectorAll("th[data-column]")) {
     const column = node.getAttribute("data-column");
     const cell = node.closest("table")?.querySelector(

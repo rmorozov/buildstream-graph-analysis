@@ -1878,7 +1878,7 @@ def _ranking_findings(result: AnalysisResult, chain_bound: bool) -> list[dict]:
             entry = blast_radius.get(elem_uid, {})
             count = entry.get('downstream_count', 0)
             detail.append(
-                f"    {i}. {elem_uid} ({count} downstream elements"
+                f"    {i}. {elem_uid} ({count:,} downstream elements"
                 f"{_blast_scale(count, distribution)})"
                 f"{structural_kind_tag(entry)}"
             )
@@ -2047,8 +2047,8 @@ def _fan_in_findings(result: AnalysisResult) -> list[dict]:
             entry = fan_in.get(uid, {})
             count = entry.get('transitive_count', 0)
             detail.append(
-                f"    {index}. {uid} ({count} upstream, "
-                f"{entry.get('direct_count', 0)} named directly"
+                f"    {index}. {uid} ({count:,} upstream, "
+                f"{entry.get('direct_count', 0):,} named directly"
                 f"{_blast_scale(count, distribution)})"
                 f"{structural_kind_tag(entry)}"
             )
@@ -2086,7 +2086,7 @@ def _fan_in_findings(result: AnalysisResult) -> list[dict]:
     )
     if structural:
         named = ", ".join(
-            f"{uid} ({fan_in[uid]['transitive_count']} upstream)" for uid in structural[:BLAST_RADIUS_SHOWN]
+            f"{uid} ({fan_in[uid]['transitive_count']:,} upstream)" for uid in structural[:BLAST_RADIUS_SHOWN]
         )
         findings.append(
             _finding(
@@ -2109,7 +2109,7 @@ def _fan_in_findings(result: AnalysisResult) -> list[dict]:
     # (`bga/graph/fan_in.py`) - this just says so.
     if foundation:
         named = ", ".join(
-            f"{uid} ({fan_in[uid]['transitive_count']} upstream)" for uid in foundation[:BLAST_RADIUS_SHOWN]
+            f"{uid} ({fan_in[uid]['transitive_count']:,} upstream)" for uid in foundation[:BLAST_RADIUS_SHOWN]
         )
         findings.append(
             _finding(

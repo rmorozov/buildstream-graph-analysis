@@ -248,11 +248,13 @@ export function renderProvenanceRecords(payload, root, schema = null) {
  */
 export function renderWhyRanked(payload, action, options = {}) {
   const uid = action?.element_uid;
-  if (!uid) return null;
-  const facts = elementFacts(payload).get(uid);
+  // `UX-1258`: a step with no element is explained by its finding's own facts.
+  const key = uid ?? action?.finding_id;
+  if (!key) return null;
+  const facts = uid ? elementFacts(payload).get(uid) : stepFacts(payload);
   const record = (payload?.provenance ?? []).find(
     (entry) => entry?.claim === action?.finding_id) ?? null;
-  const history = options.store
+  const history = uid && options.store
     ? renderElementHistory(options.store, uid, options.schema ?? null) : null;
   // `elementFacts` touches a record for every uid a source *names*, so
   // a top action alone produces an empty one. The fold needs something
@@ -266,7 +268,7 @@ export function renderWhyRanked(payload, action, options = {}) {
 
   const details = document.createElement("details");
   details.className = "why-ranked";
-  details.setAttribute("data-why", uid);
+  details.setAttribute("data-why", key);
   const summary = document.createElement("summary");
   summary.textContent = options.rank
     ? `Why #${options.rank}` : "Why this one";
@@ -288,14 +290,14 @@ export function renderWhyRanked(payload, action, options = {}) {
     const list = document.createElement("dl");
     list.className = "pairs why-facts";
     for (const row of rows) {
-      const term = document.createElement("dt");
-      term.textContent = row.label;
+      // A row with no label is a second value under the term above it.
+      if (row.label) list.append(el("dt", {}, row.label));
       const value = document.createElement("dd");
       value.className = "num";
       value.setAttribute("data-field", row.path);
       value.setAttribute("data-raw", String(row.value));
       value.textContent = factText(row);
-      list.append(term, value);
+      list.append(value);
     }
     details.append(list);
   }
@@ -337,6 +339,16 @@ function renderSaidOnce(common) {
 }
 
 /** One fact, in the unit the source declared it in. */
+/** `UX-1258`: the builders step's facts, one term per constraint: what it allows, then why, each at its path. */
+function stepFacts(payload) {
+  const rows = (payload?.capacity_recommendation?.constraints ?? []).flatMap((row) => {
+    const at = `capacity_recommendation.constraints[name=${row.name}]`;
+    return [{ label: `${shownValue(row.name)} allows`, path: `${at}.allows`, value: row.allows, kind: "count" },
+            { label: null, path: `${at}.reason`, value: row.reason }];
+  });
+  return { rows, findings: [] };
+}
+
 function factText(row) {
   return shownValue(row.value, row.kind);
 }

@@ -2,7 +2,7 @@
 
 **Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-163 verification of UX-1244 (2026-10-02) | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** judgement | **Reading:** container
 
-**Guard:** none — open, no guard named yet
+**Guard:** `tests/unit/test_why_is_this_ranked_first.py::test_the_builders_step_opens_its_own_why` (the 2,402-element page's capacity block and top actions through `renderDecision`, node; golden's rows by the file's other eleven)
 
 ## Motivation
 
@@ -34,3 +34,23 @@ The blast rows' disclosures; the step text (UX-1244).
 ## Acceptance Test
 
 On the 2,402-element two-plane page the first action row opens a "Why #1" disclosure. Mutation: build none for an element-less row, and the guard reds.
+
+## Outcome
+
+Gap measured and close measured: the Motivation's page (rebuilt as in UX-1274's Outcome, `view.export`), the decision's
+first `li.action` read in Chromium, base `decision.js` against this commit's; 1440x900 and 390x844 read alike:
+
+```text
+          details.why-ranked   summary   dd[data-field]                                        fallback link
+before    none                 -         -                                                     #finding-capacity-recommendation
+after     capacity-recommendation  Why #1  capacity_recommendation.constraints[name=graph].allows,
+                                           ...[name=graph].reason, ...[name=host_cores].allows,
+                                           ...[name=host_cores].reason                     none (UX-1019: one why control)
+```
+
+`test_why_is_this_ranked_first.py`: 12 passed in 4.0s; golden's rows 1-3 unchanged (the other eleven).
+
+| Mutation | Reddened | Count |
+|---|---|---|
+| `if (!uid) return null` restored | `test_the_builders_step_opens_its_own_why` | 1 failed, 11 passed |
+| `stepFacts` reads no constraints (`([]).flatMap`) | the same | 1 failed, 11 passed |

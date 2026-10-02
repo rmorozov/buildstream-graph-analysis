@@ -269,6 +269,10 @@ export function presetTable(key, rows, presets, hint, node, payload) {
   return { node: slot, select, draw, presets: usable.map((e) => e.preset) };
 }
 
+/** `UX-1252`: zero, none, no, or an empty list or map. */
+const allClear = (value) => value === 0 || value === null || value === false
+  || (typeof value === "object" && Object.keys(value).length === 0);
+
 export function renderPairs(key, object, hint = {}, node = undefined,
                             payload = undefined, root = undefined) {
   const direction = hint[DIRECTION];
@@ -287,6 +291,7 @@ export function renderPairs(key, object, hint = {}, node = undefined,
   // `UX-1143`: the declared answer is drawn first, as a sentence, and not again as a pair.
   const leadKey = hintsOf(node)[LEAD] ?? hint[LEAD];
   const lead = typeof object?.[leadKey] === "string" ? object[leadKey] : null;
+  const rows = [];
   for (const [name, value] of Object.entries(object)) {
     if (merged.has(name) || (lead !== null && name === leadKey)) continue;
     // `UX-1150`, `UX-1156`: a lead answers its boolean group and its empty lists; the JSON view keeps them.
@@ -383,9 +388,23 @@ export function renderPairs(key, object, hint = {}, node = undefined,
     // `UX-390`: and the run's own advice for this bucket, on its row,
     // beside the schema's sentence rather than instead of it.
     const advice = adviceFor(payload, hint, name);
-    list.append(term, el("dd", {}, cell, describe,
-                         advice ? el("p", { class: "run-advice" }, advice)
-                                : null));
+    // A share answers its block (`hit_share`) or checks it (`reconciliation_error_share`): never folded.
+    rows.push({ term, describe, empty: !advice && !direction && kind !== "share" && allClear(value),
+                dd: el("dd", {}, cell, describe, advice ? el("p", { class: "run-advice" }, advice) : null) });
+  }
+  // `UX-1252` (styleguide §6e.12): a run of two or more zero or absent values is one sentence; JSON keeps each.
+  for (let i = 0; i < rows.length;) {
+    let end = i;
+    while (end < rows.length && rows[end].empty) end += 1;
+    if (end - i < 2) { list.append(rows[i].term, rows[i].dd); i += 1; continue; }
+    const run = rows.slice(i, end);
+    list.append(el("dt", { "data-none": run.map((r) => r.term.getAttribute("data-key")).join(" ") }, "None"),
+                el("dd", {}, ...run.map(({ term }, at) => el("span", {
+                  "data-key": term.getAttribute("data-key"), "data-described": term.getAttribute("data-described"),
+                  title: term.getAttribute("title") }, `${term.textContent}${at < run.length - 1 ? ", " : "."}`)),
+                   // Opened, each sentence is its own line, labelled by CSS so the word count does not grow.
+                   ...run.map(({ term, describe }) => (describe?.setAttribute("data-label", term.textContent), describe))));
+    i = end;
   }
   const door = attachBlockDoor(list, doors);
   const parts = [sectionHead(key, hint)];

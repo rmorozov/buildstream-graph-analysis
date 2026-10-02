@@ -2094,12 +2094,7 @@ class BuildEfficiencyAnalyzer:
                 return {
                     "absence": "this analysis has no run context, graph or run directory to read a host series against"
                 }
-            return {
-                "absence": "this capture has no host memory series — "
-                "it was taken before host memory sampling "
-                "was added, or the host exposes no "
-                "/proc/meminfo"
-            }
+            return {"absence": "this capture has no host CPU series — it was taken before host sampling was added"}
         tasks = [
             {
                 "element": task.task_key.element_uid,

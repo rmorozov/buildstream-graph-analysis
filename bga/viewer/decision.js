@@ -21,7 +21,7 @@ import {
 // to take this import unaliased - the export concatenates the modules
 // into one scope and drops the `import` line, so an alias resolves to
 // a name nothing declares.
-import { READER_LABELS, TERMS, childNode, el, findingLink, heading, hintsOf, pathLabel, quantity, quantityAt, title } from "./format.js";
+import { READER_LABELS, TERMS, childNode, el, findingLink, heading, hintsOf, pathLabel, quantity, quantityAt, tally, title } from "./format.js";
 import {
   resolvePath, elementFacts, elementHistory, renderElementHistory,
 } from "./element.js";
@@ -912,7 +912,7 @@ function actionRow(action, investigate, whyBlock = null) {
     reach.className = "worth num";
     reach.setAttribute("data-field", "downstream_count");
     reach.setAttribute("data-raw", String(action.downstream_count));
-    reach.textContent = `${action.downstream_count} downstream`;
+    reach.textContent = `${tally(action.downstream_count)} downstream`;
     row.append(reach);
   }
 

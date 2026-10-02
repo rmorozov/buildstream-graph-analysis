@@ -1,6 +1,6 @@
 # UX-1014: the "safe cap plus auto" default is measured on more shapes and hosts before it is anyone's default
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-1005 | **Found by:** Ruslan on the Graviton thread (2026-09-25): "we found sane default solution and further we need more experiments, scenarios and data" | **Serves:** R4, R5 | **Topic:** capture | **Area:** tools | **Shape:** judgement | **Reading:** owner:CodSpeed Graviton and an x86 16-core host
+**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-1005 | **Found by:** Ruslan on the Graviton thread (2026-09-25): "we found sane default solution and further we need more experiments, scenarios and data" | **Serves:** R4, R5 | **Topic:** capture | **Area:** tools | **Shape:** judgement | **Reading:** owner:CodSpeed Graviton
 
 **Guard:** none — open, no guard named yet
 
@@ -55,5 +55,6 @@ bga-bench runs 36597448095 and 36602046680:
 
 Two giants gain nothing because 2 x 8 jobs already fill 16 cores; the
 memory-bound giant is the shape where the default loses. Still to read:
-an x86 16-core host and a real project.
+an x86 16-core host, whose steps are
+UX-1280's own row (2026-10-02), and a real project.
 

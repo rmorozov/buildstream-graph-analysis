@@ -2274,6 +2274,25 @@ PLANE2_BINARY_FLOOR_SHARE = OPPORTUNITY_FLOOR_PCT / 100
 PLANE2_CONFIGURE_SHARE = 0.10
 
 
+def _waiting_step(report: dict, elements) -> str:
+    """UX-1275: the waiting elements' top 3 binaries by blocked time, where Plane 2 measured it."""
+    blocked: dict[str, int] = {}
+    for element in elements:
+        cost = (report.get('binary_cost') or {}).get(element) or {}
+        for entry in cost.get('binaries') or []:
+            if entry.get('blocked_us'):
+                blocked[entry['binary']] = blocked.get(entry['binary'], 0) + entry['blocked_us']
+    top = sorted(blocked, key=lambda name: (-blocked[name], name))[:3]
+    if not top:
+        return "Find what these elements wait on before raising their job count."
+    named = [f"{name} ({qty.duration(blocked[name])})" for name in top]
+    listed = named[0] if len(named) == 1 else ", ".join(named[:-1]) + " and " + named[-1]
+    return (
+        f"Start with what {listed} wait on: the most time these elements spent alive, "
+        "off CPU and with no child running."
+    )
+
+
 def _plane2_findings(result: AnalysisResult) -> list[dict]:
     """UX-1255: the costliest binary, elements waiting on their jobs, and configure - only where Plane 2 ran."""
     report = getattr(result, 'plane2_report', None) or {}
@@ -2305,13 +2324,14 @@ def _plane2_findings(result: AnalysisResult) -> list[dict]:
     # Each element's own CPU over its own wall (the join's `cores_busy`), on correlate's compute-bound line.
     from .correlate import _COMPUTE_BOUND_CORES, _plane2_view
 
-    waiting = [
-        row
-        for row in _plane2_view(report).values()
+    waiting_by = {
+        element: row
+        for element, row in _plane2_view(report).items()
         if (row.get('requested_jobs') or 0) > 1
         and row.get('cores_busy') is not None
         and row['cores_busy'] < _COMPUTE_BOUND_CORES
-    ]
+    }
+    waiting = list(waiting_by.values())
     if waiting:
         jobs = sorted(row['requested_jobs'] for row in waiting)
         asked = f"{jobs[0]}" if jobs[0] == jobs[-1] else f"{jobs[0]}-{jobs[-1]}"
@@ -2327,7 +2347,7 @@ def _plane2_findings(result: AnalysisResult) -> list[dict]:
                     'median_cores_busy': round(median, 2),
                     'requested_jobs': jobs[-1],
                 },
-                step=_step("Find what these elements wait on before raising their job count."),
+                step=_step(_waiting_step(report, waiting_by)),
             )
             | {'section': 'element_join'}
         )

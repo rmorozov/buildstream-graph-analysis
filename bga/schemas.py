@@ -4897,6 +4897,8 @@ _ANALYZE_HINTS = {
         COLUMNS: [
             "binary",
             {"key": "cpu_us", "title": "CPU"},
+            {"key": "blocked_us", "title": "Blocked"},
+            {"key": "blocked_share", "title": "Blocked share"},
             {"key": "wall_us", "title": "Wall"},
             {"key": "calls", "title": "Calls in run"},
             {"key": "elements", "title": "Elements"},
@@ -4915,6 +4917,16 @@ _ANALYZE_HINTS = {
                     "sum of its binary cost rows. Absent when the Plane 2 "
                     "report published only top-5 rankings, or no element "
                     "it measured ran it.",
+                },
+                "blocked_us": {
+                    QUANTITY: "duration_us",
+                    "description": "Time its processes were alive, not on CPU, "
+                    "and had no child running: what they waited on themselves. "
+                    "Absent when the Plane 2 report did not measure it.",
+                },
+                "blocked_share": {
+                    QUANTITY: "share",
+                    "description": "Blocked time as a share of its own wall; absent with blocked.",
                 },
                 "wall_us": {
                     QUANTITY: "duration_us",

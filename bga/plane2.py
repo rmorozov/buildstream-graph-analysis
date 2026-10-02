@@ -516,7 +516,8 @@ def binary_totals(native_report: Optional[dict]) -> list[dict]:
     CPU and wall are the sums of `binary_cost`'s (element, binary) pairs and
     calls the capture's whole-run `by_binary`. A report whose elements carry
     only the two top-N rankings leaves `cpu_us`, `wall_us` and `elements`
-    absent rather than partial, and ranks by calls.
+    absent rather than partial, and ranks by calls. `UX-1275`: `blocked_us` sums the
+    pairs' blocked time and `blocked_share` is it over the binary's wall; absent when no pair carries it.
     """
     report = native_report or {}
     costs = [
@@ -531,14 +532,19 @@ def binary_totals(native_report: Optional[dict]) -> list[dict]:
             one["wall_us"] += round((entry.get("wall_s") or 0) * 1_000_000)
             one["calls"] += entry.get("count") or 0
             one["elements"] += 1
+            if entry.get("blocked_us") is not None:
+                one["blocked_us"] = one.get("blocked_us", 0) + entry["blocked_us"]
     calls = dict(report.get("by_binary") or {}) or {name: one["calls"] for name, one in summed.items()}
     rows = []
     for name in sorted(set(calls) | set(summed)):
         row = {"binary": name, "calls": calls.get(name, 0)}
         if name in summed:
-            row.update(
-                cpu_us=summed[name]["cpu_us"], wall_us=summed[name]["wall_us"], elements=summed[name]["elements"]
-            )
+            one = summed[name]
+            row.update(cpu_us=one["cpu_us"], wall_us=one["wall_us"], elements=one["elements"])
+            if "blocked_us" in one:
+                row["blocked_us"] = one["blocked_us"]
+                if one["wall_us"]:
+                    row["blocked_share"] = round(one["blocked_us"] / one["wall_us"], 3)
         rows.append(row)
     rows.sort(key=lambda row: (-row.get("cpu_us", -1), -row["calls"], row["binary"]))
     return rows

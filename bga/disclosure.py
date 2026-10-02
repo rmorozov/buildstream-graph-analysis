@@ -464,7 +464,7 @@ POLICIES = {
         f"binary_cost.{_PER_ELEMENT}.single_process_costs[].cpu_us": "C",
         f"binary_cost.{_PER_ELEMENT}.single_process_costs[].wall_s": "C",
         f"binary_cost.{_PER_ELEMENT}.binaries[].binary": "B:binary",
-        **{f"binary_cost.{_PER_ELEMENT}.binaries[].{key}": "C" for key in ("count", "cpu_us", "wall_s")},
+        **{f"binary_cost.{_PER_ELEMENT}.binaries[].{key}": "C" for key in ("blocked_us", "count", "cpu_us", "wall_s")},
         "configure_phase.available": "C",
         "configure_phase.configure_cpu_us": "C",
         "configure_phase.configure_share": "C",

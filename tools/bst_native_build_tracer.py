@@ -6013,9 +6013,10 @@ class _BinaryCost:
         """
         return {element: set(binaries) for element, binaries in self.per_element.items()}
 
-    def finish(self, top_n: int = 5):
+    def finish(self, top_n: int = 5, blocked: Optional[dict[str, dict[str, int]]] = None):
         result: dict[str, dict] = {}
         for element, binaries in self.per_element.items():
+            waits = (blocked or {}).get(element) or {}
             by_cpu = sorted(binaries.items(), key=lambda kv: -kv[1]["cpu_us"])
             measured_cpu = sum(v["cpu_us"] for v in binaries.values())
             if not measured_cpu:
@@ -6054,9 +6055,133 @@ class _BinaryCost:
                 # UX-1183: the membership whole; `top_n` bounds the two rankings only.
                 "binaries": [
                     {"binary": b, "count": v["count"], "cpu_us": v["cpu_us"], "wall_s": round(v["wall_s"], 3)}
+                    # UX-1275: additive; absent when no process of the pair had CPU and an exit.
+                    | ({"blocked_us": waits[b]} if b in waits else {})
                     for b, v in by_cpu
                 ],
             }
+        return result
+
+
+class _BlockedTime:
+    """`UX-1275`: per (element, binary), lifetime - own CPU - time with a live child, in microseconds.
+
+    Wall minus CPU cannot rank where time is blocked: `make`'s wall is its children's lifetimes.
+    A child's parent is the same sandbox's process with its `ppid` whose span holds the child's
+    start, so a recycled pid resolves to the occupant that was alive. A process with no CPU
+    measured or no observed exit contributes nothing. Sandbox, pid, ppid and CPU are read from
+    `_ConfigurePhase`'s rows rather than kept twice.
+    """
+
+    _NONE = -1.0
+
+    def __init__(self, rows: "_ConfigurePhase"):
+        self.rows = rows
+        self.pair_ids: dict[str, dict[str, int]] = {}
+        self.pair_names: list[tuple[str, str]] = []
+        self.start = array.array("d")
+        self.end = array.array("d")
+        self.pair = array.array("i")
+
+    def add(self, record):
+        self.start.append(record["start_ts"])
+        end = record.get("end_ts")
+        self.end.append(self._NONE if end is None or record.get("open") else end)
+        element = record.get("element")
+        if not element:
+            self.pair.append(-1)
+            return
+        binary = os.path.basename((record.get("cmd") or "").split(" ")[0]) or "unknown"
+        ids = self.pair_ids.setdefault(element, {})
+        pair = ids.get(binary)
+        if pair is None:
+            pair = ids[binary] = len(self.pair_names)
+            self.pair_names.append((element, binary))
+        self.pair.append(pair)
+
+    def _parent_key(self, index: int) -> int:
+        ppid = self.rows.rows_ppid[index]
+        return -1 if ppid == self.rows._NO_PARENT else self.rows._key(self.rows.rows_sandbox[index], ppid)
+
+    def _parent(self, child: int, latest: dict, previous) -> int:
+        index = latest.get(self._parent_key(child), -1)
+        at = self.start[child]
+        while index >= 0:
+            end = self.end[index]
+            if index != child and self.start[index] <= at and (end == self._NONE or at <= end):
+                return index
+            index = previous[index]
+        return -1
+
+    def _parents(self):
+        """`(latest, previous)`: the last process per parent key, and the chain back through a recycled pid."""
+        count = len(self.start)
+        rows = self.rows
+        wanted = {self._parent_key(index) for index in range(count)}
+        # Only processes some record names as a parent are indexed.
+        latest: dict[int, int] = {}
+        previous = array.array("q", bytes(8 * count))
+        for index in range(count):
+            key = rows._key(rows.rows_sandbox[index], rows.rows_pid[index])
+            if key in wanted:
+                previous[index] = latest.get(key, -1)
+                latest[key] = index
+        return latest, previous
+
+    def _grouped(self):
+        """`(first, filled, slots)`: children grouped by parent in array passes, a parent's run `slots[first:filled]`."""
+        count = len(self.start)
+        latest, previous = self._parents()
+        parent_of = array.array("q", [-1]) * count
+        first: dict[int, int] = {}
+        for child in range(count):
+            parent = self._parent(child, latest, previous)
+            if parent >= 0 and self.end[parent] != self._NONE:
+                parent_of[child] = parent
+                first[parent] = first.get(parent, 0) + 1
+        del latest, previous
+        offset = 0
+        for parent, many in first.items():
+            first[parent] = offset
+            offset += many
+        filled = dict(first)
+        slots = array.array("q", bytes(8 * offset))
+        for child in range(count):
+            parent = parent_of[child]
+            if parent >= 0:
+                slots[filled[parent]] = child
+                filled[parent] += 1
+        return first, filled, slots
+
+    def _covered(self) -> dict[int, float]:
+        """Per parent, seconds of its own span with at least one child live: the children's union, clipped."""
+        first, filled, slots = self._grouped()
+        covered: dict[int, float] = {}
+        for parent, start in first.items():
+            limit, reach, total = self.end[parent], 0.0, 0.0
+            for child in sorted(slots[start : filled[parent]], key=self.start.__getitem__):
+                end = self.end[child]
+                high = limit if end == self._NONE else min(end, limit)
+                low = max(self.start[child], reach)
+                if high > low:
+                    total += high - low
+                    reach = high
+            covered[parent] = total
+        return covered
+
+    def finish(self) -> dict[str, dict[str, int]]:
+        covered = self._covered()
+        cpus = self.rows.cpu
+        result: dict[str, dict[str, int]] = {}
+        for index, pair in enumerate(self.pair):
+            end, cpu = self.end[index], cpus[index]
+            if pair < 0 or end == self._NONE or cpu == self.rows._NO_CPU:
+                continue
+            life_us = (end - self.start[index]) * 1_000_000
+            blocked = max(0, round(life_us - cpu - covered.get(index, 0.0) * 1_000_000))
+            element, binary = self.pair_names[pair]
+            per = result.setdefault(element, {})
+            per[binary] = per.get(binary, 0) + blocked
         return result
 
 
@@ -6920,6 +7045,7 @@ class Plane2Fold:
         self.pressure = _ResourcePressure()
         self.outcomes = _ProcessOutcomes()
         self.binary_cost = _BinaryCost()
+        self.blocked = _BlockedTime(self.configure)
         self.parallelism = _PerElementParallelism()
         self.redundancy = _RedundantOperations()
         self.coverage = _StreamCoverage()
@@ -6950,6 +7076,7 @@ class Plane2Fold:
         self.pressure.add(record)
         self.outcomes.add(record)
         self.binary_cost.add(record)
+        self.blocked.add(record)
         self.parallelism.add(record)
         self.redundancy.add(record)
         self.coverage.add(record)
@@ -7034,7 +7161,7 @@ def _summarize_folded(
         "process_outcomes": fold.outcomes.finish(),
         # UX-69: where the time went inside each element, not how many
         # times something ran.
-        "binary_cost": fold.binary_cost.finish(),
+        "binary_cost": fold.binary_cost.finish(blocked=fold.blocked.finish()),
         # UX-32: per-element achieved parallelism - the question this
         # plane exists to answer. See compute_per_element_parallelism.
         "per_element_parallelism": fold.parallelism.finish(),

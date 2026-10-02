@@ -307,6 +307,8 @@ export const TERMS = {
   wall_clock_share_us: "Wall-clock share",
   // `UX-1234`: the reader's word for two columns a card shares.
   probability: "On the path", element_durations: "Element duration",
+  // `UX-1275`: trimmed, it collides with `blocked_us`'s "Blocked" on a one-row by_binary card.
+  blocked_share: "Blocked share",
 };
 
 /**

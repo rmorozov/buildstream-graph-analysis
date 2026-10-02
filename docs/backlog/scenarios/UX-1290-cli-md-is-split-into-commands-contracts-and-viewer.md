@@ -1,6 +1,6 @@
 # UX-1290: `cli.md` is split into a command reference, a contracts page and a viewer page, and user switches are separated from internal variables
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-1285, UX-1286, UX-1287, UX-1288 (they edit `cli.md`) | **Found by:** the docs audit (2026-10-02, finding 6) and the owner: pilots "will suffer" if the jobserver switches are buried | **Serves:** R1, R4, R5 | **Topic:** docs | **Area:** unassigned | **Shape:** judgement | **Reading:** container
+**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-1285, UX-1286, UX-1287, UX-1288 (they edit `cli.md`) | **Found by:** the docs audit (2026-10-02, finding 6) and the owner: pilots "will suffer" if the jobserver switches are buried | **Serves:** R1, R4, R5 | **Topic:** docs | **Area:** unassigned | **Shape:** bounded | **Reading:** container
 
 **Guard:** none — open, no guard named yet
 

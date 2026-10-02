@@ -21,7 +21,7 @@ import {
 // to take this import unaliased - the export concatenates the modules
 // into one scope and drops the `import` line, so an alias resolves to
 // a name nothing declares.
-import { TERMS, childNode, el, findingLink, heading, hintsOf, pathLabel, quantity, quantityAt, title } from "./format.js";
+import { READER_LABELS, TERMS, childNode, el, findingLink, heading, hintsOf, pathLabel, quantity, quantityAt, title } from "./format.js";
 import {
   resolvePath, elementFacts, elementHistory, renderElementHistory,
 } from "./element.js";
@@ -341,9 +341,11 @@ function factText(row) {
   return shownValue(row.value, row.kind);
 }
 
-// `UX-1140`: a number through the element card's formatter; anything else verbatim.
+// `UX-1140`: a number through the element card's formatter; a key through its reader label (`UX-1246`); anything else verbatim.
 function shownValue(value, kind) {
-  return typeof value === "number" ? quantity(value, kind) : plainValue(value);
+  if (typeof value === "number") return quantity(value, kind);
+  const said = plainValue(value);
+  return Object.hasOwn(READER_LABELS, said) ? READER_LABELS[said] : said;
 }
 
 /**

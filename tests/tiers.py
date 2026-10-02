@@ -1204,7 +1204,7 @@ MEDIUM = (
     # `UX-1224`.
     "tests/unit/test_a_printed_filtered_table_states_its_filter.py",  #   11.2s
     # `UX-1234`.
-    "tests/unit/test_a_shared_title_is_the_reader_s_word.py",  #    8.4s
+    "tests/unit/test_a_shared_title_is_the_reader_s_word.py",  #   12.3s (30 layers, UX-1244)
     # `UX-1223`.
     "tests/unit/test_all_rows_after_top_10_keeps_the_chain_order.py",  #    7.7s
     # `UX-1227`.

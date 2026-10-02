@@ -31,6 +31,7 @@ task file, which is the only place it ever lived twice.
 | UX-1134 | [`--jobserver auto` with no plan widens a memory-bound giant into the OOM killer](UX-1134-auto-oom-kills-a-memory-bound-giant-with-no-plan.md) | capture | High | R4, R5 | 🔴 Not Started |
 | UX-1040 | [a paired reading decides whether implementers move to opus at low effort](UX-1040-a-paired-reading-decides-the-implementers-model.md) | guards | Medium | every round's implementer spend | 🔴 Not Started |
 | UX-1259 | [UX-861's host-core cap keeps a builder-bound run at 4 builders while the CPU could feed 18](UX-1259-the-host-core-cap-holds-a-builder-bound-run-whose-cpu-idles.md) | analysis | Medium | R1, R5 | 🔴 Not Started |
+| UX-1279 | [a sort button's name says what pressing it does, not "sort: By binary"](UX-1279-a-sort-button-names-what-pressing-it-does.md) | viewer | Low | R1, R5 | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

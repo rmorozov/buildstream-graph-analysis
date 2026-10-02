@@ -14,8 +14,9 @@ autocap wall 562.87s cpu 3286s mem 26915M giant-peak 10 ... rssw 1004
 off     wall 559.74s cpu 3185s mem 21557M giant-peak 8
 ```
 
-The owner read the job log further: the second repeat completed as
-well, and the job ended at its time limit during the third. Both
+The owner read run 37022814276's log as well: two more autocap
+repeats completed (560.26, 560.45 s, rssw 1007, 1009), and the job
+ended at its time limit before the arms' exit notices. Both
 memgiant jobs ended 69 minutes after they started, each with one
 annotation and no arm notice:
 

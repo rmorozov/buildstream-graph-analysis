@@ -154,12 +154,12 @@ withdraws W` from `$OUT/<arm>-<i>.json.jobserver_ledger.jsonl` (scripted ledger:
 ```text
 widechain off  262.19/260.96/260.84 s  autocap 198.91/198.49/198.59 s  rssw 6      -24%
 mixed8    off8 144.52/141.17/141.20 s  auto8   118.48/118.44/118.40 s  rssw 2,3,0  -17%
-memgiant  autocap wall 562.87s cpu 3286s mem 26915M giant-peak 10 pool dynamic idle 1.00 ... rssw 1004 giant:372.6/10/8.1
-          off     wall 559.74s cpu 3185s mem 21557M giant-peak 8 giant:373.4/8/7.9
+memgiant  autocap 560.26/560.45 s (run 37022814276), 562.87 s (37031346135)  mem 26.7-26.9 GB  peak 10  rssw 1004-1009
+          off     557.82/560.05 s (run 37022814276), 559.74 s (37031346135)  mem 21.6-21.7 GB  peak 8
 ```
 
 The Acceptance reading: the autocap arm completes at `mem_lines 320000` at 10 jobs with
-1004 memory holds, +0.6% wall against `off` (run 37031346135, read by the owner from the job
-log, 2026-10-02; the second repeat completed too). Both memgiant jobs then hit the runner's
-time on the third repeat with no annotation; that is UX-1281's. The win shapes keep their wins (widechain as round 152; mixed8
+1004-1009 memory holds, +0.4% mean wall against `off` (three autocap repeats across the two
+runs, read by the owner from the job logs, 2026-10-02). Both jobs then hit the runner's time
+before their last arm's notice; that is UX-1281's. The win shapes keep their wins (widechain as round 152; mixed8
 auto8 +2 s against run 37012305358's 116.3-116.6 s).

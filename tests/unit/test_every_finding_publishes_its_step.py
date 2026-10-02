@@ -11,7 +11,7 @@ import pytest
 
 from bga import findings, schemas
 from bga.cli import main
-from bga.report._shared import RESOURCE_WAIT_SATURATED, resolve_attribution_hint, resource_wait_advice
+from bga.report._shared import RESOURCE_WAIT_SATURATED, resolve_attribution_hint, resource_wait_step
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 RUNS = {
@@ -54,8 +54,10 @@ def test_the_wait_category_step_is_the_resolved_hint(document):
     if category == "resource_wait_us":
         saturated, said = wait["step"]["text"].split(" — ", 1)
         assert saturated.startswith("builder slots were saturated ("), wait["step"]
-        assert said == resource_wait_advice(document["capacity_verdict"])[0], wait["step"]
+        assert said == resource_wait_step(document["capacity_verdict"]), wait["step"]
         assert wait["step"]["command"].startswith("bga sweep "), wait["step"]
+        # Round 165's walk: the sentence names the command it hands over, and no other in code.
+        assert "bga sweep" in said and "`" not in said, wait["step"]
     else:
         assert wait["step"]["text"] == resolve_attribution_hint(category, document["capacity_verdict"])
     assert "hint" not in wait["evidence"]
@@ -72,6 +74,13 @@ def test_no_finding_says_an_enum_word_or_a_bare_flag(document):
 def test_every_resource_wait_hint_is_in_reader_words(verdict):
     hint = resolve_attribution_hint("resource_wait_us", verdict)
     assert not ENUM_WORD.search(hint) and not BARE_CAPACITY.search(hint), hint
+
+
+@pytest.mark.parametrize("verdict", [{}, {"checks_ran": True}, {"checks_ran": True, "oversubscribed": True}])
+def test_the_resource_wait_step_names_the_command_it_hands_over(verdict):
+    """Round 165's walk: the step hands over `bga sweep`; its sentence names that, not `bga analyze --capacity`."""
+    said = resource_wait_step(verdict)
+    assert "bga sweep" in said and "`" not in said and "--capacity" not in said, said
 
 
 def _occupied(builders, **busy):

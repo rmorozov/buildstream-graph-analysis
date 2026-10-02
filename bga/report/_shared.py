@@ -162,6 +162,14 @@ def resource_wait_advice(capacity_verdict: Optional[dict] = None) -> tuple[str, 
     return _RESOURCE_WAIT_ADVICE, _RESOURCE_WAIT_SWEEP
 
 
+def resource_wait_step(capacity_verdict: Optional[dict] = None) -> str:
+    """The wait-category step's advice: it names `bga sweep`, the command the step hands over, and no other."""
+    advice, _ = resource_wait_advice(capacity_verdict)
+    if advice == _RESOURCE_WAIT_ADVICE:
+        return "replay more builders with bga sweep to find the knee point"
+    return f"{advice}; bga sweep shows the shape of the curve either way"
+
+
 def resolve_attribution_hint(key: str, capacity_verdict: Optional[dict] = None) -> Optional[str]:
     """UX-35: the next-step hint for one attribution category, given this
     run's own already-decided capacity verdict

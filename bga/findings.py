@@ -1639,16 +1639,15 @@ def _opportunity_findings(result: AnalysisResult, chain_bound: bool) -> list[dic
     # conditioned on this run's own capacity verdict. Imported here
     # rather than at module scope: `bga.report` imports this module, so a
     # top-level import back into it is a cycle.
-    from .report._shared import resolve_attribution_hint, resource_wait_advice
+    from .report._shared import resolve_attribution_hint, resource_wait_step
 
     hint = resolve_attribution_hint(
         top_category,
         getattr(result, 'capacity_verdict', None),
     )
     if top_category == 'resource_wait_us':
-        # UX-1271: this run's saturated resource; `bga sweep` is the step's command, not its sentence.
-        advice, _ = resource_wait_advice(getattr(result, 'capacity_verdict', None))
-        hint = f"{_saturated_resource(result)} — {advice}"
+        # UX-1271: this run's saturated resource, and the sentence names the command the step hands over.
+        hint = f"{_saturated_resource(result)} — {resource_wait_step(getattr(result, 'capacity_verdict', None))}"
     # UX-83: and conditioned on Plane 2, when Plane 2 is in hand. The
     # static RESOURCE WAIT hint says "try --capacity N with a higher N",
     # which on a measured-saturated host is the opposite of the fix - and

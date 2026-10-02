@@ -11,7 +11,7 @@ name: CodSpeed runner probe
 on:
   workflow_dispatch:
   push:
-    branches: [claude/project-thread-bim9mu, claude/project-thread-pxl1wp]
+    branches: [claude/project-thread-bim9mu, claude/project-thread-pxl1wp, claude/open-backlog-batch-nwd5gk]
     paths: [.github/workflows/codspeed-probe.yml, examples/11-serial-giant/graviton_arms.sh]
 
 permissions:
@@ -26,7 +26,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        leg: [mixed8, twogiants, widechain, memgiant]
+        leg: [mixed8, memgiant]
     steps:
       - uses: actions/checkout@v7
 

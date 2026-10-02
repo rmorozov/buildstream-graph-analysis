@@ -916,6 +916,20 @@ export const SECTION_ANSWERS = {
   },
 };
 
+/** `UX-1261`: the binary the cost answer names links to its own by_binary row, filtered to it. */
+function linkAnswerBinary(lead, name) {
+  if (typeof name !== "string" || !name) return;
+  const text = lead.textContent;
+  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const at = text.search(new RegExp(`(?<![\\w.+-])${escaped}(?![\\w.+-])`));
+  if (at < 0) return;
+  const query = `binary:${name}`;
+  const link = el("a", { href: joinHash("by_binary", new URLSearchParams({ "f.by_binary": query }).toString()),
+                         title: `${name}'s row in by binary` }, name);
+  link.addEventListener?.("click", () => filterSection(document, "by_binary", query));
+  lead.replaceChildren(text.slice(0, at), link, text.slice(at + name.length));
+}
+
 /** The answer as the section's first block; the pairs it restates are dropped. */
 function leadWith(section, key, value, payload) {
   // `UX-1156`: a member an answer reads is a member it says.
@@ -933,6 +947,7 @@ function leadWith(section, key, value, payload) {
   const lead = el("p", { class: "section-answer", "data-role": "section-answer",
                          "data-said": dropped.join(" ") }, said);
   section.insertBefore(lead, head.nextSibling ?? null);
+  if (key === "binary_cost") linkAnswerBinary(lead, payload?.by_binary?.[0]?.binary);
   // A pair the lead or a sibling count already says; the census reads `data-said`.
   if (Array.isArray(value?.cpu_disagreements) && !value.cpu_disagreements.length) {
     dropped.push("cpu_disagreements");

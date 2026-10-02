@@ -2,7 +2,7 @@
 
 **Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-163 verification of UX-1247 (2026-10-02) | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** judgement | **Reading:** container
 
-**Guard:** none — open, no guard named yet
+**Guard:** `tests/unit/test_a_jump_to_a_binary_lands_on_it.py::test_the_cost_answer_reaches_its_binary_in_one_click`
 
 ## Motivation
 
@@ -34,3 +34,14 @@ The by_binary table (UX-1247).
 ## Acceptance Test
 
 On the 2,402-element page the binary the answer names is reachable from it in one click. Mutation: drop the link, and the guard reds.
+
+## Outcome
+
+**Gap measured** (1,202-element `--workload binaries --layers 20 --width 60` two-plane page, 1440 and 390): `#binary_cost .section-answer` held no anchor; the binary it names (make, `by_binary[0]`) was reachable only through the separate #by_binary section.
+
+**Close measured:** `leadWith` wraps the named binary (word-bounded in the sentence) in a link to `#by_binary` with `f.by_binary=binary:<name>`, filtered on click. Read at 1440 and 390: `{links: 1, named: "make", hash: "#by_binary", by_binary: ["1 matched", "binary:make"]}` at both. `pytest tests/unit/test_a_jump_to_a_binary_lands_on_it.py` -> 2 passed.
+
+| Mutation | Reddened | Printed |
+|---|---|---|
+| drop the `linkAnswerBinary` call in `leadWith` | `test_the_cost_answer_reaches_its_binary_in_one_click` (`links: 0`) | 1 failed |
+| link kept, its click handler dropped | same (badge not "1 matched") | 1 failed |

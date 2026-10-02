@@ -46,6 +46,10 @@ task file, which is the only place it ever lived twice.
 | UX-1271 | [a finding's Next line runs its command into prose, with no copy control, and the High step names enum words](UX-1271-a-finding-step-hands-its-command-over-as-a-command.md) | viewer | Medium | R1 | 🔴 Not Started |
 | UX-1272 | [the sizing card calls builders x one process's peak "at most", while an element runs many processes at once](UX-1272-the-sizing-card-memory-bound-counts-one-process-per-builder.md) | analysis | Medium | R5 | 🔴 Not Started |
 | UX-1273 | ["How much work was waiting to start?" excludes work waiting for a builder, so a capacity-bound run reads 1% queued](UX-1273-the-ready-queue-question-asks-what-it-does-not-count.md) | viewer | Low | R1, R5 | 🔴 Not Started |
+| UX-1274 | ["the graph allows 8" is where the sweep stopped, and the page never shows what more builders would buy](UX-1274-the-builder-sweep-is-drawn-and-reaches-the-graph-width.md) | analysis | Medium | R1, R5, R8 | 🔴 Not Started |
+| UX-1275 | [the page says 2,300 elements wait rather than compute, and nothing says what they wait in](UX-1275-a-binary-that-waits-is-told-from-one-that-computes.md) | analysis | Medium | R1, R2 | 🔴 Not Started |
+| UX-1276 | [every saving is in build seconds, and the lead asks what it is worth to the team](UX-1276-a-saving-is-priced-in-agent-hours-a-day.md) | viewer | Medium | R8, R5 | 🔴 Not Started |
+| UX-1277 | [findings do not say whether they are new, still open or gone since the run before](UX-1277-a-finding-says-whether-it-is-new-since-the-baseline.md) | analysis | Medium | R4, R8, R1 | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

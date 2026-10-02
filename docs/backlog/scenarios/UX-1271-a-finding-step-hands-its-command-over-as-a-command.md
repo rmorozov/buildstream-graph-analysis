@@ -2,7 +2,7 @@
 
 **Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-164 view UI re-review on a 2,402-element two-plane page (2026-10-02), finding R2 | **Serves:** R1 | **Topic:** viewer | **Area:** bga, bga/viewer | **Shape:** judgement | **Reading:** container
 
-**Guard:** none — open, no guard named yet
+**Guard:** test_a_command_renders_as_a_command.py::test_a_finding_step_draws_the_command_with_its_copy_control; test_every_finding_publishes_its_step.py::test_no_finding_says_an_enum_word_or_a_bare_flag
 
 ## Motivation
 
@@ -36,3 +36,63 @@ Which step a finding carries (UX-1256); the fixture for it (UX-1264).
 ## Acceptance Test
 
 On this page every finding command is a `code` element with a copy control and does not wrap at 1440; no finding text contains PROCESS/DOWNLOAD/UPLOAD or a bare `--capacity`. Mutation: render the command as text, and the guard reds.
+
+## Outcome (2026-10-02)
+
+### The gap, measured
+
+At base `b35c30e3`, `renderStep` (sections.js:151) drew `step.command` as a bare
+`el("code", {}, …)` after a space inside the sentence's `<p>`: no
+`next-command` class, no `.copy-step`. The new findings site, run against that
+shape (M1 below), reads it: `2 failed, 16 passed`. `bga analyze
+tests/fixtures/shared_base_wide/run --format json`, wait-category's step:
+
+```text
+a resource (PROCESS/DOWNLOAD/UPLOAD) was saturated — whether raising capacity would help
+depends on …, so this hint is unconditioned; `bga sweep` shows the shape of the curve either way
+command: bga sweep tests/fixtures/shared_base_wide/run
+```
+
+and the default hint read "try --capacity N with a higher N" with no command.
+
+### The close, measured
+
+`renderStep` draws a sentence `<p>` and, under it, `p.step-command` holding
+`controls.js:commandLine(step.command, { copy })` (tables.js `copy`): a
+`code.next-command` (`white-space: pre`, scrolls in its own box) and a
+`.copy-step` sibling. The same step now reads:
+
+```text
+builder slots were saturated (1.97 of 2 busy on average) — whether raising capacity would
+help depends on …, so this hint is unconditioned
+command: bga sweep tests/fixtures/shared_base_wide/run
+```
+
+The saturated resource is the busiest of `occupancy.resource_occupancy` against
+its capacity (configured builders for PROCESS, else the peak), named builder,
+download or upload slots. The three resource-wait hints in `_shared.py` start
+"builder slots, downloads or uploads were saturated"; the default advises
+"try `bga analyze --capacity N` with a higher N, or `bga sweep` to find the real
+knee point". `_capacity_step`'s fallback therefore reads (backticks stripped):
+"builder slots, downloads or uploads were saturated — try bga analyze --capacity
+N with a higher N, or bga sweep to find the real knee point". Both committed
+analyses regenerated: one `attribution_hints.resource_wait_us` line each.
+The 1440 no-wrap check on the 2,402-element page is the walker's. A scrolling
+`code.next-command` is a focusable class, so it joins the one ring rule
+(`test_a_keyboard_journey_reaches_every_chapter`) and styleguide §4.2's focus row
+(`test_the_accent_does_only_its_listed_jobs`). Open: `xl_both` reads 1,194
+controls against the 1,192 budget (+2 copy controls); the bound is §3e's, not
+raised here.
+
+### Mutations verified red and reverted (8)
+
+| # | mutation | reddened |
+|---|---|---|
+| M1 | `renderStep` draws `el("code", {}, step.command)` | findings site, golden + macro_micro, 2 failed, 16 passed |
+| M2 | `commandLine(step.command)` with no `copy` | findings site, 2 failed, 16 passed |
+| M3 | "(PROCESS/DOWNLOAD/UPLOAD)" into the unknown-capacity advice | wording guard, 4 failed, 12 passed |
+| M4 | "a resource (PROCESS/DOWNLOAD/UPLOAD) was saturated" restored | wording guard, 6 failed, 10 passed |
+| M5 | default advice "try --capacity N with a higher N" | every-hint clause, 1 failed, 15 passed |
+| M6 | step names `PROCESS`, not builder slots | resolved-hint + wording `[shared_base_wide]`, 2 failed, 14 passed |
+| M7 | the sweep clause back in the step sentence | resolved-hint `[shared_base_wide]`, 1 failed, 15 passed |
+| M8 | `code.next-command` out of the ring rule | selector + tab-ring clauses, 2 failed, 8 passed |

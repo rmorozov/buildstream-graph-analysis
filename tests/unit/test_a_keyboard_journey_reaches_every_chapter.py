@@ -60,7 +60,7 @@ class TestOneFocusVisibleRuleCoversEveryFocusableClass:
     def test_the_selector_names_every_focusable_class(self):
         selector, _ = self._rule()
         classes = {part.strip().split(":focus-visible")[0] for part in selector.split(",")}
-        assert classes == {"a", "button", "input", "select", "summary", "[tabindex]"}, classes
+        assert classes == {"a", "button", "input", "select", "summary", "[tabindex]", "code.next-command"}, classes
 
     def test_only_one_rule_sets_the_ring(self):
         """Two rules that could disagree is the defect a single

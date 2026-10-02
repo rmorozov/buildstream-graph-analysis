@@ -95,7 +95,7 @@ def test_without_plane_2_the_hint_is_unchanged():
     """`UX-83`'s own Out of Scope: no change when only Plane 1 exists."""
     hint = _hint(_resource_wait_result())
 
-    assert 'a resource (PROCESS/DOWNLOAD/UPLOAD) was saturated' in hint
+    assert 'builder slots, downloads or uploads were saturated' in hint
     assert 'UX-83' not in hint
     assert 'do NOT raise capacity' not in hint
 

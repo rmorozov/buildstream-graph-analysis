@@ -22,6 +22,7 @@
 // concatenation a lie (`UX-199`, which rendered an empty page for
 // several rounds).
 import { chapters } from "./chapters.js";
+import { commandLine } from "./controls.js";
 import { renderProvenance } from "./decision.js";
 import { GRADE_EXHIBIT, SERIES_MIN_POINTS, decomposition, interval, strip } from "./drawings.js";
 import { resolvePath } from "./element.js";
@@ -34,7 +35,7 @@ import { recordSource } from "./rawjson.js";
 import { CONTROLS, classify } from "./shapes.js";
 import { ARRAY_INLINE_ITEMS, CELL_NEST_LIMIT, LIFTED_SECTION, OBJECT_INLINE_FIELDS, TABLE_OPENS_BOUNDED_ABOVE, filterSection, foldedList, liftedCriticalPath, mapTable, oneRecord, renderStructured, renderTable } from "./structured.js";
 import { renderPairs, taskSignalTable } from "./pairs.js";
-import { boundCards, columnCells, plural } from "./tables.js";
+import { boundCards, columnCells, copy, plural } from "./tables.js";
 import { investigationsFor } from "./trace_context.js";
 import { joinHash } from "./viewstate.js";
 import { INCOMPLETE, PLANE2_NOT_CAPTURED, renderEvidence }
@@ -150,8 +151,11 @@ function mergeRows(lines, uids) {
 // UX-1256's `step`: what to do, or why there is nothing to.
 function renderStep(step, uids, named) {
   if (step?.text) {
-    return el("p", { class: "step" }, "Next: ", ...linkNames(step.text, uids, named),
-              step.command ? " " : null, step.command ? el("code", {}, step.command) : null);
+    const sentence = ["Next: ", ...linkNames(step.text, uids, named)];
+    if (!step.command) return el("p", { class: "step" }, ...sentence);
+    // UX-1271 (§1d): the command is the shared control, on its own line under the sentence.
+    return el("div", { class: "step" }, el("p", {}, ...sentence),
+              el("p", { class: "step-command" }, ...commandLine(step.command, { copy })));
   }
   return step?.why_none ? el("p", { class: "step muted" }, `No step: ${step.why_none}`) : null;
 }

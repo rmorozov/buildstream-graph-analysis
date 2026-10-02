@@ -426,7 +426,7 @@
     "attribution_hints": {
         "execution_on_chain_us": "real work on the critical path \u2014 the only way to reduce this is to reduce the work itself",
         "dependency_wait_us": "waiting on an upstream element to finish \u2014 shorten or parallelize that dependency chain",
-        "resource_wait_us": "a resource (PROCESS/DOWNLOAD/UPLOAD) was saturated \u2014 whether raising capacity would help depends on how loaded this host already is, and this run's capacity checks could not run (see the Certified Floors note), so this hint is unconditioned; `bga sweep` shows the shape of the curve either way",
+        "resource_wait_us": "builder slots, downloads or uploads were saturated \u2014 whether raising capacity would help depends on how loaded this host already is, and this run's capacity checks could not run (see the Certified Floors note), so this hint is unconditioned; `bga sweep` shows the shape of the curve either way",
         "scheduler_wait_us": "capacity was available but nothing was dispatched \u2014 try a different --heuristic in `bga replay`",
         "idle_us": "nothing was dependency-ready at all \u2014 likely a critical-path/graph-shape issue, not a capacity one; check Critical Path",
         "retry_wait_us": "this element needed a retry \u2014 investigate why the first attempt failed/was discarded",

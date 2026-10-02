@@ -1641,12 +1641,16 @@ def _opportunity_findings(result: AnalysisResult, chain_bound: bool) -> list[dic
     # conditioned on this run's own capacity verdict. Imported here
     # rather than at module scope: `bga.report` imports this module, so a
     # top-level import back into it is a cycle.
-    from .report._shared import resolve_attribution_hint
+    from .report._shared import resolve_attribution_hint, resource_wait_advice
 
     hint = resolve_attribution_hint(
         top_category,
         getattr(result, 'capacity_verdict', None),
     )
+    if top_category == 'resource_wait_us':
+        # UX-1271: this run's saturated resource; `bga sweep` is the step's command, not its sentence.
+        advice, _ = resource_wait_advice(getattr(result, 'capacity_verdict', None))
+        hint = f"{_saturated_resource(result)} — {advice}"
     # UX-83: and conditioned on Plane 2, when Plane 2 is in hand. The
     # static RESOURCE WAIT hint says "try --capacity N with a higher N",
     # which on a measured-saturated host is the opposite of the fix - and
@@ -1675,6 +1679,29 @@ def _opportunity_findings(result: AnalysisResult, chain_bound: bool) -> list[dic
             ),
         )
     ]
+
+
+_RESOURCE_WORDS = {'PROCESS': 'builder slots', 'DOWNLOAD': 'download slots', 'UPLOAD': 'upload slots'}
+
+
+def _saturated_resource(result: AnalysisResult) -> str:
+    """The busiest resource against its capacity, in reader words, from the run's occupancy."""
+    from .report._shared import RESOURCE_WAIT_SATURATED
+
+    occupancy = getattr(result, 'occupancy', None) or {}
+    mean = occupancy.get('resource_occupancy') or {}
+    peak = occupancy.get('peak_resource_occupancy') or {}
+    builders = (getattr(result, 'capacity_recommendation', None) or {}).get('builders')
+    rows = []
+    for key, busy in mean.items():
+        name = str(key).rsplit('.', 1)[-1]
+        capacity = (builders if name == 'PROCESS' else None) or peak.get(key)
+        if name in _RESOURCE_WORDS and capacity:
+            rows.append((busy / capacity, busy, capacity, name))
+    if not rows:
+        return RESOURCE_WAIT_SATURATED
+    _, busy, capacity, name = max(rows)
+    return f"{_RESOURCE_WORDS[name]} were saturated ({busy:.2f} of {capacity:g} busy on average)"
 
 
 def _and(names: list[str]) -> str:

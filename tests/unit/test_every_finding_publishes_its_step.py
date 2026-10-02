@@ -4,12 +4,13 @@ import contextlib
 import io
 import json
 import pathlib
+import re
 
 import pytest
 
 from bga import findings, schemas
 from bga.cli import main
-from bga.report._shared import resolve_attribution_hint
+from bga.report._shared import resolve_attribution_hint, resource_wait_advice
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 RUNS = {
@@ -18,6 +19,8 @@ RUNS = {
     "shared_base_wide": (REPO / "tests/fixtures/shared_base_wide/run", None),
 }
 ACTED_ON = {"critical", "high", "medium"}
+ENUM_WORD = re.compile(r"\b(PROCESS|DOWNLOAD|UPLOAD)\b")
+BARE_CAPACITY = re.compile(r"(?<!bga analyze )--capacity\b")
 
 
 def _analysed(name):
@@ -47,10 +50,27 @@ def test_the_wait_category_step_is_the_resolved_hint(document):
     wait = findings.findings_by_id(document["findings"]).get("wait-category")
     assert wait is not None, "the fixture no longer has a wait-category finding"
     category = wait["evidence"]["category"]
-    assert wait["step"]["text"] == resolve_attribution_hint(category, document["capacity_verdict"])
     if category == "resource_wait_us":
+        saturated, said = wait["step"]["text"].split(" — ", 1)
+        assert saturated.startswith("builder slots were saturated ("), wait["step"]
+        assert said == resource_wait_advice(document["capacity_verdict"])[0], wait["step"]
         assert wait["step"]["command"].startswith("bga sweep "), wait["step"]
+    else:
+        assert wait["step"]["text"] == resolve_attribution_hint(category, document["capacity_verdict"])
     assert "hint" not in wait["evidence"]
+
+
+def test_no_finding_says_an_enum_word_or_a_bare_flag(document):
+    """UX-1271: reader words, and `--capacity` only with `bga analyze` before it."""
+    said = [(f["id"], text) for f in document["findings"] for text in [f["title"], *f["detail"], *f["step"].values()]]
+    said += [("attribution_hints", text) for text in (document.get("attribution_hints") or {}).values()]
+    assert not [(fid, text) for fid, text in said if ENUM_WORD.search(text) or BARE_CAPACITY.search(text)]
+
+
+@pytest.mark.parametrize("verdict", [{}, {"checks_ran": True}, {"checks_ran": True, "oversubscribed": True}])
+def test_every_resource_wait_hint_is_in_reader_words(verdict):
+    hint = resolve_attribution_hint("resource_wait_us", verdict)
+    assert not ENUM_WORD.search(hint) and not BARE_CAPACITY.search(hint), hint
 
 
 def test_a_fixture_leads_with_resource_wait():

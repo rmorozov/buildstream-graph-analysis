@@ -389,7 +389,7 @@ the measurements:
    | 1 links | accent | color | `a` |
    | 2 hover | accent | border | `button:hover` `button.primary:hover` `.investigate button:hover` `.path-box:hover` `.chip:hover` |
    | 3 a toggle that is on | accent | border, box-shadow | `button[aria-pressed="true"]` |
-   | 4 the current focus (§6e.8) | accent | outline | `a:focus-visible` `button:focus-visible` `input:focus-visible` `select:focus-visible` `summary:focus-visible` `[tabindex]:focus-visible` `section[data-jumped="true"]` `[data-jumped="true"]` `.jump-hits li[data-active="true"] > button` |
+   | 4 the current focus (§6e.8) | accent | outline | `a:focus-visible` `button:focus-visible` `input:focus-visible` `select:focus-visible` `summary:focus-visible` `[tabindex]:focus-visible` `code.next-command:focus-visible` `section[data-jumped="true"]` `[data-jumped="true"]` `.jump-hits li[data-active="true"] > button` |
    | 4 the current focus | accent | border | `.focus-bar` `.mark-summary` |
    | 5 decision and promotion (rule 7) | accent | border | `.decision` `.reader-lead` `section[data-promoted]` |
    | 6 info and low severity | accent | border | `.finding[data-severity="info"]` `.finding[data-severity="low"]` `.advice[data-severity="info"]` `.advice[data-severity="low"]` |

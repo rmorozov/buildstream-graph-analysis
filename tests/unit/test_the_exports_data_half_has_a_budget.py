@@ -32,6 +32,7 @@ import re
 import shutil
 import subprocess
 import sys
+import tempfile
 
 import pytest
 
@@ -129,21 +130,28 @@ def _document(blocks, name):
 
 
 @pytest.fixture(scope="module")
-def exports(tmp_path_factory):
-    """`{label: (path, elements)}` for the four runs, exported once."""
-    made = {}
+def exports():
+    """`{label: (path, elements)}` for the four runs, exported once.
+
+    The run's absolute path is in its documents (seven times on macro_micro), so each export is
+    made under one fixed-length directory: pytest's own grows `popen-gwN/` under xdist (+90 B).
+    """
+    made, root = {}, pathlib.Path(tempfile.mkdtemp(prefix="bga-data-"))
     for label, fixture in pages.FIXTURES.items():
-        into = tmp_path_factory.mktemp(f"data-{label}")
+        into = root / label
+        into.mkdir()
         made[label] = pages.export_page(fixture, into, name=f"{label}.html")
     for label, build in _GENERATED.items():
-        into = tmp_path_factory.mktemp(f"data-{label}")
+        into = root / label
+        into.mkdir()
         path = into / f"{label}.html"
         view.export(str(build(into)), str(path))
         made[label] = path
-    return {
+    yield {
         label: (path, len(_document(_halves(path)[3], "report")["elements"]["element_durations"]))
         for label, path in made.items()
     }
+    shutil.rmtree(root, ignore_errors=True)
 
 
 @pytest.mark.large

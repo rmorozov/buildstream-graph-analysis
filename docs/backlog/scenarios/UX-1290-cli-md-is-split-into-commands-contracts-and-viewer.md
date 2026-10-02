@@ -28,6 +28,9 @@ to `design/areas/tools-native_trace.md`. `--trace-opens` and
 that they are on by default, how to turn them off (`--no-trace-opens`,
 `--trace-spine=off`) and their measured cost (UX-895). Every inbound link and anchor is moved with its section.
 
+`tests/unit/test_the_environment_surface_is_an_inventory.py` keeps
+holding every variable, wherever its row now lives.
+
 ## Out of Scope
 
 Rewording sections beyond what the move needs.

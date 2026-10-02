@@ -486,6 +486,14 @@ def store_payload(run: str, window: Optional[int] = STORE_WINDOW) -> Optional[di
         return None
 
 
+def build_rate_note(run: str) -> Optional[dict]:
+    """`UX-1276`: the project's declared build rate for the manifest, so an export prices a saving too."""
+    from bga import build_rate, run_store
+
+    project = run_store.project_root(os.path.abspath(run))
+    return build_rate.build_rate(project) if project else None
+
+
 def store_aggregate_payload(store: Optional[dict]) -> Optional[dict]:
     """`store-aggregate/v1` for a listing, or None.
 
@@ -1412,6 +1420,9 @@ def export(run: str, path: str, with_trace: bool = True, reanalyse: bool = False
         # that gets tested on one side only.
         "payloads": _offered(documents),
     }
+    rate = build_rate_note(run)
+    if rate:
+        documents["run"]["build_rate"] = rate
     if notes.get("comparison_unavailable"):
         # `UX-725`: the band's own absence, said once on the page - not
         # the two lines `bga compare` printed while `payloads()` built
@@ -1997,7 +2008,8 @@ def serve(
             # trace, which `UX-296` moved off the startup path. The page
             # asks for the headers when the user asks for the timeline.
             "trace_inline_max_bytes": TRACE_BUDGET_B,
-        },
+        }
+        | ({"build_rate": rate} if (rate := build_rate_note(run)) else {}),
     )
 
     # `UX-443`: and what the graph's edges became - the third reader of

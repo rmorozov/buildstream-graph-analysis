@@ -55,7 +55,7 @@ def test_a_declared_rate_is_read_with_its_source(tmp_path):
 def served(tmp_path_factory):
     """`{declared: rows}` read off one served two-plane store, first without the key, then with it."""
     from tools.bga_snapshot import store_listing, write_element_slice
-    from tools.bga_view import serve
+    from tools.bga_view import export, serve
 
     root = tmp_path_factory.mktemp("priced")
     newest = pages.two_plane_run(root, name="store", runs=2)
@@ -74,6 +74,10 @@ def served(tmp_path_factory):
             finally:
                 httpd.shutdown()
                 httpd.server_close()
+        # Round 165's walk: the attachment prices the saving as the served page does.
+        page = root / "exported.html"
+        export(str(newest), str(page))
+        got["export"] = browser.measure(page.as_uri(), _READ, 1440, 900)
     shutil.rmtree(root, ignore_errors=True)
     return got
 
@@ -87,6 +91,13 @@ def test_a_saving_shows_its_agent_hours_and_their_source(served):
     for row in priced:
         assert float(row["hours"]) == pytest.approx(float(row["saving"]) / 1e6 * RATE / 3600), row
         assert row["said"].startswith("≈ ") and row["said"].endswith(f"agent-hours/day ({SOURCE})"), row
+
+
+@pytest.mark.skipif(chrome is None, reason=NO_BROWSER)
+def test_the_exported_page_prices_the_saving_as_the_served_one_does(served):
+    _listing, rows = served[True]
+    assert [(r["saving"], r["said"]) for r in served["export"]] == [(r["saving"], r["said"]) for r in rows], served
+    assert any(r["said"] for r in served["export"]), served["export"]
 
 
 @pytest.mark.skipif(chrome is None, reason=NO_BROWSER)

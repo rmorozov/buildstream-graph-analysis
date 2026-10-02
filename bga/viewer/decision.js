@@ -765,7 +765,7 @@ export function renderDecision(payload, investigate = null, copy = null,
       list.append(actionRow(action, investigate, renderWhyRanked(
         payload, action,
         { ...options, rank: index + 1, ranking: shared && claim,
-          said: new Set(common.map((entry) => entry.finding.id)) }), options.store?.build_rate));
+          said: new Set(common.map((entry) => entry.finding.id)) }), options.store?.build_rate ?? options.buildRate));
     }
     section.append(list);
     if (common.length) section.append(renderSaidOnce(common));

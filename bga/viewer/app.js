@@ -867,7 +867,7 @@ async function boot() {
       // `follows_from` renders as the target section's question rather
       // than its key.
       { store, schema: schemas[store?.schema], comparison, refused: Boolean(run.comparison_unavailable),
-        reportSchema: schemas[payload.schema] }));
+        reportSchema: schemas[payload.schema], buildRate: run.build_rate }));
     if (decision) root.append(decision);
     // UX-216: one section per element the report discusses, appended
     // after everything that names an element has been drawn - the

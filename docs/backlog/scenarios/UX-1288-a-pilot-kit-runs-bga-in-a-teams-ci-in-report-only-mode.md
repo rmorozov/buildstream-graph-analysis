@@ -34,6 +34,15 @@ never failing the job). A GitHub Actions workflow wraps it. A guide,
 `docs/guides/pilot.md`, says what each step costs, what the pilot
 measures in two weeks, and the switch from report-only to gating.
 
+Every switch a pilot may set is a variable at the top of the workflow,
+with its default, and the guide carries one table of them: jobserver
+mode (`off` by default, how to turn it on, why containers keep it off
+until UX-1282), `BGA_ADMISSION`, `--trace-opens` and the spine (their
+measured cost), the review sample rate, build type and variant. A
+pilot never needs a task file or `cli.md`'s environment table to find
+or disable one (the owner, 2026-10-02: pilots "will suffer" if the
+jobserver options are buried in task files).
+
 ## Out of Scope
 
 GitLab and other CI wrappers until the owner names the system; the
@@ -44,6 +53,7 @@ jobserver (off throughout the pilot); publishing a wheel to PyPI.
 `bash -n` and shellcheck clean; every `bga` command and flag the script
 and the guide name exists; a dry run of `capture` then `report` on two
 committed fixture bundles plus a candidate prints a ci-comment and
-exits 0 even when the verdict is slower.
+exits 0 even when the verdict is slower. A guard reads the
+guide's switch table against the script's variables, both ways.
 
 ## Outcome

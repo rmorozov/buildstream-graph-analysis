@@ -72,9 +72,13 @@ the class and the count, rather than falling back to the fixed 1% rule —
 that fallback is the cries-wolf comparison the band exists to replace.
 A nightly does not enter a review build's band and a sanitizer build
 does not enter a release one: the class is compared exactly, so a store
-that mixes them still yields one population per class. The comment names
-the runs the band was drawn from, so a reviewer can see a window that
-reached back across a toolchain bump.
+that mixes them still yields one population per class. A run measured
+on another machine does not enter it either (`UX-1285`): a member whose
+CPU model, CPU count or memory differs from the candidate's is skipped
+unless `--allow-cross-host` is passed, a run with no host manifest is
+kept, and both the refusal and the comment say how many were skipped
+for host. The comment names the runs the band was drawn from, so a
+reviewer can see a window that reached back across a toolchain bump.
 
 **Which gate to reach for.** `--fail-on-regression` asks "did it get
 slower", which a growing project fails legitimately.

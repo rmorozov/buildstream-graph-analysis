@@ -1257,18 +1257,24 @@ def _resolve_band_from_class(args: argparse.Namespace) -> Optional[int]:
         return EXIT_CODE_BAND_UNAVAILABLE
 
     declared = run_store.declared_class(candidate)
-    selected = run_store.runs_of_class(
+    # UX-1285: members from another machine are skipped unless the caller accepts a cross-host band.
+    host = None if getattr(args, 'allow_cross_host', False) else run_store.declared_host(candidate)
+    selected, skipped = run_store.runs_of_class(
         project,
         declared,
         window,
         exclude=(candidate, str(Path(args.baseline).resolve())),
+        host=host,
     )
+    args.band_skipped_for_host = len(skipped)
     if len(selected) < MIN_BASELINE_RUNS:
         print(
             f"Band gate REFUSED: the candidate declares "
             f"{class_label(declared) or 'no build class'} "
             f"and this store holds other {plural(len(selected), 'run')} of that class "
-            f"within the last {window}, below the {MIN_BASELINE_RUNS} a measured "
+            f"within the last {window}"
+            + (f" on its host ({len(skipped)} skipped for host: {_skipped_hosts(skipped, host)})" if skipped else "")
+            + f", below the {MIN_BASELINE_RUNS} a measured "
             f"band needs. This is a refusal to judge, not a verdict about the "
             f"build: falling back to the fixed 1% rule is exactly the "
             f"cries-wolf comparison --band-from-class exists to replace. "
@@ -1282,6 +1288,14 @@ def _resolve_band_from_class(args: argparse.Namespace) -> Optional[int]:
 
     args.baseline_run = selected
     return None
+
+
+def _skipped_hosts(skipped: list, host: Optional[dict]) -> str:
+    """Which fields set the skipped members apart, e.g. `cpu_model`."""
+    from . import hostinfo, run_store
+
+    fields = sorted({f for run in skipped for f in hostinfo.differing_fields(run_store.declared_host(run), host)})
+    return ", ".join(fields) + "; pass --allow-cross-host to pool them"
 
 
 def _compare_exit_code(args: argparse.Namespace, comparison) -> int:

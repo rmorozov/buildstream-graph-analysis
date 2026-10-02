@@ -238,6 +238,14 @@ def _band_members(comparison) -> str:
     return f" — from {names}"
 
 
+def _band_selection(args) -> str:
+    """`UX-1285`: how many runs of the class `--band-from-class` skipped for host."""
+    skipped = getattr(args, 'band_skipped_for_host', 0) or 0
+    if not skipped:
+        return ""
+    return f" — {plural(skipped, 'run')} of this class skipped, measured on another host"
+
+
 def _never_read_by_element(native_report: Optional[dict]) -> Optional[dict]:
     """`{element: [dependency, ...]}` from Plane 2's declared-vs-used.
 
@@ -444,7 +452,7 @@ def render_ci_comment(comparison, args, native_report: Optional[dict] = None) ->
     if delta_total is not None:
         headline += f" ({_signed_s(delta_total)}"
         headline += f", {pct:+.1f}%)" if pct is not None else ")"
-    lines += [headline, "", _band_reason(comparison), ""]
+    lines += [headline, "", _band_reason(comparison) + _band_selection(args), ""]
 
     if comparison.failed_runs:
         lines += [

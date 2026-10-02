@@ -212,19 +212,35 @@ def declared_class(run_dir: str) -> Optional[dict]:
     analyzer, for `_band_sample`'s reason (`UX-296`): selecting a band
     out of a store must not parse one trace per candidate row.
     """
+    return _run_context(run_dir).get("build_class")
+
+
+def declared_host(run_dir: str) -> Optional[dict]:
+    """`UX-1285`: the host manifest this run recorded, or `None` before UX-186."""
+    return _run_context(run_dir).get("host_manifest")
+
+
+def _run_context(run_dir: str) -> dict:
     for name in ("run-context.json", "run_context.json"):
         path = os.path.join(run_dir, name)
         if not os.path.isfile(path):
             continue
         try:
             with open(path, encoding="utf-8") as handle:
-                return json.load(handle).get("build_class")
+                context = json.load(handle)
         except (OSError, ValueError):
-            return None
-    return None
+            return {}
+        return context if isinstance(context, dict) else {}
+    return {}
 
 
-def runs_of_class(project: str, declared: Optional[dict], window: int, exclude: tuple = ()) -> list[str]:
+def runs_of_class(
+    project: str,
+    declared: Optional[dict],
+    window: int,
+    exclude: tuple = (),
+    host: Optional[dict] = None,
+) -> tuple[list[str], list[str]]:
     """The `window` most recent runs in this store declaring `declared`.
 
     `UX-899`: the population a noise band is drawn from is the
@@ -237,21 +253,28 @@ def runs_of_class(project: str, declared: Optional[dict], window: int, exclude: 
     pipeline never declared a class is still one population, and
     refusing it would make the gate unavailable to every store that
     predates `UX-898`.
+
+    `UX-1285`: given the candidate's `host`, a member measured on another
+    machine is skipped and returned second; a run with no manifest
+    on either side is kept, as `hostinfo.classify` keeps it.
     """
-    from . import buildclass
+    from . import buildclass, hostinfo
 
     skip = {os.path.realpath(path) for path in exclude if path}
-    selected = []
+    selected, skipped = [], []
     for snapshot in reversed(list_runs(project)):
         run_dir = os.path.join(snapshot, RUN_SUBDIR)
         if os.path.realpath(run_dir) in skip:
             continue
         if not buildclass.same_class(declared, declared_class(run_dir)):
             continue
+        if host and hostinfo.differing_fields(declared_host(run_dir), host):
+            skipped.append(run_dir)
+            continue
         selected.append(run_dir)
         if len(selected) >= window:
             break
-    return selected
+    return selected, skipped
 
 
 def read_resource_profile(snapshot: str) -> dict:

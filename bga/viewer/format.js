@@ -297,6 +297,12 @@ export const TERMS = {
   t_infinity_observed: "Chain floor T∞", t_infinity_us: "Chain floor T∞", t_infinity_cold: "Chain floor T∞ (cold)",
   lb: "Resource floor LB", lb_us: "Resource floor LB", t_c: "Replay makespan T_C",
   scheduling_gap_us: "Scheduling gap",
+  // `UX-1269`: the attribution's parts and the headroom, one name on every surface.
+  untracked_head_us: "Before the first task", execution_on_chain_us: "Execution on the chain",
+  dependency_wait_us: "Waiting on dependencies", resource_wait_us: "Waiting on resources",
+  scheduler_wait_us: "Waiting on the scheduler", retry_wait_us: "Retries", idle_us: "Idle",
+  untracked_tail_us: "After the last task",
+  certified_headroom: "Certified headroom", certified_headroom_us: "Certified headroom",
   plane2_processes: "Plane 2 processes", cpu_coverage: "Plane 2 coverage",
   primary: "Confidence",
   // `UX-1141`: a key whose trimmed title collides with a sibling's.
@@ -307,6 +313,8 @@ export const TERMS = {
   wall_clock_share_us: "Wall-clock share",
   // `UX-1234`: the reader's word for two columns a card shares.
   probability: "On the path", element_durations: "Element duration",
+  // `UX-1275`: trimmed, it collides with `blocked_us`'s "Blocked" on a one-row by_binary card.
+  blocked_share: "Blocked share",
 };
 
 /**
@@ -319,6 +327,8 @@ export const READER_LABELS = {
   scheduler_bound: "Scheduler-bound",
   capacity_bound: "Capacity-bound",
   task_horizon: "Time tasks were running",
+  // `UX-1273`: which ready work the ready queue counted.
+  builder_free: "Ready with a builder free", dependency_ready: "Ready on dependencies, builders full or free",
   wall_clock: "Wall clock",
   detected_host_cpu_count: "Detected host cores",
   declared_cpu_budget: "Declared CPU budget",

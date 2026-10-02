@@ -65,3 +65,30 @@ def test_a_jump_to_a_binary_lands_on_it(page):
             assert landed == {"hash": "#by_binary", "by_binary": ["1 matched", f"binary:{key}"]}, (width, read)
         key = read["unmounted"]
         assert ran[key] > 1 and read["linked"] == [f"{ran[key]:,} matched", f"binary:{key}"], (width, read)
+
+
+# UX-1261: binary_cost's answer names by_binary's leader; its link is that binary, and one click lands on its row.
+_ANSWER = """(async () => {
+  const turn = (ms = 50) => new Promise((done) => setTimeout(done, ms));
+  const tools = (t) => document.querySelector(`table[data-table="${t}"]`).parentNode.querySelector(".table-tools");
+  const links = [...document.querySelectorAll("#binary_cost .section-answer a")];
+  if (links.length !== 1) return { links: links.length };
+  links[0].click();
+  await turn(600);
+  const box = tools("by_binary");
+  return { links: 1, named: links[0].textContent, hash: location.hash.split("~")[0],
+           by_binary: [box.querySelector(".badge").textContent, box.querySelector("input.table-filter").value] };
+})()"""
+
+
+@pytest.mark.skipif(find_chrome() is None, reason=NO_BROWSER)
+def test_the_cost_answer_reaches_its_binary_in_one_click(page):
+    """The answer's one link is by_binary's leader; clicked, by_binary reads "1 matched" under `binary:<name>`."""
+    from tools.bga_view import payloads
+
+    run, uri = page
+    top = payloads(str(run))["report.json"]["by_binary"][0]["binary"]
+    with Browser(find_chrome()) as browser:
+        got = {width: browser.measure(uri, _ANSWER, width, 900) for width in (1440, 390)}
+    want = {"links": 1, "named": top, "hash": "#by_binary", "by_binary": ["1 matched", f"binary:{top}"]}
+    assert got == {1440: want, 390: want}, got

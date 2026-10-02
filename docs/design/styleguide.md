@@ -389,7 +389,7 @@ the measurements:
    | 1 links | accent | color | `a` |
    | 2 hover | accent | border | `button:hover` `button.primary:hover` `.investigate button:hover` `.path-box:hover` `.chip:hover` |
    | 3 a toggle that is on | accent | border, box-shadow | `button[aria-pressed="true"]` |
-   | 4 the current focus (§6e.8) | accent | outline | `a:focus-visible` `button:focus-visible` `input:focus-visible` `select:focus-visible` `summary:focus-visible` `[tabindex]:focus-visible` `section[data-jumped="true"]` `[data-jumped="true"]` `.jump-hits li[data-active="true"] > button` |
+   | 4 the current focus (§6e.8) | accent | outline | `a:focus-visible` `button:focus-visible` `input:focus-visible` `select:focus-visible` `summary:focus-visible` `[tabindex]:focus-visible` `code.next-command:focus-visible` `section[data-jumped="true"]` `[data-jumped="true"]` `.jump-hits li[data-active="true"] > button` |
    | 4 the current focus | accent | border | `.focus-bar` `.mark-summary` |
    | 5 decision and promotion (rule 7) | accent | border | `.decision` `.reader-lead` `section[data-promoted]` |
    | 6 info and low severity | accent | border | `.finding[data-severity="info"]` `.finding[data-severity="low"]` `.advice[data-severity="info"]` `.advice[data-severity="low"]` |
@@ -770,7 +770,7 @@ column re-read in round 73:
                  elements   landed   opened    words   controls    nodes
 golden                  4    3,800   15,618    7,144        427    2,498
 macro_micro            11    5,965   31,804   12,002        750    5,686
-budget, to 50 elts             7,600   39,188   13,500        872    7,900
+budget, to 50 elts             7,600   39,188   13,700        874    7,900
 
 scale               1,202    4,763   26,242   36,542      1,941   24,294
 budget, to 4,000 elts          7,000   32,000   41,000      2,300   27,500
@@ -797,7 +797,7 @@ in it hidden, and the class is bounded at both ends:
                  elements   landed   opened    words   controls    nodes
 scale               1,202    5,007   26,584    8,259        787    4,732
 xl                  4,002    4,937   27,230    8,275        812    4,960
-budget, to 4,100 elts          7,600   46,822   13,200      1,192    7,500
+budget, to 4,100 elts          7,600   46,822   14,100      1,195    8,085
 ```
 
 Height does not move at all — a bounded row costs no pixels, which is
@@ -928,11 +928,23 @@ and Depends on lists, open, as links. The bounds they push over moved by
 exactly the measured delta: the small class's height 38,400 -> 39,188 and
 controls 800 -> 868 (`macro_micro` +788, +68); the 4,100 class's height
 44,629 -> 46,822 and controls 1,020 -> 1,192 (`xl_both` +2,193, +172);
-its nodes bound stays 7,500 - the merged round reads 7,284.
+its nodes bound stayed 7,500 then (that merged round read 7,284).
 
 `UX-1254`'s sizing card moved the small class's controls 868 -> 872:
 its rail link, fold, JSON door and three source links, +6 on
 `macro_micro`'s 866 - pending the owner's call.
+
+`UX-1267` folded the map rows into every ranked card: the 4,100 class's
+words 13,200 -> 13,600 and nodes 7,500 -> 7,800 (`xl_both` 13,540 words,
+7,799 nodes) - the owner-call default, reversible.
+
+Round 165's merge, five tracks each under alone: the small class's words
+13,500 -> 13,700 and controls 872 -> 874 (`macro_micro` 13,697, 874); the
+4,100 class's words 13,600 -> 14,100, nodes 7,800 -> 8,080 and controls
+1,192 -> 1,195 (`xl_both` 14,099 words; 8,079 nodes and 1,195 controls with
+`UX-1271`'s step copy controls) - the owner-call default, reversible. The
+walk's sweep dots (knee, configured builders) take nodes to 8,085
+(`xl_both` 8,082).
 
 `UX-1152`'s card links read section titles, not ids; alone they took
 `macro_micro` to 38,201 px and 13,441 words. Round 154's merged tree,
@@ -1465,7 +1477,7 @@ distinct margin/padding/gap lengths                23 in style.css
 | 9 | **Charts** | a drawing's accessible name is its sentence (§6), and every drawing shape has an accessible route to its labelled values | 20 of 23 unnamed | 1 | the name and the route, below |
 | 10 | **Adaptivity** | two size classes, regular (≥ 60rem) and compact; the budgets (§3c, §3e) are measured in both, and compact draws no empty chrome; in compact a term stacks above its value, a chip is one line, and only the header sticks (`UX-1145`) | budgets at 1440x900 only; an empty band under "Sections" at 390px | 2 | the volume guard gains a compact column |
 | 11 | **Search** | find-in-page reaches folded content: a folded chapter's sections are `hidden="until-found"`, and the reveal goes through the same state setter as the chapter's control; a twin table and an SQL paste are `until-found` too, and a row a bound detaches is reachable through Jump, which indexes every element the payload has, as the bounded table's filter placeholder says (`UX-1179`); a head-and-tail fold's middle rows print and copy and its stub does neither, and a link to a folded row opens the fold first - Ctrl+F does not reach one, since a `tr` ignores `until-found` (`UX-1196`) | 5 of 6 chapters are `display: none` to Ctrl+F | 1 | find, fragments, controls and print, below; `test_print_and_find_reach_the_content.py` |
-| 12 | **Clarity** | an absence is one sentence: what is missing, why, and the command that fills it; no punctuation around an empty value; a run of two or more zero or absent values in one block is one sentence naming them ("None: A, B, C."), a row carrying the run's advice keeps its row and the JSON view keeps every field; every count in reader text carries the group separator; an absence names the series its question reads; a quantity in prose uses the format its row uses; a separator never ends a line alone (`UX-1252`) | the header's orphan "—" with the reader "anyone" | 2 | booted: no separator beside an empty node; no two clear rows running and the rail's separator on its link's line (`test_an_all_clear_run_is_one_sentence.py`); no bare four-digit count and no raw seconds in prose (`test_a_quantity_is_formatted_where_it_is_shown.py`) |
+| 12 | **Clarity** | an absence is one sentence: what is missing, why, and the command that fills it; no punctuation around an empty value; two or more absent values in one block are one sentence naming them ("Not recorded: A, B."), two or more zeros another ("Zero: C, D."), a boolean and a row carrying the run's advice keep their rows and the JSON view keeps every field; every count in reader text carries the group separator; an absence names the series its question reads; a quantity in prose uses the format its row uses; a separator never ends a line alone (`UX-1252`, `UX-1270`) | the header's orphan "—" with the reader "anyone" | 2 | booted: no separator beside an empty node; no two absent or two zero rows running, no false folded, no dt "None", and the rail's separator on its link's line (`test_an_all_clear_run_is_one_sentence.py`); no bare four-digit count and no raw seconds in prose (`test_a_quantity_is_formatted_where_it_is_shown.py`) |
 | 13 | **Progressive disclosure** | one glyph pair, ▸ closed and ▾ open, at the start of the label; the label names the content and its count first; a nested fold then adds §3a.1's depth after it ("inputs: 2 rows, 1 level"), never the depth alone; a fold name two rows share takes its row ("Elements · Level 3"), since the rail, the tree and Jump read it alone - it may repeat its cell's label (`UX-1177`) | "1 level, 2 rows" | 2 | booted: one glyph pair; no label is depth and count alone (`test_one_disclosure_glyph_pair.py`); level folds read apart (`test_jump_finds_what_the_rail_lists.py`) |
 
 **Rule 1, the outline.** `chapters.js` makes both the chapter title and

@@ -125,6 +125,15 @@ try {
   out.sites.decision = look(find(panel, "next-command"));
   out.sites.decisionCopy = Boolean(find(panel, "copy-step"));
 } catch (error) { out.sites.decision = { error: String(error) }; }
+// 4. UX-1271: a finding's step, its command on its own line beside the copy control
+try {
+  const line = find(v.renderFindings(payload.findings ?? []), "step-command");
+  const kids = [...(line?.childNodes ?? line?.children ?? [])];
+  const has = (node, cls) => (node.className ?? "").split(" ").includes(cls);
+  out.sites.finding = look(kids.find((kid) => has(kid, "next-command")));
+  out.sites.findingCopy = kids.some((kid) => has(kid, "copy-step"));
+  out.sites.findingCommands = (payload.findings ?? []).filter((f) => f.step?.command).length;
+} catch (error) { out.sites.finding = { error: String(error) }; }
 out.sites.button = button
   ? { tag: button.tagName, cls: button.className,
       copies: button.getAttribute?.("data-copies") }
@@ -249,6 +258,15 @@ class TestEverySiteDrawsTheSameCommand:
         seen = _probe(label)
         assert seen["sites"]["blastCopy"] is True
         assert seen["sites"]["decisionCopy"] is True
+
+    def test_a_finding_step_draws_the_command_with_its_copy_control(self, label):
+        """UX-1271: a finding's `step.command` is the shared command control, a `.copy-step` beside it."""
+        seen = _probe(label)
+        assert seen["sites"]["findingCommands"] > 0, seen["sites"]
+        line = seen["sites"]["finding"]
+        assert line and line["tag"].lower() == "code" and line["cls"] == "next-command", line
+        assert line["argv"] == line["text"], line
+        assert seen["sites"]["findingCopy"] is True, seen["sites"]
 
     def test_the_export_still_gets_the_line(self, label):
         """No server, no clipboard - and the command still renders,

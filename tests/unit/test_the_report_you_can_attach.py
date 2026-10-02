@@ -553,6 +553,7 @@ END pid=101 ppid=1 ts=1002.500000 element=work-a.bst cmd=cc -c main.c
 # `UX-1167`: 150,000 -> 160,000, the owner's call (2026-09-30): the page
 # measured 149,745 B at `3e6feb45`, 255 B under, with six page rows due.
 # `UX-1233`: 160,000 -> 165,000, the owner's call (2026-10-01): 854 B left, eleven rows due.
+# Round 165: 165,000 -> 166,250, owner-call default - merged 165,620 B, the walk's fixes 166,217 B.
 from tools import bga_view as view
 from tools.bga_view import PAGE_BUDGET_B
 

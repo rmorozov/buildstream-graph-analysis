@@ -35,6 +35,7 @@ def read_verdicts(result, headline: Optional[dict]) -> dict:
         'potential_oversubscription': utilisation.get('potential_oversubscription'),
         'capacity_checks_ran': verdict.get('checks_ran'),
         'capacity_oversubscribed': verdict.get('oversubscribed'),
+        'capacity_undersubscribed': verdict.get('undersubscribed'),
     }
 
 
@@ -90,6 +91,18 @@ PAIRS = (
             and v['binding_constraint'] not in (None, 'host_cores')
         ),
         lambda v: (DIAGNOSIS_CAPACITY_BOUND, f"keep builders, {v['binding_constraint']} binds and is not a cap"),
+    ),
+    Pair(
+        'capacity_bound_vs_capacity_verdict',
+        'headline.diagnosis',
+        'capacity_verdict',
+        lambda v: (
+            v['diagnosis'] == DIAGNOSIS_CAPACITY_BOUND
+            and v['capacity_checks_ran'] is True
+            and v['capacity_oversubscribed'] is False
+            and v['capacity_undersubscribed'] is False
+        ),
+        lambda v: (DIAGNOSIS_CAPACITY_BOUND, 'capacity matched demand, checks ran'),
     ),
 )
 

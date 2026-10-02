@@ -84,6 +84,10 @@ _LAND = r"""
   }
   const key = { element: rows[rows.length - 1]?.getAttribute("data-element"),
                 binary: rows[rows.length - 1]?.getAttribute("data-binary"), unmounted: names[0] }[KIND];
+  // `UX-1260`: a rail-open drive opens the rail by its own toggle first and reads it open.
+  const toc = document.querySelector(".toc");
+  if (RAIL === "open" && toc?.getAttribute("data-folded") === "true") toc.querySelector(".toc-title")?.click();
+  const rail = toc?.getAttribute("data-folded") ?? null;
   press(key);
   await turn(1200);
   const at = KIND === "element"
@@ -94,7 +98,7 @@ _LAND = r"""
   const stuck = tools && getComputedStyle(tools).position === "sticky" ? tools.getBoundingClientRect().bottom : 0;
   const table = at?.tagName === "TR" ? at.closest("table") : null;
   const shown = table ? [...table.querySelectorAll(":scope > tbody > tr")].filter((r) => r.offsetParent).length : null;
-  return { kind: KIND, key, stuck: Math.round(stuck), shown, top: Math.round(at?.getBoundingClientRect().top ?? -1),
+  return { kind: KIND, rail, key, stuck: Math.round(stuck), shown, top: Math.round(at?.getBoundingClientRect().top ?? -1),
            margin: Math.round(Math.max(section, stuck)), section: Math.round(section),
            tag: at?.tagName ?? null, hash: location.hash.split("~")[0] };
 })()
@@ -105,10 +109,12 @@ _LAND = r"""
 def landed(tmp_path_factory):
     into = tmp_path_factory.mktemp("ux1177-heavy")
     uri = pages.export_uri(pages.heavy_binary_run(into), into / "page")
+    drives = [(kind, "as-found") for kind in ("element", "binary", "unmounted")]
+    drives += [("binary", "open"), ("unmounted", "open")]
     with Browser(find_chrome()) as browser:
         return [
-            browser.measure(uri, f"const KIND = {kind!r};" + _LAND, 1440, 900)
-            for kind in ("element", "binary", "unmounted")
+            browser.measure(uri, f"const KIND = {kind!r}; const RAIL = {rail!r};" + _LAND, 1440, 900) | {"drive": rail}
+            for kind, rail in drives
         ]
 
 
@@ -165,3 +171,11 @@ class TestJumpFindsWhatTheRailLists:
         assert rows, landed
         # `UX-1235`: the stuck tools are measured, not the hash: their bottom clears the row, one row is shown.
         assert all(0 < t["stuck"] <= t["top"] + 1 and t["shown"] == 1 for t in rows), rows
+
+    def test_a_binary_lands_below_the_tools_with_the_rail_open_at_1440(self, landed):
+        """`UX-1260`: the rail read open before the press, the row under the stuck tools, one row shown."""
+        opened = [t for t in landed if t["drive"] == "open"]
+        assert len(opened) == 2 and all(t["rail"] == "false" for t in opened), opened
+        for t in opened:
+            assert t["tag"] == "TR" and t["hash"] == "#by_binary" and t["shown"] == 1, t
+            assert abs(t["top"] - max(t["section"], t["stuck"])) <= 8 and 0 < t["stuck"] <= t["top"] + 1, t

@@ -5,6 +5,7 @@ panel; `next_steps` is the rail's sub-entry into the panel's list, not a
 section; a finding several Why folds name is said once, under the list.
 Read on the landed page with the Why folds open; the rail is left out,
 because it repeats each heading on purpose (`UX-640`). Styleguide §1e, §5a.
+`UX-1262`: the two-plane page is exported with its store, so it carries a comparison.
 """
 
 import pathlib
@@ -41,6 +42,7 @@ _MEASURE = (
     headlineShown: !!document.querySelector('[data-section="headline"]'),
     nextStepsSection: !!document.querySelector('[data-section="next_steps"]'),
     panelSteps: document.querySelectorAll("#decision li[data-step]").length,
+    compareChapter: !!document.getElementById("chapter-compare"),
     railSub: sub && { href: sub.getAttribute("href"), text: sub.textContent,
                       target: !!document.getElementById(sub.getAttribute("href").slice(1)) },
   };
@@ -58,7 +60,7 @@ def _run(label, into):
 @pytest.fixture(scope="module", params=["two_plane", "golden", "macro_micro"])
 def landed(request, tmp_path_factory):
     into = tmp_path_factory.mktemp(f"u1146-{request.param}")
-    uri = pages.export_uri(_run(request.param, into), into)
+    uri = pages.export_uri(_run(request.param, into), into, store=request.param == "two_plane")
     with Browser(chrome) as opened:
         return request.param, opened.measure(uri, _MEASURE)
 
@@ -68,6 +70,10 @@ class TestTheDecisionIsSaidOnce:
     def test_the_page_has_a_decision_to_repeat(self, landed):
         label, page = landed
         assert page["headlineShown"] and page["panelSteps"] and len(page["sentences"]) > 10, (label, page)
+
+    def test_the_store_page_draws_its_comparison(self, landed):
+        label, page = landed
+        assert page["compareChapter"] == (label == "two_plane"), label
 
     def test_no_long_sentence_appears_twice(self, landed):
         label, page = landed

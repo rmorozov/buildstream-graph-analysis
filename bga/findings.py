@@ -36,6 +36,7 @@ import statistics
 from typing import Optional
 
 from . import shown as qty
+from . import sweep_curve
 from .cache_effectiveness import (
     HEALTHY_HIT_RATIO,
     POOR_HIT_RATIO,
@@ -91,7 +92,6 @@ FINDING_READERS = {
     "failed-task-time": "local-optimizer",
     "time-concentration": "local-optimizer",
     "joint-saving": "local-optimizer",
-    "optimization-horizon": "local-optimizer",
     "blast-radius-ranking": "local-optimizer",
     "certified-headroom": "local-optimizer",
     "wait-category": "local-optimizer",
@@ -1026,11 +1026,9 @@ def _graph_shape_findings(result: AnalysisResult) -> list[dict]:
     not a reader about shape.
 
     This one reads `elements.unweighted_depth` and nothing else. Group
-    the elements by depth and you have the dependency stages: nothing
-    in a stage can start before the stage above it finishes, whatever
-    the capacity, so the widest stage is a **ceiling on concurrency
-    that no number of builders can lift**. That is the shape making
-    something impossible, stated as the number it is.
+    the elements by depth and you have the dependency levels; the widest
+    is how many share one depth. It bounds nothing: an element waits on
+    its own dependencies, not on its whole level above (UX-1265).
 
     It is silent on the one shape that imposes nothing - a single stage,
     where every element is independent and the widest stage is the whole
@@ -1052,9 +1050,9 @@ def _graph_shape_findings(result: AnalysisResult) -> list[dict]:
         _finding(
             'graph-width',
             SEVERITY_INFO,
-            f"{plural(widest, 'element')} at most can ever build at once — the widest of {stages:,} dependency stages",
+            f"{stages:,} dependency levels; the widest holds {widest:,} of {len(depth):,} elements",
             evidence={'element_count': len(depth), 'dependency_stages': stages, 'widest_stage': widest},
-            step=_none("a ceiling the dependency graph sets; only its dependencies move it"),
+            step=_none("a shape the dependency graph has; only its dependencies move it"),
         )
     ]
 
@@ -1641,12 +1639,15 @@ def _opportunity_findings(result: AnalysisResult, chain_bound: bool) -> list[dic
     # conditioned on this run's own capacity verdict. Imported here
     # rather than at module scope: `bga.report` imports this module, so a
     # top-level import back into it is a cycle.
-    from .report._shared import resolve_attribution_hint
+    from .report._shared import resolve_attribution_hint, resource_wait_step
 
     hint = resolve_attribution_hint(
         top_category,
         getattr(result, 'capacity_verdict', None),
     )
+    if top_category == 'resource_wait_us':
+        # UX-1271: this run's saturated resource, and the sentence names the command the step hands over.
+        hint = f"{_saturated_resource(result)} — {resource_wait_step(getattr(result, 'capacity_verdict', None))}"
     # UX-83: and conditioned on Plane 2, when Plane 2 is in hand. The
     # static RESOURCE WAIT hint says "try --capacity N with a higher N",
     # which on a measured-saturated host is the opposite of the fix - and
@@ -1677,6 +1678,27 @@ def _opportunity_findings(result: AnalysisResult, chain_bound: bool) -> list[dic
     ]
 
 
+#: UX-1271: a resource is named saturated only this busy on average against its configured capacity.
+SATURATED_SHARE = 0.9
+
+
+def _saturated_resource(result: AnalysisResult) -> str:
+    """Builder slots, when the run's configured builders were >= SATURATED_SHARE busy; else the neutral opening.
+
+    Only builders have a configured capacity on the result; a peak is not a capacity.
+    """
+    from .report._shared import RESOURCE_WAIT_SATURATED
+
+    builders = ((getattr(result, 'agent_sizing', None) or {}).get('builders') or {}).get('observed') or (
+        getattr(result, 'capacity_recommendation', None) or {}
+    ).get('builders')
+    mean = (getattr(result, 'occupancy', None) or {}).get('resource_occupancy') or {}
+    busy = next((v for k, v in mean.items() if str(k).rsplit('.', 1)[-1] == 'PROCESS'), None)
+    if not builders or busy is None or busy / builders < SATURATED_SHARE:
+        return RESOURCE_WAIT_SATURATED
+    return f"builder slots were saturated ({busy:.2f} of {builders:g} busy on average)"
+
+
 def _and(names: list[str]) -> str:
     return names[0] if len(names) == 1 else ", ".join(names[:-1]) + " and " + names[-1]
 
@@ -1689,7 +1711,10 @@ def _outlook_findings(result: AnalysisResult) -> list[dict]:
     findings: list[dict] = []
 
     joint = signals.get('joint_saving')
+    horizon = (signals.get('optimization_horizon') or [])[:HORIZON_STEPS_SHOWN]
+    ordered = len(horizon) > 1
     if joint and joint.get('joint_saving_us') and total:
+        marked: list[str] = []
         joint_us = joint['joint_saving_us']
         sum_us = joint.get('sum_of_individual_us') or 0
         kind = joint.get('relation') or ('add' if joint.get('savings_add') else 'overlap')
@@ -1704,19 +1729,29 @@ def _outlook_findings(result: AnalysisResult) -> list[dict]:
             )
         else:
             elements = list(joint['elements'])
-            later = [uid for uid in joint.get('worth_more_after') or [] if uid in elements] or elements[1:]
+            marked = [uid for uid in joint.get('worth_more_after') or [] if uid in elements]
+            later = marked or elements[1:]
             earlier = elements[: elements.index(later[0])] or elements[:1]
             relation = (
-                f"more than the {qty.duration(sum_us)} alone: {_and(later)} "
+                # UX-1266: the order line names each element; a card names one once.
+                f"more than the {qty.duration(sum_us)} alone: "
+                + ("a later step pays off only once the earlier ones are done" if marked else "together they compound")
+                if ordered
+                else f"more than the {qty.duration(sum_us)} alone: {_and(later)} "
                 f"{'pays' if len(later) == 1 else 'pay'} off after {_and(earlier)}"
             )
+        order = " -> ".join(
+            f"{step['element_uid']} ({qty.duration(step['makespan_after_us'])}"
+            f"{(', pays off after the step before' if at == 1 else ', pays off after the steps before') if step['element_uid'] in marked else ''})"
+            for at, step in enumerate(horizon)
+        )
         findings.append(
             _finding(
                 'joint-saving',
                 SEVERITY_HIGH,
                 f"{qty.duration(joint_us)} ({qty.share(joint_us / total)} of the build) is what the top "
                 f"{len(joint['elements'])} are worth together",
-                detail=[f"    That is {relation}"],
+                detail=[f"    That is {relation}"] + ([f"    In this order: {order}"] if ordered else []),
                 elements=list(joint['elements']),
                 evidence={
                     'joint_saving_us': joint_us,
@@ -1727,33 +1762,6 @@ def _outlook_findings(result: AnalysisResult) -> list[dict]:
                 step=_step(
                     f"Start with {joint['elements'][0]}, then the rest.",
                     _run_command(result, 'blast', joint['elements'][0]),
-                ),
-            )
-        )
-
-    horizon = signals.get('optimization_horizon') or []
-    if len(horizon) > 1:
-        shown = horizon[:HORIZON_STEPS_SHOWN]
-        steps = " -> ".join(f"{step['element_uid']} ({qty.duration(step['makespan_after_us'])})" for step in shown)
-        last = shown[-1]
-        detail = [f"    In this order: {steps}"]
-        if total:
-            detail.append(
-                f"    The last of those leaves "
-                f"{qty.share(last['cumulative_saving_us'] / total)} of the build "
-                f"removed, projected from this run without building again"
-            )
-        findings.append(
-            _finding(
-                'optimization-horizon',
-                SEVERITY_HIGH,
-                f"{len(shown)} fixes, in order of what each is worth, take the build to "
-                f"{qty.duration(last['makespan_after_us'])}",
-                detail=detail,
-                elements=[step['element_uid'] for step in shown],
-                evidence={'steps': shown},
-                step=_step(
-                    f"Start with {shown[0]['element_uid']}.", _run_command(result, 'blast', shown[0]['element_uid'])
                 ),
             )
         )
@@ -2274,6 +2282,26 @@ PLANE2_BINARY_FLOOR_SHARE = OPPORTUNITY_FLOOR_PCT / 100
 PLANE2_CONFIGURE_SHARE = 0.10
 
 
+def _waiting_step(report: dict, elements) -> str:
+    """UX-1275: the waiting elements' top 3 binaries by blocked time, where Plane 2 measured it."""
+    blocked: dict[str, int] = {}
+    for element in elements:
+        cost = (report.get('binary_cost') or {}).get(element) or {}
+        for entry in cost.get('binaries') or []:
+            if entry.get('blocked_us'):
+                blocked[entry['binary']] = blocked.get(entry['binary'], 0) + entry['blocked_us']
+    top = sorted(blocked, key=lambda name: (-blocked[name], name))[:3]
+    if not top:
+        return "Find what these elements wait on before raising their job count."
+    named = [f"{name} ({qty.duration(blocked[name])})" for name in top]
+    listed = named[0] if len(named) == 1 else ", ".join(named[:-1]) + " and " + named[-1]
+    # The figures are summed over the waiting elements, not by_binary's whole run; say so.
+    return (
+        f"Start with what {listed} wait on: across these {plural(len(elements), 'waiting element')}, "
+        "the most time spent alive, off CPU and with no child running."
+    )
+
+
 def _plane2_findings(result: AnalysisResult) -> list[dict]:
     """UX-1255: the costliest binary, elements waiting on their jobs, and configure - only where Plane 2 ran."""
     report = getattr(result, 'plane2_report', None) or {}
@@ -2287,6 +2315,15 @@ def _plane2_findings(result: AnalysisResult) -> list[dict]:
     if rows and measured and rows[0]['cpu_us'] / measured >= PLANE2_BINARY_FLOOR_SHARE:
         top = rows[0]
         reach = plural(top['elements'], 'element', shown=f"{top['elements']:,}")
+        # UX-1269: a lever is a share of the run's capacity, not of the CPU Plane 2 measured.
+        capacity = (getattr(result, 'utilisation', None) or {}).get('capacity_cpu_us')
+        of_capacity = top['cpu_us'] / capacity if capacity else None
+        step = _step(f"Start with {top['binary']}: no other binary spent as much CPU.")
+        if of_capacity is not None and of_capacity < PLANE2_BINARY_FLOOR_SHARE:
+            step = _none(
+                f"{top['binary']} is {qty.share(of_capacity)} of the run's CPU capacity, under the "
+                f"{OPPORTUNITY_FLOOR_PCT:.0f}% opportunity floor: context, not a lever."
+            )
         out.append(
             _finding(
                 'costliest-binary',
@@ -2298,20 +2335,21 @@ def _plane2_findings(result: AnalysisResult) -> list[dict]:
                     'cpu_us': top['cpu_us'],
                     'share': round(top['cpu_us'] / measured, 3),
                 },
-                step=_step(f"Start with {top['binary']}: no other binary spent as much CPU."),
+                step=step,
             )
             | {'section': 'by_binary'}
         )
     # Each element's own CPU over its own wall (the join's `cores_busy`), on correlate's compute-bound line.
     from .correlate import _COMPUTE_BOUND_CORES, _plane2_view
 
-    waiting = [
-        row
-        for row in _plane2_view(report).values()
+    waiting_by = {
+        element: row
+        for element, row in _plane2_view(report).items()
         if (row.get('requested_jobs') or 0) > 1
         and row.get('cores_busy') is not None
         and row['cores_busy'] < _COMPUTE_BOUND_CORES
-    ]
+    }
+    waiting = list(waiting_by.values())
     if waiting:
         jobs = sorted(row['requested_jobs'] for row in waiting)
         asked = f"{jobs[0]}" if jobs[0] == jobs[-1] else f"{jobs[0]}-{jobs[-1]}"
@@ -2327,7 +2365,7 @@ def _plane2_findings(result: AnalysisResult) -> list[dict]:
                     'median_cores_busy': round(median, 2),
                     'requested_jobs': jobs[-1],
                 },
-                step=_step("Find what these elements wait on before raising their job count."),
+                step=_step(_waiting_step(report, waiting_by)),
             )
             | {'section': 'element_join'}
         )
@@ -2582,18 +2620,21 @@ def _capacity_step(result: AnalysisResult) -> tuple[str, str]:
     recommendation = getattr(result, 'capacity_recommendation', None) or {}
     binding = recommendation.get('binding_constraint')
     row = next((c for c in recommendation.get('constraints') or [] if c.get('name') == binding), {})
+    # UX-1274: the replayed wall at the knee, said once: on the step, not the sentence above it.
+    replayed = sweep_curve.replayed_clause(recommendation)
+    tail = f"; {replayed}" if replayed else ""
     if binding == 'host_cores':
         cores = recommendation.get('host_cpu_count')
         return (
             f"Builders are held at the host's {plural(cores, 'core')} by policy while the CPU could feed "
             f"{row.get('clamped_from')}: measure above that cap with bga sweep",
-            f"Measure builders above the host's {cores}-core cap with bga sweep",
+            f"Measure builders above the host's {cores}-core cap with bga sweep{tail}",
         )
     if binding and recommendation.get('recommended_builders') is not None:
         builders = recommendation['recommended_builders']
         return (
             f"{binding} binds at {plural(builders, 'builder')}: run with {builders} and measure it",
-            f"Run with {plural(builders, 'builder')} and measure it",
+            f"Run with {plural(builders, 'builder')} and measure it{tail}",
         )
     from .report._shared import resolve_attribution_hint
 
@@ -2610,6 +2651,10 @@ def _builders_actions(result: AnalysisResult, by_id: dict) -> list[dict]:
     # UX-1256: the capacity finding's own step where it has one; the derived step otherwise.
     said = ((by_id.get('capacity-recommendation') or {}).get('step') or {}).get('text')
     action = {'step': said.rstrip('.') if said else _capacity_step(result)[1]}
+    # UX-1276: the replayed wall the step's clause gains, priced per day where a rate is declared.
+    delta = sweep_curve.replayed_delta_us(getattr(result, 'capacity_recommendation', None) or {})
+    if delta:
+        action['replayed_delta_us'] = delta
     if finding:
         action['finding_id'] = finding
     return [action]
@@ -2751,7 +2796,7 @@ def _store_paths(run_dir: str):
     simply yields no store-shaped steps.
     """
     parts = os.path.normpath(run_dir or '').split(os.sep)
-    if len(parts) < 5 or parts[-1] != 'run' or parts[-3] != 'runs' or parts[-4] != '.bga':
+    if len(parts) < 4 or parts[-1] != 'run' or parts[-3] != 'runs' or parts[-4] != '.bga':
         return None, False
     return os.sep.join(parts[:-4]) or '.', True
 

@@ -269,9 +269,15 @@ export function presetTable(key, rows, presets, hint, node, payload) {
   return { node: slot, select, draw, presets: usable.map((e) => e.preset) };
 }
 
-/** `UX-1252`: zero, none, no, or an empty list or map. */
-const allClear = (value) => value === 0 || value === null || value === false
-  || (typeof value === "object" && Object.keys(value).length === 0);
+/** `UX-1252`: an absent value (none, an empty list or map) or a recorded zero; UX-1270: a boolean answers, never folds. */
+const allClear = (value) => (value === 0 ? "zero" : value === null
+  || (typeof value === "object" && Object.keys(value).length === 0) ? "absent" : null);
+const CLEAR_LABEL = { absent: "Not recorded", zero: "Zero" };
+
+/** The sweep's knee and this run's builders, as 0-based points of `sweep` (1 builder first). */
+const seriesMarks = (key, name, object) => (key === "capacity_recommendation" && name === "sweep" ? [
+  { at: Math.min((object.constraints ?? []).find((c) => c.name === "graph")?.allows, object.sweep?.length) - 1, role: "knee" },
+  { at: object.builders - 1, role: "configured" }] : []);
 
 export function renderPairs(key, object, hint = {}, node = undefined,
                             payload = undefined, root = undefined) {
@@ -336,7 +342,7 @@ export function renderPairs(key, object, hint = {}, node = undefined,
                   built.tools, built.table);
       }
     } else if (value !== null && typeof value === "object") {
-      cell = renderStructured(name, value, hintsOf(child), child, 0,
+      cell = renderStructured(name, value, { ...hintsOf(child), marks: seriesMarks(key, name, object) }, child, 0,
                               `${key}.${name}`);
     } else if (typeof value === "number" && direction) {
       // A signed change, coloured by what the schema says "better" is,
@@ -392,12 +398,13 @@ export function renderPairs(key, object, hint = {}, node = undefined,
     rows.push({ term, describe, empty: !advice && !direction && kind !== "share" && allClear(value),
                 dd: el("dd", {}, cell, describe, advice ? el("p", { class: "run-advice" }, advice) : null) });
   }
-  // `UX-1252` (styleguide §6e.12): a block's zero or absent values are one sentence, at the first one's place; JSON keeps each.
-  const run = rows.filter((r) => r.empty);
+  // `UX-1252` (styleguide §6e.12): a block's absent values are one sentence and its zeros another, each at its first one's place; JSON keeps each.
   for (const row of rows) {
+    const run = rows.filter((r) => r.empty && r.empty === row.empty);
     if (run.length < 2 || !row.empty) { list.append(row.term, row.dd); continue; }
     if (row !== run[0]) continue;
-    list.append(el("dt", { "data-none": run.map((r) => r.term.getAttribute("data-key")).join(" ") }, "None"),
+    list.append(el("dt", { "data-none": run.map((r) => r.term.getAttribute("data-key")).join(" "),
+                           "data-group": row.empty }, CLEAR_LABEL[row.empty]),
                 el("dd", {}, ...run.map(({ term }, at) => el("span", {
                   "data-key": term.getAttribute("data-key"), "data-described": term.getAttribute("data-described"),
                   title: term.getAttribute("title") }, `${term.textContent}${at < run.length - 1 ? ", " : "."}`)),

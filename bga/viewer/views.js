@@ -22,7 +22,7 @@ import { SCALE, GRADE_ANNOTATION, GRADE_EXHIBIT, exhibitAxis, exhibitTwin,
 // one. `controls.js` imports nothing, which is why this module may use
 // it where it may not use `app.js` - see the note below.
 import { commandLine, identify, labelFor } from "./controls.js";
-import { TERMS, tally } from "./format.js";
+import { TERMS, el, tally } from "./format.js";
 import { plural } from "./tables.js";
 // `UX-337`: the primitives the chapters share. Extracted because the
 // chapters were *not* acyclic without them - see `primitives.js`.
@@ -732,24 +732,13 @@ export function renderBlastAnswer(result) {
 
 // The waterfall, in the order the time is spent. Each entry names the
 // published field it reads; nothing here adds, subtracts or divides.
-const WATERFALL = [
-  { key: "untracked_head_us", label: "Before the first task", from: "attribution" },
-  { key: "execution_on_chain_us", label: "Execution on the chain", from: "attribution" },
-  { key: "dependency_wait_us", label: "Waiting on dependencies", from: "attribution" },
-  { key: "resource_wait_us", label: "Waiting on resources", from: "attribution" },
-  { key: "scheduler_wait_us", label: "Waiting on the scheduler", from: "attribution" },
-  { key: "retry_wait_us", label: "Retries", from: "attribution" },
-  { key: "idle_us", label: "Idle", from: "attribution" },
-  { key: "untracked_tail_us", label: "After the last task", from: "attribution" },
-];
+const WATERFALL = ["untracked_head_us", "execution_on_chain_us", "dependency_wait_us", "resource_wait_us",
+  "scheduler_wait_us", "retry_wait_us", "idle_us", "untracked_tail_us"]
+  .map((key) => ({ key, label: TERMS[key], from: "attribution" }));
 
 // The certified floors, read the same way.
-const FLOORS = [
-  { key: "t_infinity_observed", label: TERMS.t_infinity_observed },
-  { key: "lb", label: TERMS.lb },
-  { key: "t_c", label: TERMS.t_c },
-  { key: "certified_headroom", label: "Certified headroom" },
-];
+const FLOORS = ["t_infinity_observed", "lb", "t_c", "certified_headroom"]
+  .map((key) => ({ key, label: TERMS[key] }));
 
 
 export function renderOverview(payload) {
@@ -815,6 +804,17 @@ export function renderOverview(payload) {
         "data-section-link": "floors",
       }));
     }
+    // `UX-1269`: the waits, the chain and the floors' gaps drawn together; folded, as the 390 travel budget is spent.
+    const para = (role, text) => el("p", { "data-role": role }, text);
+    const relate = el("details", { class: "overview-relation", "data-fold": "overview-relation" },
+      el("summary", {}, "How these figures relate"),
+      para("chain-relation", `${TERMS.execution_on_chain_us} is the path that set this finish; `
+        + `${TERMS.t_infinity_observed} is the graph's longest.`),
+      para("wait-relation", `${TERMS.scheduling_gap_us} is the wall clock beyond ${TERMS.t_infinity_observed}; `
+        + `it overlaps ${TERMS.resource_wait_us}.`),
+      para("headroom-relation", `${TERMS.certified_headroom} is the wall clock beyond ${TERMS.lb}; `
+        + `it overlaps ${TERMS.scheduling_gap_us}.`));
+    section.append(relate);
   }
   return section;
 }

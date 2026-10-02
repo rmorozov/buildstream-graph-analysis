@@ -1,8 +1,8 @@
 # UX-1270: the all-clear group is labelled "None" and swallows a "no" or a 0 ms that answers the question
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-164 view UI re-review on a 2,402-element two-plane page (2026-10-02), finding R1 | **Serves:** R1, R5 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** judgement | **Reading:** container
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the round-164 view UI re-review on a 2,402-element two-plane page (2026-10-02), finding R1 | **Serves:** R1, R5 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical | **Reading:** container
 
-**Guard:** none — open, no guard named yet
+**Guard:** `tests/unit/test_an_all_clear_run_is_one_sentence.py`
 
 ## Motivation
 
@@ -22,6 +22,17 @@ UX-1252's grouping folds null, false and zero alike into one row whose label rea
 
 Input classes: the 2,402-element two-plane page, `golden` and `macro_micro`, at 1440 and 390.
 
+## Decision
+
+Route:     In pairs.js, split allClear into absent (null, empty list or map) and zero (0). A boolean never folds: every true/false keeps its own row, so false needs no "answers the question" classifier. The two groups are labelled "Not recorded:" and "Zero:", the "None" dt is gone, and §6e.12 in the styleguide is updated to match.
+Rejected:  a per-section list of verdict booleans in the schema: a classifier with a list to keep up, where "a boolean always keeps its row" is the same rule with nothing to maintain; one group re-labelled "None or zero": a reader still cannot tell a recorded zero from a missing field.
+Files:     bga/viewer/pairs.js (allClear and the grouping loop), docs/design/styleguide.md (§6e.12), tests/unit/test_an_all_clear_run_is_one_sentence.py
+Guard:     tests/unit/test_an_all_clear_run_is_one_sentence.py holds the claim that, on macro_micro and on a planted block {a: null, b: 0, c: false, d: 0, e: null}, c keeps its own row, null and 0 never share a dt, and no dt reads "None".
+Mutation:  in allClear, add `|| value === false` back to the absent group: red.
+Class:     product
+Split:     viewer track; writes pairs.js only, so it runs in parallel with UX-1267. A few more rows may move the volume budget: the track measures it, and over a bound it stops and asks.
+Question:  none (it follows the row's Required Fix: "every boolean keeps its row" is the mechanical reading of "a boolean that answers keeps its own row")
+
 ## Required Fix
 
 An absent field (null, empty) and a recorded zero or false group separately, each as one sentence that says which ("Not recorded: ...", "Zero: ..."); a boolean that answers the section's question, or a section's named verdict field, keeps its own row; no row is labelled "None".
@@ -33,3 +44,38 @@ Which fields a section publishes; the JSON door.
 ## Acceptance Test
 
 On this page `#utilisation` shows "Potential oversubscription no" as a row and `#floors` "LB CPU binds no"; no `dt` on the page reads "None"; null and zero fields never share a sentence. Mutation: fold false into the absent group, and the guard reds.
+
+## Outcome
+
+### The gap, measured
+
+```text
+accept1270.py: two_plane_run --layers 40 --width 60 (no --workload binaries), exported, 1440x844, base b35c30e31
+  #utilisation  None | Unaccounted, ...       no "Potential oversubscription" row
+  #floors       None | Chain floor T∞ (cold), ...   no "LB CPU binds" row
+  #occupancy    None | Horizon start, ...
+  dl.pairs > dt reading "None": 8
+```
+
+### The close, measured
+
+```text
+same page, this commit, 1440x844 and 390x844 identical:
+  #utilisation  Unaccounted | 0 ms (a lone zero keeps its row) · Potential oversubscription | no
+  #floors       Not recorded | Chain floor T∞ (cold), ... · Cold partial | no · LB CPU binds | no
+  #occupancy    Zero | Horizon start, ...
+  dt reading "None": 0; groups: 5 absent, 3 zero
+$ python3 -m pytest -p no:xdist tests/unit/test_an_all_clear_run_is_one_sentence.py -q
+8 passed, 2 skipped
+volume (_LOOK, opened): golden 18,317 px / 7,825 words; macro_micro 37,157 / 13,283 (bound 39,188 / 13,500);
+  xl_both 43,835 / 13,081 (bound 46,822 / 13,200) - every bound met, none raised
+```
+
+### Mutations verified red and reverted (4)
+
+| mutation in `bga/viewer/pairs.js` | reddened | count |
+|---|---|---|
+| `allClear`: `value === null \|\| value === false` (false folds as absent) | planted block | 1 failed, 7 passed |
+| `allClear`: `value === 0 ? "absent"` (zero and null share a dt) | planted block | 1 failed, 7 passed |
+| `CLEAR_LABEL` both `"None"` | page none-count (macro_micro, two_plane) + planted | 3 failed |
+| the zero group never folds | page runs (macro_micro, two_plane) + planted | 3 failed |

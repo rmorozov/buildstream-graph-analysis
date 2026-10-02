@@ -68,6 +68,7 @@ def test_each_value_equals_its_source_section(two_plane):
     assert card["builders"] == {
         "recommended": rec["recommended_builders"],
         "graph_ceiling": graph,
+        "swept_to": len(rec["sweep"]),
         "observed": rec["builders"],
         "source": "capacity_recommendation",
     }
@@ -76,7 +77,7 @@ def test_each_value_equals_its_source_section(two_plane):
     memory = card["memory"]
     assert memory["per_element_bytes"] == peak, (memory, peak)
     assert memory["bytes"] == peak * rec["recommended_builders"], memory
-    assert memory["basis"] == "envelope", memory
+    assert (memory["basis"], memory["bound"]) == ("envelope", "upper"), memory
     for field in ("builders", "cores", "memory"):
         assert card[field]["source"] in two_plane, (field, card[field]["source"])
     assert card["absence"] is None and "caveat" not in card, card
@@ -124,6 +125,7 @@ def test_the_plane1_card_reads_one_absence_sentence(read, width):
     assert got["absence"] == ABSENT, got["absence"]
 
 
+#: UX-1272: the 2,402-element page's sizing inputs: 4 builders, no host RAM, a 64.0 MiB largest process.
 _HOST = SimpleNamespace(
     capacity_recommendation={"builders": 4, "recommended_builders": 4, "constraints": [], "caveat": "c"},
     plane2_capacity={"cores_busy": 0.86, "host_cpu_count": 4},
@@ -140,6 +142,7 @@ def test_no_host_ram_still_sizes_memory_from_the_process_peaks():
         "builders": 4,
         "bytes": 4 * 65536 * 1024,
         "basis": "process_peak",
+        "bound": "none",
         "source": "peak_memory",
     }, memory
 
@@ -167,7 +170,7 @@ console.log(JSON.stringify(all(card, (n) => n.attrs?.["data-field"]).map((row) =
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="node is not installed")
-def test_the_peak_row_and_the_upper_bound_are_drawn():
+def test_the_peak_row_says_it_is_no_bound():
     card = compute_agent_sizing(_HOST)
     done = subprocess.run(
         [shutil.which("node"), "--input-type=module", "-e", _PROBE],
@@ -187,4 +190,6 @@ def test_the_peak_row_and_the_upper_bound_are_drawn():
     ], rows
     assert "3.25 busy at p95" in rows["cores_peak"]["text"], rows["cores_peak"]
     memory = rows["memory"]["text"]
-    assert "at most 256.0 MiB" in memory and "(process peak)" in memory, memory
+    # UX-1272: one process's peak per builder bounds nothing, in either direction.
+    assert "at most" not in memory and "at least" not in memory, memory
+    assert "4 builders \u00d7 the largest single process (64.0 MiB) = 256.0 MiB; not a bound" in memory, memory

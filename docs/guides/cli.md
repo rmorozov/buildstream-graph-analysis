@@ -1095,7 +1095,7 @@ the real payload instead of by validation:
 
 ```bash
 bga compare --schema | jq '."bga:always_written"'
-# ["verdict_provenance", "build_class_comparison", "baseline_band_sources", "total_duration_delta_share"]
+# ["verdict_provenance", "build_class_comparison", "baseline_band_sources", "total_duration_delta_share", "findings_diff"]
 ```
 
 `compare/v2`'s `verdict_provenance` is the worked example. `UX-610`
@@ -1106,6 +1106,13 @@ validate again and the id did not have to move. The newest,
 `total_duration_delta_share` (`UX-1257`), is the wall-clock delta as a
 share of the baseline's — negative is faster, `null` with no baseline
 total — and is what `bga view`'s compare chapter leads with.
+`findings_diff` (`UX-1277`) splits the candidate's findings by id into
+`new`, `persisting` — each with its `age`, the consecutive snapshots that
+hold it, read off the earlier runs' published analyses, and `age_exact`,
+false when that walk stopped on a run it could not read — and `resolved`;
+`null` on a refusal. When only one run recorded Plane 2, a finding on one
+side only is listed in `not_compared` with its `not_compared_reason`
+instead. `bga view` marks each finding card from it.
 
 ### Which keys the prose names, and which it does not (`UX-628`)
 
@@ -1154,7 +1161,7 @@ the blocks a reader meets first, and `certified_headroom`, the number
 Key Findings leads with, had never been in the population at all. It was
 302 such keys when that was filed and 305 when it landed. One level and
 no further: `blast_radius_distribution.deciles` is in the population and
-its own nine buckets are not. The surface is **611 keys** today, and
+its own nine buckets are not. The surface is **624 keys** today, and
 that figure is derived from the walk rather than typed here.
 
 So the statement of coverage, which is now a statement and not a
@@ -1254,6 +1261,7 @@ can look one up.
 | `assessed_dependencies`, `dependency_read_share` | A row of `element_join`: how many of this element's dependencies Plane 2 could judge — the ones it saw opened plus the ones it saw nothing from — and how many of those were read. What `unused_dependencies` is a list *of*. A dependency with no observed opens at all is uncovered and in neither, so the share is absent rather than 1.0. |
 | `phase`, `elapsed_us` | A row of `pipeline_overhead`: the named stage of the run, and the wall-clock it spanned. |
 | `finding_id` | In a `headline.top_actions` row, the finding the action's reasoning is in — so the headline's advice can be read back to the evidence that chose it. |
+| `replayed_delta_us` | `UX-1276`: in the builders row of `headline.top_actions`, the replayed wall at this run's builders minus at the count the step quotes (`capacity_recommendation.sweep`) — a replay with no contention, not a measured saving. |
 | `first` | In a `batch_opportunities.serialized_pairs` row, the element that ran first of a pair that shares a dependency chain; `then` is the other. The pair is why they cannot be batched. |
 | `shared_consumers` | In a `consolidation_candidates` row, the elements that always consume the candidate group together — the reason it is a group. |
 | `utilization_envelope`, `capacity_cores`, `busy_cores`, `busy_share` | Cores busy over the build against the smaller of `builders x max-jobs` and the host's cores (`UX-676`). The capacity is the smaller because a four-core host can never deliver sixteen, and a share against a number nothing can reach is not a verdict. `busy_cores` is the interval's own reading; `busy_share` is it over `capacity_cores`. |
@@ -1337,6 +1345,7 @@ can look one up.
 | `resource_shortfall` | Present instead of `cores_busy` and `peak_rss_bytes` where no run in the class carries them (`UX-296`). |
 | `bga_tail_us` | What the tool itself spent after the build, summed from that snapshot's `tail.json` — per run in `snapshots`, as a distribution in `host_classes` and `blended` (`UX-1078`). Absent before the file existed. |
 | `build_wall_us` | The build subprocess's own wall, from the same `tail.json`: the figure `bga_tail_us` sits beside (`UX-1078`). |
+| `build_rate`, `per_day` | `UX-1276`: builds of this project a day, as `.bga/config`'s hand-edited `builds_per_day` declares it, with `source` saying so — never counted from snapshot stamps, which count captures. Absent when undeclared; the decision panel prices a saving in agent-hours a day only beside it. |
 
 `capacity-model/v1`:
 
@@ -2265,7 +2274,7 @@ was:
 | constant | the bound | measured against | when it is the one that bit |
 | --- | --- | --- | --- |
 | `EXPORT_BUDGET_B` | 8 MiB | the whole written file: source + contract + data | nothing to do; the note says an attachment may not survive it |
-| `PAGE_BUDGET_B` | 165,000 B | the **page half**: the file less its data blocks — `index.html`, the stylesheet, and the viewer module gzipped with its loader (`UX-1052`) | nothing; it bounds the viewer `bga` writes, never your run. `--export` prints the page and data halves apart, and a release is held to it |
+| `PAGE_BUDGET_B` | 166,250 B | the **page half**: the file less its data blocks — `index.html`, the stylesheet, and the viewer module gzipped with its loader (`UX-1052`) | nothing; it bounds the viewer `bga` writes, never your run. `--export` prints the page and data halves apart, and a release is held to it |
 | `TRACE_BUDGET_B` | 4 MiB | the **gzipped trace** before it is base64-encoded — one part of the data half | the trace is left out and the page names the bound; `bga timeline` renders one beside the snapshot |
 | `TRACE_TRACK_BUDGET` | 8,000 tracks | the rows Perfetto opens: one process track per element, one thread track per traced pid — **processes**, not slices, so the spine's second record of one process is not a second row (`UX-406`) | nothing, for an export: it renders again with `--planes 1` and the handoff sentence says it did (`UX-530`). For `bga timeline`, `--planes 1` or `--only-element` narrow what is *drawn* rather than what is carried |
 

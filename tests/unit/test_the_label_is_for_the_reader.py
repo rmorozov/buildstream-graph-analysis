@@ -270,8 +270,8 @@ class TestTheRuleIsTheDeclaration:
     label."""
 
     def test_the_suffix_comes_off_the_quantity_that_accounts_for_it(self):
-        cases = [["execution_on_chain_us", "duration_us"], ["peak_rss_bytes", "bytes"], ["useful_share", "share"]]
-        assert _run(_TITLES, {"BGA_CASES": json.dumps(cases)}) == ["Execution on chain", "Peak RSS", "Useful"]
+        cases = [["explained_untracked_us", "duration_us"], ["peak_rss_bytes", "bytes"], ["useful_share", "share"]]
+        assert _run(_TITLES, {"BGA_CASES": json.dumps(cases)}) == ["Explained untracked", "Peak RSS", "Useful"]
 
     def test_a_key_that_only_looks_like_a_duration_keeps_its_suffix(self):
         """`_us` on a `count` is not a unit the value spells - the
@@ -292,8 +292,8 @@ class TestTheRuleIsTheDeclaration:
     def test_a_key_with_no_quantity_is_untouched(self):
         """Which is every label the page draws beside a sentence
         rather than a number."""
-        cases = [["idle_us", None], ["total_bytes", None]]
-        assert _run(_TITLES, {"BGA_CASES": json.dumps(cases)}) == ["Idle us", "Total bytes"]
+        cases = [["wall_clock_us", None], ["total_bytes", None]]
+        assert _run(_TITLES, {"BGA_CASES": json.dumps(cases)}) == ["Wall clock us", "Total bytes"]
 
     def test_a_key_the_trim_would_empty_keeps_its_label(self):
         """No key in either fixture is only its own suffix, and an

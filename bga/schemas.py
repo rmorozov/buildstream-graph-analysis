@@ -1231,6 +1231,7 @@ _COMPARE_ALWAYS_WRITTEN = (
     "build_class_comparison",
     "baseline_band_sources",
     "total_duration_delta_share",
+    "findings_diff",
 )
 
 # UX-221: `element_diff` has been emitted since UX-79 and declared by
@@ -1269,6 +1270,8 @@ _COMPARE_OPTIONAL = {
     "baseline_band_sources": "array",
     # `UX-1257`: the wall delta over the baseline's wall-clock; `null` with no baseline total.
     "total_duration_delta_share": "number",
+    # `UX-1277`: findings new, persisting and resolved since the baseline, by id; `null` on a refusal.
+    "findings_diff": "object",
 }
 
 _BLAST_REQUIRED = {
@@ -1693,14 +1696,14 @@ _EVIDENCE_FIELDS = {
     "blast_count": ("count", "Elements a change here rebuilds, transitively."),
     "dependency_stages": (
         "count",
-        "Levels the graph's elements group into by their dependencies "
-        "alone — nothing in a stage can start before the stage above it "
-        "finishes, whatever the capacity.",
+        "Levels the graph's elements group into by their longest "
+        "dependency chain — an element sits one level below its deepest "
+        "dependency.",
     ),
     "widest_stage": (
         "count",
-        "Elements in the largest dependency stage — the ceiling on how "
-        "many can ever build at once, which no number of builders lifts.",
+        "Elements in the largest dependency level — how many share one "
+        "depth, not a bound on how many can build at once.",
     ),
     "zero_slack_off_path": (
         "count",
@@ -1880,32 +1883,6 @@ EVIDENCE_QUANTITIES.update(
                         INLINE: "name",
                         QUANTITY: "share",
                         "description": "How much of the chain this row's element accounts for.",
-                    },
-                }
-            },
-        },
-        "steps": {
-            GROWS: False,
-            "maxItems": 3,  # `HORIZON_STEPS_SHOWN`
-            "items": {
-                "properties": {
-                    "saving_us": {
-                        QUANTITY: "duration_us",
-                        "description": "What taking this step alone is worth, before the ones after it.",
-                    },
-                    "makespan_after_us": {
-                        QUANTITY: "duration_us",
-                        "description": "Where the finish lands once this step is taken.",
-                    },
-                    "cumulative_saving_us": {
-                        QUANTITY: "duration_us",
-                        "description": "Everything saved up to and including it.",
-                    },
-                    "entering": {
-                        GROWS: "elements entering the critical path at that step "
-                        "(subset of elements, no cap within the step)",
-                        "items": {"type": "string", "description": "element uid"},
-                        "description": "Elements not on the previous step's critical path and on this one.",
                     },
                 }
             },
@@ -3113,19 +3090,21 @@ _SIGNALS_TABLES = {
         },
     },
     "ready_queue": {
-        "description": "How much work was ready to run and had nowhere to run it.",
+        "description": "How much ready work had not started; Counts says which.",
         "properties": {
+            "counts": {
+                "enum": ["builder_free", "dependency_ready"],
+                "description": "With builder slots recorded, only work with a builder free; a full "
+                "builder's wait is resource wait. Without, every dependency-ready task.",
+            },
             "average_depth": {
                 QUANTITY: "ratio",
-                "description": "How many elements were ready and waiting, averaged over the build.",
+                "description": "How many such elements were waiting, averaged over the build.",
             },
-            "peak_depth": {QUANTITY: "count", "description": "The most elements ready and waiting at once."},
+            "peak_depth": {QUANTITY: "count", "description": "The most such elements waiting at once."},
             "nonzero_fraction": {
                 QUANTITY: "share",
-                "description": "The share of the build spent with "
-                "anything waiting. High means "
-                "capacity bound, not graph "
-                "bound.",
+                "description": "The share of the build with any of them waiting, as Counts defines them.",
             },
         },
     },
@@ -3866,6 +3845,17 @@ _ANALYZE_HINTS = {
                 "measured peak RSS per element and a host "
                 "memory total.",
             },
+            # UX-1274: the curve the knee is read off, drawn as a series under the recommendation.
+            "sweep": {
+                GROWS: False,
+                "maxItems": 32,
+                "items": {QUANTITY: "duration_us", "description": "The replayed wall at this many builders."},
+                SERIES: "builder",
+                QUANTITY: "duration_us",
+                "description": "The replayed wall at 1, 2, … builders, up to the larger of twice the "
+                "builders, twice the host's cores and the graph's widest stage, capped at 32. A replay of "
+                "observed durations with no contention: what the schedule could do, not this host.",
+            },
             "sweep_binding": {
                 "description": "Which of the sweep's own two "
                 "capacities — the graph's knee or "
@@ -3888,7 +3878,11 @@ _ANALYZE_HINTS = {
                         QUANTITY: "count",
                         "description": "Builders the capacity recommendation settles on.",
                     },
-                    "graph_ceiling": {QUANTITY: "count", "description": "Builders the sweep's knee allows."},
+                    "graph_ceiling": {
+                        QUANTITY: "count",
+                        "description": "Builders the sweep's knee allows; at the most builders swept, no knee within the range.",
+                    },
+                    "swept_to": {QUANTITY: "count", "description": "The most builders the sweep replayed."},
                     "observed": {QUANTITY: "count", "description": "Builders this run was given."},
                 },
             },
@@ -3901,12 +3895,19 @@ _ANALYZE_HINTS = {
                 },
             },
             "memory": {
-                "description": "At most: the largest per-element peak RSS times the builders, as if all peak at once.",
+                "description": "The largest peak RSS times the builders: at most, from an element's whole peak; "
+                "no bound from one process's, since an element runs several at once and their sum is unrecorded.",
                 "properties": {
+                    "bound": {
+                        "description": "Upper for the memory envelope's element peak; none for a single process's."
+                    },
                     "basis": {
                         "description": "Envelope when read from the host's memory envelope; process peak when from Plane 2's per-element peaks."
                     },
-                    "per_element_bytes": {QUANTITY: "bytes", "description": "The largest element's peak RSS."},
+                    "per_element_bytes": {
+                        QUANTITY: "bytes",
+                        "description": "The largest element's peak RSS, or the largest single process's.",
+                    },
                     "builders": {QUANTITY: "count", "description": "The builders it is multiplied by."},
                     "bytes": {QUANTITY: "bytes", "description": "Per-element peak times the builders."},
                 },
@@ -4121,14 +4122,14 @@ _ANALYZE_HINTS = {
             "total": "total_duration_us",
             "quantity": "duration_us",
             "parts": [
-                {"path": "attribution.execution_on_chain_us", "key": "execution", "label": "work on the chain"},
-                {"path": "attribution.dependency_wait_us", "key": "dependency", "label": "waiting upstream"},
-                {"path": "attribution.resource_wait_us", "key": "resource", "label": "capacity full"},
-                {"path": "attribution.scheduler_wait_us", "key": "scheduler", "label": "nothing dispatched"},
-                {"path": "attribution.idle_us", "key": "idle", "label": "nothing ready"},
+                {"path": "attribution.execution_on_chain_us", "key": "execution", "label": "execution on the chain"},
+                {"path": "attribution.dependency_wait_us", "key": "dependency", "label": "waiting on dependencies"},
+                {"path": "attribution.resource_wait_us", "key": "resource", "label": "waiting on resources"},
+                {"path": "attribution.scheduler_wait_us", "key": "scheduler", "label": "waiting on the scheduler"},
+                {"path": "attribution.idle_us", "key": "idle", "label": "idle"},
                 {"path": "attribution.retry_wait_us", "key": "retry", "label": "retries"},
                 {"path": "attribution.untracked_head_us", "key": "head", "label": "before the first task"},
-                {"path": "attribution.untracked_tail_us", "key": "tail", "label": "after the last"},
+                {"path": "attribution.untracked_tail_us", "key": "tail", "label": "after the last task"},
             ],
         },
         # `UX-390`: and the run's advice for each bucket, drawn on the
@@ -4866,6 +4867,11 @@ _ANALYZE_HINTS = {
                             "description": "A capacity-bound run's builders "
                             "step, leading the list in place of an element.",
                         },
+                        "replayed_delta_us": {
+                            QUANTITY: "duration_us",
+                            "description": "The builders step's replayed wall at this run's builders minus at "
+                            "the count it quotes: a replay with no contention, not a measured saving.",
+                        },
                     },
                 },
             },
@@ -4897,6 +4903,8 @@ _ANALYZE_HINTS = {
         COLUMNS: [
             "binary",
             {"key": "cpu_us", "title": "CPU"},
+            {"key": "blocked_us", "title": "Blocked"},
+            {"key": "blocked_share", "title": "Blocked share"},
             {"key": "wall_us", "title": "Wall"},
             {"key": "calls", "title": "Calls in run"},
             {"key": "elements", "title": "Elements"},
@@ -4916,9 +4924,24 @@ _ANALYZE_HINTS = {
                     "report published only top-5 rankings, or no element "
                     "it measured ran it.",
                 },
+                "blocked_us": {
+                    QUANTITY: "duration_us",
+                    "description": "Time its processes were alive, not on CPU, "
+                    "and had no child running: what they waited on themselves. "
+                    "An upper bound: a child whose parent the capture missed is "
+                    "not subtracted from its ancestor; Plane 2's report counts "
+                    "those per element. "
+                    "Absent when the Plane 2 report did not measure it.",
+                },
+                "blocked_share": {
+                    QUANTITY: "share",
+                    "description": "Blocked time as a share of its own wall; absent with blocked.",
+                },
                 "wall_us": {
                     QUANTITY: "duration_us",
-                    "description": "Wall-clock those calls spanned, summed the same way; absent with CPU.",
+                    "description": "Each call's process lifetime, summed over every call in every "
+                    "element: overlapping and nested calls each count, so it can exceed the run's "
+                    "wall clock. Absent with CPU.",
                 },
                 "calls": {QUANTITY: "count", "description": "How many times the whole run ran it."},
                 "elements": {QUANTITY: "count", "description": "How many elements ran it; absent with CPU."},
@@ -5256,7 +5279,8 @@ _ANALYZE_HINTS = {
             "effective_cpus": {
                 INLINE: "name",
                 QUANTITY: "count",
-                "description": "The capacity this accounting divides by. Builder slots as recorded, not host cores.",
+                "description": "The capacity this accounting divides by, in CPUs: measured, a declared CPU budget "
+                "or detected host cores, as the source line says.",
             },
             "effective_cpus_source": {
                 INLINE: "caveat",
@@ -5391,7 +5415,7 @@ _LIFTED_HINTS = {
     "fetch_build_overlap": ('act', 'Did fetching wait for building?'),
     "wall_clock_share_us": ('prove', 'How much of the run did each task hold?'),
     "task_durations_us": ('prove', 'How long did each task run?'),
-    "ready_queue": ('prove', 'How much work was waiting to start?'),
+    "ready_queue": ('prove', 'How much ready work had not started?'),
     "leaf_analysis": ('investigate', 'Which elements does nothing wait on?'),
     "element_duration_distribution": ('investigate', "How are this run's element durations spread?"),
     "blast_radius_distribution": ('investigate', 'How are blast radii spread across this graph?'),
@@ -5883,6 +5907,38 @@ _COMPARE_HINTS = {
     "candidate": {"properties": _COMPARED_SIDE},
     "baseline_confidence": _CONFIDENCE,
     "candidate_confidence": _CONFIDENCE,
+    "findings_diff": {
+        "description": "The candidate's findings against the baseline's, by finding id: "
+        "new in the candidate, persisting in both, resolved since the baseline.",
+        "properties": {
+            "new": {"description": "Findings the candidate has and the baseline did not have."},
+            "resolved": {"description": "Findings the baseline had and the candidate does not."},
+            "persisting": {
+                "description": "Findings both runs have, each with its age in snapshots.",
+                "items": {
+                    "properties": {
+                        "age": {
+                            QUANTITY: "count",
+                            "description": "Consecutive snapshots ending at the candidate that hold "
+                            "this finding: 2 is the baseline and the candidate; each earlier "
+                            "published analysis holding it adds one.",
+                        },
+                        "age_exact": {
+                            "description": "False when the walk stopped on a run with no usable "
+                            "published analysis, so `age` is a floor: at least that many.",
+                        },
+                    },
+                },
+            },
+            "not_compared": {
+                "description": "Findings on one side only that are neither new nor resolved, "
+                "because the two runs recorded different planes.",
+            },
+            "not_compared_reason": {
+                "description": "Why some findings were not compared, as one clause the page shows; null when all were.",
+            },
+        },
+    },
     "cache_churn": {
         "properties": {
             "comparable_elements": {
@@ -6368,6 +6424,14 @@ _STORE_AGGREGATE_HINTS = {
 
 _STORE_HINTS = {
     "total_bytes": {QUANTITY: "bytes", "description": "What the stored snapshots occupy on disk, together."},
+    # UX-1276: a permitted key (additionalProperties), absent unless `.bga/config` declares `builds_per_day`.
+    "build_rate": {
+        "description": "Builds a day, as declared, so a saving reads in agent-hours a day. Absent when undeclared.",
+        "properties": {
+            "per_day": {QUANTITY: "rate_per_day", "description": "Builds of this project a day, as declared."},
+            "source": {"description": "Where the rate came from: declared in `.bga/config`, never counted."},
+        },
+    },
     "count": {
         QUANTITY: "count",
         "description": "Snapshots held. The store's own size, whether or not `snapshots` lists all of them.",
@@ -6833,6 +6897,7 @@ _SCHEMAS = {
         "the alias `@last`/`@prev` resolution would give it, and why it "
         "is not a measurement if it is not one. Incomplete captures are "
         "listed rather than hidden — they occupy the disk.",
+        optional={"build_rate": "object"},
         hints=_STORE_HINTS,
     ),
     STORE_AGGREGATE: lambda: _document(

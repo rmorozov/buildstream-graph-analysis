@@ -87,6 +87,10 @@ def _attribution_key(category: AttributionCategory) -> str:
 # so a test can enumerate AttributionCategory and assert none are
 # missing - a real guard against a future new category silently
 # lacking a hint.
+# UX-1271: the resource in reader words, and `--capacity` with the command that takes it.
+RESOURCE_WAIT_SATURATED = "builder slots, downloads or uploads were saturated"
+_RESOURCE_WAIT_ADVICE = "try `bga analyze --capacity N` with a higher N"
+_RESOURCE_WAIT_SWEEP = ", or `bga sweep` to find the real knee point"
 ATTRIBUTION_CATEGORY_HINTS = {
     AttributionCategory.EXECUTION_ON_CHAIN: (
         "real work on the critical path — the only way to reduce this is to reduce the work itself"
@@ -94,10 +98,7 @@ ATTRIBUTION_CATEGORY_HINTS = {
     AttributionCategory.DEPENDENCY_WAIT: (
         "waiting on an upstream element to finish — shorten or parallelize that dependency chain"
     ),
-    AttributionCategory.RESOURCE_WAIT: (
-        "a resource (PROCESS/DOWNLOAD/UPLOAD) was saturated — try --capacity N with a "
-        "higher N, or `bga sweep` to find the real knee point"
-    ),
+    AttributionCategory.RESOURCE_WAIT: f"{RESOURCE_WAIT_SATURATED} — {_RESOURCE_WAIT_ADVICE}{_RESOURCE_WAIT_SWEEP}",
     AttributionCategory.SCHEDULER_WAIT: (
         "capacity was available but nothing was dispatched — try a different --heuristic in `bga replay`"
     ),
@@ -138,18 +139,35 @@ ATTRIBUTION_CATEGORY_HINTS_BY_KEY = {
 # none of them advises a direction that capacity could invert.
 _RESOURCE_WAIT_KEY = _attribution_key(AttributionCategory.RESOURCE_WAIT)
 
-_RESOURCE_WAIT_HINT_OVERSUBSCRIBED = (
-    "a resource (PROCESS/DOWNLOAD/UPLOAD) was saturated — but this run is already "
-    "oversubscribed (see Violations), so raising capacity will make it worse, not "
-    "better: the levers here are less native parallelism per element, fewer "
-    "builders, or less work"
+_RESOURCE_WAIT_ADVICE_OVERSUBSCRIBED = (
+    "but this run is already oversubscribed (see Violations), so raising capacity "
+    "will make it worse, not better: the levers here are less native parallelism "
+    "per element, fewer builders, or less work"
 )
-_RESOURCE_WAIT_HINT_UNKNOWN_CAPACITY = (
-    "a resource (PROCESS/DOWNLOAD/UPLOAD) was saturated — whether raising capacity "
-    "would help depends on how loaded this host already is, and this run's capacity "
-    "checks could not run (see the Certified Floors note), so this hint is "
-    "unconditioned; `bga sweep` shows the shape of the curve either way"
+_RESOURCE_WAIT_ADVICE_UNKNOWN_CAPACITY = (
+    "whether raising capacity would help depends on how loaded this host already "
+    "is, and this run's capacity checks could not run (see the Certified Floors "
+    "note), so this hint is unconditioned"
 )
+_RESOURCE_WAIT_SWEEP_UNKNOWN_CAPACITY = "; `bga sweep` shows the shape of the curve either way"
+
+
+def resource_wait_advice(capacity_verdict: Optional[dict] = None) -> tuple[str, str]:
+    """`(advice, sweep clause)` for resource wait under this run's capacity verdict; the clause may be empty."""
+    verdict = capacity_verdict or {}
+    if verdict.get('oversubscribed'):
+        return _RESOURCE_WAIT_ADVICE_OVERSUBSCRIBED, ""
+    if not verdict.get('checks_ran'):
+        return _RESOURCE_WAIT_ADVICE_UNKNOWN_CAPACITY, _RESOURCE_WAIT_SWEEP_UNKNOWN_CAPACITY
+    return _RESOURCE_WAIT_ADVICE, _RESOURCE_WAIT_SWEEP
+
+
+def resource_wait_step(capacity_verdict: Optional[dict] = None) -> str:
+    """The wait-category step's advice: it names `bga sweep`, the command the step hands over, and no other."""
+    advice, _ = resource_wait_advice(capacity_verdict)
+    if advice == _RESOURCE_WAIT_ADVICE:
+        return "replay more builders with bga sweep to find the knee point"
+    return f"{advice}; bga sweep shows the shape of the curve either way"
 
 
 def resolve_attribution_hint(key: str, capacity_verdict: Optional[dict] = None) -> Optional[str]:
@@ -164,9 +182,5 @@ def resolve_attribution_hint(key: str, capacity_verdict: Optional[dict] = None) 
     """
     if key != _RESOURCE_WAIT_KEY:
         return ATTRIBUTION_CATEGORY_HINTS_BY_KEY.get(key)
-    verdict = capacity_verdict or {}
-    if verdict.get('oversubscribed'):
-        return _RESOURCE_WAIT_HINT_OVERSUBSCRIBED
-    if not verdict.get('checks_ran'):
-        return _RESOURCE_WAIT_HINT_UNKNOWN_CAPACITY
-    return ATTRIBUTION_CATEGORY_HINTS_BY_KEY.get(key)
+    advice, sweep = resource_wait_advice(capacity_verdict)
+    return f"{RESOURCE_WAIT_SATURATED} — {advice}{sweep}"

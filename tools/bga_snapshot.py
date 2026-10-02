@@ -44,7 +44,7 @@ import sys
 import time
 from typing import Optional
 
-from bga import progress, run_store
+from bga import build_rate, progress, run_store
 from bga.plural import plural
 
 # What a snapshot is made of. Deliberately the layout the published
@@ -1431,18 +1431,20 @@ def store_listing(project: str, window: Optional[int] = None) -> dict:
     # one before it, and the first row of a window has a predecessor.
     _mark_verdicts(rows)
     shown = rows if not window else rows[-window:]
-    return schemas.stamp(
-        {
-            "project": os.path.abspath(project),
-            "snapshots": shown,
-            "count": len(rows),
-            "shown": len(shown),
-            # Sum of file sizes, so it is a little under `du` (which also
-            # counts directory entries) and matches `du --apparent-size`.
-            "total_bytes": sum(row["bytes"] for row in rows),
-        },
-        schemas.STORE,
-    )
+    listing = {
+        "project": os.path.abspath(project),
+        "snapshots": shown,
+        "count": len(rows),
+        "shown": len(shown),
+        # Sum of file sizes, so it is a little under `du` (which also
+        # counts directory entries) and matches `du --apparent-size`.
+        "total_bytes": sum(row["bytes"] for row in rows),
+    }
+    # UX-1276: absent with no declared rate, so an undeclared store lists as before.
+    rate = build_rate.build_rate(project)
+    if rate:
+        listing["build_rate"] = rate
+    return schemas.stamp(listing, schemas.STORE)
 
 
 def _tail_measurements(snapshot: str) -> dict:

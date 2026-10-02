@@ -386,7 +386,7 @@ export function exhibitTwin(doc, headers, rows) {
  */
 export function sparkline(values, {
   unit = "step", format = String, doc = document, label = null,
-  grade = undefined,
+  grade = undefined, marks = [],
 } = {}) {
   const origin = SERIES_ORIGIN[unit] ?? 1;
   const size = scaleFor(grade);
@@ -426,6 +426,7 @@ export function sparkline(values, {
   const low = Math.min(...points);
   const span = high - low;
   const x = (i) => (i / (points.length - 1)) * size.width;
+  const r = 1.6 * size.spark / SPARK_HEIGHT;
   // Flat series sit on the middle line rather than on the floor: a
   // series of identical values is not "all at zero".
   //
@@ -465,11 +466,13 @@ export function sparkline(values, {
     x: edge(at - 1).toFixed(2), y: "0", width: (edge(at) - edge(at - 1)).toFixed(2),
     height: String(size.spark), fill: "transparent",
   }), says(at))));
+  // A point the sentence beside the drawing names (a knee, this run's count) is dotted too.
+  const named = marks.filter((m) => Number.isInteger(m.at) && m.at >= 0 && m.at < points.length);
   for (const [at, role] of [[0, "first"], [points.length - 1, "last"],
-                            [peak, "peak"]]) {
+                            [peak, "peak"], ...named.map((m) => [m.at, m.role])]) {
     line.append(titled(make(doc, "circle", {
       cx: x(at).toFixed(2), cy: y(points[at]).toFixed(2),
-      r: (1.6 * size.spark / SPARK_HEIGHT).toFixed(2),
+      r: r.toFixed(2),
       class: "spark-point", "data-mark": role,
       "data-value": String(points[at]), "data-at": String(at),
     }), says(at)));

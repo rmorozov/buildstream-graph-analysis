@@ -391,7 +391,18 @@ export function elementFactsFor(payload, uid) {
                             entering: [], advice: [], evidence: [],
                             lists: [], onDemand: true,
                             binaries: (payload?.binary_cost ?? []).filter((row) => row.element === uid) };
-  const held = new Set(record.rows.map((row) => row.field));
+  record.rows.push(...mapRows(payload, uid, new Set(record.rows.map((row) => row.field))));
+  record.lists = listsFor(payload, uid, record.lists);
+  if (known) return record;
+  for (const finding of payload?.findings ?? []) {
+    if ((finding.elements ?? []).includes(uid)) record.findings.push(finding);
+  }
+  return record;
+}
+
+// `ELEMENT_MAPS`'s rows for `uid`, skipping a field `held` already names.
+function mapRows(payload, uid, held) {
+  const rows = [];
   for (const [path, field, label, kind] of ELEMENT_MAPS) {
     const map = path.split(".").reduce((node, key) => node?.[key], payload);
     const entry = map?.[uid];
@@ -401,7 +412,7 @@ export function elementFactsFor(payload, uid) {
     const name = field ?? path.split(".").pop();
     if (held.has(name)) continue;
     held.add(name);
-    record.rows.push({
+    rows.push({
       label: label ?? title(name, kind), value, kind, field: name,
       // The same walk-back grammar `UX-227` established, and a uid
       // contains dots - so the bracket form, which `resolvePath` reads
@@ -409,12 +420,7 @@ export function elementFactsFor(payload, uid) {
       path: `${path}[${uid}]${field === null ? "" : `.${field}`}`,
     });
   }
-  record.lists = listsFor(payload, uid, record.lists);
-  if (known) return record;
-  for (const finding of payload?.findings ?? []) {
-    if ((finding.elements ?? []).includes(uid)) record.findings.push(finding);
-  }
-  return record;
+  return rows;
 }
 
 /**
@@ -589,7 +595,9 @@ export function renderElementSections(payload, root, options = {}) {
   const all = [...facts.values()];
   for (const record of all.slice(0, ELEMENTS_SHOWN)) {
     // UX-1200: a ranked card lists what it blocks and depends on, as the on-demand card does.
-    sections.push(elementSection({ ...record, lists: listsFor(payload, record.element, record.lists) },
+    // UX-1267: and the map rows the on-demand card shows, folded.
+    const maps = mapRows(payload, record.element, new Set(record.rows.map((row) => row.field)));
+    sections.push(elementSection({ ...record, maps, lists: listsFor(payload, record.element, record.lists) },
                                  places.get(record.element),
                                  investigate, format, bounded));
   }
@@ -658,6 +666,11 @@ function elementSection(record, places, investigate, format, bounded = null) {
   section.append(controls);
 
   if (record.rows.length) section.append(pairList(record.rows, format));
+  if (record.maps?.length) {
+    section.append(el("details", { "data-fold": "element-maps", "data-levels": "1", "data-rows": record.maps.length },
+      el("summary", {}, `Across the run · 1 level, ${plural(record.maps.length, "row")}`),
+      pairList(record.maps, format)));
+  }
 
   // `UX-356` (§1b): the sentence the analyzer wrote for this reader,
   // above the evidence it rests on and above the findings that name
@@ -903,7 +916,7 @@ export function renderWhatIf(payload, ask = null, options = {}) {
   section.append(heading);
   // `UX-650`: R1, derived rather than argued - the whole section is
   // `payload.optimization_horizon`, and that key joins to R1 in
-  // `schemas._SECTION_READERS` through the `optimization-horizon`
+  // `schemas._SECTION_READERS` through the `joint-saving`
   // finding.
   declareReaders(section, ["R1"]);
 

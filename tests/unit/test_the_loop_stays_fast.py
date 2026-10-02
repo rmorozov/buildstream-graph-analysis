@@ -176,7 +176,9 @@ class TestTheSelectorStillSelects:
     # Round 154's merged tree (13 guards over the viewer's modules): median 40, p90 65, max 180 over 736.
     # Round 161's merged tree (14 browser guards over the viewer): median 40, p90 65, max 184 over 782.
     # Round 163's merged tree (the round's guards over findings, the viewer and the schema): median 40, p90 66, max 189 over 795.
-    CEILING = {"median": 40, "p90": 66, "max": 190}
+    # Round 165's merged tree (owner-call default; the round's guards over findings, the viewer and the sweep):
+    # median 40, p90 66, max 193 over 803.
+    CEILING = {"median": 40, "p90": 66, "max": 193}
     POPULATION_FLOOR = 60
     #: `UX-645`: **13 census + 14 of your own**. The census floor is
     #: inside this bound because those files run - the figure is what
@@ -247,6 +249,9 @@ class TestTheSelectorStillSelects:
         "bga/correlate.py",
         "bga/report/json.py",
         "bga/schemas.py",
+        # Round 165: 49 = 30 census + 19 named, one over `HANDFUL`. Wide by **name**: UX-1264/1271's
+        # step guard imports the resource-wait hint it checks from `bga.report._shared`.
+        "bga/report/_shared.py",
         # `UX-740`, round 102: 46 = 31 census + 16 named, one over the
         # bound. Wide by **name**: loading a fixture run is what a guard
         # does to get one, so `from bga.ingest.loader import load_all`

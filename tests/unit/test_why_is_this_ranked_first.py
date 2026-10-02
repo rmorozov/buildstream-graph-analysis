@@ -221,6 +221,74 @@ class TestEveryValueIsTraceable:
         assert _render(payload, store)["blocks"][0]["history"] is not None
 
 
+#: UX-1258: the 2,402-element page's capacity block and the first two of its top actions, as published.
+_CAPACITY_PAGE = {
+    "schema": "analyze/v7",
+    "capacity_recommendation": {
+        "builders": 4,
+        "binding_constraint": "host_cores",
+        "constraints": [
+            {"name": "graph", "allows": 30, "reason": "the sweep's knee is at 30 builders"},
+            {
+                "name": "host_cores",
+                "allows": 4,
+                "reason": "0.86 of 4 cores busy at builders=4, i.e. 0.21 cores per concurrent element",
+                "clamped_from": 18,
+            },
+        ],
+    },
+    "provenance": [
+        {
+            "claim": "capacity-recommendation",
+            "rule": {"sentence": "Published whenever the four constraints could be intersected."},
+        },
+        {"claim": "blast-radius-ranking", "rule": {"sentence": "Ranked by downstream count."}},
+    ],
+    "elements": {"blast_radius": {"layer00/mod010.bst": {"downstream_count": 2194}}},
+    "headline": {
+        "diagnosis": "capacity_bound",
+        "sentence": "s",
+        "top_actions": [
+            {
+                "step": "Measure builders above the host's 4-core cap with bga sweep",
+                "finding_id": "capacity-recommendation",
+            },
+            {"element_uid": "layer00/mod010.bst", "finding_id": "blast-radius-ranking", "downstream_count": 2194},
+        ],
+    },
+}
+
+
+@needs_node
+def test_the_builders_step_opens_its_own_why():
+    """The step row names no element; its fold is the finding's constraint rows, each at its path."""
+    blocks = _render(_CAPACITY_PAGE)["blocks"]
+    first = blocks[0]
+    assert (first["element"], first["summary"]) == ("capacity-recommendation", "Why #1"), blocks
+    assert [row["field"] for row in first["rows"]] == [
+        f"capacity_recommendation.constraints[name={name}].{key}"
+        for name in ("graph", "host_cores")
+        for key in ("allows", "reason")
+    ], first["rows"]
+    for row in first["rows"]:
+        assert str(provenance.resolve(_CAPACITY_PAGE, row["field"])) == row["raw"] == row["resolved"], row
+    assert first["why"] == "Published whenever the four constraints could be intersected.", first
+    assert blocks[1]["element"] == "layer00/mod010.bst" and blocks[1]["summary"] == "Why #2", blocks
+
+
+@needs_node
+def test_a_step_attributed_to_another_finding_borrows_no_constraints():
+    """`_builders_actions` names `wait-category` when no capacity finding exists: no fold of capacity rows under it."""
+    import copy
+
+    page = copy.deepcopy(_CAPACITY_PAGE)
+    page["headline"]["top_actions"][0]["finding_id"] = "wait-category"
+    page["provenance"].append({"claim": "wait-category", "rule": {"sentence": "Ranked by wait."}})
+    blocks = _render(page)["blocks"]
+    assert [block["element"] for block in blocks] == ["layer00/mod010.bst"], blocks
+    assert not any("capacity_recommendation" in row["field"] for block in blocks for row in block["rows"]), blocks
+
+
 class TestTheExportCarriesIt:
     def test_the_explanations_need_no_server(self, tmp_path):
         """The block is rendered from the inlined payload, so it works
@@ -274,9 +342,10 @@ let shared = null, heading = false;
   }
   if (n.className === "why-ranked") {
     const rows = [], findings = [];
-    let why = null, history = null;
+    let why = null, history = null, summary = null;
     (function inner(m) {
       if (!m) return;
+      if (m.tagName === "summary" && summary === null) summary = m.textContent;
       if (m.tagName === "dd" && m.attrs["data-field"]) {
         rows.push({ field: m.attrs["data-field"], raw: m.attrs["data-raw"],
                     // The page walks its own path back, so the guard can
@@ -289,7 +358,7 @@ let shared = null, heading = false;
       if (m.className === "muted why-finding") findings.push(m.attrs["data-finding"]);
       (m.children ?? []).forEach(inner);
     })(n);
-    blocks.push({ element: n.attrs["data-why"], rows, findings, why, history });
+    blocks.push({ element: n.attrs["data-why"], rows, findings, why, history, summary });
     return;
   }
   // Only under the list's own rule: the headline has a chain of its

@@ -2333,6 +2333,8 @@ class BuildEfficiencyAnalyzer:
         # Ready queue (Part 21)
         if diag_result.ready_queue:
             signals['ready_queue'] = {
+                # UX-1273: with no recorded capacities the count is every dependency-ready task.
+                'counts': 'builder_free' if resource_caps else 'dependency_ready',
                 'average_depth': diag_result.ready_queue.average_depth,
                 'peak_depth': diag_result.ready_queue.peak_depth,
                 'nonzero_fraction': diag_result.ready_queue.nonzero_fraction,

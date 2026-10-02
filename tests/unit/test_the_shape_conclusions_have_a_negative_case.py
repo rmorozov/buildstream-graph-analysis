@@ -26,6 +26,7 @@ asserts what holds today, so it cannot go quietly green over either.
 import contextlib
 import io
 import json
+import re
 
 import pytest
 
@@ -427,10 +428,10 @@ class TestTheGraphOwnerHasAFindingThatReadsNoDuration:
 
     def test_it_names_the_ceiling_no_capacity_lifts(self, chain):
         finding = _by_id(chain)["graph-width"]
-        assert "5 dependency stages" in (finding["title"] + " " + " ".join(finding["detail"])), (
+        assert "5 dependency levels" in (finding["title"] + " " + " ".join(finding["detail"])), (
             finding["title"] + " " + " ".join(finding["detail"])
         )
-        assert "1 element at most" in (finding["title"] + " " + " ".join(finding["detail"])), (
+        assert "holds 1 of 5 elements" in (finding["title"] + " " + " ".join(finding["detail"])), (
             finding["title"] + " " + " ".join(finding["detail"])
         )
         assert finding["reader"] == "graph-owner", finding
@@ -474,3 +475,27 @@ class TestTheGraphOwnerHasAFindingThatReadsNoDuration:
         evidence = _by_id(payload)["graph-width"]["evidence"]
         assert evidence["dependency_stages"] == 4, evidence
         assert evidence["element_count"] == 5, evidence
+
+
+def test_the_text_report_states_the_total_and_claims_no_ceiling():
+    """UX-1265: the widest level of the total, and no concurrency bound - a deeper element waits only on its own."""
+    import pathlib
+
+    from bga.cli import main
+
+    fixture = pathlib.Path(__file__).resolve().parents[1] / "fixtures/macro_micro"
+    argv = ["analyze", str(fixture / "run"), "--plane2", str(fixture / "plane2.json")]
+
+    def _out(extra):
+        buffer = io.StringIO()
+        with contextlib.redirect_stdout(buffer), contextlib.redirect_stderr(io.StringIO()):
+            main(argv + extra)
+        return buffer.getvalue()
+
+    evidence = _by_id(json.loads(_out(["--format", "json"])))["graph-width"]["evidence"]
+    lines = _out([]).splitlines()
+    title = next(i for i, line in enumerate(lines) if "dependency levels" in line)
+    said = f"holds {evidence['widest_stage']:,} of {evidence['element_count']:,} elements"
+    assert said in lines[title], lines[title : title + 2]
+    claims = re.compile(r"at most|ever build|ceiling|builders? lifts?", re.I)
+    assert not claims.search(" ".join(lines[title : title + 2])), lines[title : title + 2]

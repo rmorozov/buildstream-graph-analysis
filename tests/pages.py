@@ -438,15 +438,21 @@ def transfer_run(fixture, into) -> pathlib.Path:
     return run
 
 
-def snapshot_copy(fixture, into) -> pathlib.Path:
+def snapshot_copy(fixture, into, store=False) -> pathlib.Path:
     """Copy the fixture's whole **snapshot** and return the run inside it.
 
     `into` is a directory the caller owns - a `tmp_path` or a
     `tmp_path_factory.mktemp(...)`. The snapshot lands at
     `into/snapshot`, so the run keeps both its own name and its
     siblings, and `sibling_plane2` finds what it finds in the tree.
+
+    `UX-1262`: `store=True` copies the fixture's whole project store to
+    `into/project`, so `bga_view.history()` finds @prev and the page
+    carries compare.json.
     """
     fixture = pathlib.Path(fixture)
+    if store:
+        return _store_copy(fixture, into)
     snapshot = pathlib.Path(into) / "snapshot"
     shutil.copytree(fixture.parent, snapshot, ignore=_IGNORED, dirs_exist_ok=True)
     run = snapshot / fixture.name
@@ -454,7 +460,20 @@ def snapshot_copy(fixture, into) -> pathlib.Path:
     return run
 
 
-def export_page(fixture, into, name="report.html", **kwargs) -> pathlib.Path:
+def _store_copy(fixture, into) -> pathlib.Path:
+    from bga import run_store
+
+    project = run_store.project_root(str(fixture.parent))
+    if project is None:
+        raise ValueError(f"{fixture} is not inside a project store")
+    copied = pathlib.Path(into) / "project"
+    shutil.copytree(project, copied, ignore=_IGNORED, dirs_exist_ok=True)
+    run = copied / fixture.resolve().relative_to(pathlib.Path(project).resolve())
+    (run / _DROPPED).unlink(missing_ok=True)
+    return run
+
+
+def export_page(fixture, into, name="report.html", store=False, **kwargs) -> pathlib.Path:
     """`snapshot_copy`, then `bga view --export`. The page's path.
 
     Imported inside the call rather than at module scope: `tests/` is on
@@ -464,16 +483,16 @@ def export_page(fixture, into, name="report.html", **kwargs) -> pathlib.Path:
     """
     import tools.bga_view as view
 
-    run = snapshot_copy(fixture, into)
+    run = snapshot_copy(fixture, into, store=store)
     page = pathlib.Path(into) / name
     page.parent.mkdir(parents=True, exist_ok=True)
     view.export(str(run), str(page), **kwargs)
     return page
 
 
-def export_uri(fixture, into, name="report.html", **kwargs) -> str:
-    """The `file://` URI `Browser.measure` wants."""
-    return export_page(fixture, into, name, **kwargs).as_uri()
+def export_uri(fixture, into, name="report.html", store=False, **kwargs) -> str:
+    """The `file://` URI `Browser.measure` wants; `store=True` copies the project store."""
+    return export_page(fixture, into, name, store=store, **kwargs).as_uri()
 
 
 def pages(tmp_path_factory, prefix="page", labels=None) -> dict:

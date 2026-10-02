@@ -486,6 +486,14 @@ def store_payload(run: str, window: Optional[int] = STORE_WINDOW) -> Optional[di
         return None
 
 
+def build_rate_note(run: str) -> Optional[dict]:
+    """`UX-1276`: the project's declared build rate for the manifest, so an export prices a saving too."""
+    from bga import build_rate, run_store
+
+    project = run_store.project_root(os.path.abspath(run))
+    return build_rate.build_rate(project) if project else None
+
+
 def store_aggregate_payload(store: Optional[dict]) -> Optional[dict]:
     """`store-aggregate/v1` for a listing, or None.
 
@@ -779,7 +787,8 @@ EXPORT_BUDGET_B = 8 * 1024 * 1024
 #: so the stylesheet, `index.html`, the gzipped viewer module and its
 #: loader. The procedure and every earlier value are
 #: `test_the_report_you_can_attach.py`'s note on this name.
-PAGE_BUDGET_B = 165_000
+#: Owner-call default (UX-1267..UX-1277): merged 165,620 B; the walk's rail mark, sweep dots and export rate 166,217 B.
+PAGE_BUDGET_B = 166_250
 # The trace is the one part that can be dropped without losing the
 # report, so it is the one part with its own ceiling.
 #
@@ -1411,6 +1420,9 @@ def export(run: str, path: str, with_trace: bool = True, reanalyse: bool = False
         # that gets tested on one side only.
         "payloads": _offered(documents),
     }
+    rate = build_rate_note(run)
+    if rate:
+        documents["run"]["build_rate"] = rate
     if notes.get("comparison_unavailable"):
         # `UX-725`: the band's own absence, said once on the page - not
         # the two lines `bga compare` printed while `payloads()` built
@@ -1996,7 +2008,8 @@ def serve(
             # trace, which `UX-296` moved off the startup path. The page
             # asks for the headers when the user asks for the timeline.
             "trace_inline_max_bytes": TRACE_BUDGET_B,
-        },
+        }
+        | ({"build_rate": rate} if (rate := build_rate_note(run)) else {}),
     )
 
     # `UX-443`: and what the graph's edges became - the third reader of

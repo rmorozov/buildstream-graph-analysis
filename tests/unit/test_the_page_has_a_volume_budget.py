@@ -382,9 +382,11 @@ BUDGETS = (
     # 800 -> 868 - macro_micro's measured +788 px, +68 controls; headroom unchanged.
     # `UX-1254`: controls 868 -> 872 - the sizing card's rail link, fold, JSON door and three source
     # links (+6) on macro_micro's 866; the owner's call, pending, like UX-1200b's.
-    # `UX-1249`: words 13,200 -> 13,500 - every finding draws its step (+201 words on macro_micro: 107 of
-    # steps, 94 of why-none), 13,162 -> 13,338 measured; px fell 39,522 -> 37,847 with the Info fold.
-    (50, 39_188, 13_500, 872, 7_900),
+    # `UX-1249`: words 13,200 -> 13,500 - every finding draws its step (+176 words on macro_micro,
+    # 13,162 -> 13,338 measured); px fell 39,522 -> 37,847 with the Info fold.
+    # Round 165's merge (owner-call default): words 13,500 -> 13,700, controls 872 -> 874 - UX-1267/1270 +210 words,
+    # UX-1269/1273 +99, UX-1272/1274/1276 +102, UX-1261/1275 and UX-1274 +1 control each; macro_micro 13,697 words, 874.
+    (50, 39_188, 13_700, 874, 7_900),
     # `UX-1050`: px 36,500 -> 43,500, words 9,600 -> 13,200, nodes
     # 6,000 -> 7,500 on the 4,100 class: `xl_both` (Plane 2 and a store)
     # reads 42,982 px, 12,872 words, 7,209 nodes; Plane 2's cost is flat
@@ -394,7 +396,12 @@ BUDGETS = (
     # Controls 900 -> 1,020: 1,006 measured +10, rounded up; one Markdown box, then raise (Ruslan 19:26).
     # UX-1200b, Ruslan 05:49: px 44,629 -> 46,822, controls 1,020 -> 1,192 - xl_both's measured
     # +2,193 px, +172 controls; nodes stay 7,500 (the merged round reads 7,284).
-    (4_100, 46_822, 13_200, 1_192, 7_500),
+    # `UX-1267` (owner-call default): words 13,200 -> 13,600, nodes 7,500 -> 7,800 - ranked cards' map-row fold, xl_both 13,081 -> 13,540 words, 7,279 -> 7,799 nodes (with UX-1270).
+    # Round 165's merge (owner-call default): words 13,600 -> 14,100, nodes 7,800 -> 8,070 - xl_both 14,099 words, 8,066
+    # nodes; each track alone under (UX-1267/1270 13,540/7,799, UX-1272/1274/1276 13,367/7,486). With UX-1271's step
+    # copy controls: nodes 8,070 -> 8,080, controls 1,192 -> 1,195 (xl_both 8,079, 1,195). The walk's sweep
+    # knee and configured-builders dots: nodes 8,080 -> 8,085 (xl_both 8,082).
+    (4_100, 46_822, 14_100, 1_195, 8_085),
 )
 
 

@@ -22,6 +22,7 @@
 // concatenation a lie (`UX-199`, which rendered an empty page for
 // several rounds).
 import { chapters } from "./chapters.js";
+import { commandLine } from "./controls.js";
 import { renderProvenance } from "./decision.js";
 import { GRADE_EXHIBIT, SERIES_MIN_POINTS, decomposition, interval, strip } from "./drawings.js";
 import { resolvePath } from "./element.js";
@@ -34,7 +35,7 @@ import { recordSource } from "./rawjson.js";
 import { CONTROLS, classify } from "./shapes.js";
 import { ARRAY_INLINE_ITEMS, CELL_NEST_LIMIT, LIFTED_SECTION, OBJECT_INLINE_FIELDS, TABLE_OPENS_BOUNDED_ABOVE, filterSection, foldedList, liftedCriticalPath, mapTable, oneRecord, renderStructured, renderTable } from "./structured.js";
 import { renderPairs, taskSignalTable } from "./pairs.js";
-import { boundCards, columnCells, plural } from "./tables.js";
+import { boundCards, columnCells, copy, plural } from "./tables.js";
 import { investigationsFor } from "./trace_context.js";
 import { joinHash } from "./viewstate.js";
 import { INCOMPLETE, PLANE2_NOT_CAPTURED, renderEvidence }
@@ -150,8 +151,11 @@ function mergeRows(lines, uids) {
 // UX-1256's `step`: what to do, or why there is nothing to.
 function renderStep(step, uids, named) {
   if (step?.text) {
-    return el("p", { class: "step" }, "Next: ", ...linkNames(step.text, uids, named),
-              step.command ? " " : null, step.command ? el("code", {}, step.command) : null);
+    const sentence = ["Next: ", ...linkNames(step.text, uids, named)];
+    if (!step.command) return el("p", { class: "step" }, ...sentence);
+    // UX-1271 (§1d): the command is the shared control, on its own line under the sentence.
+    return el("div", { class: "step" }, el("p", {}, ...sentence),
+              el("p", { class: "step-command" }, ...commandLine(step.command, { copy })));
   }
   return step?.why_none ? el("p", { class: "step muted" }, `No step: ${step.why_none}`) : null;
 }
@@ -502,14 +506,21 @@ function sizingCard(value, hint) {
     src ? el("a", { href: `#${src}`, "data-section-link": src }, title(src)) : null);
   const { builders: b = {}, cores: c, memory: m } = value;
   const of = (n, text) => (typeof n === "number" ? text.replace("#", tally(n)) : null);
+  // UX-1274: a ceiling at the sweep's top is where the range stopped, not a knee.
+  const edge = typeof b.swept_to === "number" && b.graph_ceiling >= b.swept_to;
   return el("section", { "data-section": "agent_sizing", "data-rail": heading("agent_sizing", hint).rail },
     sectionHead("agent_sizing", hint), el("ul", {},
-    row("builders", "Builders: " + [of(b.recommended, "# recommended"), of(b.graph_ceiling, "the graph allows #"),
+    row("builders", "Builders: " + [of(b.recommended, "# recommended"), of(b.graph_ceiling, edge ? "no knee within #" : "the graph allows #"),
       of(b.observed, "this run had #")].filter(Boolean).join("; "), b.source),
     c ? row("cores", `Cores: ${c.average.toFixed(2)}${typeof c.host === "number" ? ` of ${tally(c.host)}` : ""} busy on average`, c.source) : null,
     c?.peak_source ? row("cores_peak", `Cores: ${c.peak.toFixed(2)} busy at p95`, c.peak_source) : null,
-    m ? row("memory", `Memory: at most ${bytes(m.bytes)}, if all ${tally(m.builders)} builders peak together at `
-      + `${bytes(m.per_element_bytes)} (${m.basis === "envelope" ? "memory envelope" : "process peak"})`, m.source) : null),
+    // UX-1272: an element's envelope peak is a ceiling; one process's peak times builders bounds nothing.
+    m ? row("memory", m.bound === "upper"
+      ? `Memory: at most ${bytes(m.bytes)}, if all ${tally(m.builders)} builders peak together at `
+        + `${bytes(m.per_element_bytes)} (memory envelope)`
+      : `Memory: ${tally(m.builders)} builders × the largest single process (${bytes(m.per_element_bytes)}) = `
+        + `${bytes(m.bytes)}; not a bound: an element ran several processes at once and their summed memory `
+        + `was not recorded`, m.source) : null),
     // The recommendation's caveat is drawn once, in the section the builders row links.
     value.absence ? el("p", { class: "empty-population" }, value.absence) : null);
 }
@@ -916,6 +927,20 @@ export const SECTION_ANSWERS = {
   },
 };
 
+/** `UX-1261`: the binary the cost answer names links to its own by_binary row, filtered to it. */
+function linkAnswerBinary(lead, name) {
+  if (typeof name !== "string" || !name) return;
+  const text = lead.textContent;
+  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const at = text.search(new RegExp(`(?<![\\w.+-])${escaped}(?![\\w.+-])`));
+  if (at < 0) return;
+  const query = `binary:${name}`;
+  const link = el("a", { href: joinHash("by_binary", new URLSearchParams({ "f.by_binary": query }).toString()),
+                         title: `${name}'s row in by binary` }, name);
+  link.addEventListener?.("click", () => filterSection(document, "by_binary", query));
+  lead.replaceChildren(text.slice(0, at), link, text.slice(at + name.length));
+}
+
 /** The answer as the section's first block; the pairs it restates are dropped. */
 function leadWith(section, key, value, payload) {
   // `UX-1156`: a member an answer reads is a member it says.
@@ -933,6 +958,7 @@ function leadWith(section, key, value, payload) {
   const lead = el("p", { class: "section-answer", "data-role": "section-answer",
                          "data-said": dropped.join(" ") }, said);
   section.insertBefore(lead, head.nextSibling ?? null);
+  if (key === "binary_cost") linkAnswerBinary(lead, payload?.by_binary?.[0]?.binary);
   // A pair the lead or a sibling count already says; the census reads `data-said`.
   if (Array.isArray(value?.cpu_disagreements) && !value.cpu_disagreements.length) {
     dropped.push("cpu_disagreements");

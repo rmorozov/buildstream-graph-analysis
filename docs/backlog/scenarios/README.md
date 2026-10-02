@@ -40,6 +40,8 @@ task file, which is the only place it ever lived twice.
 | UX-1265 | [the graph-width finding lost the total element count and "whatever the capacity" from its title](UX-1265-the-graph-width-finding-lost-its-total-and-its-capacity-clause.md) | analysis | Low | R1 | 🔴 Not Started |
 | UX-1266 | [joint-saving and optimization-horizon name the same element set on macro_micro](UX-1266-joint-saving-and-optimization-horizon-name-the-same-set.md) | analysis | Low | R1 | 🔴 Not Started |
 | UX-1267 | [ranked element cards never show the map rows ("On the path")](UX-1267-ranked-element-cards-never-show-the-map-rows.md) | viewer | Medium | R1, R5 | 🔴 Not Started |
+| UX-1268 | [a capacity-bound run reads "capacity matched demand", and the check does not see it](UX-1268-a-capacity-bound-run-reads-capacity-matched-demand.md) | analysis | Medium | R1, R5 | 🔴 Not Started |
+| UX-1269 | [one wait quantity carries four names, and two glosses contradict their source](UX-1269-one-quantity-under-four-names-on-the-capacity-page.md) | viewer | Low | R1 | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

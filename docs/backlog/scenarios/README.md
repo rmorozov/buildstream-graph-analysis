@@ -37,7 +37,6 @@ task file, which is the only place it ever lived twice.
 | UX-1285 | [the band a review build is judged against mixes runs from different hosts](UX-1285-the-band-mixes-runs-from-different-hosts.md) | analysis | High | R4 | 🔴 Not Started |
 | UX-1286 | [the review gate reads its band from the bundles CI kept, without a store on the runner](UX-1286-the-gate-reads-kept-bundles-in-place.md) | cli | High | R4 | 🔴 Not Started |
 | UX-1287 | [`bga doctor` names the C compiler the capture compiles its hook with](UX-1287-doctor-names-the-c-compiler-the-capture-needs.md) | capture | Medium | R5 | 🔴 Not Started |
-| UX-1288 | [a pilot kit runs bga in a team's CI, report-only, from one script](UX-1288-a-pilot-kit-runs-bga-in-a-teams-ci-in-report-only-mode.md) | docs | High | R4, R5, R8 | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

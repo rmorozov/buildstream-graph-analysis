@@ -193,6 +193,12 @@ KNOWN_SKIP_REASONS = {
         "that read it say so rather than passing on an empty tree",
         5,
     ),
+    # `UX-1288`: the pilot kit's report half targets `bga compare --bundles`, which `UX-1286` adds.
+    "pending UX-1286: bga compare has no --bundles yet": (
+        "the pilot kit's report half and its guide flag wait for UX-1286's --bundles",
+        4,
+    ),
+    "shellcheck is not installed (pip install shellcheck-py)": ("shellcheck is an optional local tool", 1),
     "node is not installed": ("the viewer guards need node; CI has it", 0),
     # UX-257's geometry guards. Declared so that "no browser here" is
     # a fact the census reports rather than a silence.

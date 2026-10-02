@@ -219,7 +219,9 @@ average, so two maximally-mis-added elements move it **−14.6pp in an 11-elemen
 *change* scores those same two elements at 1.00 in both.
 
 The whole CI sequence — capture, baseline set, gates, and posting the verdict as a PR comment —
-is one page: [`docs/guides/ci-comment.md`](docs/guides/ci-comment.md).
+is one page: [`docs/guides/ci-comment.md`](docs/guides/ci-comment.md). To try it on your own
+pipeline first, report-only, with every switch in one table:
+[`docs/guides/pilot.md`](docs/guides/pilot.md).
 
 ## One repository, many elements
 
@@ -287,6 +289,7 @@ which kind of question. The three entry points:
 | you want to | read |
 |---|---|
 | **use the tool** on a real project | [`docs/guides/real-project.md`](docs/guides/real-project.md) — capture → read → go inside → join → act → gate, with real output at every step |
+| **pilot it in your CI**, report-only | [`docs/guides/pilot.md`](docs/guides/pilot.md) — one script, one workflow, and every switch (the jobserver included) in one table |
 | **work on the codebase** | [`docs/design/architecture.md`](docs/design/architecture.md) — all three planes as one system, and every extension beyond the spec |
 | **look something up** | [`docs/guides/cli.md`](docs/guides/cli.md) — every command, flag and exit code |
 | **know what changed** since the build you installed | [`CHANGELOG.md`](CHANGELOG.md) — each release records a contract state, not a date |
@@ -330,7 +333,8 @@ rather than a reading dated to one afternoon.
      longer adjacent in the report - `remote-execution-whatif` now fires between them - so an
      elision marker sits where the two used to touch, three lines to declare the cut rather
      than silently reordering the paste, plus this note. `UX-902` takes it to 343 lines: one
-     entry-point row to the first case with both captures, and this sentence. The budget is a
+     entry-point row to the first case with both captures, and this sentence. `UX-1288` takes it
+     to 347 lines: the pilot kit's entry-point row, two lines after the CI page, and this. The budget is a
      measured target, not a law - but exceeding it silently is what turned 420 into "430" once
      before, so the number is here rather than in a commit message. -->
 

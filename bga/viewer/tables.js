@@ -752,37 +752,46 @@ export function ownHeads(table) {
   return childrenNamed(childrenNamed(childrenNamed(table, "thead")[0], "tr")[0], "th");
 }
 
+// The order a press applies: the reverse of a set `aria-sort`, else a quantity's largest first.
+const next = (th) => (th.getAttribute("aria-sort") || (th.getAttribute("data-quantity") ? "ascending" : "descending"))
+  === "ascending" ? "descending" : "ascending";
+
+// `UX-1279`: a sort button's name is the column, the order a press applies, then the table's name.
+export function labelSorts(table) {
+  for (const th of ownHeads(table)) {
+    const b = th.querySelector?.("button.th-sort");
+    b?.setAttribute("aria-label", `Sort by ${b.textContent.trim()}, ${next(th)}: ${table.sortName}`);
+  }
+}
+
 /** Mark `sort` on the table's own header, and only there. */
 export function showSort(table, sort) {
   for (const th of ownHeads(table)) {
     if (sort && th.getAttribute("data-column") === sort.column) th.setAttribute("aria-sort", sort.direction);
     else th.removeAttribute("aria-sort");
   }
+  labelSorts(table);
 }
 
 // `UX-450`: moved here from `structured.js`. This file is the
 // table's *behaviour* - filters, bounds, presets, copy - and sorting
 // is behaviour. It was in the DOM builder only because that is where
 // it was first written.
-export function sortable(table, specs = [], { always = false } = {}) {
+export function sortable(table, { always = false } = {}) {
   const body = ownBody(table);
   // `UX-1196`: `always` - a listing whose order is a claim sorts at any length; a head already sortable is left.
   if (everyRow(body).length <= SORTABLE_ABOVE && !always) return;
-  ownHeads(table).forEach((th, index) => {
+  ownHeads(table).forEach((th) => {
     if (th.querySelector?.("button.th-sort")) return;
     // UX-201: a column the schema declares unsortable stays unsortable,
     // whatever its values happen to look like.
-    if (specs[index] && specs[index].sortable === false) return;
+    if (th.getAttribute("data-sortable") === "false") return;
     // `UX-1190` (styleguide §6e.8): a button, so the sort is in the tab order.
     const label = th.textContent;
     th.textContent = "";
     th.append(el("button", { type: "button", class: "th-sort" }, label));
     th.addEventListener("click", () => {
-      const was = th.getAttribute("aria-sort");
-      // The first press on a quantity puts its largest first.
-      const direction = was ? (was === "ascending" ? "descending" : "ascending")
-        : specs[index]?.quantity ? "descending" : "ascending";
-      const sort = { column: th.getAttribute("data-column"), direction };
+      const sort = { column: th.getAttribute("data-column"), direction: next(th) };
       showSort(table, sort);
       // A head-and-tail fold is about the listing's order, which a sort replaces: open it first.
       childrenNamed(body, "tr").find((tr) => tr.className === "fold-row" && !tr.hidden)
@@ -792,7 +801,7 @@ export function sortable(table, specs = [], { always = false } = {}) {
       table.dispatchEvent?.(event);
       if (event.defaultPrevented) return;
       // `UX-526`: over every row, held or shown.
-      reorder(body, [...everyRow(body)].sort(byColumn(sort.column, direction)));
+      reorder(body, [...everyRow(body)].sort(byColumn(sort.column, sort.direction)));
     });
   });
 }

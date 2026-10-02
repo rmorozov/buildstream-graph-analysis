@@ -676,7 +676,7 @@ LARGE = (
     "tests/unit/test_the_narrow_rail_jump_box_keeps_the_place_read.py",  #   20.3s
     # Round 165, measured single-process on landing.
     "tests/unit/test_a_wait_quantity_has_one_name.py",  #   27.1s
-    "tests/unit/test_the_builder_sweep_is_drawn.py",  #   30.1s
+    "tests/unit/test_the_builder_sweep_is_drawn.py",  #   33.3s
     "tests/unit/test_the_ready_queue_asks_what_it_counts.py",  #   26.1s
     "tests/unit/test_the_page_checks_its_verdicts_agree.py",  #   23.1s
 )
@@ -1229,5 +1229,6 @@ MEDIUM = (
     "tests/unit/test_a_binary_that_waits_is_told_from_one_that_computes.py",  #    4.8s
     "tests/unit/test_a_finding_says_whether_it_is_new_since_the_baseline.py",  #    6.9s
     "tests/unit/test_a_ranked_card_shows_the_map_rows.py",  #    1.0s
-    "tests/unit/test_a_saving_is_priced_per_day.py",  #    3.1s
+    "tests/unit/test_a_saving_is_priced_per_day.py",  #    4.1s
+    "tests/unit/test_the_rail_mark_is_drawn_where_it_is_seen.py",  #    2.0s
 )

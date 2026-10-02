@@ -31,7 +31,7 @@ from bga import bundle, contracts, run_store
 
 SPEC = REPO / "docs/spec/specification.md"
 ARCHITECTURE = REPO / "docs/design/architecture.md"
-INDEX = REPO / "docs/README.md"
+INDEX = REPO / "docs/guides/json-contracts.md"
 
 
 def _layout_contracts():
@@ -131,10 +131,12 @@ class TestEveryInputHasAHomeInTheDocuments:
 
     def test_the_index_names_every_input(self):
         text = INDEX.read_text(encoding="utf-8")
-        assert "## What it reads" in text, "docs/README.md answers what `bga` emits and not what it accepts"
+        assert "## What it reads" in text, (
+            "docs/guides/json-contracts.md answers what `bga` emits and not what it accepts"
+        )
         body = text.split("## What it reads", 1)[1].split("\n## ", 1)[0]
         missing = [name for name in contracts.reads() if name not in body]
-        assert missing == [], f"input contract(s) docs/README.md does not name: {missing}"
+        assert missing == [], f"input contract(s) docs/guides/json-contracts.md does not name: {missing}"
 
 
 class TestAnalysisV9IsNotAFourthInput:

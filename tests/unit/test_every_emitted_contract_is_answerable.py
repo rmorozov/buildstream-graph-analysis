@@ -407,11 +407,11 @@ class TestAnUnknownNameAndABrokenContractAreDifferentThings:
 
 
 class TestTheDocumentSaysWhatTheToolDoes:
-    """`docs/README.md`'s "What it emits" block, held to the inventory."""
+    """The contracts page's "What it emits" block, held to the inventory."""
 
     @staticmethod
     def _block():
-        text = (REPO / "docs/README.md").read_text(encoding="utf-8")
+        text = (REPO / "docs/guides/json-contracts.md").read_text(encoding="utf-8")
         start = text.index("## What it emits")
         return text[start : text.index("\n## ", start + 4)]
 

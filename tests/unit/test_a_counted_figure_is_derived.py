@@ -49,6 +49,7 @@ import dev_track_cost
 from bga import contracts
 
 INDEX = REPO / "docs/README.md"
+CONTRACTS = REPO / "docs/guides/json-contracts.md"
 ARCHITECTURE = REPO / "docs/design/architecture.md"
 CHANGELOG = REPO / "CHANGELOG.md"
 README = REPO / "README.md"
@@ -72,8 +73,8 @@ def _flat(text):
 
 
 def _emitted_block():
-    """`docs/README.md`'s "What it emits" section, subject only."""
-    text = INDEX.read_text(encoding="utf-8")
+    """The contracts page's "What it emits" section, subject only (`UX-1289` moved it)."""
+    text = CONTRACTS.read_text(encoding="utf-8")
     start = text.index("## What it emits")
     return text[start : text.index("\n## ", start + 4)]
 

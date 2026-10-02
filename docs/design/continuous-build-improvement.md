@@ -9,15 +9,14 @@ names, a fleet, a review pipeline and a budget.
 areas), R5 (the build and infrastructure team sizing agents), R4 (the
 review gate), R8 (the manager reading the quality gate's build half).
 
-**Status:** proposed - an argument, not a numbered Direction and not a
-filing. No code changed. Section 8 lists the rows filed with it. It is
-deliberately unnumbered for the reason section 9 of
-[`in-step-parallelism.md`](in-step-parallelism.md) gives: `## Direction
-21` in [`directions.md`](directions.md) reddens
+**Status:** as of 2026-10-02, an argument, not a numbered Direction.
+No code changed with it, and all twelve rows section 8 filed
+(`UX-895`-`UX-906`) have since closed. It is still unnumbered for the
+reason section 9 of [`in-step-parallelism.md`](in-step-parallelism.md)
+gives: `## Direction 21` in [`directions.md`](directions.md) reddens
 `test_every_direction_names_its_reader.py`, whose numbering assertion is
 exactly `range(1, 21)`, and wants a round-history row and an audit
-document. Two documents now wait on that one-line move; a session
-running a round takes it.
+document.
 
 ## 1. What the owner said
 

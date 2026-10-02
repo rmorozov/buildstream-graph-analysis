@@ -8,7 +8,7 @@ are filed individually as `UX-27`..`UX-40` in
 [`scenarios/`](../backlog/scenarios/README.md). Read
 [`architecture.md`](architecture.md) first for what the tool is today.
 
-## The one finding everything else follows from
+**The one finding everything else follows from.**
 
 `bga` measures **how well the scheduler packed the graph it was given**.
 It does not measure, and today cannot measure, **whether that graph was
@@ -368,38 +368,6 @@ The route there, for the record: the first two lines needed `UX-27` and
 `UX-39`; the element table needed 2b's per-element diff, which `UX-79`
 shipped; the parenthetical needed Plane 2's declared-vs-used detection
 (`UX-46`).
-
-## Implementation status (updated 2026-08-16, round complete)
-
-**All fourteen items of the `UX-27`..`UX-40` round are done.** What
-follows below is the argument that produced them, kept because the
-reasoning is still the reasoning - but several of its complaints are now
-historical, and are marked where they are.
-
-Four of the round's own filings were corrected during implementation
-rather than implemented as written. That is worth more than the fixes
-themselves as a signal about how the next round should be run:
-
-- **`UX-28`'s evidence did not support its claim.** It cited an 81%
-  per-element contention increase as proof the oversubscription check
-  could not fire. The two runs were not comparable and the costlier one
-  was 30.5% *faster* overall - beneficial parallelism, not harm. The real
-  defect (a bar whose ratio-to-cores collapses as the host grows) was
-  different, provable, and only found by checking the fix against
-  `UX-09`'s existing measurements instead of against the intuition that
-  produced the filing.
-- **`UX-32`'s proposed headline metric was backwards.** Achieved-vs-requested
-  scores a `-j1`-pinned element at 200% of what it asked for; being pinned
-  *is* the problem.
-- **`UX-30` and `UX-40` each carried a secondary claim that was already
-  implemented** (monotonicity violations are shown; the fail-open does
-  warn). Both were pinned by tests rather than "fixed".
-
-The rate is roughly one filing in four. A round of audit findings written
-from a single hands-on session should be treated as *hypotheses with
-evidence attached*, not as a work list - and the cheapest way to catch
-the bad ones is to re-check each against measurements the repo already
-has before writing any code.
 
 ## Direction 3: what the tool could see next (argued 2026-08-18, round 11)
 
@@ -1058,191 +1026,656 @@ direction's tone).
   every number); the **cost translation** (R8's units, opt-in
   rates); and only then any presentation.
 
-## Round 24: publish the relationship, then navigate it
+## Direction 10: releases as contract states (argued 2026-08-24, round 30)
 
-A third external review, evaluated the same way as the first two. Its
-one-line statement of where the tool is, adopted:
+**Serves:** R4 and R8 — the two who pin something and need to know
+when it moved — and, through the store, R1 and R7, whose questions are
+answered by comparing this build against builds an *older* `bga`
+measured.
 
-> the next improvements should not make the page prettier; they should
-> turn existing BGA facts into stronger navigation and investigation
-> primitives.
+**Status:** landed — `CHANGELOG.md`, three release rows, the generated body, `UX-241`'s review gate, and the tags. `UX-597` cut `v0.3.0` and `v0.4.0` and a guard reads them; `UX-634` made step 8 publish the release rather than only tag it; `UX-633` turned out to be no defect at all — all three tags are ordinary release tags, and the row that said otherwise was read off a truncated history, which its own file now records.
 
-**The finding that reframes it.** `bga/correlate.py:141` already
-assembles the relationship layer — one `ElementJoin` per element,
-Plane 1's path share, saving and blast radius beside Plane 2's
-achieved parallelism, CPU coverage, peak RSS and dominant binary. `bga correlate --format json`
-emits it, correctly and completely — and unversioned: no `schema`
-stamp, so `UX-190`'s contract does not cover it; no view-hints, so the
-viewer could not render it generically; and `payloads()` does not serve
-it. `correlate --schema` says so itself: *"correlate produces no
-versioned JSON output"*. So the "element inspector" and the "three-plane
-investigation ladder" the review proposed as new work are one
-already-computed join missing a contract.
-That is this project's oldest pattern, on its fourth occurrence after
-`blast_tree`, `headline` and the compare payload the band needed: **the
-analysis knows, and the published schema does not say.** Direction 7's
-rule is what makes the fix cheap and the shortcut expensive — a viewer
-that assembled the join itself would be the second analyzer the whole
-architecture exists to prevent.
+`bga` is unusual among analysis tools in one way that matters here:
+**it reads its own past output as input.** `@last`/`@prev`, the
+baseline set, `cache-trend`, `store-aggregate` — every one of them
+opens artifacts written by whatever `bga` was installed at the time,
+which on a project six months old is not the one running now.
 
-**And the correction to round 23's own work.** `UX-208` shipped a
-generic Inspect on every element row, anchored at a fragment nothing in
-the page sets: 19 links, 11 distinct targets, 11 unresolvable. The
-guards asserted the affordance existed, not that it arrived. Same
-failure class this project keeps finding, in the round that was about
-finding it — which is the argument for `UX-216` naming resolution, not
-presence, as its acceptance.
-
-**Declined, with the reasons recorded:** the element inspector as a
-*drawer*. Overlay machinery is the one part of this page that would not
-survive an export opened from a downloads folder, a print,
-`filter: grayscale`, or a pasted anchor — and a section gets the same
-cross-reference value while making the dead anchor resolve as a side
-effect. "Resist adding more charts" was agreed rather than filed: it is
-this document's standing position already.
-
-**What the review did not look at: the loop.** Every item it proposed
-improves one reading of one report. The friction this tool is built
-around is `capture → analyze → read → change → capture again`, and that
-is where the repetition is. Three items came from walking it — the next
-three commands are always retyped and can be *published* (so the
-terminal, CI and the page agree on the next step rather than the viewer
-deciding), the investigation is not resumable because `UX-211` carried
-the view and not the decision, and "did my fix work?" is still answered
-by opening two reports side by side.
-
-## Round 25: the first four, executed
-
-Round 24's argument, executed. Four items, in the order the audit
-recommended, and the order mattered: nothing after the first is honest
-without it.
-
-**`UX-215` was a stamp, a schema and thirty lines of wiring**, and it
-is the one that made the rest cheap. `correlate/v1` publishes the
-`ElementJoin` that `bga/correlate.py` had been computing since `UX-51`
-and emitting unversioned. Then the viewer needed **no change at all**
-to draw it: measured on `examples/06`, an eleven-row `element_join`
-table under its declared question, with the element role earning every
-row an Inspect. That is `UX-193`'s schema dispatch paying for itself,
-five rounds after it was built — and the clearest argument yet for the
-rule that a field enters the published contract first.
-
-**`UX-216` fixed the round-23 defect and was the reason to look.**
-Nineteen Inspect affordances resolving to nothing, because the guard
-asserted the affordance *existed*. The acceptance is resolution now,
-and the fix is one expression rather than two: `cssId` delegates to
-`elementAnchor`, because a link and its target spelling drifting apart
-*is* the defect. The mutation that proves it is not renaming the anchor
-— it is duplicating the expression with a different character class,
-which is exactly how it would recur.
-
-**The drawer was declined and the reasons recorded**: overlay machinery
-is the one part of this page that would not survive an export from a
-downloads folder, a print, `filter: grayscale`, or a pasted anchor. A
-section is linkable, printable, collapsible by machinery that exists,
-and it makes the dead anchor resolve as a side effect.
-
-**A guard stopped being about the calendar.** The page-size ceiling was
-crossed by ordinary feature work in three consecutive rounds and raised
-twice. A number that moves whenever a feature lands is measuring the
-calendar, so the third time the *measurement* changed: composition (the
-page **is** the checked-in modules plus the stylesheet — the only check
-that can tell 6 KB of feature from 6 KB of vendored library),
-Direction 7's ratio at the scale the rule names (1,000 elements:
-691,401 B of data against a 97,488 B page, **7.1x**), and a loose
-structural backstop. The small fixtures invert the ratio and always
-did; that is a property of small reports, not of the viewer, and it is
-why the absolute was the wrong instrument all along.
-
-**`UX-218` is the first item aimed at the loop rather than the
-report.** `next_steps` is published, so the terminal, CI and the page
-give the same next command — and the branch that chooses it stays in
-the pipeline, because a viewer that picked the next command from
-`chain_share` would be the second decision-maker `UX-207` exists to
-prevent. The acceptance is not "a command is shown" but "the command
-runs": every published `argv` is executed against the fixture. What is
-*absent* is asserted too — a chain-bound build is not told to add
-builders, a run outside a store is not told to compare.
-
-## Round 26: the eight that were left
-
-Round 24 filed twelve items; round 25 took the first four. These are the
-other eight, and the pattern across them is one thing said three ways.
-
-**Twice a task file was wrong about the code, and both errors were worth
-finding.** `floors.certified_us` — named in UX-220 as "the most
-misreadable number this tool publishes" — has never existed; the
-certified floor is `floors.lb`. And UX-221 said no element appears in
-`compare/v1` anywhere, when in fact `element_diff` has carried
-*appearance and removal* since UX-79 — the two cases the file predicted
-a naive join would drop were the two already present, and the elements
-in **both** runs, which is what "because of what?" actually asks about,
-were the ones missing. An audit is a hypothesis. Reproducing it first is
-not ceremony.
-
-**Twice a mutation a task file specified could not fail.** UX-219's
-"re-add the savings instead of reading `cumulative_saving_us`" cannot
-discriminate on any real report, because the two are equal by
-construction. UX-221's "sort the strip by its own computed delta" passed
-because the four-case fixture puts exactly one element in each group and
-no assertion about the order of a one-element list can fail. Neither was
-counted. One was replaced with a synthetic payload where the two values
-differ; the other with a three-regression fixture. A mutation that
-cannot redden is not evidence, and writing it down as though it were is
-the failure this discipline exists to prevent.
-
-**Three times a guard had to change, and each change is recorded as a
-decision rather than absorbed.** UX-201's fixtures were pinned to three
-`utilisation` keys no code path emits — re-pointed at published fields
-rather than deleted, and they still catch the original renderer bug.
-UX-196's "only two custom drawings" asserted a count while its docstring
-stated the rule; it holds the named set now, which also catches a
-drawing being moved or removed. And the page-size backstop was crossed
-for the fourth round running.
-
-### The backstop, and what a number cannot measure
-
-UX-218 replaced an absolute page ceiling with composition + ratio + a
-loose absolute, having watched the old ceiling get raised twice, and
-wrote the reason down: *a number that moves whenever a feature lands is
-measuring the calendar*. Round 26 crossed the new absolute too.
-Measured at the crossing:
+Measured today:
 
 ```text
-page (data removed)   123,785 B
-  modules             109,913 B
-  style.css            12,552 B
-  index.html            1,433 B
-  accounted           123,898 B   = 100.1% of the page
-export total          184,934 B   = 2.20% of the 8 MiB attachment budget
+bga --version                      0.1.0     (unmoved across 29 rounds)
+git tag                            0 tags
+CHANGELOG                          none
+published contracts                9, every one at /v1, never bumped
+artifacts recording their producer  0
 ```
 
-Every byte is a checked-in module. So the backstop did its job — it made
-someone look — and the answer was "a round landed", for the fourth time.
-The stated purpose was to catch *something structural*, and a byte count
-cannot tell a feature from a library.
+`__version__` is read in exactly one place — the `--version` string.
+It is written into nothing. A `run-context.json` from round 3 and one
+from round 29 are indistinguishable to the tool that reads them both.
 
-It is raised to 200,000 and now stands beside a guard that measures the
-thing directly: no module may look like vendored or minified code — a
-few enormous lines, almost no comments. That guard catches a 12 KB
-minified blob which **both** the byte ceiling and the composition guard
-let through. If the absolute fires again it should be because that one
-is silent and something genuinely odd is happening.
+### The gap is a missing comparability dimension, not a missing number
 
-### What the round added to the loop
+This repository is already strict about comparability, and strict in
+the right way: `bga compare` **refuses** two runs from different hosts
+(`UX-186`) and refuses a caches-off run against a caches-on one, with
+an exit code of its own rather than a caveat, because "these are not
+comparable" and "these are comparable and equal" must not look alike.
 
-The first five rounds of the viewer made the report readable. This one
-made it *resumable*: the horizon is a plan rather than a table, an
-element can be focused, the reader's own marks travel in the link, and
-each element carries what it cost across the snapshots. Round three of
-an optimization no longer reads exactly like round one — which was
-UX-225's complaint, and is the closing of the loop UX-126 opened.
+Producer identity is the same kind of dimension and it is simply
+absent. If a later `bga` re-buckets an attribution category, renames a
+finding id, or changes how a percentile is taken, the aggregate over a
+year of stored runs silently mixes two definitions — and every existing
+refusal would pass it, because the host is the same and the mode is the
+same. That is the exact defect class the refusals exist to prevent,
+on the one axis nothing watches.
 
-Two clauses were declined and recorded rather than quietly dropped: a
-global key to open the palette (it needs a decision about the table
-filters UX-205 put everywhere), and markdown detection for the copied
-finding (a button claiming to know what a paste target accepts would be
-guessing).
+So the first move is not a release process. It is: **an artifact says
+what produced it.**
+
+### Why the version must be derived from contracts, and what it is *not* for
+
+The user's instinct — base it on contract breakage or extension — is
+right, and it is right because this repository already has the
+contracts enumerated: nine schema ids, a CLI surface, a run-directory
+layout. A release does not need to invent a compatibility story; it
+needs to *record the one already implied* by those.
+
+The trap is making a single package number the load-bearing thing. It
+is a lossy summary of nine independent contracts: `whatif/v1 → v2`
+tells an `analyze/v1` consumer nothing, and if the package version were
+what they pinned, a break in a document they never read would look
+identical to one in the document they do. So:
+
+| level | answers | moves when |
+|---|---|---|
+| **contract version** (`analyze/v1`) | can my parser read this document? | that document breaks |
+| **package version** (`bga 0.3.0`) | which build produced this artifact? | every release |
+| **the release row** | which contract states shipped together? | every release |
+
+**The package version's job inside an artifact is provenance, not
+compatibility.** Compatibility is decided per contract, against the
+contract set the artifact itself recorded. That is stricter *and*
+looser than a version comparison in exactly the right places: two runs
+from `0.1.0` and `0.9.0` still compare if every contract they touch is
+unchanged, and two runs one patch apart refuse if one of them isn't.
+
+The version number is then *derived*, not chosen: the contract set at
+the last release row against the contract set now decides whether this
+is a break, an extension, or neither. A guard checks the derivation,
+because a version somebody picked by feel is a number with no meaning
+and this repository has spent twenty-nine rounds refusing those.
+
+### Where the release process should *not* go
+
+Two arguments against parts of the obvious design, both from what this
+repository has already measured.
+
+**A release must not become a second trigger for documentation review.**
+`UX-241` landed a review cadence one round ago: a stream, a checklist,
+and a guard that reddens past 25 closed rows. Adding "and also sweep
+the docs at release time" would create two mechanisms racing for one
+job — and *two hand-maintained copies of one fact drifting apart* is
+the single most-repeated defect in this backlog's history. The release
+should **consume** the review, not duplicate it: a release may only be
+cut when a review row exists at or after the previous release, and that
+review's findings are the release's documentation work. This makes the
+release cheaper, not richer, and keeps one answer to "when do we
+sweep".
+
+**The cadence must not be time-based.** There are no external consumers
+yet and nothing to deploy; a monthly release would be ceremony
+generating no information. The trigger is contract movement and a
+current review — both measurable, both already in the tree.
+
+### What a release is, then
+
+Five things, of which four are mechanical:
+
+1. a row in `CHANGELOG.md` with the contract set, the closed-row
+   marker, and the commit;
+2. a version derived from the contract delta and checked by a guard;
+3. a review row at or after the previous release (guard);
+4. notes whose **body is generated** from the closed rows since the
+   last marker — the narrative already exists there and a hand-written
+   third copy would drift — and whose **head is written**: the theme,
+   the contract delta, and what a consumer has to do about it;
+5. a tag.
+
+The one genuinely new piece of writing per release is item 4's head,
+which is a paragraph. Everything else is derivation.
+
+### What this does *not* fix
+
+The staleness the user names is real, and a release does not cure it —
+`UX-241`'s review does, and the release only refuses to proceed without
+one. Saying otherwise would be the second-trigger mistake wearing a
+different hat. What the release adds is the *changelog*: 3,549 lines of
+audit rounds and 789 lines of closed rows currently hold the "what
+landed" story, and no document answers "what changed between the thing
+I installed and the thing I have now" at all.
+
+## Direction 11: a ranking answers "what should I do", not "what is big" (argued 2026-08-24, round 32)
+
+**Serves:** R1 and R3 first — the optimizer deciding where to spend a
+day, and the graph owner who knows which of those choices the graph
+forbids — and R8, who is handed the ranking as a case for funding.
+
+**Status:** landed — the ranking (`UX-260`, `UX-303`), and every `yes` row in the table below both publishing a distribution and declaring `bga:distribution` (`UX-598`), which the note under that table derives.
+
+The report ranks elements by blast radius and tells the reader to fix
+the top one. Measured on a 1,202-element run:
+
+```text
+next_steps[0]: "toolchain.bst is the first thing to fix - this is what
+                changing it rebuilds."
+
+toolchain.bst   downstream_count 1201   element_kind "import"
+                is_structural_kind TRUE
+```
+
+The advice is *true* and *useless*. A base image, a toolchain, a
+`host_strip_tool` has a thousand dependents **on purpose**; that is
+what makes it a base image. Telling someone to optimize it is telling
+them their graph is a graph.
+
+And the tool already knows. `is_structural_kind` is computed and
+published on the very entry it ranks first. `bga/findings.py` even
+applies the right rule one function away — `_criticality_findings`
+excludes structural kinds outright, citing `UX-76`:
+
+> *"structural elements are excluded rather than annotated here"*
+
+The blast ranking simply never got the same treatment.
+
+### The deeper problem: a number with no scale
+
+Even among the non-structural entries, the ranking implies a precision
+it does not have. The measured distribution of downstream counts:
+
+```text
+p10    0      p60     66      p95    575
+p20    1      p70    157      p99    682
+p30    4      p80    293      p100  1201
+p40   10      p90    465
+p50   30
+```
+
+Positions 2 through 12 run 753, 753, 739, 727, 721, 720, 712, 709,
+706, 702, 697 — an 8% spread across eleven elements, presented as an
+ordered list of what to do first. The honest statement is *"these
+eleven are all in the top percentile and are indistinguishable"*, and
+the way to say it is to publish the **distribution** rather than the
+rank.
+
+A percentile answers the question the raw count cannot: *is 753 a lot?*
+It is p99.9 here and would be unremarkable in a graph of forty
+thousand. The number travels; the rank does not.
+
+### Where percentiles belong, and where they do not
+
+The rule that decides: **a percentile helps when a reader cannot know
+the scale, and the population is comparable.** Blast radius qualifies —
+every element is a member and the counts span three orders of
+magnitude. Applying it everywhere would be cargo cult:
+
+| quantity | key | percentile? | why |
+|---|---|---|---|
+| blast radius (downstream count) | `blast_radius` | **yes** | three orders of magnitude, every element a member, no intuition for the scale |
+| element duration | `element_duration` | **yes** | the same shape; "is 40s slow here?" has no answer without the distribution |
+| share of the critical path | `share_of_critical_path` | **no** | already a percentage of a known whole — a percentile of a percentage is a second scale for one fact |
+| sandbox tax (Plane 3) | `sandbox_tax` | **yes**, per element | the useful question is "is this element's tax unusual", which is exactly a percentile |
+| processes per element (Plane 2) | `process_count` | **yes** | heavy tails; one element with 40,000 processes is the finding |
+| confidence, coverage, efficiency | `confidence`, `coverage`, `efficiency_score` | **no** | single run-level numbers with no population to be a percentile of |
+
+The `key` column is the entry in `DISTRIBUTED_QUANTITIES` or
+`UNDISTRIBUTED_QUANTITIES` (`bga/analyzer.py`), where the split is
+recorded with an argument per row; the `percentile?` cell is that
+membership, and `test_the_percentile_rows_are_the_published_ones.py`
+derives one from the other rather than letting a reader compare them.
+
+**All four `yes` rows publish a distribution — re-measured round 84,
+2026-09-03.** `UX-581` dated an earlier count that read
+`bga/schemas.py` as a proxy for what publishes one; two of the four are
+emitted by `bga/correlate.py` into `correlate/v2` instead, and the grep
+could not see them:
+
+```text
+$ python3 -c "from bga.correlate import _scale_of; print(sorted(_scale_of(payers, native)))"
+['process_count_distribution', 'sandbox_tax_distribution']
+$ git grep -n "_distribution(" bga/schemas.py        element_duration, blast_radius
+```
+
+What `UX-598` found was the other half: those two published keys were
+declared by nothing, so every percentile inside them reached the reader
+as a bare number — `UX-343`'s defect. Both now carry `bga:distribution`
+in `_CORRELATE_HINTS`.
+
+Deciles are the right granularity: ten buckets is a shape a reader
+takes in at a glance, and finer only matters in the tail — where the
+named p95/p99 already carry it.
+
+### What the first view should rank instead
+
+The presentation follows from the same argument. "Biggest" is not a
+rubric; these are:
+
+- **Longest on the critical path** — what the build is actually waiting
+  for, which is already computed and is the honest first answer.
+- **Blast radius density** — not one element's count but the *shape*:
+  half the elements here reach 30 or fewer, the top decile reaches 465
+  or more. A graph where one element reaches everything is a different
+  problem from one where a hundred do, and the reader deserves to know
+  which they have before being handed a list.
+- **Unusual for its kind** — the outlier, which is what "worth
+  optimizing" actually means once the structural entries are set aside.
+
+### What this does not change
+
+No number moves. Structural elements stay in the payload, stay
+reachable, and stay *reported* — `UX-203` was filed because views were
+unreachable, and answering this by hiding them would trade one defect
+for an older one. What changes is that they are reported as **the
+graph's shape** rather than ranked as **the reader's next task**.
+
+## Direction 12: the report is read, not decoded (argued 2026-08-24, round 35)
+
+**Serves:** R1 first, and R3 — the two who open the page rather than the
+JSON.
+
+**Status:** landed — `UX-263`..`UX-272`.
+
+Reported from a real run, in nine parts. Every number below was
+measured on a served report in Chrome 141, not estimated.
+
+### What is actually wrong
+
+Two of the three pages `bga view` serves **ran nothing at all**:
+
+```text
+                   CSP violations   main children   body text
+index.html                      0              26      11,056
+sql.html                        1               0         508
+perfetto.html                   1               4         398
+```
+
+`default-src 'self'` refuses inline **script** exactly as it refuses
+inline style, and `sql.html` and `perfetto.html` each carried one.
+`UX-263` fixed the style half and checked `index.html` only. That is
+`UX-266`, and it is fixed.
+
+The rest is one line of code. Every object and every array that is not
+an array-of-objects renders as:
+
+```js
+el("details", {}, el("summary", {}, "object"),
+   el("pre", {}, JSON.stringify(value, null, 2)))
+```
+
+A summary that says `object` and a wall of raw JSON behind it. On a
+44-element run that is **34 such cells and 32,393 characters** of
+`<pre>`, the largest 8,191. It explains four separate complaints at
+once: clicking every object to find out what it is, JSON-as-string,
+unreadable arrays, and nothing searchable or bounded.
+
+### Where the reader's diagnosis is right, and where it is not
+
+**Right, and under-stated:** the collapsed-object problem. The reader
+called it *"quite inconvenient and puzzling"*; measured, one of those
+cells at 1,202 elements is ~224,000 characters behind a label that says
+nothing.
+
+**Right:** small objects belong inline as table cells, long ones behind
+a fixed height with a scroll and a search. Both are what a spike
+measured as best; the spike also found the trap — unfolding everything
+into tables took the document from 13.8 screens to **35.5**, and
+bounding rows got it only to 32.3. The fold is not the enemy. A
+summary reading `object` is. Keeping the fold and labelling it
+`Blast radius · 44 entries` gave zero raw JSON at 14.9 screens.
+
+**Challenged — depth is not the problem.** The proposal was to analyse
+JSON depth and choose representations by it. Measured, the document is
+7 levels deep and only **three nodes** live at level 7:
+
+```text
+depth   0    1    2    3    4    5   6  7
+nodes   1   19  129  500  794  229  88  3
+```
+
+The mass is at 3–4 and the pain is at **level 2**: maps with one key
+per element. A depth rule would fix almost nothing; a **width** rule
+fixes all of it. That is `UX-267`.
+
+**Challenged — a third column is the wrong shape.** A navigation column
+carrying the JSON structure would make the *document's shape* the
+organising principle, which is precisely what `UX-207` and `UX-199`
+moved away from: the page answers questions, and a JSON tree is a data
+browser. At 1440px a third column also leaves under 900px of reading
+width, undoing `UX-254`. The need behind the request is real — the rail
+is flat and the page is 30+ sections — so the answer is to make the
+**existing** rail two levels deep, not to add a column. That is
+`UX-271`.
+
+**Challenged — the header is not where the space goes.** Measured at
+1440x900 it is 92–184px, **0.1–0.2 screens** of a 13–15 screen
+document. Moving the actions right is cheap and worth doing, and it
+will not make the report meaningfully shorter; the honest framing is
+tidiness, not space. That is `UX-272`.
+
+### What nobody asked for and matters most
+
+Six of the seven wide maps in `signals` are **the same element list**
+seen through different fields — `blast_radius`, `slack`,
+`element_durations`, `downstream_count`, `criticality_probability`,
+`unweighted_depth`, all keyed by element UID, all 44 keys here and
+1,202 on a real run. They are one table with six columns, rendered six
+times as six opaque blobs.
+
+The seventh, `wall_clock_share`, is keyed by **task** —
+`app.bst|BUILD|BUILD|0` — and shares *zero* keys with the other six.
+Nothing on the page says so, and a reader comparing them is comparing
+different populations. That is `UX-268`, and it is the largest single
+readability win available.
+
+## Direction 13: the report has 48 fragments and no chapters (argued 2026-08-24, round 38)
+
+**Serves:** R1 first, and R7 — the two who read the page top to bottom
+before they know what they are looking for.
+
+**Status:** landed — `UX-284`..`UX-286`.
+
+Proposed from a real reading: *"maybe we need to review our data and try
+to group it into semantic blocks that should occupy exactly one screen?
+and transform our navigation pattern into going through several
+screens?"*
+
+Two ideas in one sentence. **The first is right and the measurement is
+stronger than the argument for it. The second is refuted by the same
+measurement**, and separating them is the whole of this direction.
+
+### What the page actually is
+
+Measured at 1440×900 in Chrome 141, on the 1,202-element synthetic run
+(`bga gen-synthetic --seed 1`) and on the committed `macro_micro`
+fixture:
+
+```text
+                              1,202-element     macro_micro
+sections                                48              39
+document                          18.8 scr        20.1 scr
+median section                    0.24 scr        0.35 scr
+smallest                          0.07 scr        0.07 scr
+largest                     1.98 (findings) 3.42 (findings)
+
+sections within 0.8–1.0 screens          0 (0%)          0 (0%)
+sections under 0.8 screens              46 (95%)        37 (94%)
+sections over one screen                 2 (4%)          2 (5%)
+```
+
+The median section is **0.24 screens — 216 pixels**. Not one section on
+either run is near a screen tall. The report is not a sequence of
+chapters; it is **48 fragments averaging a fifth of a screen**, read by
+scrolling past them.
+
+That is the defect the proposal is reacting to, and naming it that way
+is worth more than the nine items round 38 filed against symptoms of it.
+
+### Why "exactly one screen" is the wrong fix, measured
+
+Padding each section to a screen does not reduce scrolling — it
+multiplies it:
+
+```text
+document today                    18.8 scr        20.1 scr
+document at one screen/section    48.0 scr        39.0 scr
+padding introduced               +31.3 scr       +20.5 scr
+```
+
+A **2.6× longer document**, made of whitespace. The reader who found 48
+fragments tiring would find 48 screens worse.
+
+And a fixed cell cannot hold this content. Section height spans **0.07
+to 3.42 screens — a 49× range** — because the tall ones are tall for a
+reason a design cannot overrule: `findings` holds one row per finding,
+`signals` one row per element. Ten sections on each run size themselves
+from the run rather than from the layout. A one-screen grid has exactly
+two options for a table of 1,202 rows, and both are wrong: overflow the
+cell, or hide rows the reader came for.
+
+### What the grouping half buys, and what it must not cost
+
+Group the 48 into a small number of **chapters**, each answering one
+question a reader actually has — the shape `UX-207`'s decision screen
+already proves works, and `UX-271`'s rail already gestures at with one
+level of nesting. Then `UX-285`'s finding stops being a placement bug
+and becomes a chapter boundary: the three identity blocks are one
+chapter, and it belongs at the end.
+
+Navigation then moves **chapter to chapter**, which is the reader's
+instinct in the proposal at the granularity the content supports — six
+to eight destinations instead of 48, with ordinary scrolling inside
+each.
+
+Three things the page must keep, and each one refuses **pagination** as
+the mechanism:
+
+1. **`Ctrl-F` finds everything.** `UX-195`'s export is "the report you
+   can attach"; a reader who has been sent one searches it. Content
+   behind a page that has not been rendered is content the browser
+   cannot find, and no in-page search substitutes for the one every
+   reader already knows.
+2. **A link opens what it names.** `UX-211` puts view state in the
+   fragment and `UX-225` puts the working set in the link. A paginated
+   deck needs its own page coordinate, which is a second navigation
+   model layered on the one that already works.
+3. **It prints, and it reads aloud.** A ticket attachment gets printed
+   and pasted into slides; a document is one flow and a deck is not.
+
+So: **chapters, not slides.** Grouping is a change to the document's
+structure; pagination is a change to its medium, and the medium is
+load-bearing.
+
+### The challenge to the proposal, stated plainly
+
+The proposal's premise is that sections are too big to take in. Measured,
+they are the opposite — 95% are under four-fifths of a screen and the
+median is a fifth. The tiring part is not the size of each block; it is
+**how many of them there are and that nothing groups them**. A fix aimed
+at block size would have made the report longer while leaving the count
+untouched.
+
+The second challenge is that "exactly one screen" is unmeasurable on a
+page whose content is set by the run. `bga` reports 11-element and
+1,202-element builds through one renderer; any fixed geometry has to be
+wrong for one of them. The bound this repository already uses —
+`UX-187`'s cap and `UX-262`'s `Top N` — bounds *rows*, which is a
+property of the data, rather than pixels, which is a property of a
+window that varies by reader.
+
+### What follows
+
+Grouping is filed as its own item rather than argued further here.
+`UX-285` (identity blocks, blast placement) is its first instance, and
+`UX-284` (tools above their table) is the affordance that makes a long
+chapter usable. What none of them settle is what the chapters *are* —
+that is a decision about the report's argument, not its markup, and it
+wants the reader's questions in front of it rather than the section list.
+
+**Settled by `UX-286`** (round 39): seven chapters, each named for a
+question the reader has, with the sections whose published
+`bga:question` is a spelling of that question. The reader's questions
+were in front of it after all — the schema had been publishing them
+since `UX-209`. Measured after: the document is 18.10 screens where it
+was 18.51, so the grouping cost no height, and `UX-285`'s placement
+passes became chapter boundaries and were deleted.
+
+## Direction 14: the same elements, drawn nineteen times (argued 2026-08-24, round 39)
+
+**Serves:** R1 and R7 first — and every open viewer item, because most
+of them get smaller if this lands first.
+
+**Status:** landed — `UX-288` then `UX-289`, in that order; brainstorm items 5-7 are marked there as unmeasured proposals, not commitments.
+
+Proposed from a real reading: *"we have critical path shown three times
+with a slightly different set of columns, and one time in form of
+blocks. There definitely other duplications … almost all current open
+tasks can be made significantly easier if we firstly deduplicate
+information, then think of making tables with presets for default
+filters."*
+
+Measured, and the proposal understates it.
+
+### What the page draws
+
+On the 1,202-element synthetic run, every table that names elements,
+with its column count and the set of element uids it holds:
+
+```text
+19 tables name elements.  They draw 13 distinct populations.
+
+overlap  shared  A                                    B
+   100%      14  signals/critical_path         [2c]   critical_path_detail  [5c]
+   100%     135  signals/leaf_analysis         [8c]   signals/value         [2c]
+   100%     135  signals/leaf_analysis         [8c]   signals/value         [4c]
+   100%     135  signals/leaf_analysis         [8c]   structural/deferrability [6c]
+   100%     135  signals/value                 [2c]   signals/value         [4c]
+   100%     135  signals/value                 [2c]   structural/deferrability [6c]
+   100%     135  signals/value                 [4c]   structural/deferrability [6c]
+    94%     127  signals/leaf_analysis         [8c]   structural/value      [2c]
+```
+
+The critical path is two tables of the same fourteen elements, plus the
+drawing — the reported three. **The leaf population is worse: 135
+elements, drawn four times, every pair at 100% overlap.**
+
+### Where the duplication actually is
+
+Not in the page. In the contract:
+
+```text
+signals.leaf_analysis.leaves                    135 uids
+signals.leaf_analysis.leaves_detail             135 uids   identical to leaves: True
+structural.deferrability.{deferrable,non_}      135 uids   identical to leaves: True
+
+signals.critical_path                            14 uids
+signals.critical_path_detail                     14 uids   identical: True
+
+signals.element_durations                     1,202 uids
+   critical path is a subset of it:  True
+   leaves       is a subset of it:  True
+```
+
+`analyze/v1` publishes the **same element membership three times** for
+leaves and twice for the critical path, and every one of those
+populations is a subset of the one 1,202-row element table. The page is
+faithful; it renders every copy it is given.
+
+**Corrected after this was first written.** Two of the three are exact
+duplicates and the third is not:
+
+```text
+leaf_analysis.leaves == keys(leaves_detail)                    True
+signals.critical_path == uids of critical_path_detail          True  (order too)
+deferrability's lists derivable from a published field          False
+```
+
+`structural.deferrability` splits the leaves by a **duration-risk rule**
+(under a second is deferrable), which is different information from
+`leaves_detail.is_potentially_deferrable`, a graph fact. On the
+1,202-element run the two disagree by design: 8 against 134. So the
+partition is real and only the *membership* is the third copy.
+
+Worse, the field that would make the lists derivable is computed and
+**thrown away**: `structural/analyzer.py` builds `deferral_risk` per
+leaf and the payload publishes `risk_keys=0` of it. The dedup there is
+to publish the per-leaf risk and let the lists become filters — which
+removes a copy of the membership while *adding* information the tool
+already has.
+
+That is the finding, and it moves the work: this is a **contract**
+question first and a rendering question second. Deduplicating the page
+while the payload still publishes three copies would put the page and
+the payload into disagreement, which is the one thing the viewer axis
+has refused since `UX-193`.
+
+### An honest cost of round 38's own fix
+
+Two of the four leaf renderings are nested tables that **`UX-277`
+created**. Before it, `leaves` and `leaves_detail` were two stringified
+cells — the same duplication, one line each. `UX-277` was right and it
+made this duplication expensive: two 136-row tables where there were
+two strings.
+
+The rule holds — a value should be drawn by its shape — and it exposed
+that the shape is published twice. That is what a good fix does; it is
+also why this direction is filed immediately rather than after the
+remaining round-38 items.
+
+### The shape of the fix
+
+**Membership is a column, not a list.** An element record carries
+`is_leaf`, `on_critical_path`, `path_index`, `is_choke_point`. Then a
+"list" is a *filter* over the one element table, and there is exactly
+one place any element's facts live. The pattern already exists —
+`signals.blast_radius` carries `is_leaf` per element today — it is just
+not the pattern the lists use.
+
+**A preset is a named (filter, columns, sort, bound).** "Critical path"
+is `on_critical_path`, ordered by `path_index`, showing duration and
+share. "Leaves" is `is_leaf`. "Latent heavies" is a sort and a bound.
+The page has bounds (`UX-262`'s `Top N`) and filters (`UX-205`) already
+and **zero named presets** — measured. The controls exist; what is
+missing is the naming that turns them into views.
+
+This is why it makes the open items smaller rather than larger:
+
+- `UX-286`'s chapters have fewer things to group — 13 populations rather
+  than 19 tables.
+- `UX-283`'s choke points become a preset over a table that already has
+  Inspect, sort and filter, rather than a new table.
+- `UX-278`'s magnifier has one row per element to point at.
+- `UX-284`'s tools are attached to one table rather than nineteen.
+
+### Brainstorm, marked by what is measured
+
+Measured, worth doing:
+
+1. **Column headers are mostly placeholders.** Across 41 tables the
+   commonest headers are `name` (36), `Value` (20), `Key` (10). A reader
+   scanning for a column name mostly finds a word that names its
+   position in a map. Presets fix most of this by giving a table a
+   subject; the rest wants schema declarations.
+2. **The widest table is 13 columns.** Presets are also how that becomes
+   readable: four to five columns per view rather than thirteen for all
+   of them.
+3. **`#1`/`#2` for tuple members**, shipped this round after the first
+   draft emitted `C0`/`C1` — 16 headers that read as codes. The real fix
+   is for the schema to describe those arrays (`UX-290`).
+
+Measured and **not** a problem, recorded so it is not proposed again:
+
+4. **Empty sections.** One of 48 is near-empty, and it is the blast
+   control, which is correct. There is no dead-section problem.
+
+Unmeasured, and therefore proposals rather than findings:
+
+5. **A distribution as one cell.** The percentile maps (`p10`…`p90`)
+   are nine columns of one shape. A sparkline drawn from published
+   percentiles is rendering, not deriving, so Direction 7's boundary
+   permits it — but whether it reads better than nine numbers has not
+   been tested.
+6. **Sticky column headers** on tables taller than the viewport, beside
+   `UX-284`'s sticky tools.
+7. **One vocabulary for "what this is about".** A reader currently meets
+   `element_uid`, `element`, `key` and `name` for the same thing in four
+   tables.
+
+### What follows
+
+Filed as `UX-288` (the contract publishes membership three ways) and
+`UX-289` (one element table, many presets), in that order, because the
+second is unsafe before the first.
 
 ## Direction 15: a snapshot bigger than RAM (argued 2026-08-25, round 40)
 
@@ -1981,801 +2414,3 @@ it (its chain is the bound); stage 1 adds the example that can.
   `--jobserver auto|N|off`, recorded, read by `analyze` and `compare`.
 - `UX-852` — the leak audit: outstanding tokens against live processes,
   refilled, guarded by a killed client.
-
-## Round history
-
-This document used to carry the findings of rounds 2-6 inline, which
-made it an argument about direction *and* a changelog. They live with
-the other rounds now. A row does not type a verifier count: round
-142's said "seven" when nothing read `agent-runs.md` to check it, and
-by review time the round document itself said seven too — the count
-lives in `agent-runs.md`'s rows, counted per round from there.
-
-| round | what it found |
-|---|---|
-| [2](../audits/round-2.md) | scale probe — the tool at 1200 elements |
-| [3](../audits/round-3.md) | cross-checking quantities that ought to agree, and did not |
-| [4](../audits/round-4.md) | the plane seam, settled by measurement |
-| [5](../audits/round-5.md) | the structural plane against a real project's graph |
-| [6](../audits/round-6.md) | every real CI build is incremental |
-| [7](../audits/round-7.md) | plus the planning notes this document used to carry |
-| [8](../audits/round-8.md) | element attribution, 14.9% -> 86.1% |
-| [9](../audits/round-9.md) | the first real freedesktop-sdk capture |
-| [10](../audits/round-10.md) | both usage scenarios walked end to end |
-| [11](../audits/round-11.md) | round 10's fixes re-verified; verification discipline is where the defects were |
-| [12](../audits/round-12.md) | directions 3-4 re-verified; the MVP verdict: met |
-| [13](../audits/round-13.md) | round 12's fixes re-verified; the polish direction opened (`UX-125`..`UX-127`) |
-| [14](../audits/round-14.md) | the polish verified as a user; the docs read as a stranger (`UX-135`..`UX-145`) |
-| [15](../audits/round-15.md) | a real field failure the tool cannot see; the diagnosability chain filed and the fix claims re-verified (`UX-147`..`UX-154`) |
-| [16](../audits/round-16.md) | the tool meets a big project: a failed build verdicts IMPROVED, Ctrl-C destroys the trace, auto-spine bills every nested layout (`UX-156`..`UX-162`) |
-| [17](../audits/round-17.md) | all eight round-16 landings verified live and holding; the new findings are seams between verified features (`UX-163`..`UX-168`, plus `UX-169` from fixing them) |
-| [18](../audits/round-18.md) | every measured number reproduced exactly — the clean audit's tail is guards weaker than their prose; Direction 6 opened from the user's monorepo question (`UX-171`..`UX-177`) |
-| [19](../audits/round-19.md) | the source axis landed and met its own output: the printed identity does not round-trip, and one guard passes with its sorter reverted (`UX-178`..`UX-182`) |
-| [20](../audits/round-20.md) | the field speaks: nine usage observations ground-truthed into ten filings, and the elision that reopened the round-trip (`UX-183`..`UX-192`) |
-| [21](../audits/round-21.md) | all ten field landings verified holding; Direction 7 argued — the viewer as a thin window onto the JSON, timelines to Perfetto (`UX-193`..`UX-197`) |
-| [22](../audits/round-22.md) | the viewer landing verified; the field and an external review synthesized into Direction 7's second iteration, plus two shipped views nobody can reach (`UX-198`..`UX-206`) |
-| [23](../audits/round-23.md) | eight of nine round-22 landings hold; the ninth's guards only guard one machine. A second external review's Pareto turn adopted — decision first, everything an action — and its blind spots filed with it (`UX-207`..`UX-214`) |
-| [24](../audits/round-24.md) | the relationship layer the third external review asked for is already computed in `correlate.py` and published nowhere; round 23's own Inspect anchors resolve to nothing; three of the review's premises corrected, and the loop it did not look at filed (`UX-215`..`UX-226`) |
-| 25 | round 24's first four executed: `correlate/v1` published and the viewer drew it with no change; the dead anchors resolve; findings show their evidence; the next command is published rather than derived. The page-size ceiling stopped being a number and became a ratio (`UX-215`..`UX-218`) |
-| 26 | round 24's remaining eight executed: the schema learned to say what its numbers mean, `compare/v1` learned which elements changed, the store learned to remember one, and the page learned to draw a plan, focus one element and carry the reader's own marks in the link. Two task premises corrected and two mutations rejected for not discriminating (`UX-219`..`UX-226`) |
-| [27](../audits/round-27.md) | twenty for twenty on the eighteen-commit landing, two hollow guards filed. The role model written: four roles served, four unserved; Direction 8 (provenance) adopted from the fourth review, its workspace declined; Direction 9 (the team axis) opened from the user's positioning (`UX-227`..`UX-235`) |
-| 28-39 | the sibling's execution rounds: UX-236..295 landed, Directions 10-14 argued — recorded in each direction's section and the backlog's round sections rather than as audit files |
-| [40](../audits/round-40.md) | the field's first architectural showstopper: a 2 GB dual-plane snapshot OOMs `bga view` — every load path measured, ~95 % of the monolith unread, the streaming fix on the wrong path; Direction 15 argued (events as a Perfetto TrackEvent stream, capture computes / view serves) and the rounds 28-39 sample verified six for six (`UX-296`..`UX-301`) |
-| [41](../audits/round-41.md) | a design round while Direction 15 executes: the user's brainstorm became the visual contract (`styleguide.md`) — shape→control mapping, sparklines and density strips, a measured-and-budgeted palette (two validator failures found), dark first with print kept honest (`UX-302`..`UX-306`, Direction 16) |
-| [43](../audits/round-43.md) | Direction 15 and the visual contract verified eleven for eleven, fourteen mutations discriminating; then the user's question answered by inventory — the trace speaks Perfetto's format and none of its vocabulary, while the capture holds the content for all of it (`UX-308`..`UX-312`, Direction 15's second iteration) |
-| [44](../audits/round-44.md) | the trace vocabulary verified seven for seven with one dead question surviving its own class's purge; the user's thirteen readability observations became four visual-contract sections — drawing grades, apparatus placement, the depth budget and table focus, the click budget (`UX-316`..`UX-321`) |
-| [45](../audits/round-45.md) | the guides walked by a stranger: four bugs forty-four feature rounds never saw — the no-bst traceback, the user-install crash, the self-crashing printed command, the ghost invocations — plus the round-44 landing verified with one cascade evasion (`UX-324`..`UX-332`) |
-| [46](../audits/round-46.md) | three field errors measured to mechanisms — the trim that interns 3,000 compiles to two names, the CSP that silently breaks tick labels on served pages, the TypeError that was never bga's — and the implementation loop re-tooled with a measured 2.5× (`UX-333`..`UX-336`) |
-| [63](../audits/round-63.md) | seventeen implementation rounds (47-62) recorded in the backlog's own sections, then the sibling's outsider walk run twice: six populations vanish between a cold and an incremental run, fourteen Plane 2 blocks reach no browser, and the Tabulator question filed as a product decision (`UX-388`..`UX-397`) |
-| [64](../audits/round-64.md) | the walk that judged the answers: against example 06's `optimized/` answer key, Plane 2 names every intended fix and correlate compresses them into one 12.9 s paragraph that reaches no page; the rounds 47-63 landing held eleven-of-twelve under falsification; the library question answered with a factory measurement, and the test plan built from the escape ledger (`UX-398`..`UX-410`) |
-| [64 · the guard census](../audits/guard-census-round-64.md) | the falsify ritual run as a sweep rather than the per-round sample it had been since round 18: eleven guard families, one mechanism-revert mutation each, so that a family with no discriminating guard is found rather than a file (`UX-403`) |
-| [72 · the planted-defect walk](../audits/planted-defect-walk-round-72.md) | three defects **chosen first**, generated into real BuildStream projects with `tools/bga_gen_project.py` and built by a real `bst`, recording how far the front door gets each reader towards the answer that was planted (`UX-468`) |
-| [74](../audits/round-74.md) | rounds 65-73 reviewed as a workflow and measured — a 5m30s suite gated per item, 60 KB read before every task file, Outcomes at a median 114 lines, 12 % of commits housekeeping; a Register section and its guard, the `decompose` and `orient` skills landed, and the lifecycle's remaining steps filed (`UX-497`..`UX-506`) |
-| [75](../audits/round-75.md) | the round-74 slate closed under its own decomposition — three implementer tracks in worktrees (943-1,174 s, 81k-131k tokens each), `UX-500`'s first count (Regime A: 15 suite runs, two misses outside the selector's set), the rules card, the derived index, the self-recording CI reference (`UX-500`..`UX-510`) |
-| [76](../audits/round-76.md) | the tail closed, and `main` found red from CI's own adopt commit — the batch gate cannot assume a green base (`UX-511`..`UX-517`) |
-| [77](../audits/round-77.md) | three field reports about waiting, measured and filed — the `bst show` tail on big projects, a run bundle to carry, a Perfetto button silent for minutes (`UX-518`..`UX-521`) |
-| [78](../audits/round-78.md) | the three field reports implemented under a decomposition, everything shipping in the bundle by default (`UX-518`..`UX-521` closed) |
-| [79](../audits/round-79.md) | the controls walked on a two-plane page (782 in 193 classes): the "All rows" table is nested rows migrating into their parent; the served page is the capture-time analysis; the volume budget breached at the top of its own class; the suite weighed — forty browser files are half its seconds (`UX-522`..`UX-536`) |
-| [80](../audits/round-80.md) | the round-79 slate closed in six worktree tracks: `UX-500`'s second regime measured and refused — **4 of 9** defects the batch gate caught were outside `test-touching`'s set, so fixing guide §3 stays; a run bundle you can carry, `analyze/v5`, the export's data half bounded and compacted, and three cross-track collisions only a merge could see (`UX-514`, `UX-516`..`UX-539`, `UX-92`) |
-| [81](../audits/round-81.md) | twenty-two rows, seven premises falsified by measuring — the drift gate's cause filter, a stale base under both tracks, the suite line that was not the run's (`UX-538`..`UX-562`) |
-| [82](../audits/round-82.md) | every document read against the tool by five researchers: a sentence a guard reads is exact, a sentence no guard reads has drifted — twenty-four filings asking for derivation and dating, and the `review` skill (`UX-563`..`UX-586`) |
-| [83](../audits/round-83.md) | round 82's twenty-four rows executed, most of them not "correct a sentence" but "give the sentence a guard and let the correction follow" — the `UX-549` shape (a figure the guard derives) and the `UX-511` shape (a block labelled with its date and its cuts), extended to where round 82 found them missing (`UX-563`..`UX-586`) |
-| [84](../audits/round-84.md) | the fifteen rows round 83 filed rather than fixed, seven tracks wide — and the round where a filed premise is re-measured before it is implemented, because `UX-589`'s was false and `UX-592` had already refuted it (`UX-589`..`UX-604`) |
-| [85](../audits/round-85.md) | the rows round 84 left, plus the seven the round filed against its own work and six from architecture review 15 — and the round where a premise **carried forward** is a sentence again: seven of nineteen moved under re-measurement, five of them written by the orchestrating session from another track's report (`UX-604`..`UX-627`) |
-| [86](../audits/round-86.md) | the rows round 85 left and the three this round filed — and the round where every item turned out to be one shape: **a guard's population is bounded by a rule somebody typed**, and where that rule is wider than the claim the guard goes quiet rather than failing. Six of eight, plus the session's own undeclared skip reason (`UX-597`..`UX-635`) |
-| [87](../audits/round-87.md) | the `bga view` walk that began with pressing Expand twice — four tracks on disjoint modules, and the round where **three of six filings were corrected by the measurement that implemented them**: `UX-638`'s mechanism needed a scroll inside focus, `UX-640`'s not-a-defect held only where the listener runs, `UX-642`'s broken population was the smaller half. All three shared-value merge hazards fired and each merged cleanly into a wrong number (`UX-638`..`UX-649`) |
-| [88](../audits/round-88.md) | round 87's eight open rows, five tracks wide, plus the review the cadence guard called due — and the round where **four rows were closed by disproving their own premise**, three of them the orchestrating session's: settling was not the geometry gap, the shallow-clone sweep was already closed, the reader map was derivable, and nine page-built sections were thirteen (`UX-636`..`UX-656`) |
-| [89](../audits/round-89.md) | round 88's five open rows in three parallel tracks, and the round where **every closed row was the same defect at a different scale**: a fact written twice, one copy guarded and exact, the other drifted — plus three more found while working, one of them two rows round 88 wrote by hand (`UX-651`..`UX-659`) |
-| [90](../audits/round-90.md) | the process given a ledger — reporters on `sonnet`, the walk and the design review as skills, a run ledger — and the page looked at through seven screenshots: the rail as a source list, a reader as a shape not a hue, a runbook as a shape, a rail click that overshoots (`UX-663`..`UX-674`) |
-| [91](../audits/round-91.md) | a design round: whose question utilization is — the tool counts processes where the CI owner needs cores, computes idle intervals it never publishes, exempts foundations by kind so a toolchain is not exempt, and has no change frequency; Direction 17 argues the envelope, the jobserver, priced remote execution and expected rebuild cost (`UX-675`..`UX-684`) |
-| [92](../audits/round-92.md) | a design round on the test workflow: the suite verifies what was built and the walk what was promised — exploration as a seeded scenario that grows the answer key, a release that waits for the walk, the impact set derived, areas as a view, the architecture prose moved one area at a time, a shape budget, a flake ledger, the invariants for any shape (`UX-685`..`UX-692`) |
-| [93](../audits/round-93.md) | a design round on the development workflow: the gate holds the numbers and the review holds the design — the rule set widened by layer and pinned, a finding baseline that is zero-tolerance for new findings and a size ledger that queues the refactor stream, a burn-down on the reporters' model, the register's unguarded rows, a type baseline, a gate-only shelf on GitHub, the viewer linted, an AST symbol index in place of CodeQL for navigation, a `self-review` skill, a performance ratchet, a weekly mutation run (`UX-693`..`UX-705`) |
-| [94](../audits/round-94.md) | a process round on the pipeline: a task's shape derived from its text names the model that runs it, the implementer on `sonnet` for mechanical and bounded shapes, the orchestrator's cost measured as its live context at each rebuild (73 %), one task per track rather than per session; the rebuild count, a priced first batch, a batch close, a derived ledger row and a screen-long tool result filed (`UX-706`..`UX-711`) |
-| [95](../audits/round-95.md) | the first batch under the pipeline: the rule set widened by layer in one auto-fix commit with the tool pinned (`UX-693`), three bounded tracks on `sonnet` each read by a verifier — the symbol index, a batch `--move`, a session's rebuilds priced, a ledger row derived, the finding baseline (`UX-700`, `UX-707`, `UX-709`, `UX-710`, `UX-694`); eleven defects found by the verifiers, none by the tracks; three tracks lost to an interrupt and the rule that follows |
-| [99](../audits/round-99.md) | three judgements closed by direct commit and no track dispatched — `UX-729`'s rename guarded across all 22 modules, `UX-733`'s two fan averages named equal by construction, `UX-732`'s merge test replaced with a combined diff; `review 18` ran in the same window and filed the three ids round 100 closes (`UX-734`..`UX-736`) |
-| [100](../audits/round-100.md) | five ledger rows — two for `UX-732`'s reworked track, one each for `UX-734`'s three counted figures, `UX-735`'s export size and `UX-736`'s status table — plus `UX-731` and `UX-730` closed directly; zero verifier runs, the first of three rounds in a row with none |
-| [101](../audits/round-101.md) | seven ids closed by a track merge each (`UX-728`, `UX-737`, `UX-738`, `UX-717`, `UX-716`, `UX-692`, `UX-677`) and the ledger prices none of them; `UX-703`'s own closing commit names four lost transcripts and declines to guess a row, without saying which four of the seven it meant — an unresolved fact of the record, not this round's to settle |
-| [102](../audits/round-102.md) | five ledger rows (`UX-667`, `UX-691`, `UX-702`, `UX-712`, `UX-703`) around a mid-round gate, `af56022`, that found three guards `UX-667`'s own track moved and did not visit — the gate a checkpoint inside the round the ledger names, not its edge |
-| [103](../audits/round-103.md) | the guard whose population is narrower than its sentence, five times: four `implementer` tracks on `sonnet` each read by a `verifier` before merge (`UX-746`, `UX-749`, `UX-748`, `UX-674`), six rows closed by the session before them; the verifiers found four defects the tracks' own reports did not, two of which would have merged — an acceptance test that did not survive being committed, and a budget claim off by 524px; seven rows filed (`UX-750`..`UX-756`), two of them closed in the same round, and three CI reds all the session's own |
-| [104](../audits/round-104.md) | the verifier earned the round: six `judgement` rows as `implementer` tracks on `sonnet`, each read by a `verifier` before merge, and three held — `UX-753`'s guard stayed green when the rule it checked was deleted outright, and `UX-744` claimed an independence that a mutation one function down disproved twice; five closed (`UX-750`, `UX-751`, `UX-753`, `UX-755`, `UX-756`), `UX-744` reverted after CI falsified a derivation no worktree could test, four filed (`UX-757`..`UX-760`); the gate itself was wrong — BuildStream sizes its 5% cache reserve against nominal disk, not free, which round 103 misdiagnosed as contention |
-| [105](../audits/round-105.md) | the two rules the pipeline never wrote down: the verifier mandate moved out of `decompose/SKILL.md` — its only statement, in the document the guide outranks and never mentioned — into `fixing-guide.md` §3, with a guard pairing every merged `implementer` ledger row to a `verifier` row; and the gate bound to the commit that gets pushed, by a marker `make test` writes and a hook that reads it. Both rows held by their verifier: a pasted `grep` that did not reproduce, a skill line still restating the rule its commit message said it had stopped restating, and a hook an ordinary `git status && git push` walked straight past. Three filed (`UX-766`, `UX-767`, and the ordering into `UX-763`) |
-| [106](../audits/round-106.md) | the agent workflow's own loop, and the guards that read a citation: four `implementer` tracks each read by a `verifier`, every track held at least once and every hold on a claim its own commands disproved — a `--force` that silently erased the previous one, a boundary sentence reversed with its `UX-767` citation intact that both new guards still passed, and a 10-line commit body visible only by running `tools/dev_commit_bodies.py`. Eight closed (`UX-757`, `UX-763`, `UX-765`, `UX-766`, `UX-767`, `UX-768`, `UX-769`, `UX-770`), one filed (`UX-771`). Two of the eight CI filed: a count guard matching `UX-503`, the id it names in its own failure message, and a cost-row median that sat on a 37/38 tie so this container wrote 38 where CI computed 37 on the same commit |
-| [107](../audits/round-107.md) | a fix that retired a filed row, and a conclusion that outran its measurement: `UX-744`'s register landed as `{round, date}` with no ids column, which left `UX-759` — filed against that column's silent partial loss — with nothing to check and no runnable acceptance test, so it closed as a decline; the annotation was owed by `UX-744`'s own commit under the guide's item 6, which has no guard. Round 106 had recorded `UX-760`'s reserve as why `make test` could not pass; the spend was real and the conclusion was not — the margin was thin because the suite's own leavings had eaten it, which is `UX-773`. `UX-760`'s verifier found its population derivation cited two files that are not in the sweep it describes, and that the two files it deferred still redden at a negative margin (`UX-775`). Three closed (`UX-744`, `UX-759`, `UX-760`; `UX-764`'s track landed but the row stays open, which this row said wrongly until review 20), four filed (`UX-772`, `UX-773`, `UX-774`, `UX-775`) |
-| [108](../audits/round-108.md) | three planned tracks and a fourth the round found under them. `UX-771` derives the section-numbering population, `UX-772` makes the register read a dateline rather than a document's first date — its verifier caught the first pass filtering the population on `document_date() is not None`, the same silent skip moved one layer down — and `UX-773` sweeps the browser and profile a `SIGKILL`ed worker leaves. `UX-781` is why CI was red while the tree was green here: `ci.yml`'s base-diff step ran `git fetch --depth=200` on a `fetch-depth: 0` checkout, which grafts a boundary (1,541 commits to 855, measured), so every step after it read a cut history. `UX-776`'s detector, two commits old, missed it — no parent object is absent when nothing was deleted — which is the third proxy for one question. It reads the traversal now. `UX-773` merged without a verifier; the run happened late, returned HOLD, and found three defects including one this session made while closing the round — moving a browser guard out of `MEDIUM` on the duration rule when that file is placed by construction (`UX-783`). Then `bst-tests` reddened on the push: it runs the whole `make test` on a default-depth checkout, and the guard for that asserted `"fetch-depth: 0"` appeared *somewhere* in the file, so the `test` matrix covered for it (`UX-784`) — the same population defect a third time in one round. Six closed (`UX-771`, `UX-772`, `UX-773`, `UX-781`, `UX-783`, `UX-784`), four filed (`UX-781`, `UX-782`, `UX-783`, `UX-784`) |
-| [109](../audits/round-109.md) | the ten tracks rounds 100 and 102 merged unread, read: nine retrospective verifiers found eight code or guard defects and four false pastes against zero in the tracks' own tables (`UX-785`..`UX-793` filed). Then the open tasks the same way: `UX-698`'s GitHub shelf (CodeQL, pip-audit, a lock, Dependabot), `UX-682` and `UX-697` split into two tracks each against a session contract, seven filings in four tracks, `UX-778` — every track merged behind a verifier, and eight of nine verifiers returned a fix that landed before the merge. The `sizes` shelf reddened on the round's own head and was re-adopted once at the close. Worktrees open at `origin/main`'s old tip, a clean stop removes them, a verifier's editable install repointed the shared environment, and the hundredth ledger row raised `IndexError` (`UX-794`). Thirteen closed, eleven filed |
-| [110](../audits/round-110.md) | the fifteen open tasks that fit a track, in three batches and two serial chains, every merge behind a verifier: `UX-744`'s register, four bounded rows, four rows behind one fix each, the spine guard reading what contention cannot move (`UX-741`), the guide's size figure derived (`UX-774`), the reader as a shape in the header (`UX-668`), the suite's shape table with a browser ratchet at 50.5 % (`UX-690`), a declared foundation tier (`UX-683`), the jump box writing its anchor (`UX-671`). Nine of fifteen verifiers returned a hold or a fix; four PASS verdicts carried a finding the track's table could not see. Review 21 at 30 closes found two records no guard reads. Six filed (`UX-796`..`UX-801`). Fifteen closed, eight filed |
-| [111](../audits/round-111.md) | round 110's eight filings and the round-sized rows behind them, in parallel tracks behind verifiers: three renderers split behind a walked list each (`UX-695`), memory in the sweep (`UX-678`), the cached-build verdict (`UX-684`), remote execution priced two ways and never summed (`UX-680`), the viewer and Plane 2 chapters into area pages (`UX-689`, `UX-806`). Eleven of nineteen verifiers returned a hold. The gate reddened three times on findings nobody's diff touched — two of them filed and closed (`UX-804`, `UX-805`). Sixteen closed, three filed |
-| [112](../audits/round-112.md) | the last three open rows, in parallel tracks behind verifiers, after one probe capture of `examples/06` the session took first: the max-jobs advice priced by replay as a stated floor (`UX-739`), its rows one per built element (`UX-808`, found by the probe), the jobserver spike measured — under-utilised share 0.857 → 0.214 at an unchanged wall, not a mode yet (`UX-679`) — and the projection chapter into its area page (`UX-807`). Three verifiers, three PASS, each with a finding the track's table could not see. Four closed, three filed |
-| [113](../audits/round-113.md) | the two rows left, in tracks behind verifiers — the price's assumptions rendered in the text (`UX-809`), the Plane 3 chapter into the tools area page (`UX-810`) — and the shelf's two Dependabot pull requests unblocked: `UX-696`'s commit-body gate read Dependabot's generated 75-line body, so no shelf pull request could ever merge (`UX-811`); both branches brought to main, the fix ported, locks and ledgers refreshed, gated and pushed; review 22 at 808 closes found two records whose guard's population cancelled its own errors (`UX-813`, `UX-814`), closed in-round with the impact guard's (`UX-812`). Six closed, five filed |
-| [114](../audits/round-114.md) | `UX-689`'s last two chapters, each its own row in a serial track behind a verifier: the ingestion path into the tools area page (`UX-815`), the `bga` area's chapters into a page of their own (`UX-816`), `architecture.md` 1044 → 490 lines outside the log and the series closed; walk seed 3 (the process storm, spine on) found three rows carried into the release (`UX-817`, `UX-818`, `UX-819`); 0.4.1 cut as a patch, the contract state 0.4.0's; after the merge, main's three adopt jobs found red since 2026-09-08 on a bare interpreter (`UX-821`). Four closed, seven filed |
-| [115](../audits/round-115.md) | the owner's twelve considerations on the 0.4.1 page, each measured on the all-planes walk capture and the 1,202-element export and challenged against the guide: nine agreed, two declined as designed (filters under the cap, the run chapter as reference), one whose premise the page no longer shows (the twin is a toggle); a design review found eight more — a monotonic base rendered as "497003.7 h", five bare task ids, 47 visible payload keys, five joined fields with no column, the header's 149-char path. Four styleguide sections (§2f, §3i, §4g, §5b) and fifteen filings, `UX-822` to `UX-836`; none closed |
-| [116](../audits/round-116.md) | the nineteen open rows in three waves of `implementer` tracks behind `verifier`s, judgement shapes with the decision in the brief: the header is identity only, the readers table gone, the From column an offset, the twin draws fifteen marks, the max-jobs advice one flat table, every joined field a column, the serial chains ranked, a declared source-kind map, and a guard that reads both exports for the register. Nine of seventeen verifier runs held, four on a guard that could not fail; `UX-817` to `UX-837` closed, the last filed at the gate for `structured.js`'s ceiling; review 23 at the gate, three filings open |
-| [117](../audits/round-117.md) | a design round on the jobserver as a mode, on `UX-679`'s spike: a pin read from BuildStream's own argv is never joined, the pool follows busy cores and PSI rather than the load average by being a client of its own pipe, the key is safe by construction and guarded by `%{full-key}` both ways, tools that will not read the pipe hold tokens through a bind-mounted wrapper, and the analysis feeds the scheduler — priority by slack, memory from the plan, a token ledger in Plane 2. Direction 20; twelve filings, `UX-841` to `UX-852`; none closed |
-| [118](../audits/round-118.md) | the fifteen open rows closed - review 23's three and Direction 20's twelve, the jobserver's three stages - as fifteen `implementer` tracks behind sixteen `verifier` reads on `sonnet`, the pull request open from the first commit; CI found three defects no local run could (the runner's PSI files, the read-only sandbox root), one track fork-bombed the box, and the evaluation example read the mode slower at every stage |
-| [119](../audits/round-119.md) | the jobserver's value: round 118's verifier gaps closed (`UX-853` to `UX-855`), the snapshot switch (`UX-856`) and `examples/11-serial-giant` (`UX-857`) - one long element under a `max-jobs` below the core count, the server's shape on four cores; five `implementer` tracks behind five `verifier` reads on `sonnet`; the quiet-box pair the session ran read `auto` IMPROVED -10.6 % (286.53 s to 256.06 s, the giant's peak 2 to 3) where two loaded pairs had read it REGRESSED |
-| [120](../audits/round-120.md) | a 16-core field capture read eight things off the page and eight rows closed - the pool that never grew past its opening seed (`UX-858`), manual recipes that never joined (`UX-859`), swap unpublished (`UX-860`), the capacity figure unclamped (`UX-861`), the twin's CSS (`UX-862`), the strip's ticks (`UX-863`), maps as pairs (`UX-864`), relative opens dropped (`UX-865`) - seven `implementer` tracks behind seven `verifier` reads on `sonnet`, four `researcher` reads before the filings; the pair the round was for, `examples/11` with builders equal to the cores, read `auto` IMPROVED -13.4 % (296.26 s to 256.47 s, the giant's width 2 to 4) where the same command opened at ceiling 1 before |
-| [121](../audits/round-121.md) | the first day on a real project, eight rows closed - the jobserver FIFO no longer bound onto its own host path under a read-only root, named under `bind_dst` (`UX-869`), the kinds read carrying the user's own global options with a reason and `kinds_read.json` on every failure (`UX-870`), a junctioned name stored under both spellings with `junctions`/`collisions` in the record (`UX-871`), `examples/12-junctioned` under `bga snapshot --jobserver auto` in CI (`UX-872`), the target read past `--deps all` (`UX-873`, filed and closed in the round), plus review 24's three rows (`UX-866` to `UX-868`) - eight `implementer` tracks behind eight `verifier` reads on `sonnet`, two `researcher` reads before the filings; the fifo-auth pair on `examples/11` opened its sandbox clean and this box's GNU Make 4.3 refused the auth string, so the timing waits for a 4.4 host |
-| [122](../audits/round-122.md) | the jobserver auth style the sandbox make refused - `auto` picked `fifo` from the host's GNU Make 4.4, but a `kind: make` element's own `tar` staged an older make that rejects `fifo:`, so the style must follow the make that consumes it, not the host's (`UX-874`), and `bga snapshot` gains the `--jobserver-auth` passthrough `capture run` already has (`UX-875`) |
-| [123](../audits/round-123.md) | the jobserver auth autodetect picks the style that always works - `--jobserver auto` resolves to `fd`, which every GNU Make from 4.2 up accepts, rather than `fifo` from the host make (`UX-876`), after a `kind: cmake` element's sandbox-built make below 4.4 rejected `fifo:` that round 122's probe never saw; and the sandbox-make downgrade for an explicit `fifo` now covers every kind that injects `MAKEFLAGS`, not only make/autotools (`UX-877`) |
-| [125](../audits/round-125.md) | a per-element switch for the jobserver auth style - a mixed-make project (some elements pinned to GNU Make ≤4.2.1, others migrating to 4.4) forces `fd` on a named element so it fills the pool via the fd jobserver, or `off`/`fifo`, overriding the auto/scrub decision UX-878 makes from the make probe; `--jobserver-auth-override 'style:glob'` threaded to the shim, resolved against the element name (`UX-879`) |
-| [126](../audits/round-126.md) | a compiler-LTO shim fills the box without the gcc-13 ICE - a forced-`fd` element that *does* GCC LTO still crashed lto-wrapper on the invalid fd, so a new `flto` override style keeps `fd` for make (compiles fill the pool) but mounts a reference shim over the GCC driver that strips the auth and passes a static `-flto=N`, only when `-flto` is already present, and is not scrubbed because the shim keeps it safe (`UX-880`); a preflight warns when an LTO element meets a sub-4.4 make and names the make-4.4 remedy (`UX-883`); the `--wrapper-dir` override, the `public: bga.jobserver-auth` surface, the make/autotools LTO gap, and two process rows filed for later (`UX-881`, `UX-882`, `UX-884`, `UX-885`, `UX-886`) |
-| [127](../audits/round-127.md) | the two operator surfaces for a custom-prefix shim - `bga capture run --wrapper-dir <path>` (augment, or `--replace`) lets an operator ship their own shim matching bga's published contract for a compiler PATH-shadowing cannot reach (`UX-881`), and a `public: { bga: { jobserver-auth: fd\|fifo\|off\|flto } }` element annotation, read via a second `bst show %{public}` and resolved after the command-line override, carries the per-element style in the project instead of the invocation (`UX-882`); advisory input, no contract version bump |
-| [128](../audits/round-128.md) | the ninja wrapper owns ninja's `-j` - a `kind: cmake`/`meson` recipe of the shape `ninja -j ${JOBS}` (the `-j` literal, `JOBS` a bare count) crashed `invalid -j parameter` under `--jobserver auto`, because bga empties `JOBS` and stranded the flag; the UX-846 ninja wrapper now strips the recipe's own `-jN`/`--jobs=N`/dangling-`-j` before prepending its token-held `-j<width>`, so it is ninja's single source of parallelism whatever shape the recipe writes (`UX-888`) |
-| [129](../audits/round-129.md) | the four deferred rows cleared - the token-refill guard polls for the reap instead of a fixed 2s window so its refill+naming claim gates and the wall-clock does not (`UX-886`), `make lint` folds into the push gate on CI's pinned versions so a lint-red blob is caught before the push (`UX-885`), the `implementer` brief no longer names the dev-deps command that repoints the shared editable install (`UX-887`), and the jobserver policy's `make`-kind LTO exclusion is settled by measurement (`UX-884`) |
-| [130](../audits/round-130.md) | the control-growth review: the 12-run store window holds, while the finding fold leaves hidden controls materialised (`UX-921`); snapshot-management placement remains a proposal, not a filed defect |
-| [131](../audits/round-131.md) | a rising ratio that was a stale record - `UX-908`'s three excursions are one step (26 -> 36 tests on 2026-09-15) and then a band spanning 6%, not a rise, so both records were re-recorded (`tiers.py` 3.1s -> 8.7s, `ci_reference.json` 6.47 -> 13.86); the round's finding is why neither moved on its own, filed as `UX-924` - `adopt` reads the candidate's `files`, already the median of that candidate's own samples, so a full flat window feeds the committed value back to itself and 37 adopt commits never moved a 2.1x-stale entry |
-| [134](../audits/round-134.md) | the examples stage their own make - the host's `make` was copied verbatim into every sysroot, below `UX-841`'s cutoff, so `style_for_make_version` read `fd` on every host this repository has run on; `UX-915` pins GNU Make 4.4.1 from `cache.nixos.org` (keyed on `platform.machine()`, one relative interpreter symlink, no glibc closure) and `UX-916` stages 4.2.1 beside it behind a `/usr/lib/bga-make/<series>` PATH alias, so one `bst-examples` capture crosses the version switch both ways - written retroactively in round 135 from this round's own records |
-| [135](../audits/round-135.md) | the sysroot was the host's and nothing said which host - `UX-914`'s four base candidates all need a mirror refused at CONNECT, so the pick dissolves into per-package nix pinning and a declaration: `tools/sysroot_manifest.py` names one row per package over two axes (runtime, toolchain) and probes **every** owned binary, 23 over 21 staged names, because a package-level probe is a proxy for its own members - a pinned divergence exits 1 and a host divergence warns and reddens a guard; the toolchain axis is filed as `UX-925` |
-| [136](../audits/round-136.md) | three rows in three concurrent threads and a document none of them wrote - `UX-924`'s `adopt` took the candidate's committed median rather than its newest reading, so 367 flat windows fed a value back onto itself; `UX-927` found a pin stages 1 store path of 5 (and would stage 1 of 15 for gcc), so `tools/nix_closure.py` walks the narinfos transitively and gates on `NarHash` because a recompressed `glibc-2.40-224` disagrees on `FileHash`; and `UX-930` measured `-B` as three directories rather than one, with a `-B` at a directory holding no `cc1` compiling against the host at exit 0 and no stderr - written retroactively in round 137 from the three task files and the ledger, and `UX-926` is the row for why none of the three wrote it |
-| [137](../audits/round-137.md) | a prefix this repository can name - `UX-925` predicted that gcc's compiled-in search paths meant a second `arch=` variant needed a second machine, and the pin falsifies it: the stock nix gcc closure staged at its own `/nix/store/<hash>` is already configured where it stands, so `tools/nix_toolchain.py` pins gcc 14.3.0, binutils 2.44 and cmake 4.1.2 (37 store paths, 420 MiB) and `UX-930`'s parameters read **five** `-B` prefixes off it rather than three - the assembler and the linker are classes only once a pin takes them off `PATH` - with the C++ headers flipped to toolchain-owned (`argv[0]` relocation, no flag) and the closure's own glibc declared as `glibc-pinned` so the runtime rows stay byte-identical |
-| [138](../audits/round-138.md) | eighteen rows and one closing PR - the review cadence (25 closed rows) stood at 914 against review 25's 889, so review 26 ran first and every row moved in `#277`; `dev_sizes.py --adopt --force` was refused as a CI bypass and two tracks cut `tools/_close_task_checks.py` and `tools/_record_readers.py` instead; six concurrent local suites on four cores read 43 false reds at load about 400, so `UX-948` makes `make push-check` the push gate and CI's matrix the merge gate; the last eight PRs landed as a stacked chain, which found a census guard undeclared (31 -> 32), a guard's inner make inheriting `MAKELEVEL`, and a ceiling 164 -> 167 read green through a pipe without `pipefail`; and this closing PR is the first docs-only lane run (`UX-956`) |
-| [139](../audits/round-139.md) | the workflow review's first rows - process was 87% of filings and 40 of 47 catch-up conflict paths were registers, so an `architect` shapes rows under a 40% bookkeeping cap (`UX-993`, `UX-994`), derived figures are printed rather than committed (`UX-996`), a pull request runs the newest Python alone (`UX-995`) and CI's records publish to a `records` branch (`UX-997` T1); every track's verifier held once, each on a real defect |
-| [140](../audits/round-140.md) | the workflow batch in parallel - nine rows under the architect's Decisions: the push gate reads the payload's tree (`UX-992`), a bookkeeping finding is one line (`UX-998`), a weekly `retro` (`UX-999`), the records leave main (`UX-997` T2) and area pages name each row's guard, `covered 366 / 567 (declared 121, inferred 245)`, published by CI (`UX-1000`); seven of nine verifications held, each on a real defect |
-| [141](../audits/round-141.md) | the jobserver batch on a real project - fdsdk's LTO links hung because gcc's `lto1` deadlocks on a blocking raw fd pair, so every compiler-facing policy hands `fifo:` (`UX-1001`, `UX-1006`); a shared build root hid 12 make sandboxes (`UX-1003`); the CI runner is two SMT cores and its VMs span two CPU generations, so no wall verdict is possible there (`UX-1002`, `UX-1004`) |
-| [142](../audits/round-142.md) | the styleguide audit's 22 rows and `UX-921` in nine parallel tracks - controls meet 24x24/44x44 (`UX-1022`), find-in-page opens folded chapters through `hidden="until-found"` (`UX-1015`), one `?` door per block, 191 -> 39 (`UX-1021`), spacing, fonts and sizes from tokens (`UX-1026`, `UX-1033`, `UX-1035`), every step past a bound bounded (`UX-1028`-`UX-1032`); the merged tree moved the landed bound 7,300 -> 7,600 px and split `pairs.js` and `schema_hints.py` out at their ceilings; held `UX-1018`, whose guard now reddens |
-| [143](../audits/round-143.md) | every agent names its model and effort - architect opus high, verifier sonnet high, researcher sonnet low; implementer tracks go to opus when architect-shaped from judgement or over 150 code lines, which were held 53% on sonnet; `integrator`, `walker` and `closer` own the merge, the page and the close (`UX-1039`) |
-| [144](../audits/round-144.md) | the second styleguide audit's rows, viewer tracks in parallel - one accent guard per grade's sentinel, one resting rule for select and text, the viewer JS ships gzipped, one landed-height bound per size class with the chapter distance kept separate, the rail discloses the current chapter and the first Tab starts at the top, copy-rows/top-n moved in the DOM rather than on screen (`UX-1042`-`UX-1055`, `UX-1045` still open); the walk found three pre-existing gaps (`UX-1056`-`UX-1058`) |
-| [145](../audits/round-145.md) | the anonymized-bundle rows close - disclosure classes for every exported value path, keyed shape-preserving pseudonyms, a bundle that exports anonymized and refuses a leftover name, analysis commutes with anonymization, pseudonym text resolves back via `bga bundle --resolve`, a declared public junction keeps its public names, the archive and its gzip header carry no original metadata (`UX-1060`-`UX-1065`, `UX-1067`; `UX-1066` still open); verification found the length band, gzip FNAME, a long-flag leak, the epoch-0 start and a split table, and a `plural()` fix landed after |
-| [146](../audits/round-146.md) | the #298 review rows close - a command-line credential drops to `<dropped>` and never enters the pseudonym map, the anonymized export streams in bounded memory to a 0600 archive, the disclosure policy names what the producer writes (gaps 10 -> 0), the residue scan runs 0.22 -> 4.04 MB/s (`UX-1068`-`UX-1071`); verification found four credential leaks, an F-classed `"None"` key and a non-integer C key |
-| [147](../audits/round-147.md) | the #298 re-review rows close - a numeric option value pseudonymizes by default, keyed safe on (binary, option); the residue scan is Unicode-aware with NFC folding after casefold; the pseudonym map saves atomically before the archive publishes; the bounded-memory measurement now varies distinct identifiers, about 1.3 KB/identifier (`UX-1084`-`UX-1087`); verification found `gcc -l1234`/`curl -O 12345` leaks and the map-write temp-file/existing-destination defects |
-| [148](../audits/round-148.md) | the #298 review's third pass closes - an unrecognized numeric value (`--otp`/`--pin`/...) drops to `<dropped>` instead of pseudonymizing into the reversible map, and the glued `-j<digits>` shortcut is keyed to make-like binaries same as the other forms (`UX-1088`, `UX-1089`); a verifier ran and found a further leak, the glued `-j=N` form |
-| [149](../audits/round-149.md) | a housekeeping round on Ruslan's ask, the 40% bookkeeping cap lifted for it, 11 parallel tracks off the 2026-09-28 retro's proposals and filed guard gaps - a reading's environment now takes it (`UX-938`), the flake census counts a multi-file run once (`UX-950`), a population entry keeps its tree size (`UX-955`), a linked worktree cannot repoint the shared install or the sweep (`UX-1041`), the retro keys a finding by its own class (`UX-1090`), the records writers queue instead of cancelling (`UX-1091`), every scenario declares its guard in one field, 1021 files backfilled (`UX-1092`), the Enter-on-a-reached-fold race (inferred, not reproduced) closed by a bounded Tab walk (`UX-1093`); load average 50-63 from 11 parallel tracks made every gate a 10-25 minute wait, and `merge=union` on the bookkeeping ledger reopened 12 swept lines across two merges |
-| [124](../audits/round-124.md) | the LTO link survives the jobserver - `fd`-style auth in `MAKEFLAGS` is read directly by an unwrapped `gcc -flto`/`lto-wrapper` whose fd is invalid inside the sandbox, so a `kind: cmake` element's GCC-13 LTO link ICEs; the injected auth for gcc-lto-driving kinds (`cmake`/`meson`/`jobs_env`, cargo) is rewritten `fd → fifo:` (path-based, valid across the boundary for gcc-13 and modern LLVM) or scrubbed when a sub-4.4 make shares the string, at the one channel that reaches an absolute-path custom-prefix compiler (`UX-878`) |
-| [150](../audits/round-150.md) | bga's own cost, from the snapshot tail through the view - the tail reuses `_analyze`'s slice and one bitset reachability closure (`UX-1072`, `UX-1074`), compare reads each side's published analysis under a full fingerprint (`UX-1073`), the raw log gzips at level 6 and its opened paths are interned (`UX-1075`, `UX-1076`), every phase is announced and timed into `tail.json` (`UX-1077`, `UX-1078`), capture report reads a gzipped log and BuildStream calls are timed (`UX-1079`, `UX-1080`), export renders once and the cache key set reads the build's own log, reusing the graph on an equal fingerprint (`UX-1081`-`UX-1083`); the Verification Log re-grounds at both merge seams and the selector ceiling takes #298's merge (`UX-1101`, `UX-1103`) - fourteen closed, six filed |
-| [151](../audits/round-151.md) | the quality gates, audited and batched - CI cancels a superseded PR run and stops chaining the bst jobs behind the suite (`UX-1108`-`UX-1111`, `UX-1115`, `UX-1121`), push-check lints changed markdown and runs the locked tools (`UX-1112`, `UX-1113`), a SessionStart hook unshallows and locks (`UX-1114`), the hook builds warning-clean and the Plane 1 reader has property tests (`UX-1116`, `UX-1117`), docstrings follow Google convention and `closed.md` is chunked (`UX-1119`, `UX-1120`), the retro prices its guards (`UX-1122`), the Verification Log re-grounds (`UX-1123`), the tree is formatted (`UX-1118`) and the size ledger reads one order (`UX-1126`), two CodeQL findings fixed (`UX-1127`) - eighteen closed, five filed |
-| [152](../audits/round-152.md) | the open rows closed - blast radius off the bitset (`UX-1106`), the export, stamp and env fixes (`UX-1107`, `UX-1124`, `UX-1007`, `UX-1057`), raw logs travel tokenized (`UX-1066`), the jobserver verdict table (`UX-1012`, `UX-1008`), a tree of bundles as a store (`UX-900`), `bga junction-cost` (`UX-904`), the guard and doc rows (`UX-975`, `UX-976`, `UX-1125`, `UX-1129`-`UX-1131`, `UX-1133`), the rail toggle and back re-fold (`UX-1058`, `UX-1056`), the Graviton reading (`UX-1010`) - twenty-one closed |
-| [153](../audits/round-153.md) | the view page on a two-plane capture, reviewed - no "null" in a finding card (`UX-1136`), the `?` door off the first term's cell (`UX-1137`), pinned from the resolved width rather than `make -j1 install` (`UX-1138`), the costliest pins named first (`UX-1139`); the review's 25 findings filed as `UX-1140`-`UX-1153` - four closed |
-| [154](../audits/round-154.md) | the review's fourteen rows fixed - `UX-1140`-`UX-1153`, seven tracks merged (30 then 7 merged-tree reds to 0), five verifier holds closed by a residue pass; the walk's 14 defect classes filed as `UX-1154`-`UX-1160` |
-| [155](../audits/round-155.md) | the round-154 walk's seven rows fixed - `UX-1154`-`UX-1160`, seven tracks merged (34 B over the page budget recovered to 255 B under, 6 reds fixed), one verifier hold recorded; the walk's residue filed as `UX-1161`-`UX-1167`, the last asking the owner about the 150,000 B budget |
-| [156](../audits/round-156.md) | the round-155 walk's seven rows fixed - `UX-1161`-`UX-1167`, seven tracks merged, the page budget raised to 160,000 B on the owner's call, one suite flake traced and fixed as `UX-1168`; the walk's residue filed as `UX-1169`-`UX-1175` |
-| [157](../audits/round-157.md) | the round-156 walk's seven rows fixed - `UX-1169`-`UX-1175`, seven tracks merged (8 merged-tree reds fixed in a four-commit pass, the page half 151,228 B to 144,196 B), a chapter-row press at 390 keeps the rail open for J2; the walk's residue filed as `UX-1176`-`UX-1181` |
-| [158](../audits/round-158.md) | the data-exploration review and round 157's residue - `UX-1176`-`UX-1193`, eighteen rows in three waves (a container restart mid-integration, a verifier FAIL on `UX-1179` fixed in a residue pass, 18 of 18 guards red on undo); the review's five tasks now 3 answered, 1 half, 1 wrong; the walk's residue filed as `UX-1194`-`UX-1205` |
-| [159](../audits/round-159.md) | round 158's walk residue - `UX-1194`-`UX-1205`, twelve rows in two waves (owner: full Blocks lists with bounds raised by the measured delta, `UX-1205` rides bst-tests); 12/12 verified PASS; the review's five tasks all answered; walk N1-N8 fixed in three residue tracks; the residue filed as `UX-1206`-`UX-1217` |
-| [160](../audits/round-160.md) | round 159's walk residue - `UX-1206`-`UX-1217`, twelve rows in two architect waves (owner: `UX-1214` publishes every direct list, `depends_on:` and `blocks:` exact, the transitive `downstream:` dropped); verifiers 10 PASS and `UX-1208` FAIL (fixed); the review's five tasks all answered; walk N1-N8 fixed in five residue tracks; the residue filed as `UX-1219`-`UX-1232` |
-| [161](../audits/round-161.md) | round 160's walk residue - `UX-1219`-`UX-1232` in four tracks, with the owner's `UX-1233` (page budget 165,000 B) and `UX-1234` (shared titles); verifiers 15 PASS; the residue filed as `UX-1235`, `UX-1236` |
-| [163](../audits/round-163.md) | the round-162 review's rows - `UX-1235`, `UX-1236`, `UX-1244`-`UX-1257` in eleven opus and two sonnet tracks (a capacity-bound run reads `capacity_bound`, `analyze/v7`'s per-binary totals, Plane 2 findings, the sizing card, the compare lead); three owner calls pending (`UX-1254` 872 controls, `UX-1249` 13,500 words, `UX-1244` the host-core cap); the residue filed as `UX-1258`-`UX-1267` |
-| [165](../audits/round-165.md) | the round-163 residue and the round-164 review's rows - `UX-1258`, `UX-1260`-`UX-1277` in six opus tracks (a finding's Why #1 from its own step, `analyze/v7` `findings_diff` and `blocked_unparented`, the capacity page's `counts`, the replayed sweep knee, a comparison page guarded); owner-call defaults taken for the `xl_both`/`macro_micro` budgets, `joint-saving`, `builds_per_day`; the log re-grounded as `UX-1278` |
-| [166](../audits/round-166.md) | the memory-bound giant and two closes - `UX-902` (the serial-giant case, two Graviton cases), `UX-1279` (a sort button names its next press), `UX-1134` (the no-plan memory gate, autocap completes at 10 jobs); `UX-1280`, `UX-1281` filed |
-
-## Verification Log
-
-Written 2026-08-16 from a real session: BuildStream 2.7.0 with
-`buildstream-plugins`, real `bwrap` sandboxes, real `gcc 13`/`cmake 3.28`
-staged by `examples/stage_cpp_toolchain.sh`, on a 4-core / 16GB Linux
-host. Every number quoted is from a real build and a real `bga`
-invocation in that session, recorded in
-[`case-study-06-macro-micro.md`](../audits/case-study-06-macro-micro.md); every
-claim about what the code does was checked against the source rather than
-inferred from output. The proposed report and CI-comment layouts are
-illustrations of intent, not implemented output.
-
-## Direction 10: releases as contract states (argued 2026-08-24, round 30)
-
-**Serves:** R4 and R8 — the two who pin something and need to know
-when it moved — and, through the store, R1 and R7, whose questions are
-answered by comparing this build against builds an *older* `bga`
-measured.
-
-**Status:** landed — `CHANGELOG.md`, three release rows, the generated body, `UX-241`'s review gate, and the tags. `UX-597` cut `v0.3.0` and `v0.4.0` and a guard reads them; `UX-634` made step 8 publish the release rather than only tag it; `UX-633` turned out to be no defect at all — all three tags are ordinary release tags, and the row that said otherwise was read off a truncated history, which its own file now records.
-
-`bga` is unusual among analysis tools in one way that matters here:
-**it reads its own past output as input.** `@last`/`@prev`, the
-baseline set, `cache-trend`, `store-aggregate` — every one of them
-opens artifacts written by whatever `bga` was installed at the time,
-which on a project six months old is not the one running now.
-
-Measured today:
-
-```text
-bga --version                      0.1.0     (unmoved across 29 rounds)
-git tag                            0 tags
-CHANGELOG                          none
-published contracts                9, every one at /v1, never bumped
-artifacts recording their producer  0
-```
-
-`__version__` is read in exactly one place — the `--version` string.
-It is written into nothing. A `run-context.json` from round 3 and one
-from round 29 are indistinguishable to the tool that reads them both.
-
-### The gap is a missing comparability dimension, not a missing number
-
-This repository is already strict about comparability, and strict in
-the right way: `bga compare` **refuses** two runs from different hosts
-(`UX-186`) and refuses a caches-off run against a caches-on one, with
-an exit code of its own rather than a caveat, because "these are not
-comparable" and "these are comparable and equal" must not look alike.
-
-Producer identity is the same kind of dimension and it is simply
-absent. If a later `bga` re-buckets an attribution category, renames a
-finding id, or changes how a percentile is taken, the aggregate over a
-year of stored runs silently mixes two definitions — and every existing
-refusal would pass it, because the host is the same and the mode is the
-same. That is the exact defect class the refusals exist to prevent,
-on the one axis nothing watches.
-
-So the first move is not a release process. It is: **an artifact says
-what produced it.**
-
-### Why the version must be derived from contracts, and what it is *not* for
-
-The user's instinct — base it on contract breakage or extension — is
-right, and it is right because this repository already has the
-contracts enumerated: nine schema ids, a CLI surface, a run-directory
-layout. A release does not need to invent a compatibility story; it
-needs to *record the one already implied* by those.
-
-The trap is making a single package number the load-bearing thing. It
-is a lossy summary of nine independent contracts: `whatif/v1 → v2`
-tells an `analyze/v1` consumer nothing, and if the package version were
-what they pinned, a break in a document they never read would look
-identical to one in the document they do. So:
-
-| level | answers | moves when |
-|---|---|---|
-| **contract version** (`analyze/v1`) | can my parser read this document? | that document breaks |
-| **package version** (`bga 0.3.0`) | which build produced this artifact? | every release |
-| **the release row** | which contract states shipped together? | every release |
-
-**The package version's job inside an artifact is provenance, not
-compatibility.** Compatibility is decided per contract, against the
-contract set the artifact itself recorded. That is stricter *and*
-looser than a version comparison in exactly the right places: two runs
-from `0.1.0` and `0.9.0` still compare if every contract they touch is
-unchanged, and two runs one patch apart refuse if one of them isn't.
-
-The version number is then *derived*, not chosen: the contract set at
-the last release row against the contract set now decides whether this
-is a break, an extension, or neither. A guard checks the derivation,
-because a version somebody picked by feel is a number with no meaning
-and this repository has spent twenty-nine rounds refusing those.
-
-### Where the release process should *not* go
-
-Two arguments against parts of the obvious design, both from what this
-repository has already measured.
-
-**A release must not become a second trigger for documentation review.**
-`UX-241` landed a review cadence one round ago: a stream, a checklist,
-and a guard that reddens past 25 closed rows. Adding "and also sweep
-the docs at release time" would create two mechanisms racing for one
-job — and *two hand-maintained copies of one fact drifting apart* is
-the single most-repeated defect in this backlog's history. The release
-should **consume** the review, not duplicate it: a release may only be
-cut when a review row exists at or after the previous release, and that
-review's findings are the release's documentation work. This makes the
-release cheaper, not richer, and keeps one answer to "when do we
-sweep".
-
-**The cadence must not be time-based.** There are no external consumers
-yet and nothing to deploy; a monthly release would be ceremony
-generating no information. The trigger is contract movement and a
-current review — both measurable, both already in the tree.
-
-### What a release is, then
-
-Five things, of which four are mechanical:
-
-1. a row in `CHANGELOG.md` with the contract set, the closed-row
-   marker, and the commit;
-2. a version derived from the contract delta and checked by a guard;
-3. a review row at or after the previous release (guard);
-4. notes whose **body is generated** from the closed rows since the
-   last marker — the narrative already exists there and a hand-written
-   third copy would drift — and whose **head is written**: the theme,
-   the contract delta, and what a consumer has to do about it;
-5. a tag.
-
-The one genuinely new piece of writing per release is item 4's head,
-which is a paragraph. Everything else is derivation.
-
-### What this does *not* fix
-
-The staleness the user names is real, and a release does not cure it —
-`UX-241`'s review does, and the release only refuses to proceed without
-one. Saying otherwise would be the second-trigger mistake wearing a
-different hat. What the release adds is the *changelog*: 3,549 lines of
-audit rounds and 789 lines of closed rows currently hold the "what
-landed" story, and no document answers "what changed between the thing
-I installed and the thing I have now" at all.
-
-## Direction 11: a ranking answers "what should I do", not "what is big" (argued 2026-08-24, round 32)
-
-**Serves:** R1 and R3 first — the optimizer deciding where to spend a
-day, and the graph owner who knows which of those choices the graph
-forbids — and R8, who is handed the ranking as a case for funding.
-
-**Status:** landed — the ranking (`UX-260`, `UX-303`), and every `yes` row in the table below both publishing a distribution and declaring `bga:distribution` (`UX-598`), which the note under that table derives.
-
-The report ranks elements by blast radius and tells the reader to fix
-the top one. Measured on a 1,202-element run:
-
-```text
-next_steps[0]: "toolchain.bst is the first thing to fix - this is what
-                changing it rebuilds."
-
-toolchain.bst   downstream_count 1201   element_kind "import"
-                is_structural_kind TRUE
-```
-
-The advice is *true* and *useless*. A base image, a toolchain, a
-`host_strip_tool` has a thousand dependents **on purpose**; that is
-what makes it a base image. Telling someone to optimize it is telling
-them their graph is a graph.
-
-And the tool already knows. `is_structural_kind` is computed and
-published on the very entry it ranks first. `bga/findings.py` even
-applies the right rule one function away — `_criticality_findings`
-excludes structural kinds outright, citing `UX-76`:
-
-> *"structural elements are excluded rather than annotated here"*
-
-The blast ranking simply never got the same treatment.
-
-### The deeper problem: a number with no scale
-
-Even among the non-structural entries, the ranking implies a precision
-it does not have. The measured distribution of downstream counts:
-
-```text
-p10    0      p60     66      p95    575
-p20    1      p70    157      p99    682
-p30    4      p80    293      p100  1201
-p40   10      p90    465
-p50   30
-```
-
-Positions 2 through 12 run 753, 753, 739, 727, 721, 720, 712, 709,
-706, 702, 697 — an 8% spread across eleven elements, presented as an
-ordered list of what to do first. The honest statement is *"these
-eleven are all in the top percentile and are indistinguishable"*, and
-the way to say it is to publish the **distribution** rather than the
-rank.
-
-A percentile answers the question the raw count cannot: *is 753 a lot?*
-It is p99.9 here and would be unremarkable in a graph of forty
-thousand. The number travels; the rank does not.
-
-### Where percentiles belong, and where they do not
-
-The rule that decides: **a percentile helps when a reader cannot know
-the scale, and the population is comparable.** Blast radius qualifies —
-every element is a member and the counts span three orders of
-magnitude. Applying it everywhere would be cargo cult:
-
-| quantity | key | percentile? | why |
-|---|---|---|---|
-| blast radius (downstream count) | `blast_radius` | **yes** | three orders of magnitude, every element a member, no intuition for the scale |
-| element duration | `element_duration` | **yes** | the same shape; "is 40s slow here?" has no answer without the distribution |
-| share of the critical path | `share_of_critical_path` | **no** | already a percentage of a known whole — a percentile of a percentage is a second scale for one fact |
-| sandbox tax (Plane 3) | `sandbox_tax` | **yes**, per element | the useful question is "is this element's tax unusual", which is exactly a percentile |
-| processes per element (Plane 2) | `process_count` | **yes** | heavy tails; one element with 40,000 processes is the finding |
-| confidence, coverage, efficiency | `confidence`, `coverage`, `efficiency_score` | **no** | single run-level numbers with no population to be a percentile of |
-
-The `key` column is the entry in `DISTRIBUTED_QUANTITIES` or
-`UNDISTRIBUTED_QUANTITIES` (`bga/analyzer.py`), where the split is
-recorded with an argument per row; the `percentile?` cell is that
-membership, and `test_the_percentile_rows_are_the_published_ones.py`
-derives one from the other rather than letting a reader compare them.
-
-**All four `yes` rows publish a distribution — re-measured round 84,
-2026-09-03.** `UX-581` dated an earlier count that read
-`bga/schemas.py` as a proxy for what publishes one; two of the four are
-emitted by `bga/correlate.py` into `correlate/v2` instead, and the grep
-could not see them:
-
-```text
-$ python3 -c "from bga.correlate import _scale_of; print(sorted(_scale_of(payers, native)))"
-['process_count_distribution', 'sandbox_tax_distribution']
-$ git grep -n "_distribution(" bga/schemas.py        element_duration, blast_radius
-```
-
-What `UX-598` found was the other half: those two published keys were
-declared by nothing, so every percentile inside them reached the reader
-as a bare number — `UX-343`'s defect. Both now carry `bga:distribution`
-in `_CORRELATE_HINTS`.
-
-Deciles are the right granularity: ten buckets is a shape a reader
-takes in at a glance, and finer only matters in the tail — where the
-named p95/p99 already carry it.
-
-### What the first view should rank instead
-
-The presentation follows from the same argument. "Biggest" is not a
-rubric; these are:
-
-- **Longest on the critical path** — what the build is actually waiting
-  for, which is already computed and is the honest first answer.
-- **Blast radius density** — not one element's count but the *shape*:
-  half the elements here reach 30 or fewer, the top decile reaches 465
-  or more. A graph where one element reaches everything is a different
-  problem from one where a hundred do, and the reader deserves to know
-  which they have before being handed a list.
-- **Unusual for its kind** — the outlier, which is what "worth
-  optimizing" actually means once the structural entries are set aside.
-
-### What this does not change
-
-No number moves. Structural elements stay in the payload, stay
-reachable, and stay *reported* — `UX-203` was filed because views were
-unreachable, and answering this by hiding them would trade one defect
-for an older one. What changes is that they are reported as **the
-graph's shape** rather than ranked as **the reader's next task**.
-
-## Direction 12: the report is read, not decoded (argued 2026-08-24, round 35)
-
-**Serves:** R1 first, and R3 — the two who open the page rather than the
-JSON.
-
-**Status:** landed — `UX-263`..`UX-272`.
-
-Reported from a real run, in nine parts. Every number below was
-measured on a served report in Chrome 141, not estimated.
-
-### What is actually wrong
-
-Two of the three pages `bga view` serves **ran nothing at all**:
-
-```text
-                   CSP violations   main children   body text
-index.html                      0              26      11,056
-sql.html                        1               0         508
-perfetto.html                   1               4         398
-```
-
-`default-src 'self'` refuses inline **script** exactly as it refuses
-inline style, and `sql.html` and `perfetto.html` each carried one.
-`UX-263` fixed the style half and checked `index.html` only. That is
-`UX-266`, and it is fixed.
-
-The rest is one line of code. Every object and every array that is not
-an array-of-objects renders as:
-
-```js
-el("details", {}, el("summary", {}, "object"),
-   el("pre", {}, JSON.stringify(value, null, 2)))
-```
-
-A summary that says `object` and a wall of raw JSON behind it. On a
-44-element run that is **34 such cells and 32,393 characters** of
-`<pre>`, the largest 8,191. It explains four separate complaints at
-once: clicking every object to find out what it is, JSON-as-string,
-unreadable arrays, and nothing searchable or bounded.
-
-### Where the reader's diagnosis is right, and where it is not
-
-**Right, and under-stated:** the collapsed-object problem. The reader
-called it *"quite inconvenient and puzzling"*; measured, one of those
-cells at 1,202 elements is ~224,000 characters behind a label that says
-nothing.
-
-**Right:** small objects belong inline as table cells, long ones behind
-a fixed height with a scroll and a search. Both are what a spike
-measured as best; the spike also found the trap — unfolding everything
-into tables took the document from 13.8 screens to **35.5**, and
-bounding rows got it only to 32.3. The fold is not the enemy. A
-summary reading `object` is. Keeping the fold and labelling it
-`Blast radius · 44 entries` gave zero raw JSON at 14.9 screens.
-
-**Challenged — depth is not the problem.** The proposal was to analyse
-JSON depth and choose representations by it. Measured, the document is
-7 levels deep and only **three nodes** live at level 7:
-
-```text
-depth   0    1    2    3    4    5   6  7
-nodes   1   19  129  500  794  229  88  3
-```
-
-The mass is at 3–4 and the pain is at **level 2**: maps with one key
-per element. A depth rule would fix almost nothing; a **width** rule
-fixes all of it. That is `UX-267`.
-
-**Challenged — a third column is the wrong shape.** A navigation column
-carrying the JSON structure would make the *document's shape* the
-organising principle, which is precisely what `UX-207` and `UX-199`
-moved away from: the page answers questions, and a JSON tree is a data
-browser. At 1440px a third column also leaves under 900px of reading
-width, undoing `UX-254`. The need behind the request is real — the rail
-is flat and the page is 30+ sections — so the answer is to make the
-**existing** rail two levels deep, not to add a column. That is
-`UX-271`.
-
-**Challenged — the header is not where the space goes.** Measured at
-1440x900 it is 92–184px, **0.1–0.2 screens** of a 13–15 screen
-document. Moving the actions right is cheap and worth doing, and it
-will not make the report meaningfully shorter; the honest framing is
-tidiness, not space. That is `UX-272`.
-
-### What nobody asked for and matters most
-
-Six of the seven wide maps in `signals` are **the same element list**
-seen through different fields — `blast_radius`, `slack`,
-`element_durations`, `downstream_count`, `criticality_probability`,
-`unweighted_depth`, all keyed by element UID, all 44 keys here and
-1,202 on a real run. They are one table with six columns, rendered six
-times as six opaque blobs.
-
-The seventh, `wall_clock_share`, is keyed by **task** —
-`app.bst|BUILD|BUILD|0` — and shares *zero* keys with the other six.
-Nothing on the page says so, and a reader comparing them is comparing
-different populations. That is `UX-268`, and it is the largest single
-readability win available.
-
-## Direction 13: the report has 48 fragments and no chapters (argued 2026-08-24, round 38)
-
-**Serves:** R1 first, and R7 — the two who read the page top to bottom
-before they know what they are looking for.
-
-**Status:** landed — `UX-284`..`UX-286`.
-
-Proposed from a real reading: *"maybe we need to review our data and try
-to group it into semantic blocks that should occupy exactly one screen?
-and transform our navigation pattern into going through several
-screens?"*
-
-Two ideas in one sentence. **The first is right and the measurement is
-stronger than the argument for it. The second is refuted by the same
-measurement**, and separating them is the whole of this direction.
-
-### What the page actually is
-
-Measured at 1440×900 in Chrome 141, on the 1,202-element synthetic run
-(`bga gen-synthetic --seed 1`) and on the committed `macro_micro`
-fixture:
-
-```text
-                              1,202-element     macro_micro
-sections                                48              39
-document                          18.8 scr        20.1 scr
-median section                    0.24 scr        0.35 scr
-smallest                          0.07 scr        0.07 scr
-largest                     1.98 (findings) 3.42 (findings)
-
-sections within 0.8–1.0 screens          0 (0%)          0 (0%)
-sections under 0.8 screens              46 (95%)        37 (94%)
-sections over one screen                 2 (4%)          2 (5%)
-```
-
-The median section is **0.24 screens — 216 pixels**. Not one section on
-either run is near a screen tall. The report is not a sequence of
-chapters; it is **48 fragments averaging a fifth of a screen**, read by
-scrolling past them.
-
-That is the defect the proposal is reacting to, and naming it that way
-is worth more than the nine items round 38 filed against symptoms of it.
-
-### Why "exactly one screen" is the wrong fix, measured
-
-Padding each section to a screen does not reduce scrolling — it
-multiplies it:
-
-```text
-document today                    18.8 scr        20.1 scr
-document at one screen/section    48.0 scr        39.0 scr
-padding introduced               +31.3 scr       +20.5 scr
-```
-
-A **2.6× longer document**, made of whitespace. The reader who found 48
-fragments tiring would find 48 screens worse.
-
-And a fixed cell cannot hold this content. Section height spans **0.07
-to 3.42 screens — a 49× range** — because the tall ones are tall for a
-reason a design cannot overrule: `findings` holds one row per finding,
-`signals` one row per element. Ten sections on each run size themselves
-from the run rather than from the layout. A one-screen grid has exactly
-two options for a table of 1,202 rows, and both are wrong: overflow the
-cell, or hide rows the reader came for.
-
-### What the grouping half buys, and what it must not cost
-
-Group the 48 into a small number of **chapters**, each answering one
-question a reader actually has — the shape `UX-207`'s decision screen
-already proves works, and `UX-271`'s rail already gestures at with one
-level of nesting. Then `UX-285`'s finding stops being a placement bug
-and becomes a chapter boundary: the three identity blocks are one
-chapter, and it belongs at the end.
-
-Navigation then moves **chapter to chapter**, which is the reader's
-instinct in the proposal at the granularity the content supports — six
-to eight destinations instead of 48, with ordinary scrolling inside
-each.
-
-Three things the page must keep, and each one refuses **pagination** as
-the mechanism:
-
-1. **`Ctrl-F` finds everything.** `UX-195`'s export is "the report you
-   can attach"; a reader who has been sent one searches it. Content
-   behind a page that has not been rendered is content the browser
-   cannot find, and no in-page search substitutes for the one every
-   reader already knows.
-2. **A link opens what it names.** `UX-211` puts view state in the
-   fragment and `UX-225` puts the working set in the link. A paginated
-   deck needs its own page coordinate, which is a second navigation
-   model layered on the one that already works.
-3. **It prints, and it reads aloud.** A ticket attachment gets printed
-   and pasted into slides; a document is one flow and a deck is not.
-
-So: **chapters, not slides.** Grouping is a change to the document's
-structure; pagination is a change to its medium, and the medium is
-load-bearing.
-
-### The challenge to the proposal, stated plainly
-
-The proposal's premise is that sections are too big to take in. Measured,
-they are the opposite — 95% are under four-fifths of a screen and the
-median is a fifth. The tiring part is not the size of each block; it is
-**how many of them there are and that nothing groups them**. A fix aimed
-at block size would have made the report longer while leaving the count
-untouched.
-
-The second challenge is that "exactly one screen" is unmeasurable on a
-page whose content is set by the run. `bga` reports 11-element and
-1,202-element builds through one renderer; any fixed geometry has to be
-wrong for one of them. The bound this repository already uses —
-`UX-187`'s cap and `UX-262`'s `Top N` — bounds *rows*, which is a
-property of the data, rather than pixels, which is a property of a
-window that varies by reader.
-
-### What follows
-
-Grouping is filed as its own item rather than argued further here.
-`UX-285` (identity blocks, blast placement) is its first instance, and
-`UX-284` (tools above their table) is the affordance that makes a long
-chapter usable. What none of them settle is what the chapters *are* —
-that is a decision about the report's argument, not its markup, and it
-wants the reader's questions in front of it rather than the section list.
-
-**Settled by `UX-286`** (round 39): seven chapters, each named for a
-question the reader has, with the sections whose published
-`bga:question` is a spelling of that question. The reader's questions
-were in front of it after all — the schema had been publishing them
-since `UX-209`. Measured after: the document is 18.10 screens where it
-was 18.51, so the grouping cost no height, and `UX-285`'s placement
-passes became chapter boundaries and were deleted.
-
-## Direction 14: the same elements, drawn nineteen times (argued 2026-08-24, round 39)
-
-**Serves:** R1 and R7 first — and every open viewer item, because most
-of them get smaller if this lands first.
-
-**Status:** landed — `UX-288` then `UX-289`, in that order; brainstorm items 5-7 are marked there as unmeasured proposals, not commitments.
-
-Proposed from a real reading: *"we have critical path shown three times
-with a slightly different set of columns, and one time in form of
-blocks. There definitely other duplications … almost all current open
-tasks can be made significantly easier if we firstly deduplicate
-information, then think of making tables with presets for default
-filters."*
-
-Measured, and the proposal understates it.
-
-### What the page draws
-
-On the 1,202-element synthetic run, every table that names elements,
-with its column count and the set of element uids it holds:
-
-```text
-19 tables name elements.  They draw 13 distinct populations.
-
-overlap  shared  A                                    B
-   100%      14  signals/critical_path         [2c]   critical_path_detail  [5c]
-   100%     135  signals/leaf_analysis         [8c]   signals/value         [2c]
-   100%     135  signals/leaf_analysis         [8c]   signals/value         [4c]
-   100%     135  signals/leaf_analysis         [8c]   structural/deferrability [6c]
-   100%     135  signals/value                 [2c]   signals/value         [4c]
-   100%     135  signals/value                 [2c]   structural/deferrability [6c]
-   100%     135  signals/value                 [4c]   structural/deferrability [6c]
-    94%     127  signals/leaf_analysis         [8c]   structural/value      [2c]
-```
-
-The critical path is two tables of the same fourteen elements, plus the
-drawing — the reported three. **The leaf population is worse: 135
-elements, drawn four times, every pair at 100% overlap.**
-
-### Where the duplication actually is
-
-Not in the page. In the contract:
-
-```text
-signals.leaf_analysis.leaves                    135 uids
-signals.leaf_analysis.leaves_detail             135 uids   identical to leaves: True
-structural.deferrability.{deferrable,non_}      135 uids   identical to leaves: True
-
-signals.critical_path                            14 uids
-signals.critical_path_detail                     14 uids   identical: True
-
-signals.element_durations                     1,202 uids
-   critical path is a subset of it:  True
-   leaves       is a subset of it:  True
-```
-
-`analyze/v1` publishes the **same element membership three times** for
-leaves and twice for the critical path, and every one of those
-populations is a subset of the one 1,202-row element table. The page is
-faithful; it renders every copy it is given.
-
-**Corrected after this was first written.** Two of the three are exact
-duplicates and the third is not:
-
-```text
-leaf_analysis.leaves == keys(leaves_detail)                    True
-signals.critical_path == uids of critical_path_detail          True  (order too)
-deferrability's lists derivable from a published field          False
-```
-
-`structural.deferrability` splits the leaves by a **duration-risk rule**
-(under a second is deferrable), which is different information from
-`leaves_detail.is_potentially_deferrable`, a graph fact. On the
-1,202-element run the two disagree by design: 8 against 134. So the
-partition is real and only the *membership* is the third copy.
-
-Worse, the field that would make the lists derivable is computed and
-**thrown away**: `structural/analyzer.py` builds `deferral_risk` per
-leaf and the payload publishes `risk_keys=0` of it. The dedup there is
-to publish the per-leaf risk and let the lists become filters — which
-removes a copy of the membership while *adding* information the tool
-already has.
-
-That is the finding, and it moves the work: this is a **contract**
-question first and a rendering question second. Deduplicating the page
-while the payload still publishes three copies would put the page and
-the payload into disagreement, which is the one thing the viewer axis
-has refused since `UX-193`.
-
-### An honest cost of round 38's own fix
-
-Two of the four leaf renderings are nested tables that **`UX-277`
-created**. Before it, `leaves` and `leaves_detail` were two stringified
-cells — the same duplication, one line each. `UX-277` was right and it
-made this duplication expensive: two 136-row tables where there were
-two strings.
-
-The rule holds — a value should be drawn by its shape — and it exposed
-that the shape is published twice. That is what a good fix does; it is
-also why this direction is filed immediately rather than after the
-remaining round-38 items.
-
-### The shape of the fix
-
-**Membership is a column, not a list.** An element record carries
-`is_leaf`, `on_critical_path`, `path_index`, `is_choke_point`. Then a
-"list" is a *filter* over the one element table, and there is exactly
-one place any element's facts live. The pattern already exists —
-`signals.blast_radius` carries `is_leaf` per element today — it is just
-not the pattern the lists use.
-
-**A preset is a named (filter, columns, sort, bound).** "Critical path"
-is `on_critical_path`, ordered by `path_index`, showing duration and
-share. "Leaves" is `is_leaf`. "Latent heavies" is a sort and a bound.
-The page has bounds (`UX-262`'s `Top N`) and filters (`UX-205`) already
-and **zero named presets** — measured. The controls exist; what is
-missing is the naming that turns them into views.
-
-This is why it makes the open items smaller rather than larger:
-
-- `UX-286`'s chapters have fewer things to group — 13 populations rather
-  than 19 tables.
-- `UX-283`'s choke points become a preset over a table that already has
-  Inspect, sort and filter, rather than a new table.
-- `UX-278`'s magnifier has one row per element to point at.
-- `UX-284`'s tools are attached to one table rather than nineteen.
-
-### Brainstorm, marked by what is measured
-
-Measured, worth doing:
-
-1. **Column headers are mostly placeholders.** Across 41 tables the
-   commonest headers are `name` (36), `Value` (20), `Key` (10). A reader
-   scanning for a column name mostly finds a word that names its
-   position in a map. Presets fix most of this by giving a table a
-   subject; the rest wants schema declarations.
-2. **The widest table is 13 columns.** Presets are also how that becomes
-   readable: four to five columns per view rather than thirteen for all
-   of them.
-3. **`#1`/`#2` for tuple members**, shipped this round after the first
-   draft emitted `C0`/`C1` — 16 headers that read as codes. The real fix
-   is for the schema to describe those arrays (`UX-290`).
-
-Measured and **not** a problem, recorded so it is not proposed again:
-
-4. **Empty sections.** One of 48 is near-empty, and it is the blast
-   control, which is correct. There is no dead-section problem.
-
-Unmeasured, and therefore proposals rather than findings:
-
-5. **A distribution as one cell.** The percentile maps (`p10`…`p90`)
-   are nine columns of one shape. A sparkline drawn from published
-   percentiles is rendering, not deriving, so Direction 7's boundary
-   permits it — but whether it reads better than nine numbers has not
-   been tested.
-6. **Sticky column headers** on tables taller than the viewport, beside
-   `UX-284`'s sticky tools.
-7. **One vocabulary for "what this is about".** A reader currently meets
-   `element_uid`, `element`, `key` and `name` for the same thing in four
-   tables.
-
-### What follows
-
-Filed as `UX-288` (the contract publishes membership three ways) and
-`UX-289` (one element table, many presets), in that order, because the
-second is unsafe before the first.

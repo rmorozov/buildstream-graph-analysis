@@ -207,6 +207,11 @@
   {
     "exception": null,
     "role": "heading",
+    "text": "What does this run want from this host?"
+  },
+  {
+    "exception": null,
+    "role": "heading",
     "text": "Were the builders busy?"
   },
   {
@@ -557,6 +562,11 @@
   {
     "exception": null,
     "role": "summary",
+    "text": "Also noted \u00b7 #"
+  },
+  {
+    "exception": null,
+    "role": "summary",
     "text": "Scheduling (#)"
   },
   {
@@ -778,6 +788,11 @@
     "exception": null,
     "role": "rail-entry",
     "text": "How much of the run did each task hold?"
+  },
+  {
+    "exception": null,
+    "role": "rail-entry",
+    "text": "What does this run want from this host?"
   },
   {
     "exception": null,
@@ -1187,7 +1202,7 @@
   {
     "exception": null,
     "role": "heading",
-    "text": "What did this build actually run, and how often?"
+    "text": "What did this build actually run, and what did each binary cost?"
   },
   {
     "exception": null,
@@ -1507,7 +1522,7 @@
   {
     "exception": null,
     "role": "rail-entry",
-    "text": "What did this build actually run, and how often?"
+    "text": "What did this build actually run, and what did each binary cost?"
   },
   {
     "exception": null,
@@ -1852,6 +1867,16 @@
   {
     "exception": null,
     "role": "summary",
+    "text": "The rule \u00b7 # level, # row"
+  },
+  {
+    "exception": null,
+    "role": "summary",
+    "text": "What they share \u00b7 # level, # row"
+  },
+  {
+    "exception": null,
+    "role": "summary",
     "text": "Half of this graph's # elements reach # others or fewer; the top tenth reach # others or more, up to #. Reach is spread across many elements \u2014 there\u2026 moreless"
   },
   {
@@ -1873,11 +1898,6 @@
     "exception": null,
     "role": "summary",
     "text": "Blast radius structural \u00b7 # level, # row"
-  },
-  {
-    "exception": null,
-    "role": "summary",
-    "text": "Foundation candidates \u00b7 # level, # rows"
   },
   {
     "exception": null,

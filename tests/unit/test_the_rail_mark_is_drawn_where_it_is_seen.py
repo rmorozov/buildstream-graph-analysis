@@ -12,10 +12,9 @@ import pytest
 
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
-sys.path.insert(0, str(REPO / "tests"))
 
-import pages
-from browser import NO_BROWSER, Browser, find_chrome
+from tests import pages
+from tests.browser import NO_BROWSER, Browser, find_chrome
 
 needs_browser = pytest.mark.skipif(find_chrome() is None, reason=NO_BROWSER)
 

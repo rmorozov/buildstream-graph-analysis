@@ -9,6 +9,7 @@ from pathlib import Path
 import pytest
 
 from bga.consistency import PAIRS, VIOLATION_TYPE, disagreements
+from tests.browser import NO_BROWSER, Browser, find_chrome
 
 REPO = Path(__file__).resolve().parents[2]
 
@@ -138,7 +139,6 @@ def test_a_capacity_bound_page_names_the_matched_verdict(tmp_path):
     sys.path.insert(0, str(REPO))
     import tools.bga_view as view
     from tests import pages
-    from tests.browser import NO_BROWSER, Browser, find_chrome
 
     chrome = find_chrome()
     if chrome is None:

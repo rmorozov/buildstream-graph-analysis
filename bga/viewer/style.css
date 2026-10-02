@@ -1354,7 +1354,7 @@ button.json-toggle:hover { color: var(--fg); }
    by size and a ring rather than by a status tone (§4.3 reserves those,
    and §4.2 allows one accent). */
 .spark-point[data-mark="peak"], .spark-point[data-mark="knee"] { r: 2.2; stroke-width: .8; }
-.spark-point[data-mark="configured"] { fill: var(--bg); stroke: var(--accent-mark); stroke-width: .8; }
+.spark-point[data-mark="configured"] { fill: var(--bg); stroke: var(--fg); stroke-width: .8; }
 .series-sentence, .density-sentence {
   font-size: var(--font-small); font-variant-numeric: tabular-nums;
 }

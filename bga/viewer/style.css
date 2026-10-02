@@ -583,11 +583,14 @@ p.empty-population { margin: var(--space-1) 0 0; color: var(--muted); max-width:
    orientation, not severity. The marker is what carries it where color
    is unavailable (print, forced-colors, a monochrome screen). */
 /* One "you are here" across the rail: the chapter row and its section link. */
-button.toc-chapter-open[aria-current="location"] { font-weight: 600; color: var(--fg); }
-/* A stroke, not a weight: a heavier face is wider and re-wraps a long entry as the mark moves. */
-.toc a[data-current] { color: var(--fg); -webkit-text-stroke: 0.04em currentColor; }
-/* Inside each link's own reserved padding: no wrap change when the mark moves, and no clip by the rail's overflow. */
-.toc a[data-toc] { position: relative; padding-left: 1em; }
+button.toc-chapter-open[aria-current="location"],
+.toc a[data-current] { font-weight: 600; color: var(--fg); }
+/* The mark sits in room every link reserves, inside the link, so the rail's overflow never clips it. */
+.toc a[data-toc] { position: relative; padding-left: var(--space-4); }
+/* Each entry is as wide as its bold self, so marking it current re-packs no row of the narrow rail. */
+.toc a[data-toc]:not([data-empty])::after {
+  content: attr(title); display: block; height: 0; visibility: hidden; font-weight: 600;
+}
 .toc a[data-current]::before { content: "\25b8"; position: absolute; left: 0; }
 /* `UX-1203`: the rail's tools at one size, each on one line. */
 .toc-controls { margin: var(--space-2) 0 0; display: flex; flex-wrap: wrap; align-items: center;
@@ -798,7 +801,8 @@ input.table-filter { max-width: 100%; }
   /* `UX-1145`: a folded rail is a bar and scrolls away - header and rail stuck 168 of 844 px; an opened one stays. */
   body[data-has-toc] > .toc[data-folded="true"] { position: static; }
   body[data-has-toc] > .toc ul { display: flex; }
-  body[data-has-toc] > .toc a { display: inline; white-space: normal; }
+  /* One line each, as in the column: a bold entry wider than the rail ellipses rather than wrapping. */
+  body[data-has-toc] > .toc a { display: inline-block; max-width: 100%; vertical-align: bottom; }
   /* `UX-397`: the handoff stays when the rail folds. A folded rail
      hides its map, which is the point on a phone; hiding the control
      that opens the trace would make the move a loss for the reader

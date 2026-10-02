@@ -2,7 +2,7 @@
 
 **Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-164 view UI re-review on a 2,402-element two-plane page (2026-10-02), finding R4 | **Serves:** R1, R5 | **Topic:** viewer | **Area:** bga, bga/viewer | **Shape:** judgement | **Reading:** container
 
-**Guard:** none — open, no guard named yet
+**Guard:** `tests/unit/test_the_ready_queue_asks_what_it_counts.py`
 
 ## Motivation
 
@@ -36,3 +36,21 @@ The scheduler-wait attribution bucket.
 ## Acceptance Test
 
 On this page the section's heading or answer no longer reads as the backlog behind full builders, or its backlog figure is nonzero for most of the 43.7 min. Mutation: restore the old heading, and the guard reds.
+
+## Outcome
+
+The gap measured, at `b35c30e31`, the 2,402-element two-plane page exported, Chromium 1440, `#ready_queue`
+textContent: `How much work was waiting to start? ... Nonzero fraction 1.0% The share of the build spent with anything
+waiting. High means capacity bound, not graph bound.`
+
+The close measured, same page: `How much ready work waited with a builder free? ... Average depth 0.55x How many
+elements were ready with a builder free, averaged over the build. ... Nonzero fraction 1.0% The share of the build
+with ready work and a builder free. Work waiting for a full builder is not counted; read resource wait for it.`
+The rename default taken; no schema field added. `docs/design/rendered-strings.json`'s two rows of the old heading
+read the new one. Guard: 2 passed (25.8 s), at 1440 and 390.
+
+| mutation | reddened | run printed |
+|---|---|---|
+| restore "How much work was waiting to start?" | `[1440]`, `[390]` | 2 failed |
+| restore "High means capacity bound, not graph bound." | `[1440]`, `[390]` | 2 failed |
+| reverted | | 2 passed |

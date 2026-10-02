@@ -3113,19 +3113,18 @@ _SIGNALS_TABLES = {
         },
     },
     "ready_queue": {
-        "description": "How much work was ready to run and had nowhere to run it.",
+        "description": "How much work was ready with a builder free and not yet started. "
+        "Work waiting for a full builder is not counted: that is resource wait.",
         "properties": {
             "average_depth": {
                 QUANTITY: "ratio",
-                "description": "How many elements were ready and waiting, averaged over the build.",
+                "description": "How many elements were ready with a builder free, averaged over the build.",
             },
-            "peak_depth": {QUANTITY: "count", "description": "The most elements ready and waiting at once."},
+            "peak_depth": {QUANTITY: "count", "description": "The most elements ready with a builder free at once."},
             "nonzero_fraction": {
                 QUANTITY: "share",
-                "description": "The share of the build spent with "
-                "anything waiting. High means "
-                "capacity bound, not graph "
-                "bound.",
+                "description": "The share of the build with ready work and a builder free. "
+                "Work waiting for a full builder is not counted; read resource wait for it.",
             },
         },
     },
@@ -5391,7 +5390,7 @@ _LIFTED_HINTS = {
     "fetch_build_overlap": ('act', 'Did fetching wait for building?'),
     "wall_clock_share_us": ('prove', 'How much of the run did each task hold?'),
     "task_durations_us": ('prove', 'How long did each task run?'),
-    "ready_queue": ('prove', 'How much work was waiting to start?'),
+    "ready_queue": ('prove', 'How much ready work waited with a builder free?'),
     "leaf_analysis": ('investigate', 'Which elements does nothing wait on?'),
     "element_duration_distribution": ('investigate', "How are this run's element durations spread?"),
     "blast_radius_distribution": ('investigate', 'How are blast radii spread across this graph?'),

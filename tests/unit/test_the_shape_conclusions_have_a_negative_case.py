@@ -474,3 +474,25 @@ class TestTheGraphOwnerHasAFindingThatReadsNoDuration:
         evidence = _by_id(payload)["graph-width"]["evidence"]
         assert evidence["dependency_stages"] == 4, evidence
         assert evidence["element_count"] == 5, evidence
+
+
+def test_the_text_report_states_the_total_and_the_capacity_clause():
+    """UX-1265: under the graph-width title, the element total and that no builder count lifts it."""
+    import pathlib
+
+    from bga.cli import main
+
+    fixture = pathlib.Path(__file__).resolve().parents[1] / "fixtures/macro_micro"
+    argv = ["analyze", str(fixture / "run"), "--plane2", str(fixture / "plane2.json")]
+
+    def _out(extra):
+        buffer = io.StringIO()
+        with contextlib.redirect_stdout(buffer), contextlib.redirect_stderr(io.StringIO()):
+            main(argv + extra)
+        return buffer.getvalue()
+
+    total = _by_id(json.loads(_out(["--format", "json"])))["graph-width"]["evidence"]["element_count"]
+    lines = _out([]).splitlines()
+    title = next(i for i, line in enumerate(lines) if "dependency stages" in line)
+    assert f"{total:,} elements in all" in lines[title + 1], lines[title : title + 2]
+    assert "no number of builders" in lines[title + 1], lines[title : title + 2]

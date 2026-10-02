@@ -1053,6 +1053,7 @@ def _graph_shape_findings(result: AnalysisResult) -> list[dict]:
             'graph-width',
             SEVERITY_INFO,
             f"{plural(widest, 'element')} at most can ever build at once — the widest of {stages:,} dependency stages",
+            detail=[f"    {len(depth):,} elements in all; no number of builders lifts this ceiling"],
             evidence={'element_count': len(depth), 'dependency_stages': stages, 'widest_stage': widest},
             step=_none("a ceiling the dependency graph sets; only its dependencies move it"),
         )

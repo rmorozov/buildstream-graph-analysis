@@ -5,7 +5,11 @@
 toolchain.bst's Downstream count is 1,201 and its direct dependents 1,200.
 """
 
+import json
+import os
 import pathlib
+import shutil
+import subprocess
 import sys
 
 import pytest
@@ -69,6 +73,38 @@ def test_a_downstream_comparison_reads_the_count_column_bare_or_named(uri):
     for form in ("bare", "named"):
         assert seen[form]["matched"] == 1, (form, seen)
         assert seen[form]["badge"] == "1 matched", (form, seen)
+
+
+_CARRIERS = (
+    '{ key: "downstream", drawn: false }, { key: "downstream_count", title: "Downstream count", quantity: "count" }'
+)
+
+
+def _parse(clause, specs):
+    script = (
+        'const t = await import(process.env.BGA_REPO + "/bga/viewer/tables.js");'
+        f"console.log(JSON.stringify(t.parseQuery({json.dumps(clause)}, [{specs}])));"
+    )
+    out = subprocess.run(
+        [shutil.which("node"), "--input-type=module", "-e", script],
+        capture_output=True,
+        text=True,
+        check=True,
+        env={**os.environ, "BGA_REPO": str(REPO)},
+    )
+    return json.loads(out.stdout)
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="node is not installed")
+def test_a_bare_word_two_columns_carry_is_said_back_unread():
+    """UX-1260: UX-1236's several-candidates branch - two quantity columns carry `downstream`, so neither is read."""
+    two = _parse(
+        "downstream > 1000",
+        _CARRIERS + ', { key: "downstream_wall_us", title: "Downstream wall", quantity: "duration_us" }',
+    )
+    assert two["thresholds"] == {} and two["unread"] == [{"clause": "downstream > 1000", "column": "downstream"}], two
+    one = _parse("downstream > 1000", _CARRIERS)
+    assert list(one["thresholds"]) == ["downstream_count"] and one["unread"] == [], one
 
 
 @needs_browser

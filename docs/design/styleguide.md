@@ -797,7 +797,7 @@ in it hidden, and the class is bounded at both ends:
                  elements   landed   opened    words   controls    nodes
 scale               1,202    5,007   26,584    8,259        787    4,732
 xl                  4,002    4,937   27,230    8,275        812    4,960
-budget, to 4,100 elts          7,600   46,822   13,200      1,192    7,500
+budget, to 4,100 elts          7,600   46,822   13,600      1,192    7,800
 ```
 
 Height does not move at all — a bounded row costs no pixels, which is
@@ -933,6 +933,10 @@ its nodes bound stays 7,500 - the merged round reads 7,284.
 `UX-1254`'s sizing card moved the small class's controls 868 -> 872:
 its rail link, fold, JSON door and three source links, +6 on
 `macro_micro`'s 866 - pending the owner's call.
+
+`UX-1267` folded the map rows into every ranked card: the 4,100 class's
+words 13,200 -> 13,600 and nodes 7,500 -> 7,800 (`xl_both` 13,540 words,
+7,799 nodes) - the owner-call default, reversible.
 
 `UX-1152`'s card links read section titles, not ids; alone they took
 `macro_micro` to 38,201 px and 13,441 words. Round 154's merged tree,

@@ -1,6 +1,6 @@
 # UX-1278: the verification log re-grounds at round 165's merge
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-1267 | **Found by:** round 165 | **Serves:** whoever reads `architecture.md`'s Verification Log next | **Topic:** contracts | **Area:** bga | **Shape:** bounded | **Reading:** container
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-1267 | **Found by:** round 165 | **Serves:** whoever reads `architecture.md`'s Verification Log next | **Topic:** contracts | **Area:** bga | **Shape:** bounded | **Reading:** container
 
 **Guard:** test_the_verification_log_is_true.py
 
@@ -23,3 +23,15 @@ re-measured at the merged tree.
 
 `tests/unit/test_the_verification_log_is_true.py` passes on the merged
 tree.
+
+## Outcome
+
+Gap measured: `tests/unit/test_the_verification_log_is_true.py` failed
+on `test_nothing_landed_after_the_commit_the_entry_credits`,
+`stale(['212aa27bc...'])`.
+
+Close measured: entry credited to `UX-1278`; `bga analyze --schema`
+65 top-level properties; `bga.contracts.ids()` 28 emitted ids; the file's
+31 tests pass.
+
+Deviation: none; the shape is `UX-1218`'s.

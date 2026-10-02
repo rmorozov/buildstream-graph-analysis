@@ -1,6 +1,6 @@
 # UX-1277: findings do not say whether they are new, still open or gone since the run before
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-164 view UI re-review on a 2,402-element two-plane page (2026-10-02), brainstorm B4 | **Serves:** R4, R8, R1 | **Topic:** analysis | **Area:** bga, bga/viewer | **Shape:** mechanical | **Reading:** container
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the round-164 view UI re-review on a 2,402-element two-plane page (2026-10-02), brainstorm B4 | **Serves:** R4, R8, R1 | **Topic:** analysis | **Area:** bga, bga/viewer | **Shape:** mechanical | **Reading:** container
 
 **Guard:** test_a_finding_says_whether_it_is_new_since_the_baseline.py
 

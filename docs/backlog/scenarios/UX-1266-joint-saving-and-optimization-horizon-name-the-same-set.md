@@ -1,6 +1,6 @@
 # UX-1266: joint-saving and optimization-horizon name the same element set on macro_micro
 
-**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-163 verification of UX-1249 (2026-10-02) | **Serves:** R1 | **Topic:** analysis | **Area:** bga | **Shape:** mechanical | **Reading:** container
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the round-163 verification of UX-1249 (2026-10-02) | **Serves:** R1 | **Topic:** analysis | **Area:** bga | **Shape:** mechanical | **Reading:** container
 
 **Guard:** test_the_joint_saving_is_priced_one_element_at_a_time.py::test_one_finding_carries_the_set_and_its_order
 

@@ -1,6 +1,6 @@
 # UX-1264: no fixture has resource_wait as its biggest wait category, so wait-category's step is unexercised
 
-**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-163 verification of UX-1256 (2026-10-02) | **Serves:** R1 | **Topic:** guards | **Area:** tests | **Shape:** mechanical | **Reading:** container
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the round-163 verification of UX-1256 (2026-10-02) | **Serves:** R1 | **Topic:** guards | **Area:** tests | **Shape:** mechanical | **Reading:** container
 
 **Guard:** test_every_finding_publishes_its_step.py::test_the_wait_category_step_is_the_resolved_hint
 

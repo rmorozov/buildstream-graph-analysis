@@ -1,6 +1,6 @@
 # UX-1258: the capacity-bound first action row has no numbered "Why #1" disclosure
 
-**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-163 verification of UX-1244 (2026-10-02) | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical | **Reading:** container
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the round-163 verification of UX-1244 (2026-10-02) | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical | **Reading:** container
 
 **Guard:** `tests/unit/test_why_is_this_ranked_first.py::test_the_builders_step_opens_its_own_why` (the 2,402-element page's capacity block and top actions through `renderDecision`, node; golden's rows by the file's other eleven; a `wait-category` step folds nothing)
 

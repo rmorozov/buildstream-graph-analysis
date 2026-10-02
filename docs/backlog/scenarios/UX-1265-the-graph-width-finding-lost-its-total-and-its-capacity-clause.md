@@ -1,6 +1,6 @@
 # UX-1265: the graph-width finding lost the total element count and "whatever the capacity" from its title
 
-**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-163 verification of UX-1248 (2026-10-02) | **Serves:** R1 | **Topic:** analysis | **Area:** bga | **Shape:** mechanical | **Reading:** container
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the round-163 verification of UX-1248 (2026-10-02) | **Serves:** R1 | **Topic:** analysis | **Area:** bga | **Shape:** mechanical | **Reading:** container
 
 **Guard:** test_the_shape_conclusions_have_a_negative_case.py::test_the_text_report_states_the_total_and_claims_no_ceiling
 

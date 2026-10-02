@@ -1,6 +1,6 @@
 # UX-1272: the sizing card calls builders x one process's peak "at most", while an element runs many processes at once
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-164 view UI re-review on a 2,402-element two-plane page (2026-10-02), finding R3 | **Serves:** R5 | **Topic:** analysis | **Area:** bga, bga/viewer | **Shape:** mechanical | **Reading:** container
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the round-164 view UI re-review on a 2,402-element two-plane page (2026-10-02), finding R3 | **Serves:** R5 | **Topic:** analysis | **Area:** bga, bga/viewer | **Shape:** mechanical | **Reading:** container
 
 **Guard:** `tests/unit/test_an_agent_sizing_card_reads_its_sources.py` (the 2,402-element page's sizing inputs through `sizingCard` by node probe, process-peak row "not a bound"; `macro_micro`'s envelope basis in Chromium 1440x900 and 390x844)
 

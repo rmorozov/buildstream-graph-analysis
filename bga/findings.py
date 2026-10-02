@@ -2751,7 +2751,7 @@ def _store_paths(run_dir: str):
     simply yields no store-shaped steps.
     """
     parts = os.path.normpath(run_dir or '').split(os.sep)
-    if len(parts) < 5 or parts[-1] != 'run' or parts[-3] != 'runs' or parts[-4] != '.bga':
+    if len(parts) < 4 or parts[-1] != 'run' or parts[-3] != 'runs' or parts[-4] != '.bga':
         return None, False
     return os.sep.join(parts[:-4]) or '.', True
 

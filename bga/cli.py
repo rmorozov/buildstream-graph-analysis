@@ -1996,6 +1996,11 @@ def cmd_bundle(args: argparse.Namespace) -> int:
     """
     from . import bundle as bundle_mod
 
+    if args.anonymize and (not args.export or args.no_plane2):
+        print(
+            "Error: --anonymize goes with --export alone; it ships what each member's treatment says.", file=sys.stderr
+        )
+        return 2
     try:
         if args.resolve:
             return _bundle_resolve(args)
@@ -2019,6 +2024,8 @@ def _bundle_export(args: argparse.Namespace, bundle_mod) -> int:
         snapshot = token
     else:
         snapshot = run_store.resolve_snapshot(token if run_store.is_alias(token) else "@" + token.lstrip("@"))
+    if args.anonymize:
+        return _bundle_export_anonymized(args, bundle_mod, snapshot)
     path, manifest = bundle_mod.export(snapshot, args.output, include_plane2=not args.no_plane2)
     counts = bundle_mod.describe(manifest)
     print(f"Wrote {path}")
@@ -2032,6 +2039,49 @@ def _bundle_export(args: argparse.Namespace, bundle_mod) -> int:
         print(f"  left out (--no-plane2): {', '.join(manifest['excluded'])}")
     print(f"  load it with: bga bundle --load {os.path.basename(path)}")
     return 0
+
+
+def _bundle_export_anonymized(args: argparse.Namespace, bundle_mod, snapshot: str) -> int:
+    """`bga bundle --export STAMP --anonymize` (UX-1295): the key and map
+    `--resolve` reads, the review shown, nothing written unless approved."""
+    from . import anonymize, run_store
+
+    project = run_store.project_root()
+    if project is None:
+        print(
+            "Error: no BuildStream project here to keep the anonymization key in "
+            "(no project.conf in this directory or any parent).",
+            file=sys.stderr,
+        )
+        return 2
+    key = anonymize.load_or_create_key(project)
+    pmap = anonymize.PseudonymMap.for_project(project)
+    path, manifest = bundle_mod.export_anonymized(snapshot, key, pmap, args.output, approve=_review_approver())
+    counts = bundle_mod.describe(manifest)
+    print(f"Wrote {path}")
+    print(f"  {plural(counts['members'], 'member')}, {run_store.human_bytes(counts['bytes'])} before compression")
+    print(f"  read a reply with: bga bundle --resolve --key-fingerprint {manifest['key_fingerprint']}")
+    return 0
+
+
+def _review_approver():
+    """Who approves the review: the person at a terminal, else no one."""
+    # an unattended approval is one more branch here, on its own flag
+    return _ask_on_the_terminal if sys.stdin.isatty() else _refuse_without_a_terminal
+
+
+def _ask_on_the_terminal(screen: str) -> bool:
+    print(screen)
+    try:
+        return input("Write this bundle? [y/N] ").strip().lower() in ("y", "yes")
+    except EOFError:
+        return False
+
+
+def _refuse_without_a_terminal(screen: str) -> bool:
+    print(screen)
+    print("stdin is not a terminal, so no one can approve the review above.", file=sys.stderr)
+    return False
 
 
 def _bundle_load(args: argparse.Namespace, bundle_mod) -> int:
@@ -2818,15 +2868,16 @@ def _add_bundle_subcommand(subparsers) -> None:
     # switches that already read and write a project's own store.
     bundle_parser = subparsers.add_parser(
         'bundle',
-        usage='bga bundle --export STAMP [-o FILE] | --load FILE|DIR | --resolve --key-fingerprint FP',
+        usage='bga bundle --export STAMP [--anonymize] [-o FILE] | --load FILE|DIR | --resolve --key-fingerprint FP',
         help='Pack a capture into one file, load one, or resolve pseudonyms.',
         description='Pack one snapshot\'s whole capture - the run directory and the '
         'Plane 2 report, raw trace, host samples and analysis beside it - '
         'into a single archive to carry to another machine, and load one '
         'back into this project\'s store under its own stamp. Each member '
         'carries its contract version, so a bundle from a newer bga is '
-        'refused rather than half-read. --resolve rewrites pseudonyms read '
-        'from stdin back to real names, entirely on this machine.',
+        'refused rather than half-read. --anonymize replaces every name with '
+        'a pseudonym and asks before writing; --resolve rewrites pseudonyms '
+        'read from stdin back to real names, entirely on this machine.',
     )
     bundle_group = bundle_parser.add_mutually_exclusive_group(required=True)
     bundle_group.add_argument('--export', metavar='STAMP', help='Snapshot to pack: a stamp, @last/@prev, or a path.')
@@ -2849,6 +2900,11 @@ def _add_bundle_subcommand(subparsers) -> None:
         '--no-plane2',
         action='store_true',
         help='Leave the Plane 2 capture out. Says what it omitted, and\nthe manifest records it so --load says so too.',
+    )
+    bundle_parser.add_argument(
+        '--anonymize',
+        action='store_true',
+        help='With --export: every name pseudonymized under this project\'s\nkey, the review shown, then y/N; refused with no terminal.',
     )
     bundle_parser.add_argument(
         '--key-fingerprint',

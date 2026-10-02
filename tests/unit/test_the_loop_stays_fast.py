@@ -179,7 +179,8 @@ class TestTheSelectorStillSelects:
     # Round 165's merged tree (owner-call default; the round's guards over findings, the viewer and the sweep):
     # median 40, p90 66, max 193 over 803.
     # `UX-902`'s census member adds one file to every selection: median 41, p90 67, max 194 over 806.
-    CEILING = {"median": 41, "p90": 67, "max": 194}
+    # `UX-1295`'s guard runs `bga.cli`: max 195 over 807.
+    CEILING = {"median": 41, "p90": 67, "max": 195}
     POPULATION_FLOOR = 60
     #: `UX-645`: **13 census + 14 of your own**. The census floor is
     #: inside this bound because those files run - the figure is what

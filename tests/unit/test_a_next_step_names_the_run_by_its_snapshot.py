@@ -67,3 +67,13 @@ def test_each_step_resolves_the_run_it_was_printed_for(store, monkeypatch):
 
 def test_a_run_outside_a_store_keeps_its_path(tmp_path):
     assert findings.run_token(str(tmp_path / "run")) == str(tmp_path / "run")
+
+
+def test_a_relative_store_path_is_the_same_run(store, monkeypatch):
+    """`UX-1263`: `.bga/runs/<stamp>/run` from the project dir reads as the absolute spelling."""
+    relative = os.path.join(".bga", "runs", STAMPS[1], "run")
+    monkeypatch.chdir(store)
+    assert findings.run_token(relative) == findings.run_token(str(store / relative)) == "@" + STAMPS[1]
+    ids = [s["id"] for s in _steps(relative)]
+    assert ids == [s["id"] for s in _steps(store / relative)], ids
+    assert [s["argv"] for s in _steps(relative)] == [s["argv"] for s in _steps(store / relative)]

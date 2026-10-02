@@ -1231,6 +1231,7 @@ _COMPARE_ALWAYS_WRITTEN = (
     "build_class_comparison",
     "baseline_band_sources",
     "total_duration_delta_share",
+    "findings_diff",
 )
 
 # UX-221: `element_diff` has been emitted since UX-79 and declared by
@@ -1269,6 +1270,8 @@ _COMPARE_OPTIONAL = {
     "baseline_band_sources": "array",
     # `UX-1257`: the wall delta over the baseline's wall-clock; `null` with no baseline total.
     "total_duration_delta_share": "number",
+    # `UX-1277`: findings new, persisting and resolved since the baseline, by id; `null` on a refusal.
+    "findings_diff": "object",
 }
 
 _BLAST_REQUIRED = {
@@ -5883,6 +5886,38 @@ _COMPARE_HINTS = {
     "candidate": {"properties": _COMPARED_SIDE},
     "baseline_confidence": _CONFIDENCE,
     "candidate_confidence": _CONFIDENCE,
+    "findings_diff": {
+        "description": "The candidate's findings against the baseline's, by finding id: "
+        "new in the candidate, persisting in both, resolved since the baseline.",
+        "properties": {
+            "new": {"description": "Findings the candidate has and the baseline did not have."},
+            "resolved": {"description": "Findings the baseline had and the candidate does not."},
+            "persisting": {
+                "description": "Findings both runs have, each with its age in snapshots.",
+                "items": {
+                    "properties": {
+                        "age": {
+                            QUANTITY: "count",
+                            "description": "Consecutive snapshots ending at the candidate that hold "
+                            "this finding: 2 is the baseline and the candidate; each earlier "
+                            "published analysis holding it adds one.",
+                        },
+                        "age_exact": {
+                            "description": "False when the walk stopped on a run with no usable "
+                            "published analysis, so `age` is a floor: at least that many.",
+                        },
+                    },
+                },
+            },
+            "not_compared": {
+                "description": "Findings on one side only that are neither new nor resolved, "
+                "because the two runs recorded different planes.",
+            },
+            "not_compared_reason": {
+                "description": "Why `not_compared` is not empty, as one clause the page shows; null when it is.",
+            },
+        },
+    },
     "cache_churn": {
         "properties": {
             "comparable_elements": {

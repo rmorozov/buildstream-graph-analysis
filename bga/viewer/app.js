@@ -37,7 +37,7 @@ import { renderCulprits, renderElementHistory, renderHorizon,
 import { renderDecision, renderProvenanceRecords, renderInvestigation } from "./decision.js";
 import { anchor, collapsible, toc, scrollspy, stepper, runSelector,
          jumpTargets, matches, paletteResults } from "./nav.js";
-import { applyFolds, applyRole, chapters, fileInChapter, foldSnapshot,
+import { applyFolds, applyRole, chapters, fileInChapter, foldSnapshot, markSince,
          revealAndLand, setAllOpen } from "./chapters.js";
 // UX-302: the second of §1's two deliberate raw-JSON sites - the one
 // the reader asks for, per section, because pasting a section into an
@@ -979,6 +979,7 @@ async function boot() {
     renderProvenanceRecords(payload, root, schemas[payload.schema]);
 
     chapters(root, document, payload, comparison);
+    markSince(root, comparison);
     for (const table of root.querySelectorAll?.("table") ?? []) nameTable(table);
 
     // UX-199: navigation, last, over whatever was rendered. Nothing

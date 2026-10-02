@@ -1095,7 +1095,7 @@ the real payload instead of by validation:
 
 ```bash
 bga compare --schema | jq '."bga:always_written"'
-# ["verdict_provenance", "build_class_comparison", "baseline_band_sources", "total_duration_delta_share"]
+# ["verdict_provenance", "build_class_comparison", "baseline_band_sources", "total_duration_delta_share", "findings_diff"]
 ```
 
 `compare/v2`'s `verdict_provenance` is the worked example. `UX-610`
@@ -1106,6 +1106,13 @@ validate again and the id did not have to move. The newest,
 `total_duration_delta_share` (`UX-1257`), is the wall-clock delta as a
 share of the baseline's — negative is faster, `null` with no baseline
 total — and is what `bga view`'s compare chapter leads with.
+`findings_diff` (`UX-1277`) splits the candidate's findings by id into
+`new`, `persisting` — each with its `age`, the consecutive snapshots that
+hold it, read off the earlier runs' published analyses, and `age_exact`,
+false when that walk stopped on a run it could not read — and `resolved`;
+`null` on a refusal. When only one run recorded Plane 2, a finding on one
+side only is listed in `not_compared` with its `not_compared_reason`
+instead. `bga view` marks each finding card from it.
 
 ### Which keys the prose names, and which it does not (`UX-628`)
 
@@ -1154,7 +1161,7 @@ the blocks a reader meets first, and `certified_headroom`, the number
 Key Findings leads with, had never been in the population at all. It was
 302 such keys when that was filed and 305 when it landed. One level and
 no further: `blast_radius_distribution.deciles` is in the population and
-its own nine buckets are not. The surface is **611 keys** today, and
+its own nine buckets are not. The surface is **618 keys** today, and
 that figure is derived from the walk rather than typed here.
 
 So the statement of coverage, which is now a statement and not a

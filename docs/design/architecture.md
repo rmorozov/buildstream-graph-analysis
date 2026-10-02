@@ -509,8 +509,9 @@ Updated 2026-10-01 (after `UX-1247`), covering one change to this
 document in round 163. The contract registry's headline id moves to
 `analyze/v7`, and `analyze/v6` joins the rows read and never written:
 `by_binary` is ranked rows of CPU, wall, calls and elements
-(`UX-1247`). The figures are re-grounded in `bga analyze --schema`
-(`analyze/v7`: **64 top-level properties**) and in `python3 -m pytest
+(`UX-1247`); `analyze/v7` also gains `agent_sizing` (`UX-1254`). The
+figures are re-grounded in `bga analyze --schema`
+(`analyze/v7`: **65 top-level properties**) and in `python3 -m pytest
 $(grep -ln "architecture.md" tests/unit/*.py) -q`, run at this commit:
 **28 emitted ids**.
 

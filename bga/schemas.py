@@ -3877,16 +3877,19 @@ _ANALYZE_HINTS = {
     },
     # UX-1254: copied from the sections each field names in `source`, never computed.
     "agent_sizing": {
-        QUESTION: 'What does this build want from this host?',
+        QUESTION: 'What does this run want from this host?',
         RAIL: 'act',
         "description": "Builders, cores and memory in one place, each read off the section it links.",
         "properties": {
             "builders": {
                 "description": "Recommended, the graph's ceiling, and what this run had.",
                 "properties": {
-                    "recommended": {QUANTITY: "count", "description": "The recommendation's builders."},
-                    "graph_ceiling": {QUANTITY: "count", "description": "The sweep's knee."},
-                    "observed": {QUANTITY: "count", "description": "This run's builders."},
+                    "recommended": {
+                        QUANTITY: "count",
+                        "description": "Builders the capacity recommendation settles on.",
+                    },
+                    "graph_ceiling": {QUANTITY: "count", "description": "Builders the sweep's knee allows."},
+                    "observed": {QUANTITY: "count", "description": "Builders this run was given."},
                 },
             },
             "cores": {
@@ -3894,16 +3897,18 @@ _ANALYZE_HINTS = {
                 "properties": {
                     "average": {QUANTITY: "ratio", "description": "Plane 2's cores busy."},
                     "peak": {QUANTITY: "ratio", "description": "The host series' p95."},
-                    "host": {QUANTITY: "count", "description": "The host's cores."},
+                    "host": {QUANTITY: "count", "description": "Cores the host reports having."},
                 },
             },
             "memory": {
                 "description": "At most: the largest per-element peak RSS times the builders, as if all peak at once.",
                 "properties": {
-                    "basis": {"description": "`envelope` (memory_envelope) or `process_peak` (Plane 2's peaks)."},
+                    "basis": {
+                        "description": "Envelope when read from the host's memory envelope; process peak when from Plane 2's per-element peaks."
+                    },
                     "per_element_bytes": {QUANTITY: "bytes", "description": "The largest element's peak RSS."},
                     "builders": {QUANTITY: "count", "description": "The builders it is multiplied by."},
-                    "bytes": {QUANTITY: "bytes", "description": "The product."},
+                    "bytes": {QUANTITY: "bytes", "description": "Per-element peak times the builders."},
                 },
             },
             "absence": {"description": "Which of cores and memory this run did not measure, and why."},

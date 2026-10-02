@@ -483,7 +483,7 @@ function isEmptyPopulation(value) {
 }
 
 /** `UX-1254`: each row a published value and a link to the section it was read off. */
-function sizingCard(value, hint, payload) {
+function sizingCard(value, hint) {
   const row = (field, said, src) => el("li", { "data-field": field }, said, src ? " \u2014 " : null,
     src ? el("a", { href: `#${src}`, "data-section-link": src }, title(src)) : null);
   const { builders: b = {}, cores: c, memory: m } = value;
@@ -496,9 +496,8 @@ function sizingCard(value, hint, payload) {
     c?.peak_source ? row("cores_peak", `Cores: ${c.peak.toFixed(2)} busy at p95`, c.peak_source) : null,
     m ? row("memory", `Memory: at most ${bytes(m.bytes)}, if all ${tally(m.builders)} builders peak together at `
       + `${bytes(m.per_element_bytes)} (${m.basis === "envelope" ? "memory envelope" : "process peak"})`, m.source) : null),
-    value.absence ? el("p", { class: "empty-population" }, value.absence) : null,
-    // The caveat is the recommendation's, read where it is published.
-    payload?.capacity_recommendation?.caveat ? el("p", { class: "muted" }, payload.capacity_recommendation.caveat) : null);
+    // The recommendation's caveat is drawn once, in the section the builders row links.
+    value.absence ? el("p", { class: "empty-population" }, value.absence) : null);
 }
 
 /** The heading, the sentence, and the one line that says it is empty. */
@@ -630,7 +629,7 @@ export function renderSection(key, value, hint = {}, node = undefined,
     value = Object.fromEntries(
       Object.entries(value).filter(([name]) => !(name in elsewhere)));
   }
-  if (key === "agent_sizing" && value) return sizingCard(value, hint, payload);
+  if (key === "agent_sizing" && value) return sizingCard(value, hint);
   // `UX-536`: **a join with no Plane 2 in it is not a measurement of
   // zero.** The evidence line already says these words on the same
   // condition; the section presenting the zeros said nothing, under a

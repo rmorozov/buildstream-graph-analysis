@@ -9,12 +9,13 @@ import pytest
 
 from bga import findings, schemas
 from bga.cli import main
-from bga.report import ATTRIBUTION_CATEGORY_HINTS_BY_KEY
+from bga.report._shared import resolve_attribution_hint
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 RUNS = {
     "golden": (REPO / "tests/fixtures/golden/mixed_task_kinds", None),
     "macro_micro": (REPO / "tests/fixtures/macro_micro/run", REPO / "tests/fixtures/macro_micro/plane2.json"),
+    "shared_base_wide": (REPO / "tests/fixtures/shared_base_wide/run", None),
 }
 ACTED_ON = {"critical", "high", "medium"}
 
@@ -46,10 +47,15 @@ def test_the_wait_category_step_is_the_resolved_hint(document):
     wait = findings.findings_by_id(document["findings"]).get("wait-category")
     assert wait is not None, "the fixture no longer has a wait-category finding"
     category = wait["evidence"]["category"]
+    assert wait["step"]["text"] == resolve_attribution_hint(category, document["capacity_verdict"])
     if category == "resource_wait_us":
-        pytest.skip("resource wait is conditioned on Plane 2; test_plane2_conditioned_capacity_advice holds it")
-    assert wait["step"]["text"] == ATTRIBUTION_CATEGORY_HINTS_BY_KEY[category]
+        assert wait["step"]["command"].startswith("bga sweep "), wait["step"]
     assert "hint" not in wait["evidence"]
+
+
+def test_a_fixture_leads_with_resource_wait():
+    wait = findings.findings_by_id(_analysed("shared_base_wide")["findings"])["wait-category"]
+    assert wait["evidence"]["category"] == "resource_wait_us"
 
 
 def test_the_text_report_prints_the_step():

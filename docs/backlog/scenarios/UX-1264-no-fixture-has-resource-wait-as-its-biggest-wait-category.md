@@ -2,7 +2,7 @@
 
 **Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-163 verification of UX-1256 (2026-10-02) | **Serves:** R1 | **Topic:** guards | **Area:** tests | **Shape:** judgement | **Reading:** container
 
-**Guard:** none — open, no guard named yet
+**Guard:** test_every_finding_publishes_its_step.py::test_the_wait_category_step_is_the_resolved_hint
 
 ## Motivation
 
@@ -34,3 +34,34 @@ The step text (UX-1256).
 ## Acceptance Test
 
 Mutation: change the wait-category step for resource_wait, and the guard reds.
+
+## Outcome (2026-10-02)
+
+### The gap, measured
+
+Base `b35c30e3`'s copy of the guard, run with wait-category's resource-wait
+step mutated to `hint + "."` (`mutate.py`, scratchpad): RUNS held golden and
+`macro_micro`, neither leads with resource wait, so the claim never ran.
+
+```text
+7 passed in 0.49s
+```
+
+### The close, measured
+
+`shared_base_wide` joins RUNS (`bga analyze tests/fixtures/shared_base_wide/run
+--format json`: wait-category `resource_wait_us`, 77.0%, 8.7 s, capacity checks
+not run). The step equals `resolve_attribution_hint(category,
+capacity_verdict)`, the command starts `bga sweep `; the resource-wait skip is
+gone, and `test_a_fixture_leads_with_resource_wait` pins the fixture's category.
+
+```text
+tests/unit/test_every_finding_publishes_its_step.py  10 passed in 1.20s
+```
+
+### Mutations verified red and reverted (2)
+
+| # | mutation | reddened |
+|---|---|---|
+| M1 | resource-wait step `hint + "."` | resolved-hint `[shared_base_wide]`, 1 failed, 9 passed |
+| M2 | resource-wait step command `None` | resolved-hint `[shared_base_wide]`, 1 failed, 9 passed |

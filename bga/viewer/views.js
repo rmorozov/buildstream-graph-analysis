@@ -733,14 +733,14 @@ export function renderBlastAnswer(result) {
 // The waterfall, in the order the time is spent. Each entry names the
 // published field it reads; nothing here adds, subtracts or divides.
 const WATERFALL = [
-  { key: "untracked_head_us", label: "Before the first task", from: "attribution" },
-  { key: "execution_on_chain_us", label: "Execution on the chain", from: "attribution" },
-  { key: "dependency_wait_us", label: "Waiting on dependencies", from: "attribution" },
-  { key: "resource_wait_us", label: "Waiting on resources", from: "attribution" },
-  { key: "scheduler_wait_us", label: "Waiting on the scheduler", from: "attribution" },
-  { key: "retry_wait_us", label: "Retries", from: "attribution" },
-  { key: "idle_us", label: "Idle", from: "attribution" },
-  { key: "untracked_tail_us", label: "After the last task", from: "attribution" },
+  { key: "untracked_head_us", label: TERMS.untracked_head_us, from: "attribution" },
+  { key: "execution_on_chain_us", label: TERMS.execution_on_chain_us, from: "attribution" },
+  { key: "dependency_wait_us", label: TERMS.dependency_wait_us, from: "attribution" },
+  { key: "resource_wait_us", label: TERMS.resource_wait_us, from: "attribution" },
+  { key: "scheduler_wait_us", label: TERMS.scheduler_wait_us, from: "attribution" },
+  { key: "retry_wait_us", label: TERMS.retry_wait_us, from: "attribution" },
+  { key: "idle_us", label: TERMS.idle_us, from: "attribution" },
+  { key: "untracked_tail_us", label: TERMS.untracked_tail_us, from: "attribution" },
 ];
 
 // The certified floors, read the same way.
@@ -748,7 +748,7 @@ const FLOORS = [
   { key: "t_infinity_observed", label: TERMS.t_infinity_observed },
   { key: "lb", label: TERMS.lb },
   { key: "t_c", label: TERMS.t_c },
-  { key: "certified_headroom", label: "Certified headroom" },
+  { key: "certified_headroom", label: TERMS.certified_headroom },
 ];
 
 
@@ -815,6 +815,12 @@ export function renderOverview(payload) {
         "data-section-link": "floors",
       }));
     }
+    // `UX-1269`: the decision's gap and the waits above are two cuts of one wall clock, never summed.
+    const para = document.createElement("p");
+    para.setAttribute("data-role", "wait-relation");
+    para.textContent = `${TERMS.scheduling_gap_us} is the wall clock beyond ${TERMS.t_infinity_observed}; `
+      + `it overlaps ${TERMS.resource_wait_us} above and does not add to it.`;
+    section.append(para);
   }
   return section;
 }

@@ -2,7 +2,7 @@
 
 **Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-163 walk of the merged page (2026-10-02) | **Serves:** R1 | **Topic:** viewer | **Area:** bga, bga/viewer | **Shape:** judgement | **Reading:** container
 
-**Guard:** none — open, no guard named yet
+**Guard:** `tests/unit/test_a_wait_quantity_has_one_name.py`
 
 ## Motivation
 
@@ -34,3 +34,31 @@ The figures themselves.
 ## Acceptance Test
 
 On this page no two headings name the same wait quantity differently, the Effective CPUs gloss matches its source, and costliest-binary below the floor reads as context. Mutation: restore one name, and the guard reds.
+
+## Outcome
+
+The gap measured, at `b35c30e31`, the 2,402-element two-plane page exported, Chromium 1440, labels by data key:
+`resource_wait_us ['Resource wait', 'Waiting on resources']` plus the drawing's `resource` tick `capacity full`;
+`execution_on_chain_us ['Execution on chain', 'Execution on the chain']` plus `work on the chain`;
+`scheduler_wait_us ['Scheduler wait', 'Waiting on the scheduler']`; `untracked_tail_us ['After the last task',
+'Untracked tail']`. Effective CPUs gloss `Builder slots as recorded, not host cores` beside source `Detected host
+cores`. `costliest-binary` step `Start with make` at 36.0 s, 0.3% of `capacity_cpu_us` 3.1 h.
+
+The close measured, same page: every attribution key and both headroom keys carry one label (`Waiting on resources`,
+`Execution on the chain`, `Waiting on the scheduler`, `After the last task`, ...; ticks the same words). The time
+chapter's floors, under the waterfall, end `Scheduling gap is the wall clock beyond Chain floor T∞; it overlaps
+Waiting on resources above and does not add to it.` Placed there, not under the decision's split: there it cost
+390 J1/J2 wheel 466 -> 696 and 1,487 -> 1,734 px (`test_pointer_travel_is_a_budget.py`, budget x1.1); here 56
+passed. Gloss: `The capacity this accounting divides by, in CPUs; the source line says where it came from.`
+`costliest-binary` step: `{'why_none': "make is 0.3% of the run's CPU capacity, under the 1% opportunity floor:
+context, not a lever."}`. `test_one_bucket_one_row.py` matches a bucket's row by `data-key`, and
+`test_the_label_is_for_the_reader.py`'s suffix cases use keys outside `TERMS`. Guard: 4 passed; with
+`test_plane_two_reaches_the_findings.py` 12 passed (37.2 s).
+
+| mutation | reddened | run printed |
+|---|---|---|
+| restore the `resource` decomposition label "capacity full" | `test_each_wait_key_is_drawn_under_one_name` | 1 failed |
+| drop `section.append(para)` in `renderOverview` | `test_the_time_chapter_states_the_waits_against_the_gaps` | 1 failed |
+| restore "Builder slots as recorded, not host cores." | `test_the_effective_cpus_gloss_agrees_with_its_source` | 1 failed |
+| share read against `measured` again | `test_a_costliest_binary_under_the_floor_carries_no_step` | 1 failed |
+| reverted | | 4 passed |

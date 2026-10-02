@@ -4120,14 +4120,14 @@ _ANALYZE_HINTS = {
             "total": "total_duration_us",
             "quantity": "duration_us",
             "parts": [
-                {"path": "attribution.execution_on_chain_us", "key": "execution", "label": "work on the chain"},
-                {"path": "attribution.dependency_wait_us", "key": "dependency", "label": "waiting upstream"},
-                {"path": "attribution.resource_wait_us", "key": "resource", "label": "capacity full"},
-                {"path": "attribution.scheduler_wait_us", "key": "scheduler", "label": "nothing dispatched"},
-                {"path": "attribution.idle_us", "key": "idle", "label": "nothing ready"},
+                {"path": "attribution.execution_on_chain_us", "key": "execution", "label": "execution on the chain"},
+                {"path": "attribution.dependency_wait_us", "key": "dependency", "label": "waiting on dependencies"},
+                {"path": "attribution.resource_wait_us", "key": "resource", "label": "waiting on resources"},
+                {"path": "attribution.scheduler_wait_us", "key": "scheduler", "label": "waiting on the scheduler"},
+                {"path": "attribution.idle_us", "key": "idle", "label": "idle"},
                 {"path": "attribution.retry_wait_us", "key": "retry", "label": "retries"},
                 {"path": "attribution.untracked_head_us", "key": "head", "label": "before the first task"},
-                {"path": "attribution.untracked_tail_us", "key": "tail", "label": "after the last"},
+                {"path": "attribution.untracked_tail_us", "key": "tail", "label": "after the last task"},
             ],
         },
         # `UX-390`: and the run's advice for each bucket, drawn on the
@@ -5255,7 +5255,7 @@ _ANALYZE_HINTS = {
             "effective_cpus": {
                 INLINE: "name",
                 QUANTITY: "count",
-                "description": "The capacity this accounting divides by. Builder slots as recorded, not host cores.",
+                "description": "The capacity this accounting divides by, in CPUs; the source line says where it came from.",
             },
             "effective_cpus_source": {
                 INLINE: "caveat",

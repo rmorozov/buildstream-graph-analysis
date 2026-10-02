@@ -26,7 +26,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        leg: [memgiant]
+        leg: [mixed8, widechain, memgiant]
     steps:
       - uses: actions/checkout@v7
 

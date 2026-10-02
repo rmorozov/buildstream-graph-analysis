@@ -33,6 +33,7 @@ _MEASURE = r"""
     chapter: !!document.querySelector("#chapter-compare"),
     lead: text('[data-chapter-answer="compare"]'),
     panel: text('#decision [data-role="compare-lead"]'),
+    panel_href: [...document.querySelectorAll('#decision [data-role="compare-lead"] a')].map((a) => a.getAttribute("href")),
     absent: document.body.innerText.split(%r).length - 1,
   };
 })()
@@ -51,17 +52,19 @@ def _page(tmp_path_factory, runs):
 
 
 @needs_browser
-def test_the_lead_is_the_delta_and_the_panel_says_it_too(tmp_path_factory):
+def test_the_lead_is_the_delta_and_the_panel_links_it(tmp_path_factory):
     page = _page(tmp_path_factory, 2)
     assert page["chapter"] and len(page["lead"]) == 1, page
     assert LEAD.match(page["lead"][0]), page
-    assert page["panel"] == page["lead"] and page["absent"] == 0, page
+    # Each sentence drawn once: the panel carries the delta clause, linking the chapter's lead.
+    assert page["panel"] == [page["lead"][0].split(", ")[0]] and page["absent"] == 0, page
+    assert page["panel_href"] == ["#chapter-compare"], page
 
 
 @needs_browser
 def test_one_snapshot_reads_one_absence_sentence(tmp_path_factory):
     page = _page(tmp_path_factory, 1)
-    assert page == {"chapter": False, "lead": [], "panel": [ABSENT], "absent": 1}, page
+    assert page == {"chapter": False, "lead": [], "panel": [ABSENT], "panel_href": [], "absent": 1}, page
 
 
 _CONSTRUCTED = (

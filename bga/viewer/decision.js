@@ -28,7 +28,7 @@ import {
 // `UX-643`: the fold `UX-347` built, driven by the choice this module
 // already collects. The role decides what is promoted; `chapters.js`
 // owns how a thing folds and this module does not learn a second way.
-import { applyRole, compareLead } from "./chapters.js";
+import { applyRole, compareDelta } from "./chapters.js";
 import { plural } from "./tables.js";
 
 // ------------------------------------------------- UX-207: the decision
@@ -694,10 +694,13 @@ export function renderDecision(payload, investigate = null, copy = null,
   sentence.setAttribute("data-field", "headline.sentence");
   sentence.textContent = headline.sentence ?? "";
   section.append(sentence);
-  // `UX-1257`: the delta against the run before, the compare chapter's own lead; a refused baseline says so in `band`.
-  const lead = "comparison" in options && (compareLead(options.comparison)
-    ?? (options.comparison || options.refused ? null : "No earlier run to compare against."));
-  if (lead) section.append(el("p", { "data-role": "compare-lead" }, lead));
+  // `UX-1257`: the delta, linking the compare chapter that leads with it and its verdict; drawn once each.
+  if ("comparison" in options) {
+    const delta = compareDelta(options.comparison);
+    const absent = options.comparison || options.refused ? null : "No earlier run to compare against.";
+    if (delta) section.append(el("p", { "data-role": "compare-lead" }, el("a", { href: "#chapter-compare" }, delta)));
+    else if (absent) section.append(el("p", { "data-role": "compare-lead" }, absent));
+  }
 
   // `UX-372`: and, for a reader who says who they are, their own
   // biggest lever. Below the diagnosis, which is true for everyone.

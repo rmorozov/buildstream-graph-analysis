@@ -78,15 +78,20 @@ const BAND = {
   regressed: "outside the noise band: regressed",
 };
 
-/** `UX-1257`: the wall delta and its band verdict, published fields only; the chapter lead and the decision panel both. */
-export function compareLead(comparison) {
+/** `UX-1257`: the wall delta against the run before, published fields only; the decision panel's link. */
+export function compareDelta(comparison) {
   const share = comparison?.total_duration_delta_share;
   const delta = comparison?.deltas?.total_duration_us;
-  const band = BAND[comparison?.verdict_kind];
-  if (typeof share !== "number" || typeof delta !== "number" || !band) return null;
+  if (typeof share !== "number" || typeof delta !== "number" || !BAND[comparison?.verdict_kind]) return null;
   const pct = (share * 100).toFixed(1).replace(/^-(0\.0)$/, "$1");
   return `${share > 0 && pct !== "0.0" ? "+" : ""}${pct}% (${duration(Math.abs(delta))} `
-    + `${delta < 0 ? "faster" : "slower"}) than the run before, ${band}.`;
+    + `${delta < 0 ? "faster" : "slower"}) than the run before`;
+}
+
+/** `UX-1257`: the delta and its band verdict, the compare chapter's lead. */
+export function compareLead(comparison) {
+  const delta = compareDelta(comparison);
+  return delta && `${delta}, ${BAND[comparison.verdict_kind]}.`;
 }
 
 // The chapters, in the order the document reads. Each names the

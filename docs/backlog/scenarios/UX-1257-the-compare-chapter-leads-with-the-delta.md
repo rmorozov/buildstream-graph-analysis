@@ -67,3 +67,6 @@ slower-regressed and faster-inside-band comparison; `cli.md` names `total_durati
 | `delta < 0` -> `delta > 0` in `compareLead` | both constructed cases | 2 failed, 3 passed |
 | `regressed` reads `...: improved` | `[slower-regressed]` | 1 failed, 4 passed |
 | reverted | | 5 passed |
+
+Round 163 merge: `test_each_sentence_is_drawn_once.py` has no exemption, so the panel no longer repeats the
+lead; it draws the delta clause (`compareDelta`) as a link to `#chapter-compare`, and the guard pins that.

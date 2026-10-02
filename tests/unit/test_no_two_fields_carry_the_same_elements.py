@@ -64,9 +64,9 @@ def _is_narrative(path):
     and cites the numbers it read. On the macro/micro run that makes
     four pairs the sweep flags and none of them is this item's defect -
     `joint_saving.elements` against the `joint-saving` finding
-    that reports it, `optimization-horizon`'s `evidence.steps` against
-    its own `elements`, and the two findings that share one subject
-    because they are two claims about the same three elements.
+    that reports it, `time-concentration`'s `evidence.rows` against
+    its own `elements`, and two findings whose elements match an
+    `element_join[...].unused_dependencies` set.
 
     Findings travel into a CI comment as a unit (`UX-75`), so a finding
     that named no elements would be the regression. `UX-288` is about

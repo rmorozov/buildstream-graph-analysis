@@ -4,19 +4,24 @@ import contextlib
 import io
 import json
 import pathlib
+import re
+from types import SimpleNamespace
 
 import pytest
 
 from bga import findings, schemas
 from bga.cli import main
-from bga.report import ATTRIBUTION_CATEGORY_HINTS_BY_KEY
+from bga.report._shared import RESOURCE_WAIT_SATURATED, resolve_attribution_hint, resource_wait_advice
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 RUNS = {
     "golden": (REPO / "tests/fixtures/golden/mixed_task_kinds", None),
     "macro_micro": (REPO / "tests/fixtures/macro_micro/run", REPO / "tests/fixtures/macro_micro/plane2.json"),
+    "shared_base_wide": (REPO / "tests/fixtures/shared_base_wide/run", None),
 }
 ACTED_ON = {"critical", "high", "medium"}
+ENUM_WORD = re.compile(r"\b(PROCESS|DOWNLOAD|UPLOAD)\b")
+BARE_CAPACITY = re.compile(r"(?<!bga analyze )--capacity\b")
 
 
 def _analysed(name):
@@ -47,9 +52,55 @@ def test_the_wait_category_step_is_the_resolved_hint(document):
     assert wait is not None, "the fixture no longer has a wait-category finding"
     category = wait["evidence"]["category"]
     if category == "resource_wait_us":
-        pytest.skip("resource wait is conditioned on Plane 2; test_plane2_conditioned_capacity_advice holds it")
-    assert wait["step"]["text"] == ATTRIBUTION_CATEGORY_HINTS_BY_KEY[category]
+        saturated, said = wait["step"]["text"].split(" — ", 1)
+        assert saturated.startswith("builder slots were saturated ("), wait["step"]
+        assert said == resource_wait_advice(document["capacity_verdict"])[0], wait["step"]
+        assert wait["step"]["command"].startswith("bga sweep "), wait["step"]
+    else:
+        assert wait["step"]["text"] == resolve_attribution_hint(category, document["capacity_verdict"])
     assert "hint" not in wait["evidence"]
+
+
+def test_no_finding_says_an_enum_word_or_a_bare_flag(document):
+    """UX-1271: reader words, and `--capacity` only with `bga analyze` before it."""
+    said = [(f["id"], text) for f in document["findings"] for text in [f["title"], *f["detail"], *f["step"].values()]]
+    said += [("attribution_hints", text) for text in (document.get("attribution_hints") or {}).values()]
+    assert not [(fid, text) for fid, text in said if ENUM_WORD.search(text) or BARE_CAPACITY.search(text)]
+
+
+@pytest.mark.parametrize("verdict", [{}, {"checks_ran": True}, {"checks_ran": True, "oversubscribed": True}])
+def test_every_resource_wait_hint_is_in_reader_words(verdict):
+    hint = resolve_attribution_hint("resource_wait_us", verdict)
+    assert not ENUM_WORD.search(hint) and not BARE_CAPACITY.search(hint), hint
+
+
+def _occupied(builders, **busy):
+    occupancy = {f"Resource.{name}": share for name, share in busy.items()}
+    peak = dict.fromkeys(occupancy, 1)
+    return SimpleNamespace(
+        occupancy={"resource_occupancy": occupancy, "peak_resource_occupancy": peak},
+        agent_sizing={"builders": {"observed": builders}},
+    )
+
+
+@pytest.mark.parametrize(
+    ("run", "said"),
+    [
+        (_occupied(8, PROCESS=0.5, UPLOAD=0.2), RESOURCE_WAIT_SATURATED),
+        (_occupied(None, UPLOAD=1.0), RESOURCE_WAIT_SATURATED),
+        (_occupied(None, PROCESS=1.0), RESOURCE_WAIT_SATURATED),
+        (_occupied(8, PROCESS=7.0), RESOURCE_WAIT_SATURATED),
+        (_occupied(8, PROCESS=7.6, UPLOAD=1.0), "builder slots were saturated (7.60 of 8 busy on average)"),
+    ],
+)
+def test_only_a_configured_capacity_past_the_threshold_is_called_saturated(run, said):
+    """UX-1271: a peak is not a capacity, and 7.0 of 8 busy is not saturated."""
+    assert findings._saturated_resource(run) == said
+
+
+def test_a_fixture_leads_with_resource_wait():
+    wait = findings.findings_by_id(_analysed("shared_base_wide")["findings"])["wait-category"]
+    assert wait["evidence"]["category"] == "resource_wait_us"
 
 
 def test_the_text_report_prints_the_step():

@@ -382,8 +382,8 @@ BUDGETS = (
     # 800 -> 868 - macro_micro's measured +788 px, +68 controls; headroom unchanged.
     # `UX-1254`: controls 868 -> 872 - the sizing card's rail link, fold, JSON door and three source
     # links (+6) on macro_micro's 866; the owner's call, pending, like UX-1200b's.
-    # `UX-1249`: words 13,200 -> 13,500 - every finding draws its step (+201 words on macro_micro: 107 of
-    # steps, 94 of why-none), 13,162 -> 13,338 measured; px fell 39,522 -> 37,847 with the Info fold.
+    # `UX-1249`: words 13,200 -> 13,500 - every finding draws its step (+176 words on macro_micro,
+    # 13,162 -> 13,338 measured); px fell 39,522 -> 37,847 with the Info fold.
     # Round 165's merge (owner-call default): words 13,500 -> 13,700, controls 872 -> 874 - UX-1267/1270 +210 words,
     # UX-1269/1273 +99, UX-1272/1274/1276 +102, UX-1261/1275 and UX-1274 +1 control each; macro_micro 13,697 words, 874.
     (50, 39_188, 13_700, 874, 7_900),

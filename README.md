@@ -31,7 +31,7 @@ Tab completion — subcommands, flags, and `@last`/`@prev`/stamps wherever a run
 bga analyze tests/fixtures/golden/mixed_task_kinds --diagnostics   # or: make dev-run
 ```
 
-A three-element fixture that runs instantly. The report is **110 lines**;
+A three-element fixture that runs instantly. The report is **106 lines**;
 its two headline sections are below, verbatim, with every cut marked —
 `UX-192` is on file for a block that claimed to be full output and was
 not:
@@ -43,7 +43,7 @@ Key Findings:
     -> real time after the last tracked task finished — outside per-task tracking, not a scheduling issue
   100.0% of the 14 ms critical path is 3 elements — chain-bound, not scheduler-bound
 
-[... elided: the step, the three ranked elements, the chain note, the joint saving, the work order, the latent heavies, the fan-in ranking and the graph width ...]
+[... elided: the step, the three ranked elements, the chain note, the joint saving and its order, the latent heavies, the fan-in ranking and the graph width ...]
 
   87.5% confidence (high)
 

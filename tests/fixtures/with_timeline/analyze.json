@@ -103,7 +103,8 @@
             "severity": "high",
             "title": "23.1 s (50.0% of the build) is what the top 3 are worth together",
             "detail": [
-                "    That is more than the 16.1 s alone: codegen.bst pays off after core.bst"
+                "    That is more than the 16.1 s alone: a later step pays off only once the earlier ones are done",
+                "    In this order: core.bst (31.1 s) -> codegen.bst (24.1 s, pays off after the step before) -> lib-b.bst (20.1 s)"
             ],
             "elements": [
                 "core.bst",
@@ -121,56 +122,12 @@
                 "command": "bga blast core.bst <fixture>/run"
             },
             "reader": "local-optimizer",
-            "copy_text": "BGA finding: 23.1 s (50.0% of the build) is what the top 3 are worth together\n      That is more than the 16.1 s alone: codegen.bst pays off after core.bst\n  joint_saving_us 23.1 s\n  sum_of_individual_us 16.1 s\n  savings_add False\n  relation compound\n  Elements: core.bst, codegen.bst, lib-b.bst\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
-            "trace_query": "waited-on-flow"
-        },
-        {
-            "id": "optimization-horizon",
-            "severity": "high",
-            "title": "3 fixes, in order of what each is worth, take the build to 20.1 s",
-            "detail": [
-                "    In this order: core.bst (31.1 s) -> codegen.bst (24.1 s) -> lib-b.bst (20.1 s)",
-                "    The last of those leaves 50.0% of the build removed, projected from this run without building again"
-            ],
-            "elements": [
-                "core.bst",
-                "codegen.bst",
-                "lib-b.bst"
-            ],
-            "evidence": {
-                "steps": [
-                    {
-                        "element_uid": "core.bst",
-                        "saving_us": 12050000,
-                        "makespan_after_us": 31150000,
-                        "cumulative_saving_us": 12050000,
-                        "entering": [
-                            "codegen.bst"
-                        ]
-                    },
-                    {
-                        "element_uid": "codegen.bst",
-                        "saving_us": 7000000,
-                        "makespan_after_us": 24150000,
-                        "cumulative_saving_us": 19050000,
-                        "entering": []
-                    },
-                    {
-                        "element_uid": "lib-b.bst",
-                        "saving_us": 4000000,
-                        "makespan_after_us": 20150000,
-                        "cumulative_saving_us": 23050000,
-                        "entering": []
-                    }
-                ]
-            },
-            "step": {
-                "text": "Start with core.bst.",
-                "command": "bga blast core.bst <fixture>/run"
-            },
-            "reader": "local-optimizer",
-            "copy_text": "BGA finding: 3 fixes, in order of what each is worth, take the build to 20.1 s\n      In this order: core.bst (31.1 s) -> codegen.bst (24.1 s) -> lib-b.bst (20.1 s)\n      The last of those leaves 50.0% of the build removed, projected from this run without building again\n  Elements: core.bst, codegen.bst, lib-b.bst\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
-            "trace_query": "time-by-kind"
+            "copy_text": "BGA finding: 23.1 s (50.0% of the build) is what the top 3 are worth together\n      That is more than the 16.1 s alone: a later step pays off only once the earlier ones are done\n      In this order: core.bst (31.1 s) -> codegen.bst (24.1 s, pays off after the step before) -> lib-b.bst (20.1 s)\n  joint_saving_us 23.1 s\n  sum_of_individual_us 16.1 s\n  savings_add False\n  relation compound\n  Elements: core.bst, codegen.bst, lib-b.bst\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
+            "trace_query": "waited-on-flow",
+            "trace_queries": [
+                "waited-on-flow",
+                "time-by-kind"
+            ]
         },
         {
             "id": "blast-radius-reach",
@@ -306,7 +263,7 @@
         {
             "id": "graph-width",
             "severity": "info",
-            "title": "2 elements at most can ever build at once \u2014 the widest of 10 dependency stages",
+            "title": "The widest of 10 dependency levels holds 2 of 11 elements",
             "detail": [],
             "elements": [],
             "evidence": {
@@ -315,10 +272,10 @@
                 "widest_stage": 2
             },
             "step": {
-                "why_none": "a ceiling the dependency graph sets; only its dependencies move it"
+                "why_none": "a shape the dependency graph has; only its dependencies move it"
             },
             "reader": "graph-owner",
-            "copy_text": "BGA finding: 2 elements at most can ever build at once \u2014 the widest of 10 dependency stages\n  element_count 11\n  dependency_stages 10\n  widest_stage 2\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
+            "copy_text": "BGA finding: The widest of 10 dependency levels holds 2 of 11 elements\n  element_count 11\n  dependency_stages 10\n  widest_stage 2\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
             "trace_query": "graph-levels"
         },
         {
@@ -442,8 +399,7 @@
             "findings": [
                 "wait-category",
                 "time-concentration",
-                "joint-saving",
-                "optimization-horizon"
+                "joint-saving"
             ]
         },
         {
@@ -563,7 +519,7 @@
     "attribution_hints": {
         "execution_on_chain_us": "real work on the critical path \u2014 the only way to reduce this is to reduce the work itself",
         "dependency_wait_us": "waiting on an upstream element to finish \u2014 shorten or parallelize that dependency chain",
-        "resource_wait_us": "a resource (PROCESS/DOWNLOAD/UPLOAD) was saturated \u2014 whether raising capacity would help depends on how loaded this host already is, and this run's capacity checks could not run (see the Certified Floors note), so this hint is unconditioned; `bga sweep` shows the shape of the curve either way",
+        "resource_wait_us": "builder slots, downloads or uploads were saturated \u2014 whether raising capacity would help depends on how loaded this host already is, and this run's capacity checks could not run (see the Certified Floors note), so this hint is unconditioned; `bga sweep` shows the shape of the curve either way",
         "scheduler_wait_us": "capacity was available but nothing was dispatched \u2014 try a different --heuristic in `bga replay`",
         "idle_us": "nothing was dependency-ready at all \u2014 likely a critical-path/graph-shape issue, not a capacity one; check Critical Path",
         "retry_wait_us": "this element needed a retry \u2014 investigate why the first attempt failed/was discarded",
@@ -2078,6 +2034,12 @@
                     "value": "compound"
                 },
                 {
+                    "path": "optimization_horizon[0].makespan_after_us",
+                    "resolved": true,
+                    "value": 31150000,
+                    "quantity": "duration_us"
+                },
+                {
                     "path": "total_duration_us",
                     "resolved": true,
                     "value": 46133000,
@@ -2093,41 +2055,10 @@
                 "module": "bga/findings.py"
             },
             "trace_query": "waited-on-flow",
-            "unpublished_inputs": []
-        },
-        {
-            "claim": "optimization-horizon",
-            "kind": "finding",
-            "document": "analyze/v7",
-            "evidence": [
-                {
-                    "path": "optimization_horizon[0].makespan_after_us",
-                    "resolved": true,
-                    "value": 31150000,
-                    "quantity": "duration_us"
-                },
-                {
-                    "path": "optimization_horizon[0].cumulative_saving_us",
-                    "resolved": true,
-                    "value": 12050000,
-                    "quantity": "duration_us"
-                },
-                {
-                    "path": "total_duration_us",
-                    "resolved": true,
-                    "value": 46133000,
-                    "quantity": "duration_us"
-                }
+            "trace_queries": [
+                "waited-on-flow",
+                "time-by-kind"
             ],
-            "rule": {
-                "name": null,
-                "threshold": null,
-                "comparison": "present",
-                "observed_path": null,
-                "sentence": "Published when the horizon has more than one step \u2014 a single-step horizon is the first fix, which is already named.",
-                "module": "bga/findings.py"
-            },
-            "trace_query": "time-by-kind",
             "unpublished_inputs": []
         },
         {
@@ -2419,10 +2350,10 @@
         }
     ],
     "document_shape": {
-        "leaves": 1618,
-        "deepest_depth": 7,
-        "deepest_path": "findings.[].evidence.steps.[].entering.[]",
-        "deeper_than_three": 986,
-        "deeper_than_three_share": 0.6093943139678616
+        "leaves": 1579,
+        "deepest_depth": 6,
+        "deepest_path": "findings.[].evidence.rows.[].element_uid",
+        "deeper_than_three": 956,
+        "deeper_than_three_share": 0.6054464851171628
     }
 }

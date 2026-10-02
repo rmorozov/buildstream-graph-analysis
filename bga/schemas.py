@@ -1696,14 +1696,14 @@ _EVIDENCE_FIELDS = {
     "blast_count": ("count", "Elements a change here rebuilds, transitively."),
     "dependency_stages": (
         "count",
-        "Levels the graph's elements group into by their dependencies "
-        "alone — nothing in a stage can start before the stage above it "
-        "finishes, whatever the capacity.",
+        "Levels the graph's elements group into by their longest "
+        "dependency chain — an element sits one level below its deepest "
+        "dependency.",
     ),
     "widest_stage": (
         "count",
-        "Elements in the largest dependency stage — the ceiling on how "
-        "many can ever build at once, which no number of builders lifts.",
+        "Elements in the largest dependency level — how many share one "
+        "depth, not a bound on how many can build at once.",
     ),
     "zero_slack_off_path": (
         "count",
@@ -1883,32 +1883,6 @@ EVIDENCE_QUANTITIES.update(
                         INLINE: "name",
                         QUANTITY: "share",
                         "description": "How much of the chain this row's element accounts for.",
-                    },
-                }
-            },
-        },
-        "steps": {
-            GROWS: False,
-            "maxItems": 3,  # `HORIZON_STEPS_SHOWN`
-            "items": {
-                "properties": {
-                    "saving_us": {
-                        QUANTITY: "duration_us",
-                        "description": "What taking this step alone is worth, before the ones after it.",
-                    },
-                    "makespan_after_us": {
-                        QUANTITY: "duration_us",
-                        "description": "Where the finish lands once this step is taken.",
-                    },
-                    "cumulative_saving_us": {
-                        QUANTITY: "duration_us",
-                        "description": "Everything saved up to and including it.",
-                    },
-                    "entering": {
-                        GROWS: "elements entering the critical path at that step "
-                        "(subset of elements, no cap within the step)",
-                        "items": {"type": "string", "description": "element uid"},
-                        "description": "Elements not on the previous step's critical path and on this one.",
                     },
                 }
             },

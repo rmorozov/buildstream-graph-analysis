@@ -502,9 +502,6 @@ def grown(browser, tmp_path_factory):
     for key in _GRAFTED:
         if not payload.get(key):
             payload[key] = copy.deepcopy(two_plane[key])
-    payload["findings"].append(
-        copy.deepcopy(next(f for f in two_plane["findings"] if f.get("evidence", {}).get("steps")))
-    )
     named = _named_paths()
     markers = _fill(payload, named)
     (snapshot / "analyze.json").write_text(json.dumps(payload))

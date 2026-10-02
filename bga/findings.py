@@ -92,7 +92,6 @@ FINDING_READERS = {
     "failed-task-time": "local-optimizer",
     "time-concentration": "local-optimizer",
     "joint-saving": "local-optimizer",
-    "optimization-horizon": "local-optimizer",
     "blast-radius-ranking": "local-optimizer",
     "certified-headroom": "local-optimizer",
     "wait-category": "local-optimizer",
@@ -1027,11 +1026,9 @@ def _graph_shape_findings(result: AnalysisResult) -> list[dict]:
     not a reader about shape.
 
     This one reads `elements.unweighted_depth` and nothing else. Group
-    the elements by depth and you have the dependency stages: nothing
-    in a stage can start before the stage above it finishes, whatever
-    the capacity, so the widest stage is a **ceiling on concurrency
-    that no number of builders can lift**. That is the shape making
-    something impossible, stated as the number it is.
+    the elements by depth and you have the dependency levels; the widest
+    is how many share one depth. It bounds nothing: an element waits on
+    its own dependencies, not on its whole level above (UX-1265).
 
     It is silent on the one shape that imposes nothing - a single stage,
     where every element is independent and the widest stage is the whole
@@ -1053,9 +1050,9 @@ def _graph_shape_findings(result: AnalysisResult) -> list[dict]:
         _finding(
             'graph-width',
             SEVERITY_INFO,
-            f"{plural(widest, 'element')} at most can ever build at once — the widest of {stages:,} dependency stages",
+            f"The widest of {stages:,} dependency levels holds {widest:,} of {len(depth):,} elements",
             evidence={'element_count': len(depth), 'dependency_stages': stages, 'widest_stage': widest},
-            step=_none("a ceiling the dependency graph sets; only its dependencies move it"),
+            step=_none("a shape the dependency graph has; only its dependencies move it"),
         )
     ]
 
@@ -1642,12 +1639,16 @@ def _opportunity_findings(result: AnalysisResult, chain_bound: bool) -> list[dic
     # conditioned on this run's own capacity verdict. Imported here
     # rather than at module scope: `bga.report` imports this module, so a
     # top-level import back into it is a cycle.
-    from .report._shared import resolve_attribution_hint
+    from .report._shared import resolve_attribution_hint, resource_wait_advice
 
     hint = resolve_attribution_hint(
         top_category,
         getattr(result, 'capacity_verdict', None),
     )
+    if top_category == 'resource_wait_us':
+        # UX-1271: this run's saturated resource; `bga sweep` is the step's command, not its sentence.
+        advice, _ = resource_wait_advice(getattr(result, 'capacity_verdict', None))
+        hint = f"{_saturated_resource(result)} — {advice}"
     # UX-83: and conditioned on Plane 2, when Plane 2 is in hand. The
     # static RESOURCE WAIT hint says "try --capacity N with a higher N",
     # which on a measured-saturated host is the opposite of the fix - and
@@ -1678,6 +1679,27 @@ def _opportunity_findings(result: AnalysisResult, chain_bound: bool) -> list[dic
     ]
 
 
+#: UX-1271: a resource is named saturated only this busy on average against its configured capacity.
+SATURATED_SHARE = 0.9
+
+
+def _saturated_resource(result: AnalysisResult) -> str:
+    """Builder slots, when the run's configured builders were >= SATURATED_SHARE busy; else the neutral opening.
+
+    Only builders have a configured capacity on the result; a peak is not a capacity.
+    """
+    from .report._shared import RESOURCE_WAIT_SATURATED
+
+    builders = ((getattr(result, 'agent_sizing', None) or {}).get('builders') or {}).get('observed') or (
+        getattr(result, 'capacity_recommendation', None) or {}
+    ).get('builders')
+    mean = (getattr(result, 'occupancy', None) or {}).get('resource_occupancy') or {}
+    busy = next((v for k, v in mean.items() if str(k).rsplit('.', 1)[-1] == 'PROCESS'), None)
+    if not builders or busy is None or busy / builders < SATURATED_SHARE:
+        return RESOURCE_WAIT_SATURATED
+    return f"builder slots were saturated ({busy:.2f} of {builders:g} busy on average)"
+
+
 def _and(names: list[str]) -> str:
     return names[0] if len(names) == 1 else ", ".join(names[:-1]) + " and " + names[-1]
 
@@ -1690,7 +1712,10 @@ def _outlook_findings(result: AnalysisResult) -> list[dict]:
     findings: list[dict] = []
 
     joint = signals.get('joint_saving')
+    horizon = (signals.get('optimization_horizon') or [])[:HORIZON_STEPS_SHOWN]
+    ordered = len(horizon) > 1
     if joint and joint.get('joint_saving_us') and total:
+        marked: list[str] = []
         joint_us = joint['joint_saving_us']
         sum_us = joint.get('sum_of_individual_us') or 0
         kind = joint.get('relation') or ('add' if joint.get('savings_add') else 'overlap')
@@ -1705,19 +1730,29 @@ def _outlook_findings(result: AnalysisResult) -> list[dict]:
             )
         else:
             elements = list(joint['elements'])
-            later = [uid for uid in joint.get('worth_more_after') or [] if uid in elements] or elements[1:]
+            marked = [uid for uid in joint.get('worth_more_after') or [] if uid in elements]
+            later = marked or elements[1:]
             earlier = elements[: elements.index(later[0])] or elements[:1]
             relation = (
-                f"more than the {qty.duration(sum_us)} alone: {_and(later)} "
+                # UX-1266: the order line names each element; a card names one once.
+                f"more than the {qty.duration(sum_us)} alone: "
+                + ("a later step pays off only once the earlier ones are done" if marked else "together they compound")
+                if ordered
+                else f"more than the {qty.duration(sum_us)} alone: {_and(later)} "
                 f"{'pays' if len(later) == 1 else 'pay'} off after {_and(earlier)}"
             )
+        order = " -> ".join(
+            f"{step['element_uid']} ({qty.duration(step['makespan_after_us'])}"
+            f"{(', pays off after the step before' if at == 1 else ', pays off after the steps before') if step['element_uid'] in marked else ''})"
+            for at, step in enumerate(horizon)
+        )
         findings.append(
             _finding(
                 'joint-saving',
                 SEVERITY_HIGH,
                 f"{qty.duration(joint_us)} ({qty.share(joint_us / total)} of the build) is what the top "
                 f"{len(joint['elements'])} are worth together",
-                detail=[f"    That is {relation}"],
+                detail=[f"    That is {relation}"] + ([f"    In this order: {order}"] if ordered else []),
                 elements=list(joint['elements']),
                 evidence={
                     'joint_saving_us': joint_us,
@@ -1728,33 +1763,6 @@ def _outlook_findings(result: AnalysisResult) -> list[dict]:
                 step=_step(
                     f"Start with {joint['elements'][0]}, then the rest.",
                     _run_command(result, 'blast', joint['elements'][0]),
-                ),
-            )
-        )
-
-    horizon = signals.get('optimization_horizon') or []
-    if len(horizon) > 1:
-        shown = horizon[:HORIZON_STEPS_SHOWN]
-        steps = " -> ".join(f"{step['element_uid']} ({qty.duration(step['makespan_after_us'])})" for step in shown)
-        last = shown[-1]
-        detail = [f"    In this order: {steps}"]
-        if total:
-            detail.append(
-                f"    The last of those leaves "
-                f"{qty.share(last['cumulative_saving_us'] / total)} of the build "
-                f"removed, projected from this run without building again"
-            )
-        findings.append(
-            _finding(
-                'optimization-horizon',
-                SEVERITY_HIGH,
-                f"{len(shown)} fixes, in order of what each is worth, take the build to "
-                f"{qty.duration(last['makespan_after_us'])}",
-                detail=detail,
-                elements=[step['element_uid'] for step in shown],
-                evidence={'steps': shown},
-                step=_step(
-                    f"Start with {shown[0]['element_uid']}.", _run_command(result, 'blast', shown[0]['element_uid'])
                 ),
             )
         )

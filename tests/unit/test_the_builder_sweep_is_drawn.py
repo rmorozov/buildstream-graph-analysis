@@ -26,10 +26,28 @@ VIEWPORTS = [(1440, 900), (390, 844)]
 REPLAYED = re.compile(r"the replay puts (\d+) builders at [\d.]+ (?:s|min|h) \(replayed, no contention\)")
 
 _READ = r"""
-(() => {
+(async () => {
+  for (const open of document.querySelectorAll('section.chapter[data-open="false"] [data-chapter-open]')) open.click();
+  for (let i = 0; i < 10; i += 1) await new Promise((d) => requestAnimationFrame(d));
   const rec = document.querySelector('[data-section="capacity_recommendation"]');
   const series = rec?.querySelector('[data-role="series"]');
+  rec?.scrollIntoView();
+  for (let i = 0; i < 5; i += 1) await new Promise((d) => requestAnimationFrame(d));
+  // Each dot, and whether every box that clips it holds all of it: what the reader sees, not the markup.
+  const whole = (dot) => {
+    const r = dot.getBoundingClientRect();
+    for (let n = dot.ownerSVGElement; n && n !== document.documentElement; n = n.parentElement) {
+      const s = getComputedStyle(n);
+      if (s.overflowX === "visible" && s.overflowY === "visible") continue;
+      const c = n.getBoundingClientRect();
+      if (r.left < c.left - 0.5 || r.right > c.right + 0.5 || r.top < c.top - 0.5 || r.bottom > c.bottom + 0.5) return false;
+    }
+    return r.width > 0;
+  };
+  const dots = [...(series?.querySelectorAll("circle.spark-point") ?? [])]
+    .map((c) => ({ mark: c.dataset.mark, at: Number(c.dataset.at), whole: whole(c) }));
   return {
+    dots,
     points: series ? Number(series.dataset.points) : null,
     unit: series?.dataset.unit ?? null,
     marks: series ? series.querySelectorAll('svg[data-role="sparkline"] rect').length : null,
@@ -86,6 +104,18 @@ def test_the_curve_is_drawn_one_mark_a_point(page, read, width):
     assert (got["points"], got["marks"], got["unit"]) == (count, count, "builder"), got
     assert REPLAYED.search(got["step"] or ""), got["step"]
     assert not re.search(rf"knee is at {count} builders", got["text"]), got["text"]
+
+
+@pytest.mark.skipif(chrome is None, reason=NO_BROWSER)
+@pytest.mark.parametrize("width", [w for w, _ in VIEWPORTS])
+def test_the_curve_dots_its_ends_whole_and_the_points_the_page_names(page, read, width):
+    """Round 165's walk: end dots were half-clipped at x 0 and 100, and the knee the sentence names was not drawn."""
+    rec = page[0]["capacity_recommendation"]
+    knee = next(c["allows"] for c in rec["constraints"] if c["name"] == "graph")
+    dots = {d["mark"]: d for d in read[width]["dots"]}
+    assert all(d["whole"] for d in read[width]["dots"]), read[width]["dots"]
+    assert dots["knee"]["at"] == min(knee, len(rec["sweep"])) - 1, dots
+    assert dots["configured"]["at"] == rec["builders"] - 1, dots
 
 
 def test_a_knee_at_the_range_top_is_no_knee():

@@ -425,7 +425,7 @@ export function renderStructured(key, value, hint = {}, node = undefined,
   // beside an element's row. Neither comes through here.
   if (control === CONTROLS.SPARKLINE) {
     return sparkline(value, {
-      unit: String(declared[SERIES]), grade: GRADE_EXHIBIT,
+      unit: String(declared[SERIES]), grade: GRADE_EXHIBIT, marks: hint.marks ?? [],
       format: (n) => quantity(n, quantityFor(node, key)),
     });
   }

@@ -1346,14 +1346,15 @@ button.json-toggle:hover { color: var(--fg); }
 }
 .sparkline {
   width: var(--draw-annotation-w); height: var(--draw-annotation-h);
-  flex: none;
+  flex: none; overflow: visible;
 }
 .spark-line { stroke: var(--accent-mark); stroke-width: 1.2; }
 .spark-point { fill: var(--accent-mark); stroke: var(--bg); stroke-width: .4; }
 /* The peak is not a *status* - it is a position - so it is told apart
    by size and a ring rather than by a status tone (§4.3 reserves those,
    and §4.2 allows one accent). */
-.spark-point[data-mark="peak"] { r: 2.2; stroke-width: .8; }
+.spark-point[data-mark="peak"], .spark-point[data-mark="knee"] { r: 2.2; stroke-width: .8; }
+.spark-point[data-mark="configured"] { fill: var(--bg); stroke: var(--accent-mark); stroke-width: .8; }
 .series-sentence, .density-sentence {
   font-size: var(--font-small); font-variant-numeric: tabular-nums;
 }

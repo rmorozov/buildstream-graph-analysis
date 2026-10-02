@@ -274,6 +274,11 @@ const allClear = (value) => (value === 0 ? "zero" : value === null
   || (typeof value === "object" && Object.keys(value).length === 0) ? "absent" : null);
 const CLEAR_LABEL = { absent: "Not recorded", zero: "Zero" };
 
+/** The sweep's knee and this run's builders, as 0-based points of `sweep` (1 builder first). */
+const seriesMarks = (key, name, object) => (key === "capacity_recommendation" && name === "sweep" ? [
+  { at: Math.min((object.constraints ?? []).find((c) => c.name === "graph")?.allows, object.sweep?.length) - 1, role: "knee" },
+  { at: object.builders - 1, role: "configured" }] : []);
+
 export function renderPairs(key, object, hint = {}, node = undefined,
                             payload = undefined, root = undefined) {
   const direction = hint[DIRECTION];
@@ -337,7 +342,7 @@ export function renderPairs(key, object, hint = {}, node = undefined,
                   built.tools, built.table);
       }
     } else if (value !== null && typeof value === "object") {
-      cell = renderStructured(name, value, hintsOf(child), child, 0,
+      cell = renderStructured(name, value, { ...hintsOf(child), marks: seriesMarks(key, name, object) }, child, 0,
                               `${key}.${name}`);
     } else if (typeof value === "number" && direction) {
       // A signed change, coloured by what the schema says "better" is,

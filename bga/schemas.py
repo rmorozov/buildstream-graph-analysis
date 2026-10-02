@@ -4888,6 +4888,11 @@ _ANALYZE_HINTS = {
                             "description": "A capacity-bound run's builders "
                             "step, leading the list in place of an element.",
                         },
+                        "replayed_delta_us": {
+                            QUANTITY: "duration_us",
+                            "description": "The builders step's replayed wall at this run's builders minus at "
+                            "the count it quotes: a replay with no contention, not a measured saving.",
+                        },
                     },
                 },
             },
@@ -6390,6 +6395,14 @@ _STORE_AGGREGATE_HINTS = {
 
 _STORE_HINTS = {
     "total_bytes": {QUANTITY: "bytes", "description": "What the stored snapshots occupy on disk, together."},
+    # UX-1276: a permitted key (additionalProperties), absent unless `.bga/config` declares `builds_per_day`.
+    "build_rate": {
+        "description": "Builds a day, as declared, so a saving reads in agent-hours a day. Absent when undeclared.",
+        "properties": {
+            "per_day": {QUANTITY: "rate_per_day", "description": "Builds of this project a day, as declared."},
+            "source": {"description": "Where the rate came from: declared in `.bga/config`, never counted."},
+        },
+    },
     "count": {
         QUANTITY: "count",
         "description": "Snapshots held. The store's own size, whether or not `snapshots` lists all of them.",
@@ -6855,6 +6868,7 @@ _SCHEMAS = {
         "the alias `@last`/`@prev` resolution would give it, and why it "
         "is not a measurement if it is not one. Incomplete captures are "
         "listed rather than hidden — they occupy the disk.",
+        optional={"build_rate": "object"},
         hints=_STORE_HINTS,
     ),
     STORE_AGGREGATE: lambda: _document(

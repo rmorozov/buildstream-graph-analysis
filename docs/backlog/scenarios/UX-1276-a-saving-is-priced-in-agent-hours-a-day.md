@@ -2,7 +2,7 @@
 
 **Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-164 view UI re-review on a 2,402-element two-plane page (2026-10-02), brainstorm B3 | **Serves:** R8, R5 | **Topic:** viewer | **Area:** bga, bga/viewer | **Shape:** judgement | **Reading:** container
 
-**Guard:** none — open, no guard named yet
+**Guard:** `tests/unit/test_a_saving_is_priced_per_day.py` (a served two-plane store, `builds_per_day` undeclared then 300, Chromium 1440x900; the 2,402-element page's builders row by node probe)
 
 ## Motivation
 
@@ -36,3 +36,27 @@ Money; cross-project aggregation.
 ## Acceptance Test
 
 On a store with a declared rate the decision's saving shows agent-hours per day equal to seconds x rate / 3600 and names its source; with no rate the line is absent. Mutation: drop the rate source, and the guard reds.
+
+## Outcome
+
+Gap measured (base `b35c30e31`): no build rate reaches any document - `store/v1` has no rate key, the decision's rows
+read `saves 2.1 s` and stop, and the capacity-bound builders row carries no delta to price.
+
+Close measured (a served `two_plane_run` store, 2 snapshots, `.bga/config` without then with `"builds_per_day": 300`;
+the decision rows' text at 1440x900, Perfetto query elided):
+
+```text
+undeclared   layer00/mod003.bst saves 2.1 s Investigate in Perfetto ...           store/v1: no build_rate
+declared     layer00/mod003.bst saves 2.1 s ≈ 0.17 agent-hours/day (300 builds/day, declared in .bga/config) ...
+             store/v1: build_rate {per_day: 300, source: "declared in .bga/config"}
+2,402 page   top_actions[0].replayed_delta_us 2435300000 (4 builders 47.0 min - 30 builders 6.4 min);
+             the row: "replays 40.6 min shorter ≈ 203 agent-hours/day (300 builds/day, declared in .bga/config)"
+```
+
+`test_a_saving_is_priced_per_day.py`: 5 passed in 4.3s.
+
+| Mutation | Reddened | Count |
+|---|---|---|
+| `source` dropped from `build_rate()` | `test_a_declared_rate_is_read_with_its_source`, `test_a_saving_shows_its_agent_hours_and_their_source` | 2 failed, 3 passed |
+| the config key ignored (`declared = None`) | the same two | 2 failed, 3 passed |
+| `agentHours` divides by 1800 | the served saving row, the builders row `[rate0]` | 2 failed, 3 passed |

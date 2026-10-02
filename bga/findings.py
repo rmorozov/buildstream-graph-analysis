@@ -2614,6 +2614,10 @@ def _builders_actions(result: AnalysisResult, by_id: dict) -> list[dict]:
     # UX-1256: the capacity finding's own step where it has one; the derived step otherwise.
     said = ((by_id.get('capacity-recommendation') or {}).get('step') or {}).get('text')
     action = {'step': said.rstrip('.') if said else _capacity_step(result)[1]}
+    # UX-1276: the replayed wall the step's clause gains, priced per day where a rate is declared.
+    delta = sweep_curve.replayed_delta_us(getattr(result, 'capacity_recommendation', None) or {})
+    if delta:
+        action['replayed_delta_us'] = delta
     if finding:
         action['finding_id'] = finding
     return [action]

@@ -779,7 +779,7 @@ export function renderDecision(payload, investigate = null, copy = null,
       list.append(actionRow(action, investigate, renderWhyRanked(
         payload, action,
         { ...options, rank: index + 1, ranking: shared && claim,
-          said: new Set(common.map((entry) => entry.finding.id)) })));
+          said: new Set(common.map((entry) => entry.finding.id)) }), options.store?.build_rate));
     }
     section.append(list);
     if (common.length) section.append(renderSaidOnce(common));
@@ -880,7 +880,16 @@ function followsFrom(name, payload, reportSchema) {
   return named;
 }
 
-function actionRow(action, investigate, whyBlock = null) {
+/** `UX-1276`: one build's saving as agent-hours a day at the store's declared rate; null with no rate. */
+function agentHours(field, savingUs, rate) {
+  if (typeof savingUs !== "number" || typeof rate?.per_day !== "number") return null;
+  const hours = savingUs / 1e6 * rate.per_day / 3600;
+  return el("span", { class: "worth num", "data-field": `${field}.agent_hours`, "data-raw": String(hours) },
+    `≈ ${hours >= 10 ? tally(Math.round(hours)) : Number(hours.toPrecision(2))} agent-hours/day `
+    + `(${tally(rate.per_day)} builds/day, ${rate.source})`);
+}
+
+function actionRow(action, investigate, whyBlock = null, rate = null) {
   const row = document.createElement("li");
   row.className = "action";
   row.setAttribute("data-element", action.element_uid ?? "");
@@ -907,6 +916,14 @@ function actionRow(action, investigate, whyBlock = null) {
     worth.setAttribute("data-raw", String(action.saving_us));
     worth.textContent = `saves ${seconds(action.saving_us)}`;
     row.append(worth);
+    const perDay = agentHours("saving_us", action.saving_us, rate);
+    if (perDay) row.append(perDay);
+  } else if (typeof action.replayed_delta_us === "number") {
+    // UX-1274's replayed gain: a replay, said as one, beside its price a day.
+    row.append(el("span", { class: "worth num", "data-field": "replayed_delta_us",
+      "data-raw": String(action.replayed_delta_us) }, `replays ${seconds(action.replayed_delta_us)} shorter`));
+    const perDay = agentHours("replayed_delta_us", action.replayed_delta_us, rate);
+    if (perDay) row.append(perDay);
   } else if (typeof action.downstream_count === "number") {
     const reach = document.createElement("span");
     reach.className = "worth num";

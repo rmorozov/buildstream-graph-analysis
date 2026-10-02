@@ -47,3 +47,14 @@ def replayed_clause(recommendation: dict) -> str:
         return ''
     count = min(graph['allows'], len(walls))
     return f"the replay puts {plural(count, 'builder')} at {qty.duration(walls[count - 1])} (replayed, no contention)"
+
+
+def replayed_delta_us(recommendation: dict) -> Optional[int]:
+    """The replayed wall at this run's builders minus at the clause's count; `None` without both points or a gain."""
+    walls = recommendation.get('sweep') or []
+    graph = next((c for c in recommendation.get('constraints') or [] if c.get('name') == 'graph'), None)
+    builders = recommendation.get('builders')
+    if not graph or not builders or builders > len(walls):
+        return None
+    delta = walls[builders - 1] - walls[min(graph['allows'], len(walls)) - 1]
+    return delta if delta > 0 else None

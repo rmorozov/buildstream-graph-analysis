@@ -248,6 +248,7 @@ bga/cache_effectiveness.py  the cache's own numbers
 bga/cache_capacity.py  what the cache was configured to hold (UX-896)
 bga/artifact_weight.py what one element's artifact weighs, walked from the CAS (UX-907)
 bga/store_aggregate.py the store as a distribution, per host class (UX-234)
+bga/build_rate.py      the builds a day `.bga/config` declares, for agent-hours
 bga/capacity_model.py  Allen-Cunneen M/G/c over that distribution, each
                        assumption recorded where the arithmetic uses it (UX-595)
 bga/run_store.py       .bga/runs, the @last/@prev aliases, prune

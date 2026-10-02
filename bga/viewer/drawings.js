@@ -466,7 +466,7 @@ export function sparkline(values, {
     x: edge(at - 1).toFixed(2), y: "0", width: (edge(at) - edge(at - 1)).toFixed(2),
     height: String(size.spark), fill: "transparent",
   }), says(at))));
-  // Round 165's walk: a point the sentence beside the drawing names (a knee, this run's count) is dotted too.
+  // A point the sentence beside the drawing names (a knee, this run's count) is dotted too.
   const named = marks.filter((m) => Number.isInteger(m.at) && m.at >= 0 && m.at < points.length);
   for (const [at, role] of [[0, "first"], [points.length - 1, "last"],
                             [peak, "peak"], ...named.map((m) => [m.at, m.role])]) {

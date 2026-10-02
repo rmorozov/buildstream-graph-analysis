@@ -621,9 +621,10 @@ would need the real failing build to say the same thing.
 
 Read-only, one line per check, and a concrete remedy on every failure. It invents no check — each one fronts a failure that really happened while standing this project up, and the remedy quoted is the one that actually fixed it: a virtualenv for `pluginbase` under a distro-patched setuptools, `buildstream-plugins` for the `cmake` kind, the `apparmor_restrict_unprivileged_userns` sysctl for bwrap's loopback, `build-essential` for the hook and spine compile, `stage_runtimes.sh`/`stage_cpp_toolchain.sh` for a sandbox with no shell.
 
-Two details worth knowing:
+Details worth knowing:
 
 - **bwrap is probed, not just found.** Presence is not the check that matters — bwrap's namespace setup succeeds and then the sandbox fails to bring up loopback, deep inside a build. `doctor` runs the same trivial sandboxed command CI's `bst-smoke` job does.
+- **The compiler is the capture's own, and it compiles the real hook** (`UX-1287`). `c-compiler` resolves `cc` then `gcc` exactly as `compile_hook` does and compiles `tools/native_trace/hook.c` once into a scratch directory it removes, so a missing compiler and one that cannot build the hook (no libc headers) are both a `FAIL` worded as the capture would raise it, naming `build-essential`. A compiler that cannot link `-static` stays a warning: only `--trace-spine` needs it.
 - **"No element plugin registered for kind" gets two different remedies**, because it has two different causes: the package is missing, or the project has not declared it. Telling a user to install what they already have is how a diagnostic loses its reader.
 - **A stale `buildbox-casd` is checked before the build, not guessed at afterwards** (`UX-161`). Any plain `bst` command leaves a daemon holding the cache directory, and a capture that starts under one fails in a way the summary could previously only speculate about. `doctor` reads `/proc` for a casd already holding this project's cache — the directory `bst` itself would use, `buildstream2.conf` before `buildstream.conf` (`UX-166`) — and prints the remedy.
 

@@ -17,9 +17,11 @@ import os
 import re
 import subprocess
 import sys
+import tempfile as tempfile_mod
 
 import pytest
 
+from tools import bst_native_build_tracer as tracer
 from tools.bga_doctor import (
     FAIL,
     OK,
@@ -256,9 +258,9 @@ def test_the_compiler_check_is_the_one_the_capture_performs():
 
     from tools import bst_native_build_tracer as tracer
 
-    source = inspect.getsource(tracer.compile_hook)
+    source = inspect.getsource(tracer.c_compiler)
     compilers = set(re.findall(r'shutil\.which\(["\'](\w+)["\']\)', source))
-    assert compilers, "compile_hook no longer resolves a compiler by name"
+    assert compilers, "c_compiler no longer resolves a compiler by name"
 
     import shutil
 
@@ -398,12 +400,13 @@ class TestTheCompilerCheckProbesRatherThanChecks:
     machine where the hook compiles fine."""
 
     def test_both_capabilities_are_probed(self):
+        """UX-1287: the hook half is the capture's own `compile_hook`, not a restatement of its flags."""
         import inspect
 
         import tools.bga_doctor as doctor
 
         source = inspect.getsource(doctor.check_compiler)
-        assert "-shared" in source and "-fPIC" in source
+        assert "compile_hook(" in source
         assert "-static" in source
 
     def test_a_compiler_that_cannot_link_static_warns_and_says_which(self, monkeypatch):
@@ -412,6 +415,8 @@ class TestTheCompilerCheckProbesRatherThanChecks:
         import tools.bga_doctor as doctor
 
         monkeypatch.setattr(doctor, "_compiles", lambda argv: "-static" not in argv)
+        monkeypatch.setattr(tracer, "compile_hook", lambda build_dir: os.path.join(build_dir, "hook.so"))
+        monkeypatch.setattr(tracer, "c_compiler", lambda purpose: "/usr/bin/cc")
 
         finding = doctor.check_compiler()
 
@@ -424,6 +429,8 @@ class TestTheCompilerCheckProbesRatherThanChecks:
         import tools.bga_doctor as doctor
 
         monkeypatch.setattr(doctor, "_compiles", lambda argv: True)
+        monkeypatch.setattr(tracer, "compile_hook", lambda build_dir: os.path.join(build_dir, "hook.so"))
+        monkeypatch.setattr(tracer, "c_compiler", lambda purpose: "/usr/bin/cc")
 
         assert doctor.check_compiler()["status"] == OK
 
@@ -443,6 +450,43 @@ class TestTheCompilerCheckProbesRatherThanChecks:
         monkeypatch.chdir(tmp_path)
         doctor.check_compiler()
         assert sorted(os.listdir(tmp_path)) == before
+
+
+class TestTheHookIsCompiledOnce:
+    """UX-1287: doctor compiles the real hook with the capture's own compiler, so a missing or broken
+    `cc` fails before the first capture, in the words `compile_hook` would raise."""
+
+    def _doctor_on(self, monkeypatch, path_dir):
+        monkeypatch.setenv("PATH", str(path_dir))
+        return check_compiler()
+
+    def test_no_compiler_fails_with_the_capture_s_message(self, monkeypatch, tmp_path):
+        finding = self._doctor_on(monkeypatch, tmp_path)
+        with pytest.raises(tracer.TraceError) as raised:
+            tracer.compile_hook(str(tmp_path))
+        assert finding["status"] == FAIL, finding
+        assert finding["summary"] == str(raised.value)
+        assert "cc" in finding["summary"]
+        assert "build-essential" in finding["remedy"]
+
+    def test_a_cc_that_cannot_compile_fails_naming_the_failure(self, monkeypatch, tmp_path):
+        stub = tmp_path / "cc"
+        stub.write_text("#!/bin/sh\necho 'cc: fatal error: stdio.h: No such file' >&2\nexit 1\n")
+        stub.chmod(0o755)
+        finding = self._doctor_on(monkeypatch, tmp_path)
+        assert finding["status"] == FAIL, finding
+        assert finding["summary"].startswith("failed to compile ") and "hook.c" in finding["summary"]
+        assert any("stdio.h" in line for line in finding["detail"]), finding
+        assert "build-essential" in finding["remedy"]
+
+    def test_the_scratch_directory_is_removed(self, monkeypatch, tmp_path):
+        monkeypatch.setenv("TMPDIR", str(tmp_path))
+        tempfile_mod.tempdir = None
+        try:
+            check_compiler()
+        finally:
+            tempfile_mod.tempdir = None
+        assert os.listdir(tmp_path) == []
 
 
 class TestTheWholeChainProbe:

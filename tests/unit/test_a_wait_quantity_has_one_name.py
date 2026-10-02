@@ -33,8 +33,8 @@ MARKS = {
     "gap": "scheduling_gap_us",
 }
 WAIT_KEYS = set(MARKS.values()) | {"certified_headroom", "certified_headroom_us"}
-#: A capacity kind a gloss could name; the source line must name the same one.
-KINDS = ("host core", "builder slot", "cpu budget")
+#: Each capacity source's kind, as its line and the gloss spell it.
+KINDS = ("host core", "cpu budget", "measured")
 
 _READ = r"""
 (() => {
@@ -52,6 +52,9 @@ _READ = r"""
   return {
     pairs: pairs.map(([k, v]) => [k, v.trim()]),
     relation: document.querySelector('#overview [data-role="wait-relation"]')?.textContent ?? '',
+    chain: document.querySelector('#overview [data-role="chain-relation"]')?.textContent ?? '',
+    headroom: document.querySelector('#overview [data-role="headroom-relation"]')?.textContent ?? '',
+    wall: document.querySelector('#by_binary th[data-column="wall_us"]')?.getAttribute('title') ?? '',
     floors: [...document.querySelectorAll('#overview [data-field^="floors."]')].length,
     split: [...document.querySelectorAll('dl.opportunity dt')].map((dt) => dt.textContent),
     gloss: util?.querySelector('[data-describes="effective_cpus"]')?.textContent ?? '',
@@ -110,12 +113,34 @@ def test_the_time_chapter_states_the_waits_against_the_gaps(page):
 
 
 @needs_browser
+def test_the_chain_and_the_headroom_say_what_they_are_beside(page):
+    """Execution on the chain is drawn beside Chain floor T∞, Certified headroom beside both gaps."""
+    read, _doc = page
+    for key, terms in (
+        ("chain", ("Execution on the chain", "Chain floor T∞")),
+        ("headroom", ("Certified headroom", "Resource floor LB", "Scheduling gap")),
+    ):
+        for term in terms:
+            assert term in read[key], (key, term, read[key])
+
+
+@needs_browser
+def test_the_binary_wall_says_it_sums_process_lifetimes(page):
+    """make's Wall 2.9 h on a 47.2 min run: the column says it is a sum that can pass the wall clock."""
+    read, doc = page
+    top = doc["by_binary"][0]
+    assert top["wall_us"] > doc["total_duration_us"], (top, doc["total_duration_us"])
+    for said in ("summed", "exceed the run's wall clock"):
+        assert said in read["wall"], (said, read["wall"])
+
+
+@needs_browser
 def test_the_effective_cpus_gloss_agrees_with_its_source(page):
     read, _doc = page
     gloss, source = read["gloss"].lower(), read["source"].lower()
     assert gloss and source, read
-    named = [kind for kind in KINDS if kind in gloss]
-    assert all(kind in source for kind in named), (read["gloss"], read["source"])
+    (kind,) = [kind for kind in KINDS if kind in source]
+    assert kind in gloss, (read["gloss"], read["source"])
     assert not re.search(r"\bnot (host cores|builder slots|a declared)", gloss), read["gloss"]
 
 

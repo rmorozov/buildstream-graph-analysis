@@ -62,3 +62,20 @@ context, not a lever."}`. `test_one_bucket_one_row.py` matches a bucket's row by
 | restore "Builder slots as recorded, not host cores." | `test_the_effective_cpus_gloss_agrees_with_its_source` | 1 failed |
 | share read against `measured` again | `test_a_costliest_binary_under_the_floor_carries_no_step` | 1 failed |
 | reverted | | 4 passed |
+
+Verifier fix: the overview's relation is now a fold, `How these figures relate` (class `overview-relation`, a
+declared `LAYOUT_FOLDS` entry), under the floors: `Execution on the chain is the path that set this finish; Chain floor
+T∞ is the graph's longest.`, `Scheduling gap ... overlaps Waiting on resources.`, `Certified headroom is the wall clock
+beyond Resource floor LB; it overlaps Scheduling gap.` 390 macro_micro J2 wheel 1,578 px (limit 1,635.7). Kept terse:
+the first wording put `xl_both` at 13,235 words over its 13,200 budget. `by_binary`'s Wall column title says it is
+process lifetimes summed over every call and can exceed the run's wall clock (make 2.9 h on a 47.2 min run). The
+Effective CPUs gloss names the source kinds; the guard needs the source line's kind in it.
+Guard: 6 passed (25.3 s).
+
+| mutation | reddened | run printed |
+|---|---|---|
+| chain relation's `data-role` renamed | `test_the_chain_and_the_headroom_say_what_they_are_beside` | 1 failed |
+| headroom relation's `data-role` renamed | the same | 1 failed |
+| Wall gloss restored to "summed the same way" | `test_the_binary_wall_says_it_sums_process_lifetimes` | 1 failed |
+| gloss names no kind ("the source line says where it came from") | `test_the_effective_cpus_gloss_agrees_with_its_source` | 1 failed |
+| reverted | | 6 passed |

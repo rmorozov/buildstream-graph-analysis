@@ -4920,7 +4920,9 @@ _ANALYZE_HINTS = {
                 },
                 "wall_us": {
                     QUANTITY: "duration_us",
-                    "description": "Wall-clock those calls spanned, summed the same way; absent with CPU.",
+                    "description": "Each call's process lifetime, summed over every call in every "
+                    "element: overlapping and nested calls each count, so it can exceed the run's "
+                    "wall clock. Absent with CPU.",
                 },
                 "calls": {QUANTITY: "count", "description": "How many times the whole run ran it."},
                 "elements": {QUANTITY: "count", "description": "How many elements ran it; absent with CPU."},
@@ -5258,7 +5260,8 @@ _ANALYZE_HINTS = {
             "effective_cpus": {
                 INLINE: "name",
                 QUANTITY: "count",
-                "description": "The capacity this accounting divides by, in CPUs; the source line says where it came from.",
+                "description": "The capacity this accounting divides by, in CPUs: measured, a declared CPU budget "
+                "or detected host cores, as the source line says.",
             },
             "effective_cpus_source": {
                 INLINE: "caveat",

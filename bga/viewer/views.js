@@ -815,12 +815,26 @@ export function renderOverview(payload) {
         "data-section-link": "floors",
       }));
     }
-    // `UX-1269`: the decision's gap and the waits above are two cuts of one wall clock, never summed.
-    const para = document.createElement("p");
-    para.setAttribute("data-role", "wait-relation");
-    para.textContent = `${TERMS.scheduling_gap_us} is the wall clock beyond ${TERMS.t_infinity_observed}; `
-      + `it overlaps ${TERMS.resource_wait_us} above and does not add to it.`;
-    section.append(para);
+    // `UX-1269`: the waits, the chain and the floors' gaps drawn together; folded, as the 390 travel budget is spent.
+    const relate = document.createElement("details");
+    relate.className = "overview-relation";
+    relate.setAttribute("data-fold", "overview-relation");
+    const said = document.createElement("summary");
+    said.textContent = "How these figures relate";
+    const para = (role, text) => {
+      const p = document.createElement("p");
+      p.setAttribute("data-role", role);
+      p.textContent = text;
+      return p;
+    };
+    relate.append(said,
+      para("chain-relation", `${TERMS.execution_on_chain_us} is the path that set this finish; `
+        + `${TERMS.t_infinity_observed} is the graph's longest.`),
+      para("wait-relation", `${TERMS.scheduling_gap_us} is the wall clock beyond ${TERMS.t_infinity_observed}; `
+        + `it overlaps ${TERMS.resource_wait_us}.`),
+      para("headroom-relation", `${TERMS.certified_headroom} is the wall clock beyond ${TERMS.lb}; `
+        + `it overlaps ${TERMS.scheduling_gap_us}.`));
+    section.append(relate);
   }
   return section;
 }

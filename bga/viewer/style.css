@@ -931,7 +931,7 @@ section[data-promoted] { border-left: 3px solid var(--accent); }
 .status-line { margin: var(--space-1) 0 var(--space-2); font-size: var(--font-small); }
 .evidence-detail > summary { cursor: pointer; font-size: var(--font-small);
                              color: var(--muted); }
-.overview-tail > summary { cursor: pointer; font-size: var(--font-small);
+.overview-tail > summary, .overview-relation > summary { cursor: pointer; font-size: var(--font-small);
                            color: var(--muted); margin-top: var(--space-1); }
 
 /* UX-208 / UX-209: investigation affordances, and the rail. */

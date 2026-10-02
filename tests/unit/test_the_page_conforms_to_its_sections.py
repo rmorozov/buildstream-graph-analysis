@@ -73,6 +73,7 @@ LAYOUT_FOLDS = {
     "long-text": "`UX-269`'s truncation: it shows the string it cut, and the rest is the same string",
     "question-group": "counted already, in its own summary - `scheduling (3)`",
     "also-noted": "counted already, in its own summary - `Also noted · 4`, one level of cards (`UX-1249`)",
+    "overview-relation": "three sentences on how the overview's figures relate (`UX-1269`). No depth to announce",
 }
 
 

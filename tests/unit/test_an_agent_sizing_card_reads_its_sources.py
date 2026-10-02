@@ -142,7 +142,7 @@ def test_no_host_ram_still_sizes_memory_from_the_process_peaks():
         "builders": 4,
         "bytes": 4 * 65536 * 1024,
         "basis": "process_peak",
-        "bound": "lower",
+        "bound": "none",
         "source": "peak_memory",
     }, memory
 
@@ -170,7 +170,7 @@ console.log(JSON.stringify(all(card, (n) => n.attrs?.["data-field"]).map((row) =
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="node is not installed")
-def test_the_peak_row_and_the_lower_bound_are_drawn():
+def test_the_peak_row_says_it_is_no_bound():
     card = compute_agent_sizing(_HOST)
     done = subprocess.run(
         [shutil.which("node"), "--input-type=module", "-e", _PROBE],
@@ -190,6 +190,6 @@ def test_the_peak_row_and_the_lower_bound_are_drawn():
     ], rows
     assert "3.25 busy at p95" in rows["cores_peak"]["text"], rows["cores_peak"]
     memory = rows["memory"]["text"]
-    # UX-1272: one process's peak per builder is a floor, never "at most".
-    assert "at most" not in memory, memory
-    assert "at least 256.0 MiB: 4 builders \u00d7 the largest single process (64.0 MiB)" in memory, memory
+    # UX-1272: one process's peak per builder bounds nothing, in either direction.
+    assert "at most" not in memory and "at least" not in memory, memory
+    assert "4 builders \u00d7 the largest single process (64.0 MiB) = 256.0 MiB; not a bound" in memory, memory

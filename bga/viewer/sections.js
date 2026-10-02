@@ -510,12 +510,13 @@ function sizingCard(value, hint) {
       of(b.observed, "this run had #")].filter(Boolean).join("; "), b.source),
     c ? row("cores", `Cores: ${c.average.toFixed(2)}${typeof c.host === "number" ? ` of ${tally(c.host)}` : ""} busy on average`, c.source) : null,
     c?.peak_source ? row("cores_peak", `Cores: ${c.peak.toFixed(2)} busy at p95`, c.peak_source) : null,
-    // UX-1272: the direction follows the basis; one process's peak is a floor under an element's.
+    // UX-1272: an element's envelope peak is a ceiling; one process's peak times builders bounds nothing.
     m ? row("memory", m.bound === "upper"
       ? `Memory: at most ${bytes(m.bytes)}, if all ${tally(m.builders)} builders peak together at `
         + `${bytes(m.per_element_bytes)} (memory envelope)`
-      : `Memory: at least ${bytes(m.bytes)}: ${tally(m.builders)} builders × the largest single process `
-        + `(${bytes(m.per_element_bytes)}); an element ran several processes at once`, m.source) : null),
+      : `Memory: ${tally(m.builders)} builders × the largest single process (${bytes(m.per_element_bytes)}) = `
+        + `${bytes(m.bytes)}; not a bound: an element ran several processes at once and their summed memory `
+        + `was not recorded`, m.source) : null),
     // The recommendation's caveat is drawn once, in the section the builders row links.
     value.absence ? el("p", { class: "empty-population" }, value.absence) : null);
 }

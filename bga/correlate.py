@@ -1331,13 +1331,13 @@ def compute_agent_sizing(result, builders: Optional[int] = None) -> dict:
         basis = 'process_peak'
     count = recommended or observed
     if per_element and count:
-        # UX-1272: an element's peak bounds it from above; one process's peak, from below, as an element runs several.
+        # UX-1272: an element's peak bounds it from above; one process's peak bounds it in neither direction.
         memory = {
             'per_element_bytes': per_element,
             'builders': count,
             'bytes': per_element * count,
             'basis': basis,
-            'bound': 'upper' if basis == 'envelope' else 'lower',
+            'bound': 'upper' if basis == 'envelope' else 'none',
             'source': 'peak_memory',
         }
     missing = [name for name, value in (('cores', cores), ('memory', memory)) if value is None]

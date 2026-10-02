@@ -3917,10 +3917,10 @@ _ANALYZE_HINTS = {
             },
             "memory": {
                 "description": "The largest peak RSS times the builders: at most, from an element's whole peak; "
-                "at least, from one process's, since an element runs several at once.",
+                "no bound from one process's, since an element runs several at once and their sum is unrecorded.",
                 "properties": {
                     "bound": {
-                        "description": "Upper for the memory envelope's element peak; lower for a single process's."
+                        "description": "Upper for the memory envelope's element peak; none for a single process's."
                     },
                     "basis": {
                         "description": "Envelope when read from the host's memory envelope; process peak when from Plane 2's per-element peaks."

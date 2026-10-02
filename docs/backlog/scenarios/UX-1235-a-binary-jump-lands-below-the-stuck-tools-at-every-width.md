@@ -1,6 +1,6 @@
 # UX-1235: a binary jump lands below the stuck tools, at every width, with the rail open
 
-**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-161 verification of UX-1225 and UX-1220 (2026-10-01) | **Serves:** R1 | **Topic:** guards | **Area:** tests | **Shape:** mechanical | **Reading:** container
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the round-161 verification of UX-1225 and UX-1220 (2026-10-01) | **Serves:** R1 | **Topic:** guards | **Area:** tests | **Shape:** mechanical | **Reading:** container
 
 **Guard:** `tests/unit/test_jump_finds_what_the_rail_lists.py::test_a_jump_lands_on_its_target`, `tests/unit/test_the_narrow_rail_jump_box_keeps_the_place_read.py[binary]`
 

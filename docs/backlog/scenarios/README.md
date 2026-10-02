@@ -30,22 +30,6 @@ task file, which is the only place it ever lived twice.
 | UX-1014 | [the "safe cap plus auto" default is measured on more shapes and hosts before it is anyone's default](UX-1014-the-builders-and-auto-default-is-measured-on-more-shapes-and-hosts.md) | capture | High | R4, R5 | 🔴 Not Started |
 | UX-1134 | [`--jobserver auto` with no plan widens a memory-bound giant into the OOM killer](UX-1134-auto-oom-kills-a-memory-bound-giant-with-no-plan.md) | capture | High | R4, R5 | 🔴 Not Started |
 | UX-1040 | [a paired reading decides whether implementers move to opus at low effort](UX-1040-a-paired-reading-decides-the-implementers-model.md) | guards | Medium | every round's implementer spend | 🔴 Not Started |
-| UX-1235 | [a binary jump lands below the stuck tools, at every width, with the rail open](UX-1235-a-binary-jump-lands-below-the-stuck-tools-at-every-width.md) | guards | Low | R1 | 🔴 Not Started |
-| UX-1236 | [a bare `downstream > N` says what it read, and `downstream_count > N` is guarded](UX-1236-a-bare-downstream-comparison-says-what-it-read.md) | viewer | Low | R1 | 🔴 Not Started |
-| UX-1244 | [a run whose resource floor is its wall reads "scheduler-bound" and is sent to the blast ranking](UX-1244-a-capacity-bound-run-reads-scheduler-bound.md) | analysis | High | R1, R5, R8 | 🔴 Not Started |
-| UX-1245 | [utilisation calls full builder slots "High CPU use", and its peak concurrency is always 1](UX-1245-oversubscription-evidence-reads-slot-occupancy-as-cpu.md) | analysis | High | R5 | 🔴 Not Started |
-| UX-1246 | [the capacity recommendation names the host-core cap "CPU" while CPU does not bind](UX-1246-the-capacity-recommendation-names-a-policy-cap-as-cpu.md) | viewer | Medium | R5 | 🔴 Not Started |
-| UX-1247 | ["Which binaries cost this build its time?" has no per-binary total to answer with](UX-1247-the-binary-question-has-no-binary-total.md) | analysis | Medium | R1, R2, R5 | 🔴 Not Started |
-| UX-1248 | [finding titles run to 276 characters and bury the number they lead with](UX-1248-a-finding-title-leads-with-its-number-and-stays-short.md) | viewer | Medium | R1, R8 | 🔴 Not Started |
-| UX-1249 | [findings name the same elements twice and ten Info findings carry no step](UX-1249-findings-say-each-thing-once-and-info-without-action-folds.md) | viewer | Medium | R1, R8 | 🔴 Not Started |
-| UX-1250 | [next-step commands carry a 100-character absolute run path](UX-1250-a-next-step-command-names-the-run-by-its-snapshot.md) | viewer | Medium | R1 | 🔴 Not Started |
-| UX-1251 | [the floors drawing's labels overprint each other when the chain segment is narrow](UX-1251-the-floors-drawing-labels-collide-on-a-narrow-segment.md) | viewer | Low | R1, R3 | 🔴 Not Started |
-| UX-1252 | [zero counters take a row each, counts lose their separators, and an absence names the wrong series](UX-1252-all-clear-counters-are-one-sentence-and-values-keep-separators.md) | viewer | Low | R1, R5 | 🔴 Not Started |
-| UX-1253 | [five sections each publish a bound, and nothing checks that they agree](UX-1253-the-page-checks-its-verdicts-agree.md) | analysis | Medium | R1, R4, R5 | 🔴 Not Started |
-| UX-1254 | [the capacity operator assembles a sizing answer from five sections](UX-1254-an-agent-sizing-card-for-the-capacity-operator.md) | viewer | Medium | R5 | 🔴 Not Started |
-| UX-1255 | [39,854 Plane 2 processes produce no finding](UX-1255-plane-2-measurements-reach-the-findings.md) | analysis | Medium | R1, R2, R5 | 🔴 Not Started |
-| UX-1256 | [findings publish facts, and the steps live only in attribution hints and next steps](UX-1256-every-finding-publishes-its-step.md) | analysis | Medium | R1, R8 | 🔴 Not Started |
-| UX-1257 | ["What changed since last time?" has an empty lead, and the first screen never says the delta](UX-1257-the-compare-chapter-leads-with-the-delta.md) | viewer | Medium | R4, R7, R8 | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

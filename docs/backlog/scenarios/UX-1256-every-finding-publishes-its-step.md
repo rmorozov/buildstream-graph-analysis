@@ -1,6 +1,6 @@
 # UX-1256: findings publish facts, and the steps live only in attribution hints and next steps
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-162 view UI review on a 2,402-element two-plane page (2026-10-01), brainstorm B4, filed at Ruslan's request | **Serves:** R1, R8 | **Topic:** analysis | **Area:** bga | **Shape:** mechanical | **Reading:** container
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the round-162 view UI review on a 2,402-element two-plane page (2026-10-01), brainstorm B4, filed at Ruslan's request | **Serves:** R1, R8 | **Topic:** analysis | **Area:** bga | **Shape:** mechanical | **Reading:** container
 
 **Guard:** test_every_finding_publishes_its_step.py
 

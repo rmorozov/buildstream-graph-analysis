@@ -1,6 +1,6 @@
 # UX-1252: zero counters take a row each, counts lose their separators, and an absence names the wrong series
 
-**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-162 view UI review on a 2,402-element two-plane page (2026-10-01), finding L2 | **Serves:** R1, R5 | **Topic:** viewer | **Area:** bga, bga/viewer | **Shape:** mechanical | **Reading:** container
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the round-162 view UI review on a 2,402-element two-plane page (2026-10-01), finding L2 | **Serves:** R1, R5 | **Topic:** viewer | **Area:** bga, bga/viewer | **Shape:** mechanical | **Reading:** container
 
 **Guard:** `tests/unit/test_an_all_clear_run_is_one_sentence.py` (browser, `macro_micro` + served two-plane store) and `tests/unit/test_a_quantity_is_formatted_where_it_is_shown.py` (bare count, raw seconds; 1,200-element `counted` page)
 

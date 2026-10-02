@@ -1,6 +1,6 @@
 # UX-1236: a bare `downstream > N` says what it read, and `downstream_count > N` is guarded
 
-**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-161 verification of UX-1228 (2026-10-01) | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical | **Reading:** container
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the round-161 verification of UX-1228 (2026-10-01) | **Serves:** R1 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** mechanical | **Reading:** container
 
 **Guard:** `tests/unit/test_a_downstream_clause_follows_the_closure.py::test_a_downstream_comparison_reads_the_count_column_bare_or_named`
 

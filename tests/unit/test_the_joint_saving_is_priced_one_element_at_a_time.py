@@ -88,3 +88,22 @@ def test_one_finding_carries_the_set_and_its_order(run):
     said = [line for line in joint["detail"] if "In this order: " in line]
     assert said and " -> ".join(part.split(" (")[0] for part in said[0].split(": ", 1)[1].split(" -> ")) == order
     assert [f["id"] for f in found if set(f["elements"] or []) == set(joint["elements"])] == ["joint-saving"]
+
+
+@pytest.mark.parametrize("worth_more_after", [[], ["C"]])
+def test_the_order_marks_only_the_steps_measured_to_pay_off_later(worth_more_after):
+    """UX-1266: a compound relation with no `worth_more_after` marks no step."""
+    joint = {
+        "elements": ["A", "B", "C"],
+        "joint_saving_us": 90_000_000,
+        "sum_of_individual_us": 60_000_000,
+        "relation": "compound",
+        "savings_add": False,
+        "worth_more_after": worth_more_after,
+    }
+    horizon = [{"element_uid": uid, "makespan_after_us": us} for uid, us in (("A", 80e6), ("B", 50e6), ("C", 10e6))]
+    result = SimpleNamespace(signals={"joint_saving": joint, "optimization_horizon": horizon}, total_duration_us=100e6)
+    (finding,) = [f for f in _outlook_findings(result) if f["id"] == "joint-saving"]
+    (order,) = [line for line in finding["detail"] if "In this order: " in line]
+    marked = [part.split(" (")[0] for part in order.split(": ", 1)[1].split(" -> ") if "pays off after" in part]
+    assert marked == worth_more_after, order

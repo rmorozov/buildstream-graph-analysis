@@ -1719,7 +1719,7 @@ def _outlook_findings(result: AnalysisResult) -> list[dict]:
     horizon = (signals.get('optimization_horizon') or [])[:HORIZON_STEPS_SHOWN]
     ordered = len(horizon) > 1
     if joint and joint.get('joint_saving_us') and total:
-        later: list[str] = []
+        marked: list[str] = []
         joint_us = joint['joint_saving_us']
         sum_us = joint.get('sum_of_individual_us') or 0
         kind = joint.get('relation') or ('add' if joint.get('savings_add') else 'overlap')
@@ -1734,18 +1734,20 @@ def _outlook_findings(result: AnalysisResult) -> list[dict]:
             )
         else:
             elements = list(joint['elements'])
-            later = [uid for uid in joint.get('worth_more_after') or [] if uid in elements] or elements[1:]
+            marked = [uid for uid in joint.get('worth_more_after') or [] if uid in elements]
+            later = marked or elements[1:]
             earlier = elements[: elements.index(later[0])] or elements[:1]
             relation = (
                 # UX-1266: the order line names each element; a card names one once.
-                f"more than the {qty.duration(sum_us)} alone: a later step pays off only once the earlier ones are done"
+                f"more than the {qty.duration(sum_us)} alone: "
+                + ("a later step pays off only once the earlier ones are done" if marked else "together they compound")
                 if ordered
                 else f"more than the {qty.duration(sum_us)} alone: {_and(later)} "
                 f"{'pays' if len(later) == 1 else 'pay'} off after {_and(earlier)}"
             )
         order = " -> ".join(
             f"{step['element_uid']} ({qty.duration(step['makespan_after_us'])}"
-            f"{(', pays off after the step before' if at == 1 else ', pays off after the steps before') if step['element_uid'] in later else ''})"
+            f"{(', pays off after the step before' if at == 1 else ', pays off after the steps before') if step['element_uid'] in marked else ''})"
             for at, step in enumerate(horizon)
         )
         findings.append(

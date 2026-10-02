@@ -65,6 +65,8 @@ joint-saving high | 23.1 s (50.0% of the build) is what the top 3 are worth toge
 With the order shown, the compound relation names no element: naming them in
 both lines reddened `test_no_element_is_named_twice_in_one_card[macro_micro]`
 (UX-1249's once-per-card rule), and the order line marks the step instead.
+Only steps in `worth_more_after` are marked; a compound set with none (the
+`elements[1:]` fallback) marks no step and reads "together they compound" (verifier).
 
 The finding id leaves `FINDING_READERS` and `provenance._CLAIMS`; the
 `optimization_horizon` signal stays, and `joint-saving`'s claim cites
@@ -77,7 +79,7 @@ Golden's `document_shape`: 896 -> 852 leaves, deepest 7 -> 6, deep share
 `test_the_report_you_can_attach.py` reddened. README quick start 111 -> 107
 lines. `test_the_page_has_a_volume_budget.py` comment reads +176 words.
 
-### Mutations verified red and reverted (4)
+### Mutations verified red and reverted (5)
 
 | # | mutation | reddened |
 |---|---|---|
@@ -85,3 +87,4 @@ lines. `test_the_page_has_a_volume_budget.py` comment reads +176 words.
 | M2 | drop the "In this order" detail line | one-finding clause, both runs, 2 failed, 4 passed |
 | M3 | order drawn reversed | one-finding clause, both runs, 2 failed, 4 passed |
 | M4 | ordered compound relation names `later` and `earlier` again | `test_no_element_is_named_twice_in_one_card[macro_micro]`, 1 failed, 7 passed |
+| M5 | order marks `marked or elements[1:]` | `test_the_order_marks_only_the_steps_measured_to_pay_off_later[worth_more_after0]`, 1 failed, 7 passed |

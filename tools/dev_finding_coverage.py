@@ -54,6 +54,13 @@ UNREACHABLE = {
     "fact. A capture taken with the flag is the fixture this needs; "
     "tests/fixtures/cas_artifact is a real BuildStream CAS and guards "
     "the walk itself, but it is not a capture",
+    "costliest-binary": "the one committed Plane 2 report, tests/fixtures/macro_micro/plane2.json, "
+    "predates the per-element binaries list and ranks by calls, with no CPU (UX-1247); "
+    "a generated --workload binaries run reaches it (UX-1255)",
+    "jobs-waiting": "the one committed Plane 2 report's run has a graph knee at 2 of its 4 builders, "
+    "so cores busy per builder is not per element and the finding holds back (UX-1255)",
+    "configure-share": "the one committed Plane 2 report spends 6.4% of CPU in configure, "
+    "under PLANE2_CONFIGURE_SHARE (UX-1255)",
 }
 
 

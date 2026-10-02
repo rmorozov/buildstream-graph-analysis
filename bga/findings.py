@@ -137,6 +137,10 @@ FINDING_READERS = {
     # `UX-860`: the envelope's own overcommit test, half of which is
     # swap - previously a word in the headline sentence and nowhere else.
     "swap-observed": "capacity-operator",
+    # UX-1255: Plane 2's binary, job and configure findings; the binary is the recipe's.
+    "costliest-binary": "recipe-author",
+    "jobs-waiting": "capacity-operator",
+    "configure-share": "recipe-author",
     # UX-680: R4, the task's own; R5's section needs Plane 2 and half (a) fires without it.
     "remote-execution-whatif": "ci-gatekeeper",
 }
@@ -2261,6 +2265,87 @@ def _floor_findings(result: AnalysisResult) -> list[dict]:
     return findings
 
 
+# UX-1255: the bounds Plane 2's findings clear. A binary below Plane 1's
+# opportunity floor is noise; an element drawing under a quarter of the
+# jobs it asked for idles three of four; configure past a tenth is named.
+PLANE2_BINARY_FLOOR_SHARE = OPPORTUNITY_FLOOR_PCT / 100
+PLANE2_WAITING_OF_REQUESTED = 0.25
+PLANE2_CONFIGURE_SHARE = 0.10
+
+
+def _plane2_findings(result: AnalysisResult) -> list[dict]:
+    """UX-1255: the costliest binary, elements waiting on their jobs, and configure - only where Plane 2 ran."""
+    report = getattr(result, 'plane2_report', None) or {}
+    if not report:
+        return []
+    from .plane2 import binary_totals
+
+    out = []
+    rows = [row for row in binary_totals(report) if row.get('cpu_us') is not None]
+    measured = sum(row['cpu_us'] for row in rows)
+    if rows and measured and rows[0]['cpu_us'] / measured >= PLANE2_BINARY_FLOOR_SHARE:
+        top = rows[0]
+        reach = plural(top['elements'], 'element', shown=f"{top['elements']:,}")
+        out.append(
+            _finding(
+                'costliest-binary',
+                SEVERITY_INFO,
+                f"{qty.duration(top['cpu_us'])} of CPU in {top['binary']}, the costliest of "
+                f"{len(rows):,} binaries, across {reach}",
+                evidence={
+                    'binary': top['binary'],
+                    'cpu_us': top['cpu_us'],
+                    'share': round(top['cpu_us'] / measured, 3),
+                },
+                step=_step(f"Start with {top['binary']}: no other binary spent as much CPU."),
+            )
+            | {'section': 'by_binary'}
+        )
+    # The run's cores busy (UX-1245's source) per builder, as the capacity verdict divides it.
+    cores_busy = (getattr(result, 'plane2_capacity', None) or {}).get('cores_busy')
+    recommendation = getattr(result, 'capacity_recommendation', None) or {}
+    builders = recommendation.get('builders')
+    knee = next((c['allows'] for c in recommendation.get('constraints') or () if c.get('name') == 'graph'), None)
+    # Per builder is per element only while the builders were full: a graph knee below them idles some.
+    if cores_busy is not None and builders and (knee is None or knee >= builders):
+        per = cores_busy / builders
+        jobs = [
+            entry['requested_jobs']
+            for entry in report.get('per_element_parallelism') or []
+            if (entry.get('requested_jobs') or 0) > 1 and per < PLANE2_WAITING_OF_REQUESTED * entry['requested_jobs']
+        ]
+        if jobs:
+            asked = f"{min(jobs)}" if min(jobs) == max(jobs) else f"{min(jobs)}-{max(jobs)}"
+            out.append(
+                _finding(
+                    'jobs-waiting',
+                    SEVERITY_MEDIUM,
+                    f"{per:.2f} cores per building element against {asked} jobs requested by "
+                    f"{plural(len(jobs), 'element', shown=f'{len(jobs):,}')}: waiting, not computing",
+                    evidence={'cores_per_element': round(per, 2), 'element_count': len(jobs)},
+                    step=_step("Find what these elements wait on before raising their job count."),
+                )
+                | {'section': 'capacity_recommendation'}
+            )
+    phase = report.get('configure_phase') or {}
+    if phase.get('available') and (phase.get('configure_share') or 0) >= PLANE2_CONFIGURE_SHARE:
+        out.append(
+            _finding(
+                'configure-share',
+                SEVERITY_MEDIUM,
+                f"{qty.share(phase['configure_share'])} of CPU is configure: "
+                f"{qty.duration(phase.get('configure_cpu_us'))} before any build step ran",
+                evidence={
+                    'configure_share': phase['configure_share'],
+                    'configure_cpu_us': phase.get('configure_cpu_us'),
+                },
+                step=_step("Cache or skip configure in the elements that spend most on it."),
+            )
+            | {'section': 'configure_phase'}
+        )
+    return out
+
+
 def _by_severity(findings: list[dict]) -> list[dict]:
     """`UX-1148`: severity, then the argued order below; an indented note stays under its table."""
     groups: list[list[dict]] = []
@@ -2360,6 +2445,8 @@ def compute_findings(result: AnalysisResult) -> list[dict]:
     # `UX-860`: beside the fleet's other R5 findings, after capacity -
     # the reader has met the configuration before meeting what it cost.
     findings.extend(_swap_observed_finding(result))
+    # UX-1255: Plane 2's own measurements, beside the fleet findings that read it.
+    findings.extend(_plane2_findings(result))
     # `UX-680`: beside the capacity/sweep findings it reads alongside -
     # `ci-gatekeeper`, not `capacity-operator`, because half (a) fires
     # without Plane 2 and R5's page section cannot.

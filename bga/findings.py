@@ -91,7 +91,6 @@ FINDING_READERS = {
     "failed-task-time": "local-optimizer",
     "time-concentration": "local-optimizer",
     "joint-saving": "local-optimizer",
-    "optimization-horizon": "local-optimizer",
     "blast-radius-ranking": "local-optimizer",
     "certified-headroom": "local-optimizer",
     "wait-category": "local-optimizer",
@@ -1690,7 +1689,10 @@ def _outlook_findings(result: AnalysisResult) -> list[dict]:
     findings: list[dict] = []
 
     joint = signals.get('joint_saving')
+    horizon = (signals.get('optimization_horizon') or [])[:HORIZON_STEPS_SHOWN]
+    ordered = len(horizon) > 1
     if joint and joint.get('joint_saving_us') and total:
+        later: list[str] = []
         joint_us = joint['joint_saving_us']
         sum_us = joint.get('sum_of_individual_us') or 0
         kind = joint.get('relation') or ('add' if joint.get('savings_add') else 'overlap')
@@ -1708,16 +1710,24 @@ def _outlook_findings(result: AnalysisResult) -> list[dict]:
             later = [uid for uid in joint.get('worth_more_after') or [] if uid in elements] or elements[1:]
             earlier = elements[: elements.index(later[0])] or elements[:1]
             relation = (
-                f"more than the {qty.duration(sum_us)} alone: {_and(later)} "
+                # UX-1266: the order line names each element; a card names one once.
+                f"more than the {qty.duration(sum_us)} alone: a later step pays off only once the earlier ones are done"
+                if ordered
+                else f"more than the {qty.duration(sum_us)} alone: {_and(later)} "
                 f"{'pays' if len(later) == 1 else 'pay'} off after {_and(earlier)}"
             )
+        order = " -> ".join(
+            f"{step['element_uid']} ({qty.duration(step['makespan_after_us'])}"
+            f"{(', pays off after the step before' if at == 1 else ', pays off after the steps before') if step['element_uid'] in later else ''})"
+            for at, step in enumerate(horizon)
+        )
         findings.append(
             _finding(
                 'joint-saving',
                 SEVERITY_HIGH,
                 f"{qty.duration(joint_us)} ({qty.share(joint_us / total)} of the build) is what the top "
                 f"{len(joint['elements'])} are worth together",
-                detail=[f"    That is {relation}"],
+                detail=[f"    That is {relation}"] + ([f"    In this order: {order}"] if ordered else []),
                 elements=list(joint['elements']),
                 evidence={
                     'joint_saving_us': joint_us,
@@ -1728,33 +1738,6 @@ def _outlook_findings(result: AnalysisResult) -> list[dict]:
                 step=_step(
                     f"Start with {joint['elements'][0]}, then the rest.",
                     _run_command(result, 'blast', joint['elements'][0]),
-                ),
-            )
-        )
-
-    horizon = signals.get('optimization_horizon') or []
-    if len(horizon) > 1:
-        shown = horizon[:HORIZON_STEPS_SHOWN]
-        steps = " -> ".join(f"{step['element_uid']} ({qty.duration(step['makespan_after_us'])})" for step in shown)
-        last = shown[-1]
-        detail = [f"    In this order: {steps}"]
-        if total:
-            detail.append(
-                f"    The last of those leaves "
-                f"{qty.share(last['cumulative_saving_us'] / total)} of the build "
-                f"removed, projected from this run without building again"
-            )
-        findings.append(
-            _finding(
-                'optimization-horizon',
-                SEVERITY_HIGH,
-                f"{len(shown)} fixes, in order of what each is worth, take the build to "
-                f"{qty.duration(last['makespan_after_us'])}",
-                detail=detail,
-                elements=[step['element_uid'] for step in shown],
-                evidence={'steps': shown},
-                step=_step(
-                    f"Start with {shown[0]['element_uid']}.", _run_command(result, 'blast', shown[0]['element_uid'])
                 ),
             )
         )

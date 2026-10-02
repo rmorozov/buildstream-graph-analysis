@@ -903,7 +903,7 @@ export function renderWhatIf(payload, ask = null, options = {}) {
   section.append(heading);
   // `UX-650`: R1, derived rather than argued - the whole section is
   // `payload.optimization_horizon`, and that key joins to R1 in
-  // `schemas._SECTION_READERS` through the `optimization-horizon`
+  // `schemas._SECTION_READERS` through the `joint-saving`
   // finding.
   declareReaders(section, ["R1"]);
 

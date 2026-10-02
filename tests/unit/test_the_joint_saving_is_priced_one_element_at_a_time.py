@@ -7,9 +7,11 @@ construction and the report called every set "separate pieces of work".
 from pathlib import Path
 from types import SimpleNamespace
 
+import pytest
+
 from bga import whatif
 from bga.analyzer import BuildEfficiencyAnalyzer
-from bga.findings import _outlook_findings
+from bga.findings import _outlook_findings, compute_findings
 from bga.graph.edg import compute_optimization_horizon, price_joint_saving
 from bga.ingest.models import DependencyEdge, Element, Graph
 
@@ -72,3 +74,17 @@ def test_the_individual_sum_is_what_whatif_prices_each_element_at():
 
     assert joint["sum_of_individual_us"] == sum(alone)
     assert joint["relation"] == "compound"
+
+
+@pytest.mark.parametrize("run", [MACRO_MICRO, Path("tests/fixtures/golden/mixed_task_kinds")])
+def test_one_finding_carries_the_set_and_its_order(run):
+    """UX-1266: joint-saving names the horizon's order, and no other finding names the same set."""
+    analyzer = BuildEfficiencyAnalyzer()
+    analyzer.load(run)
+    result = analyzer.analyze(run)
+    found = compute_findings(result)
+    (joint,) = [f for f in found if f["id"] == "joint-saving"]
+    order = " -> ".join(step["element_uid"] for step in result.signals["optimization_horizon"][:3])
+    said = [line for line in joint["detail"] if "In this order: " in line]
+    assert said and " -> ".join(part.split(" (")[0] for part in said[0].split(": ", 1)[1].split(" -> ")) == order
+    assert [f["id"] for f in found if set(f["elements"] or []) == set(joint["elements"])] == ["joint-saving"]

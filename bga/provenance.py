@@ -246,9 +246,8 @@ TRACE_QUERIES = {
     "failed-task-time": ("failed-processes",),
     "efficiency-score": ("cpu-versus-wall",),
     "certified-headroom": ("concurrency-curve",),
-    "optimization-horizon": ("time-by-kind",),
     "run-mode-incremental": ("which-run-is-this",),
-    "joint-saving": ("waited-on-flow",),
+    "joint-saving": ("waited-on-flow", "time-by-kind"),
     # `UX-380`: the level decomposition, opened from the claim it
     # explains. `mesh-graph` says the graph is near-equal chains whose
     # savings cap each other; `graph-levels` is that statement drawn -
@@ -821,23 +820,12 @@ _CLAIMS = {
             "joint_saving.sum_of_individual_us",
             "joint_saving.savings_add",
             "joint_saving.relation",
+            "optimization_horizon[0].makespan_after_us",
             "total_duration_us",
         ),
         _unconditional(
             "Published whenever the top elements have a joint projection; "
             "whether the savings add is the finding, not its gate."
-        ),
-        (),
-    ),
-    "optimization-horizon": (
-        (
-            "optimization_horizon[0].makespan_after_us",
-            "optimization_horizon[0].cumulative_saving_us",
-            "total_duration_us",
-        ),
-        _unconditional(
-            "Published when the horizon has more than one step — a "
-            "single-step horizon is the first fix, which is already named."
         ),
         (),
     ),

@@ -1884,32 +1884,6 @@ EVIDENCE_QUANTITIES.update(
                 }
             },
         },
-        "steps": {
-            GROWS: False,
-            "maxItems": 3,  # `HORIZON_STEPS_SHOWN`
-            "items": {
-                "properties": {
-                    "saving_us": {
-                        QUANTITY: "duration_us",
-                        "description": "What taking this step alone is worth, before the ones after it.",
-                    },
-                    "makespan_after_us": {
-                        QUANTITY: "duration_us",
-                        "description": "Where the finish lands once this step is taken.",
-                    },
-                    "cumulative_saving_us": {
-                        QUANTITY: "duration_us",
-                        "description": "Everything saved up to and including it.",
-                    },
-                    "entering": {
-                        GROWS: "elements entering the critical path at that step "
-                        "(subset of elements, no cap within the step)",
-                        "items": {"type": "string", "description": "element uid"},
-                        "description": "Elements not on the previous step's critical path and on this one.",
-                    },
-                }
-            },
-        },
         "latent_heavies": {
             GROWS: False,
             "maxItems": 2,  # `LATENT_HEAVIES_SHOWN`

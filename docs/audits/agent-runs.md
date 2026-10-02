@@ -759,6 +759,22 @@ pairing for every merged row from round 103 on.
 | 163 | verifier | sonnet | UX-1255 verifier (track H) | 34k | — | — | see round-163 | tool calls and wall not in the brief |
 | 163 | verifier | sonnet | UX-1252 verifier (track J) | 48k | — | — | see round-163 | tool calls and wall not in the brief |
 | 163 | integrator | sonnet | integrator: six parts, 16 rows | 321k | — | — | see round-163 | figure is approximate (~) over six parts; tool calls and wall not in the brief |
+| 165 | architect | opus | rows A (1264-1271) | 83k | — | — | see round-165 | tool calls and wall not in the brief |
+| 165 | architect | opus | rows B (1258,1268-1276) | 89k | — | — | see round-165 | tool calls and wall not in the brief |
+| 165 | architect | opus | rows C (1260-1263,1275,1277) | 81k | — | — | see round-165 | tool calls and wall not in the brief |
+| 165 | implementer | opus | track 1 finding text | 237k | — | — | see round-165 | tool calls and wall not in the brief |
+| 165 | implementer | opus | track 2 viewer cards | 110k | — | — | see round-165 | tool calls and wall not in the brief |
+| 165 | implementer | opus | track 3 capacity page | 244k | — | — | see round-165 | tool calls and wall not in the brief |
+| 165 | implementer | opus | track 4 sweep/sizing | 260k | — | — | see round-165 | tool calls and wall not in the brief |
+| 165 | implementer | opus | track 5 binaries | 203k | — | — | see round-165 | tool calls and wall not in the brief |
+| 165 | implementer | opus | track 6 compare/store | 178k | — | — | see round-165 | tool calls and wall not in the brief |
+| 165 | verifier | sonnet | track 1 verifier | 70k | — | — | see round-165 | tool calls and wall not in the brief |
+| 165 | verifier | sonnet | track 2 verifier | 47k | — | — | see round-165 | tool calls and wall not in the brief |
+| 165 | verifier | sonnet | track 3 verifier | 56k | — | — | see round-165 | tool calls and wall not in the brief |
+| 165 | verifier | sonnet | track 4 verifier | 52k | — | — | see round-165 | tool calls and wall not in the brief |
+| 165 | verifier | sonnet | track 5 verifier | 58k | — | — | see round-165 | tool calls and wall not in the brief |
+| 165 | verifier | sonnet | track 6 verifier | 42k | — | — | see round-165 | tool calls and wall not in the brief |
+| 165 | integrator | opus | six merges + 12 merged-tree reds | 255k | — | — | see round-165 | worktree sandbox refused compound shell commands (probes via scratch scripts); -n 1 touching runs took 14-21 min on a shared 4-core box; 5 of 6 tracks needed a verifier fix loop |
 
 Round 101's four tracks are **not** here: this session could not
 identify their transcripts with certainty after a context rebuild, and
@@ -771,7 +787,7 @@ committed cleanly once told to run in the foreground. Three of the five
 left a derived figure or a §6 context-map row behind - the same class
 the round itself was about, arriving in the tracks' own work.
 
-What the seven hundred and forty-two rows already say: a researcher that reads a document
+What the seven hundred and fifty-eight rows already say: a researcher that reads a document
 whole costs 100-180k; a walker that drives every control costs 336k;
 the two cuts cost a re-run each. The `walk` and `design-review`
 skills fix the report shape so the next rows are smaller, and the

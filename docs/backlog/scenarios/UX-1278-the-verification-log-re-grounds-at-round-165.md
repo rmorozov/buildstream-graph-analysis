@@ -34,4 +34,6 @@ Close measured: entry credited to `UX-1278`; `bga analyze --schema`
 65 top-level properties; `bga.contracts.ids()` 28 emitted ids; the file's
 31 tests pass.
 
+Mutation: the entry's figure set back to **64 top-level properties** gives 1 failed, 30 passed; restored, 31 passed.
+
 Deviation: none; the shape is `UX-1218`'s.

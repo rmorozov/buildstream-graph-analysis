@@ -1218,4 +1218,6 @@ MEDIUM = (
     "tests/unit/test_findings_say_each_thing_once.py",  #    5.3s
     # `UX-1257`.
     "tests/unit/test_the_compare_chapter_leads_with_the_delta.py",  #    3.6s
+    # `UX-1252`.
+    "tests/unit/test_an_all_clear_run_is_one_sentence.py",  #    4.9s
 )

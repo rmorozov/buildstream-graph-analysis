@@ -224,6 +224,7 @@ bga/analyzer.py        orchestrator - wires every stage together, BuildEfficienc
 ```text
 bga/findings.py        every conclusion the report draws, as data with stable ids
 bga/provenance.py      why each claim is made: evidence refs, rule, trace query (UX-229)
+bga/consistency.py     whether the published verdicts agree, pairwise; names a disagreement, picks no winner
 bga/schemas.py         every published contract + view-hints; `--schema` prints from here
 bga/schema_hints.py    the `bga:*` view-hint vocabulary and its checker; re-exported by schemas.py
 bga/contracts.py       the derived inventory of every contract, printable or not (UX-248)

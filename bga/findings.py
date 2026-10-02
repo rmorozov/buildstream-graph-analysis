@@ -1154,6 +1154,8 @@ def _shared_source_findings(result: AnalysisResult) -> list[dict]:
                 "Narrow which elements take this source, or key it per element, so a change stops rebuilding the rest."
             ),
         )
+        # The section leads with the same sentence; the card links there rather than drawing it twice.
+        | {'section': 'resource_blast'}
     ]
 
 

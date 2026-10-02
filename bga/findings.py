@@ -32,6 +32,7 @@ numbers behind the sentence, so a consumer never has to parse `title`.
 
 import collections
 import os
+import statistics
 from typing import Optional
 
 from . import shown as qty
@@ -137,9 +138,9 @@ FINDING_READERS = {
     # `UX-860`: the envelope's own overcommit test, half of which is
     # swap - previously a word in the headline sentence and nowhere else.
     "swap-observed": "capacity-operator",
-    # UX-1255: Plane 2's binary, job and configure findings; the binary is the recipe's.
+    # UX-1255: Plane 2's binary, job and configure findings - each a recipe's to change.
     "costliest-binary": "recipe-author",
-    "jobs-waiting": "capacity-operator",
+    "jobs-waiting": "recipe-author",
     "configure-share": "recipe-author",
     # UX-680: R4, the task's own; R5's section needs Plane 2 and half (a) fires without it.
     "remote-execution-whatif": "ci-gatekeeper",
@@ -2266,10 +2267,8 @@ def _floor_findings(result: AnalysisResult) -> list[dict]:
 
 
 # UX-1255: the bounds Plane 2's findings clear. A binary below Plane 1's
-# opportunity floor is noise; an element drawing under a quarter of the
-# jobs it asked for idles three of four; configure past a tenth is named.
+# opportunity floor is noise; configure past a tenth of CPU is named.
 PLANE2_BINARY_FLOOR_SHARE = OPPORTUNITY_FLOOR_PCT / 100
-PLANE2_WAITING_OF_REQUESTED = 0.25
 PLANE2_CONFIGURE_SHARE = 0.10
 
 
@@ -2301,32 +2300,35 @@ def _plane2_findings(result: AnalysisResult) -> list[dict]:
             )
             | {'section': 'by_binary'}
         )
-    # The run's cores busy (UX-1245's source) per builder, as the capacity verdict divides it.
-    cores_busy = (getattr(result, 'plane2_capacity', None) or {}).get('cores_busy')
-    recommendation = getattr(result, 'capacity_recommendation', None) or {}
-    builders = recommendation.get('builders')
-    knee = next((c['allows'] for c in recommendation.get('constraints') or () if c.get('name') == 'graph'), None)
-    # Per builder is per element only while the builders were full: a graph knee below them idles some.
-    if cores_busy is not None and builders and (knee is None or knee >= builders):
-        per = cores_busy / builders
-        jobs = [
-            entry['requested_jobs']
-            for entry in report.get('per_element_parallelism') or []
-            if (entry.get('requested_jobs') or 0) > 1 and per < PLANE2_WAITING_OF_REQUESTED * entry['requested_jobs']
-        ]
-        if jobs:
-            asked = f"{min(jobs)}" if min(jobs) == max(jobs) else f"{min(jobs)}-{max(jobs)}"
-            out.append(
-                _finding(
-                    'jobs-waiting',
-                    SEVERITY_MEDIUM,
-                    f"{per:.2f} cores per building element against {asked} jobs requested by "
-                    f"{plural(len(jobs), 'element', shown=f'{len(jobs):,}')}: waiting, not computing",
-                    evidence={'cores_per_element': round(per, 2), 'element_count': len(jobs)},
-                    step=_step("Find what these elements wait on before raising their job count."),
-                )
-                | {'section': 'capacity_recommendation'}
+    # Each element's own CPU over its own wall (the join's `cores_busy`), on correlate's compute-bound line.
+    from .correlate import _COMPUTE_BOUND_CORES, _plane2_view
+
+    waiting = [
+        row
+        for row in _plane2_view(report).values()
+        if (row.get('requested_jobs') or 0) > 1
+        and row.get('cores_busy') is not None
+        and row['cores_busy'] < _COMPUTE_BOUND_CORES
+    ]
+    if waiting:
+        jobs = sorted(row['requested_jobs'] for row in waiting)
+        asked = f"{jobs[0]}" if jobs[0] == jobs[-1] else f"{jobs[0]}-{jobs[-1]}"
+        median = statistics.median(row['cores_busy'] for row in waiting)
+        out.append(
+            _finding(
+                'jobs-waiting',
+                SEVERITY_MEDIUM,
+                f"{len(waiting):,} elements asked for {asked} jobs and ran at a median {median:.2f} cores busy: "
+                "waiting, not computing",
+                evidence={
+                    'element_count': len(waiting),
+                    'median_cores_busy': round(median, 2),
+                    'requested_jobs': jobs[-1],
+                },
+                step=_step("Find what these elements wait on before raising their job count."),
             )
+            | {'section': 'element_join'}
+        )
     phase = report.get('configure_phase') or {}
     if phase.get('available') and (phase.get('configure_share') or 0) >= PLANE2_CONFIGURE_SHARE:
         out.append(

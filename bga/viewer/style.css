@@ -1524,3 +1524,5 @@ p.run-advice {
 /* `UX-1252`: "· save trace" is one line. */
 #actions-fallback, #actions-download { white-space: nowrap; }
 #actions-fallback > a, #actions-download > a { display: inline; }
+dl.pairs > dt[data-none] + dd > .description { display: block; margin: var(--space-1) 0 0; }
+dl.pairs > dt[data-none] + dd > .description::before { content: attr(data-label) ": "; }

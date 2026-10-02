@@ -63,13 +63,13 @@ Close measured (`test_the_page_has_a_volume_budget.py`'s `_LOOK`, 1440x900, same
 
 ```text
                          before      after     bound
-macro_micro opened px    37,805     37,287    39,188
-macro_micro words        13,338     13,361    13,500   (textContent glued dt to dd: "elements0Hit" was one token; per text node 17,430 -> 17,416)
+macro_micro opened px    37,805     37,396    39,188
+macro_micro words        13,338     13,358    13,500   (textContent glued dt to dd: "elements0Hit" was one token)
 macro_micro controls        872        872       872
-xl_both opened px        44,292     43,852    46,822
-xl_both words            13,160     13,190    13,200
+xl_both opened px        44,292     43,935    46,822
+xl_both words            13,160     13,181    13,200
 xl_both controls          1,190      1,190     1,192
-page bytes              162,460    162,936   165,000
+page bytes              162,460    163,130   165,000
 macro_micro data half   100,278    100,229   100,000   (this tree's longer path; -49 B, the absence sentence)
 ```
 
@@ -77,10 +77,14 @@ macro_micro data half   100,278    100,229   100,000   (this tree's longer path;
 |---|---|---|
 | fold off (`empty: false` in `renderPairs`) | `test_no_block_draws_two_clear_rows_running` [macro_micro, two_plane] | 2 failed |
 | rail CSS removed (`nowrap` + inline link) | `test_the_rail_separator_keeps_its_link[two_plane]`, 2 lines at 1440 | 1 failed |
+| shares fold too (`kind !== "share"` dropped) | `test_the_row_that_answers_the_block_is_not_folded[macro_micro]` | 1 failed |
+| opened sentence unlabelled (`data-label` dropped) | `test_an_opened_folded_sentence_is_its_own_labelled_line` x2 | 2 failed |
+| opened sentence inline (block rule dropped) | same, x2 | 2 failed |
 | absence back to "host memory series" | `test_the_cores_absence_names_the_cpu_series` | 1 failed |
 | `{count:,}` -> `{count}` at the blast-radius line | `test_no_count_lacks_its_separator[counted]`, 3 bare | 1 failed, 3 passed |
 | `tally()` dropped from `decision.js`'s reach | `test_no_count_lacks_its_separator[counted]`, 2 bare | 1 failed, 3 passed |
 | `{lb_cpu_us / 1e6:.2f} s` restored in `cli.py` | `test_no_prose_duration_is_raw_seconds` [macro_micro, two_plane] | 2 failed, 2 passed |
 
 Deviation: a row carrying the run's advice (`attribution`'s buckets, `UX-390`) and a signed delta keep their rows; `decision.js`,
-outside the Decision's Files, printed the decision list's "2194 downstream"; textContent words +23 on `macro_micro`, under its bound.
+outside the Decision's Files, printed the decision list's "2194 downstream"; a share (`#cache`'s `hit_share`, `reconciliation_error_share`) never folds; an opened
+folded sentence is its own line labelled by CSS `::before`, since a text label put `xl_both` at 13,237 words, over 13,200.

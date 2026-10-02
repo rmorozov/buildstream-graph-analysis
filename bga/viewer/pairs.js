@@ -388,7 +388,8 @@ export function renderPairs(key, object, hint = {}, node = undefined,
     // `UX-390`: and the run's own advice for this bucket, on its row,
     // beside the schema's sentence rather than instead of it.
     const advice = adviceFor(payload, hint, name);
-    rows.push({ term, describe, empty: !advice && !direction && allClear(value),
+    // A share answers its block (`hit_share`) or checks it (`reconciliation_error_share`): never folded.
+    rows.push({ term, describe, empty: !advice && !direction && kind !== "share" && allClear(value),
                 dd: el("dd", {}, cell, describe, advice ? el("p", { class: "run-advice" }, advice) : null) });
   }
   // `UX-1252` (styleguide §6e.12): a run of two or more zero or absent values is one sentence; JSON keeps each.
@@ -401,7 +402,8 @@ export function renderPairs(key, object, hint = {}, node = undefined,
                 el("dd", {}, ...run.map(({ term }, at) => el("span", {
                   "data-key": term.getAttribute("data-key"), "data-described": term.getAttribute("data-described"),
                   title: term.getAttribute("title") }, `${term.textContent}${at < run.length - 1 ? ", " : "."}`)),
-                   ...run.map((r) => r.describe)));
+                   // Opened, each sentence is its own line, labelled by CSS so the word count does not grow.
+                   ...run.map(({ term, describe }) => (describe?.setAttribute("data-label", term.textContent), describe))));
     i = end;
   }
   const door = attachBlockDoor(list, doors);

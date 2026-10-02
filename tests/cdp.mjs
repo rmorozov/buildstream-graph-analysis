@@ -61,8 +61,8 @@ const scheme = schemeArg ? schemeArg.slice("--scheme=".length) : null;
 let expression = "";
 for await (const chunk of process.stdin) expression += chunk;
 
-const targets = await (await fetch(`http://127.0.0.1:${port}/json/list`)).json();
-const page = targets.find((t) => t.type === "page");
+// A tab of its own per drive: Chrome drops a frame's `history.replaceState` calls past 200 in 10s, and the shared tab carried that budget into the next drive.
+const page = await (await fetch(`http://127.0.0.1:${port}/json/new?about:blank`, { method: "PUT" })).json();
 const ws = new WebSocket(page.webSocketDebuggerUrl);
 
 let id = 0;
@@ -349,4 +349,5 @@ if (journeying) {
 // asynchronous, and exiting truncates a long report. Closing the
 // socket is what lets the event loop drain and the process end.
 process.stdout.write(JSON.stringify(out));
+await fetch(`http://127.0.0.1:${port}/json/close/${page.id}`);
 ws.close();

@@ -2,7 +2,7 @@
 
 **Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-164 view UI re-review on a 2,402-element two-plane page (2026-10-02), finding R1 | **Serves:** R1, R5 | **Topic:** viewer | **Area:** bga/viewer | **Shape:** judgement | **Reading:** container
 
-**Guard:** none — open, no guard named yet
+**Guard:** `tests/unit/test_an_all_clear_run_is_one_sentence.py`
 
 ## Motivation
 
@@ -44,3 +44,38 @@ Which fields a section publishes; the JSON door.
 ## Acceptance Test
 
 On this page `#utilisation` shows "Potential oversubscription no" as a row and `#floors` "LB CPU binds no"; no `dt` on the page reads "None"; null and zero fields never share a sentence. Mutation: fold false into the absent group, and the guard reds.
+
+## Outcome
+
+### The gap, measured
+
+```text
+accept1270.py: two_plane_run --layers 40 --width 60 (no --workload binaries), exported, 1440x844, base b35c30e31
+  #utilisation  None | Unaccounted, ...       no "Potential oversubscription" row
+  #floors       None | Chain floor T∞ (cold), ...   no "LB CPU binds" row
+  #occupancy    None | Horizon start, ...
+  dl.pairs > dt reading "None": 8
+```
+
+### The close, measured
+
+```text
+same page, this commit, 1440x844 and 390x844 identical:
+  #utilisation  Unaccounted | 0 ms (a lone zero keeps its row) · Potential oversubscription | no
+  #floors       Not recorded | Chain floor T∞ (cold), ... · Cold partial | no · LB CPU binds | no
+  #occupancy    Zero | Horizon start, ...
+  dt reading "None": 0; groups: 5 absent, 3 zero
+$ python3 -m pytest -p no:xdist tests/unit/test_an_all_clear_run_is_one_sentence.py -q
+8 passed, 2 skipped
+volume (_LOOK, opened): golden 18,317 px / 7,825 words; macro_micro 37,157 / 13,283 (bound 39,188 / 13,500);
+  xl_both 43,835 / 13,081 (bound 46,822 / 13,200) - every bound met, none raised
+```
+
+### Mutations verified red and reverted (4)
+
+| mutation in `bga/viewer/pairs.js` | reddened | count |
+|---|---|---|
+| `allClear`: `value === null \|\| value === false` (false folds as absent) | planted block | 1 failed, 7 passed |
+| `allClear`: `value === 0 ? "absent"` (zero and null share a dt) | planted block | 1 failed, 7 passed |
+| `CLEAR_LABEL` both `"None"` | page none-count (macro_micro, two_plane) + planted | 3 failed |
+| the zero group never folds | page runs (macro_micro, two_plane) + planted | 3 failed |

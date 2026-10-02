@@ -107,6 +107,7 @@ would have caught it; a bound at it would only just have.
 | 33 | 2026-10-01 | 1142 | one bookkeeping line filed, no task file, nothing fixed - rounds 156-158 (33 closed, `UX-1161`..`UX-1193`) and the shape is review 32's again: **guards that landed without a section to be found from.** 14 of the 23 tests the window added read 0 in `styleguide.md` and cite no §, so the ledger guard, which reads section to test, cannot see them (`UX-1177`'s rail mark, `UX-1179`'s print and find, `UX-1190`'s sortable header among them); review 32's `r155` line is still open and this one is its continuation. Sound: 27 ids, 10 printable, 10 superseded, 11 schemas; `_consumer_surface()` 606 as `cli.md:1150` says; 24 `bga:` hints emitted, 24 table rows in the styleguide, `format.js`'s *21 of the 24*; 23 viewer modules; `PAGE_BUDGET_B` 160,000 in `bga_view.py:782` and `cli.md`; §3e's 38,226 and 43,158 + 1,129 px sit under the guard's 38,400 and 44,629; `CLAUDE.md`'s 115 of 302 and 318k/249k at `--runs 232`; every test and path the diff's added sentences name exists; 1142 closed, 16 open in `dev_close_task.py --counts` |
 | 34 | 2026-10-01 | 1169 | one bookkeeping line filed, no task file, nothing fixed - round 160 and `UX-1240`..`UX-1241` (27 closed) and the shape is review 33's again: **guards that landed without a section to be found from.** 7 of the 8 tests the window added read 0 in `styleguide.md` and cite no §, and the `r155` and `r158` lines on 25 more are still open; this is `r160`. Sound: 27 ids, 10 printable, 10 superseded, 11 schemas; `analyze/v6` 64 properties as the new `architecture.md` entry says; `_consumer_surface()` 607 as `cli.md:1150` says; 24 `bga:` hints emitted and *of the 24* in `format.js`; 23 viewer modules; `PAGE_BUDGET_B` 160,000; `CLAUDE.md`'s 117 of 330 and 318k/249k at `--runs 232`; `report.json` 57 sections; 1169 closed, 18 open in `dev_close_task.py --counts` |
 | 35 | 2026-10-02 | 1202 | one bookkeeping line filed, no task file, nothing fixed - round 161 (`UX-1219`..`UX-1236`) and round 163 (`UX-1244`..`UX-1257`; 33 closed) and the shape is review 34's again: **guards that landed without a section to be found from.** 12 of the 14 tests the window added read 0 in `styleguide.md` and cite no §, the `r155`, `r158` and `r160` lines on 32 more are still open; this is `r163`. Sound: 28 ids, 10 printable, 11 superseded, 11 schemas (`analyze/v6` moved to superseded, `analyze/v7` published); `analyze/v7` 65 properties as `architecture.md:514` says; `_consumer_surface()` 611 as `cli.md:1157` says; 24 hint rows in the styleguide and *of the 24* in `format.js`; 23 viewer modules; `PAGE_BUDGET_B` 165,000 at `tools/bga_view.py:782` and `cli.md:2268`; `CLAUDE.md`'s 117 of 353 and 318k/249k at `--runs 232`; `bga/consistency.py` in the fixing guide §6 map; 1202 closed, 14 open in `dev_close_task.py --counts` |
+| 36 | 2026-10-02 | 1234 | four rows filed, `UX-1296`..`UX-1299`, nothing fixed - rounds 165, 166 and 167 (32 closed, `UX-1258`..`UX-1295`), scoped to the documents round 167 created or changed, and the shape is a **new page whose sentences describe the code's neighbour rather than the code**: `pilot.md` says the band refuses below three kept runs and exit 6 posts no comment, and the kit judges the band at four prior runs and comments on exit 6 (`UX-1296`); its two-week readings are kept by no step of the shipped workflow on a pull request (`UX-1297`); `UX-1285`/`UX-1286` put the band's skipped-for-host count and its tree in the comment and in no `compare/v2` key (`UX-1298`); and `UX-1293`'s move left two pointers at the old round table and the audits index says the review log is newest last (`UX-1299`). Sound: 28 ids, 10 printable, 11 superseded, 3 read; `json-contracts.md`'s *last eighteen*, *eleven*, *other ten*; the pilot's switch table, overhead and jobserver figures against `real-project.md:355-358` and `jobserver.md:14-54`; `COMPARED_FIELDS` as `ci-comment.md` says; doctor's `c-compiler`; `--anonymize` refusing `--no-plane2`; README 339 lines; 118 round links both ways; 1234 closed, 14 open in `dev_close_task.py --counts` |
 
 ### Review 11 — 2026-09-02
 
@@ -1565,6 +1566,46 @@ six named plus §1a were checked. The §6 module map's ~103 per-row
 descriptions were checked for the CI-workflow block only — `UX-780`
 came out of that block, which is a reason to think the rest is worth a
 pass. `UX-689` owns the map's structural half.
+
+## Review 36 — 2026-10-02, at 1234 closed rows
+
+Run by one reader over rounds 165, 166 and 167 (`closed.md` 1202 to 1234:
+32 closes), scoped to the documents round 167 created or changed
+(`git diff --stat origin/main...HEAD -- docs README.md CHANGELOG.md examples`):
+`pilot.md`, `json-contracts.md`, `docs/README.md`, `audits/README.md`,
+`directions-history.md`, `directions.md`, `cli.md`'s bundle, doctor and
+compare hunks, `ci-comment.md`, `continuous-build-improvement.md` and the
+README. The same-day docs audit's rows (`UX-1289`..`UX-1295`) were not
+re-filed. Four rows filed, nothing fixed.
+
+**The shape** is a new page whose sentences describe the code's
+neighbour rather than the code. `pilot.md`'s threshold is `cli.md`'s
+*three runs* with the kit's own baseline left out of the count:
+
+```text
+$ pytest scratch/test_band_threshold.py -s      (the pilot guard's fixture, 2..4 kept, candidate 30% slower)
+prior=2 kept_total=3 tsv=...review default rule 4
+prior=3 kept_total=4 tsv=...review default rule 4
+prior=4 kept_total=5 tsv=...review default band 4
+```
+
+### The five checks
+
+| check | result |
+|---|---|
+| code does what it says | **`pilot.md:63-65,133` three kept runs → four (`UX-1296`)**; **`:132` exit 6 *no comment* → a 2,263-character comment on a cross-host candidate (`UX-1296`)**; **`:135-143`'s readings are kept by no workflow step on a pull request (`UX-1297`)**; `COMPARED_FIELDS` is CPU model, count and memory as `ci-comment.md` says; doctor's `c-compiler` is `compile_hook`'s; `--anonymize` refuses `--no-plane2` (`bga/cli.py:1999`) |
+| contracts have a home | `ids()` 28, `printable()` 10, `superseded()` 11, `reads()` 3 — `json-contracts.md`'s *twenty-eight*, *last eighteen*, *eleven*, *other ten* reproduce; **the band's skipped-for-host count and `--bundles` source are in the comment and no `compare/v2` key (`UX-1298`)** |
+| figures invalidated | `pilot.md`'s overhead rows are `real-project.md:355-358`; its jobserver rows `jobserver.md:14-54`; *33%* is `UX-899`'s; README 339 lines as its own comment says; `docs/README.md`'s ten terms and *Parts 0-44*, *`I1`-`I13`*; **`in-step-parallelism.md:268`'s `directions.md:1822` is now `:2255` (`UX-1299`)** |
+| shipped, no document names it | `UX-1285`..`UX-1288` and `UX-1295` are in `cli.md`, `ci-comment.md` or `pilot.md`; CHANGELOG's Unreleased carries the contract delta only, by design (`UX-1078`) |
+| last-updated claims | every scoped file last touched 2026-10-02; the dated ones (`directions.md:3`, `directions-history.md:7,362`, `continuous-build-improvement.md:3,12`) are records; **`architecture-review.md:5` and `audits/README.md:13` name a round table and an order that moved (`UX-1299`)** |
+
+### One gap in this sweep
+
+`continuous-build-improvement.md` §4 (*25 versioned documents with
+`--schema` behind each*) and §6 (*no percentage anywhere in the tree*)
+were read as records of its 2026-09-20 dateline, though its status line
+now reads *as of 2026-10-02*; `UX-895` has since measured +7.1% to +9.3%.
+`cli.md` outside the three hunks was not re-read; `UX-1290` splits it.
 
 ## Review 35 — 2026-10-02, at 1202 closed rows
 

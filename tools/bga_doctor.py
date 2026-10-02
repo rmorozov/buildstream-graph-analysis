@@ -161,46 +161,31 @@ def check_bwrap() -> dict:
 
 
 def check_compiler() -> dict:
-    """A C compiler for the hook and the spine.
+    """A C compiler for the hook and the spine: the capture's own choice, and the hook compiled once."""
+    from .bst_native_build_tracer import TraceError, c_compiler, compile_hook
 
-    The same check `compile_hook` performs, moved before the build rather
-    than after twenty minutes of one.
-    """
-    cc = shutil.which("cc") or shutil.which("gcc")
-    if not cc:
-        return _check(
-            "c-compiler",
-            FAIL,
-            "no C compiler (cc/gcc) on PATH - Plane 2 compiles its LD_PRELOAD hook and ptrace spine at capture time",
-            remedy="apt-get install -y build-essential (Plane 1 and Plane 3 work "
-            "without it; only `bga capture` needs it)",
-        )
+    remedy = "apt-get install -y build-essential (Plane 1 and Plane 3 work without it; only `bga capture` needs it)"
+    # UX-1287: compile the real hook into a scratch dir, so a cc that cannot build it fails here, not at capture.
+    with tempfile.TemporaryDirectory(prefix="bga-doctor-cc-") as scratch:
+        try:
+            cc = c_compiler("LD_PRELOAD hook")
+            compile_hook(scratch)
+        except (TraceError, OSError) as exc:
+            summary, _, stderr = str(exc).partition("\n")
+            return _check("c-compiler", FAIL, summary, remedy=remedy, detail=stderr.splitlines()[-6:] or None)
 
-    # UX-153: probe, do not check - this file's own principle, applied to
-    # itself. A compiler on PATH is not the question; the capture needs
-    # two *capabilities* from it, and they fail separately. `-static` in
-    # particular needs a static libc, which `build-essential` alone does
-    # not provide - and the spine is the half that goes missing, silently,
-    # on a machine where the hook compiles fine.
-    missing = [
-        name
-        for name, argv in (
-            ("-shared -fPIC (the LD_PRELOAD hook)", [cc, "-shared", "-fPIC", "-o", "/dev/null", "-x", "c", "-"]),
-            ("-static (the ptrace spine)", [cc, "-static", "-o", "/dev/null", "-x", "c", "-"]),
-        )
-        if not _compiles(argv)
-    ]
-    if missing:
+    # UX-153: `-static` needs a static libc that `build-essential` alone does not provide; the spine goes missing alone.
+    if not _compiles([cc, "-static", "-o", "/dev/null", "-x", "c", "-"]):
         return _check(
             "c-compiler",
             WARN,
-            f"{cc} cannot link: {', '.join(missing)}",
+            f"{cc} cannot link: -static (the ptrace spine)",
             remedy="apt-get install -y build-essential libc6-dev "
             "(a static libc is a separate package on some distributions; "
             "without it the hook still works and `--trace-spine` does not)",
             detail=[f"probed by compiling a trivial program with {cc}"],
         )
-    return _check("c-compiler", OK, f"C compiler at {cc} links shared and static")
+    return _check("c-compiler", OK, f"C compiler at {cc} builds the hook and links static")
 
 
 def _compiles(argv: list[str]) -> bool:

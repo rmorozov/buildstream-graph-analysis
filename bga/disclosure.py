@@ -456,6 +456,7 @@ POLICIES = {
         "commands_not_observed.per_element.{A}.commands_not_read": "C",
         f"binary_cost.{_PER_ELEMENT}.available": "C",
         f"binary_cost.{_PER_ELEMENT}.measured_cpu_us": "C",
+        f"binary_cost.{_PER_ELEMENT}.blocked_unparented": "C",
         f"binary_cost.{_PER_ELEMENT}.by_count[].binary": "B:binary",
         f"binary_cost.{_PER_ELEMENT}.by_count[].count": "C",
         **{f"binary_cost.{_PER_ELEMENT}.by_cpu[].{key}": "C" for key in ("count", "cpu_share", "cpu_us", "wall_s")},

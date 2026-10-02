@@ -6013,7 +6013,12 @@ class _BinaryCost:
         """
         return {element: set(binaries) for element, binaries in self.per_element.items()}
 
-    def finish(self, top_n: int = 5, blocked: Optional[dict[str, dict[str, int]]] = None):
+    def finish(
+        self,
+        top_n: int = 5,
+        blocked: Optional[dict[str, dict[str, int]]] = None,
+        unparented: Optional[dict[str, int]] = None,
+    ):
         result: dict[str, dict] = {}
         for element, binaries in self.per_element.items():
             waits = (blocked or {}).get(element) or {}
@@ -6052,6 +6057,8 @@ class _BinaryCost:
                 # UX-69: one process holding real wall time cannot be
                 # parallelised away - a different fix from N processes.
                 "single_process_costs": serial,
+                # UX-1275: processes whose parent the capture missed; their ancestor's blocked time holds their run.
+                **({"blocked_unparented": unparented[element]} if unparented and element in unparented else {}),
                 # UX-1183: the membership whole; `top_n` bounds the two rankings only.
                 "binaries": [
                     {"binary": b, "count": v["count"], "cpu_us": v["cpu_us"], "wall_s": round(v["wall_s"], 3)}
@@ -6082,6 +6089,7 @@ class _BlockedTime:
         self.start = array.array("d")
         self.end = array.array("d")
         self.pair = array.array("i")
+        self.unparented: dict[str, int] = {}
 
     def add(self, record):
         self.start.append(record["start_ts"])
@@ -6128,18 +6136,38 @@ class _BlockedTime:
                 latest[key] = index
         return latest, previous
 
+    def _count_unparented(self, orphans: list[int]) -> None:
+        """Per element, processes with no recorded parent beyond each sandbox's earliest: a missed intermediate's
+        child is not subtracted from its real ancestor, whose blocked time then holds the child's run."""
+        rootless: dict[int, list[int]] = {}
+        for child in orphans:
+            seen = rootless.setdefault(self.rows.rows_sandbox[child], [0, child])
+            seen[0] += 1
+            if self.start[child] < self.start[seen[1]]:
+                seen[1] = child
+        self.unparented = {}
+        for many, root in rootless.values():
+            pair = self.pair[root]
+            if many > 1 and pair >= 0:
+                element = self.pair_names[pair][0]
+                self.unparented[element] = self.unparented.get(element, 0) + many - 1
+
     def _grouped(self):
         """`(first, filled, slots)`: children grouped by parent in array passes, a parent's run `slots[first:filled]`."""
         count = len(self.start)
         latest, previous = self._parents()
         parent_of = array.array("q", [-1]) * count
         first: dict[int, int] = {}
+        orphans: list[int] = []
         for child in range(count):
             parent = self._parent(child, latest, previous)
             if parent >= 0 and self.end[parent] != self._NONE:
                 parent_of[child] = parent
                 first[parent] = first.get(parent, 0) + 1
+            elif parent < 0:
+                orphans.append(child)
         del latest, previous
+        self._count_unparented(orphans)
         offset = 0
         for parent, many in first.items():
             first[parent] = offset
@@ -7161,7 +7189,7 @@ def _summarize_folded(
         "process_outcomes": fold.outcomes.finish(),
         # UX-69: where the time went inside each element, not how many
         # times something ran.
-        "binary_cost": fold.binary_cost.finish(blocked=fold.blocked.finish()),
+        "binary_cost": fold.binary_cost.finish(blocked=fold.blocked.finish(), unparented=fold.blocked.unparented),
         # UX-32: per-element achieved parallelism - the question this
         # plane exists to answer. See compute_per_element_parallelism.
         "per_element_parallelism": fold.parallelism.finish(),

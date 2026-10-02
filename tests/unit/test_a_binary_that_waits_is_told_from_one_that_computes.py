@@ -7,10 +7,13 @@ and the jobs-waiting step named no binary. Wall minus CPU is its children's life
 import contextlib
 import io
 import json
+import re
+from types import SimpleNamespace
 
 import pytest
 
 from bga.cli import main
+from bga.findings import _plane2_findings
 from bga.plane2 import binary_totals
 from tests import pages
 from tools.bst_native_build_tracer import summarize
@@ -49,6 +52,8 @@ def test_make_waits_nine_seconds_not_ninety_nine():
         ]
     )
     assert blocked == {"make": 9_000_000, "cc1": 10_000_000}, blocked
+    root_only = summarize([_record(10, 1, 0.0, 100.0, 1_000_000, "/usr/bin/make -j4")])["binary_cost"]["e.bst"]
+    assert "blocked_unparented" not in root_only, root_only
 
 
 def test_a_recycled_pid_bills_the_occupant_alive_at_the_childs_start():
@@ -61,6 +66,48 @@ def test_a_recycled_pid_bills_the_occupant_alive_at_the_childs_start():
         ]
     )
     assert blocked == {"sh": 10_000_000 + 2_000_000, "cc1": 0}, blocked
+
+
+def test_a_child_whose_parent_was_missed_is_counted_where_blocked_time_is_published():
+    """cc1's parent pid 11 was never recorded: make reads its whole life blocked, and the element says one was missed."""
+    records = [
+        _record(10, 1, 0.0, 100.0, 1_000_000, "/usr/bin/make -j4"),
+        _record(12, 11, 10.0, 90.0, 80_000_000, "cc1 a.c"),
+    ]
+    cost = summarize(records)["binary_cost"]["e.bst"]
+    assert {entry["binary"]: entry["blocked_us"] for entry in cost["binaries"]} == {"make": 99_000_000, "cc1": 0}
+    assert cost["blocked_unparented"] == 1, cost
+
+
+def _waiting_report():
+    """Two waiting elements and one computing; CPU ranks cc1 first, blocked ranks make, sh, ld; the busy one blocks most."""
+    costs = {
+        "w1.bst": [("cc1", 100_000_000, 1_000_000), ("make", 1_000_000, 30_000_000), ("sh", 2_000_000, 20_000_000)],
+        "w2.bst": [("make", 1_000_000, 20_000_000), ("ld", 5_000_000, 10_000_000)],
+        "busy.bst": [("zzz", 1_000_000, 900_000_000)],
+    }
+    cores = {"w1.bst": 0.2, "w2.bst": 0.3, "busy.bst": 3.5}
+    return {
+        "per_element_parallelism": [{"element": uid, "requested_jobs": 4} for uid in costs],
+        "cpu_time": {"per_element": {uid: {"cpu_per_wall_second": c, "wall_span_s": 1.0} for uid, c in cores.items()}},
+        "binary_cost": {
+            uid: {
+                "available": True,
+                "measured_cpu_us": sum(cpu for _b, cpu, _w in rows),
+                "binaries": [
+                    {"binary": b, "count": 1, "cpu_us": cpu, "wall_s": 1.0, "blocked_us": w} for b, cpu, w in rows
+                ],
+            }
+            for uid, rows in costs.items()
+        },
+    }
+
+
+def test_the_waiting_step_names_the_waiting_elements_top_three_by_blocked_time():
+    (finding,) = [
+        f for f in _plane2_findings(SimpleNamespace(plane2_report=_waiting_report())) if f["id"] == "jobs-waiting"
+    ]
+    assert re.findall(r"(\S+) \(", finding["step"]["text"]) == ["make", "sh", "ld"], finding["step"]
 
 
 def test_a_report_without_blocked_time_leaves_the_column_absent():

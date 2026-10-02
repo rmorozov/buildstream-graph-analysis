@@ -51,3 +51,9 @@ Report cost (`bga capture report --json` on that log, 3 runs each, fresh child, 
 | parent = latest occupant of the pid, no span check | `test_a_recycled_pid_bills_the_occupant_alive_at_the_childs_start` (sh 20 s, not 12 s) | 1 failed, 4 passed |
 | jobs-waiting step back to the fixed sentence | `test_the_waiting_step_names_a_binary_from_the_blocked_ranking` | 1 failed, 4 passed |
 | `binary_totals` sums an absent `blocked_us` as 0 | `test_a_report_without_blocked_time_leaves_the_column_absent` | 1 failed, 4 passed |
+| step ranks by `cpu_us` (verifier round; file now 7 tests) | `test_the_waiting_step_names_the_waiting_elements_top_three_by_blocked_time` (cc1, ld, make) | 1 failed, 6 passed |
+| step reads every element, not the waiting ones | same (zzz, make, sh) | 1 failed, 6 passed |
+| unparented children not collected | `test_a_child_whose_parent_was_missed_is_counted_where_blocked_time_is_published` | 1 failed, 6 passed |
+| each sandbox's root counted as unparented | `test_make_waits_nine_seconds_not_ninety_nine` (root-only element gains the key) | 1 failed, 6 passed |
+
+Verifier round: a child whose ppid names no recorded process is not subtracted from its real ancestor (make reads 99 s of 100 s blocked in the hand-built case). Counted, not re-attributed: `binary_cost[e].blocked_unparented` (processes with no recorded parent beyond each sandbox's earliest), and `by_binary.blocked_us`'s description calls blocked time an upper bound for that reason.

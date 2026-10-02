@@ -4922,6 +4922,9 @@ _ANALYZE_HINTS = {
                     QUANTITY: "duration_us",
                     "description": "Time its processes were alive, not on CPU, "
                     "and had no child running: what they waited on themselves. "
+                    "An upper bound: a child whose parent the capture missed is "
+                    "not subtracted from its ancestor; Plane 2's report counts "
+                    "those per element. "
                     "Absent when the Plane 2 report did not measure it.",
                 },
                 "blocked_share": {

@@ -38,6 +38,11 @@ task file, which is the only place it ever lived twice.
 | UX-1286 | [the review gate reads its band from the bundles CI kept, without a store on the runner](UX-1286-the-gate-reads-kept-bundles-in-place.md) | cli | High | R4 | 🔴 Not Started |
 | UX-1287 | [`bga doctor` names the C compiler the capture compiles its hook with](UX-1287-doctor-names-the-c-compiler-the-capture-needs.md) | capture | Medium | R5 | 🔴 Not Started |
 | UX-1288 | [a pilot kit runs bga in a team's CI, report-only, from one script](UX-1288-a-pilot-kit-runs-bga-in-a-teams-ci-in-report-only-mode.md) | docs | High | R4, R5, R8 | 🔴 Not Started |
+| UX-1289 | [`docs/README.md` is a one-screen router by job, and the round log moves under `audits/`](UX-1289-docs-front-door-is-a-router-not-a-round-log.md) | docs | High | R1, R4, R5, R8 | 🔴 Not Started |
+| UX-1290 | [`cli.md` is split into a command reference, a contracts page and a viewer page, and user switches are separated from internal variables](UX-1290-cli-md-is-split-into-commands-contracts-and-viewer.md) | docs | High | R1, R4, R5 | 🔴 Not Started |
+| UX-1291 | [one guide says how to keep, share, anonymise and reload a capture](UX-1291-a-sharing-a-capture-guide.md) | docs | Medium | R4, R5 | 🔴 Not Started |
+| UX-1292 | [the stale claims the docs audit found are corrected, and the retired stub is removed](UX-1292-stale-and-retired-doc-pages-are-corrected.md) | docs | Medium | R1, R5 | 🔴 Not Started |
+| UX-1293 | [`design/directions.md` holds the directions in order, and its round history moves to `audits/`](UX-1293-design-directions-holds-directions-not-round-history.md) | docs | Low | contributors | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

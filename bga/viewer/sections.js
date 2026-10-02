@@ -116,6 +116,36 @@ export function renderFindingEvidence(evidence, node = undefined, said = new Set
 const elementLink = (uid) => el("a", { href: `#${cssId(uid)}`, "data-element": uid },
                                 el("code", {}, uid));
 
+// UX-1249: each element a detail line names becomes its link there, once; `named` collects them.
+function linkNames(line, uids, named) {
+  const sorted = [...uids].filter((uid) => uid).sort((a, b) => b.length - a.length);
+  if (!sorted.length) return [line];
+  const quoted = sorted.map((uid) => uid.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+  const parts = [];
+  let last = 0;
+  for (const match of line.matchAll(new RegExp(`(?<![\\w./-])(?:${quoted.join("|")})(?![\\w/-])`, "g"))) {
+    if (named.has(match[0])) continue;
+    named.add(match[0]);
+    parts.push(line.slice(last, match.index), elementLink(match[0]));
+    last = match.index + match[0].length;
+  }
+  parts.push(line.slice(last));
+  return parts.filter((part) => part !== "");
+}
+
+// UX-1256's `step`: what to do, or why there is nothing to.
+function renderStep(step, uids, named) {
+  if (step?.text) {
+    return el("p", { class: "step" }, el("strong", {}, "Next: "), ...linkNames(step.text, uids, named),
+              step.command ? " " : null, step.command ? el("code", {}, step.command) : null);
+  }
+  return step?.why_none ? el("p", { class: "step muted" }, `No step: ${step.why_none}`) : null;
+}
+
+// UX-1249: an Info finding with no step, its notes with it, folds under "Also noted".
+const noted = (finding) => String(finding.severity ?? "info").toLowerCase() === "info"
+  && !finding.step?.text;
+
 export function renderFindings(findings, investigate = null, node = undefined,
                                root = undefined, payload = undefined) {
   const section = el("section", { "data-section": "findings" },
@@ -125,7 +155,19 @@ export function renderFindings(findings, investigate = null, node = undefined,
   let ranked = null;
   // `UX-1156`: a detail line `attribution` draws as its bucket's advice is said there.
   const advised = Object.values(payload?.attribution_hints ?? {});
-  findings.forEach((finding, index) => {
+  const groups = [];
+  for (const finding of findings) {
+    if (finding.indent && groups.length) groups.at(-1).push(finding);
+    else groups.push([finding]);
+  }
+  const quiet = groups.filter((group) => group.every(noted));
+  const ordered = [...groups.filter((group) => !group.every(noted)), ...quiet].flat();
+  const folded = new Set(quiet.flat());
+  const also = folded.size
+    ? el("details", { class: "also-noted", "data-fold": "also-noted" },
+         el("summary", {}, `Also noted · ${folded.size}`))
+    : null;
+  ordered.forEach((finding, index) => {
     const severity = String(finding.severity ?? "info").toLowerCase();
     // UX-1148: an indented finding is a note on the card above, not a rank of its own.
     const noteOf = finding.indent && ranked ? ranked : null;
@@ -146,9 +188,14 @@ export function renderFindings(findings, investigate = null, node = undefined,
     // UX-921: `_hydrate` appends the rest once; a second call no-ops.
     article._hydrate = () => {
       // UX-1136: native `append` prints a null child as the text "null"; `el` skips it.
+      const named = new Set();
+      const linkable = finding.elements?.length > bound ? [] : (finding.elements ?? []);
+      const lines = (drawnIn ? [] : detail).filter((line) => !advised.includes(line))
+        .map((line) => el("p", { class: "detail muted" }, ...linkNames(line, linkable, named)));
+      const step = renderStep(finding.step, linkable, named);
+      const unnamed = linkable.filter((uid) => !named.has(uid));
       article.append(...[
-        ...(drawnIn ? [] : detail).filter((line) => !advised.includes(line))
-          .map((line) => el("p", { class: "detail muted" }, line)),
+        ...lines,
         drawnIn
           ? el("p", { class: "section-link" }, "The evidence: ",
                el("a", { href: `#${drawnIn}`, "data-section-link": drawnIn },
@@ -161,11 +208,11 @@ export function renderFindings(findings, investigate = null, node = undefined,
         // Review (#297): the bounded list keeps each shown name a link.
         finding.elements?.length > bound
           ? foldedList("elements", finding.elements, elementLink)
-          : finding.elements && finding.elements.length
+          : unnamed.length
           ? el("p", { class: "muted" },
-              ...finding.elements.flatMap((uid, i) => [
-                i ? ", " : "", elementLink(uid)]))
+              ...unnamed.flatMap((uid, i) => [i ? ", " : "", elementLink(uid)]))
           : null,
+        step,
         // `UX-1157`: the door and its list are two children, so spread.
         ...[drawnIn ? null : renderFindingEvidence(finding.evidence, evidenceNode,
                                                    new Set(detail.map((line) => line.trim())))].flat(),
@@ -189,8 +236,9 @@ export function renderFindings(findings, investigate = null, node = undefined,
       article._hydrate = null;
     };
     if (index < bound) article._hydrate();
-    section.append(article);
+    (folded.has(finding) ? also : section).append(article);
   });
+  if (also) section.append(also);
   //: `UX-413`: cards are bounded like rows - see `boundCards`.
   const control = boundCards(section, "article.finding", bound, "finding");
   // UX-921: Show all hydrates every shell too - already-hydrated cards

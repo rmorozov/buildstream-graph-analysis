@@ -2277,6 +2277,27 @@ def _by_severity(findings: list[dict]) -> list[dict]:
     return [finding for group in sorted(groups, key=rank) for finding in group]
 
 
+def _said_once(findings: list[dict]) -> list[dict]:
+    """`UX-1249`: a finding listing the elements a more severe one listed becomes a line of that one."""
+    kept: list[dict] = []
+    first: dict = {}
+    for finding in findings:
+        key = frozenset(finding.get('elements') or ())
+        # One shared element is two claims about it; a shared list is one claim said twice.
+        earlier = first.get(key) if len(key) > 1 else None
+        if earlier is not None and _rank(earlier) < _rank(finding):
+            earlier['detail'] = [*earlier['detail'], f"    {finding['title']}"]
+            continue
+        first.setdefault(key, finding)
+        kept.append(finding)
+    return kept
+
+
+def _rank(finding: dict) -> int:
+    severity = finding.get('severity')
+    return _LEAD_ORDER.index(severity) if severity in _LEAD_ORDER else len(_LEAD_ORDER)
+
+
 def compute_findings(result: AnalysisResult) -> list[dict]:
     """Every conclusion the report draws, in the order it draws them.
 
@@ -2349,7 +2370,7 @@ def compute_findings(result: AnalysisResult) -> list[dict]:
     # rather than about this run - the reader has met the run's own
     # numbers by the time they reach "and one repo rebuilds all of it".
     findings.extend(_shared_source_findings(result))
-    findings = _by_severity(findings)
+    findings = _said_once(_by_severity(findings))
     # `UX-372`: and who each is for. Stamped here rather than at the
     # nineteen construction sites, for the reason `FINDING_READERS`
     # gives - and after the whole list exists, so the map is applied to

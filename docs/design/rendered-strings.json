@@ -547,11 +547,6 @@
   {
     "exception": null,
     "role": "summary",
-    "text": "How these figures relate"
-  },
-  {
-    "exception": null,
-    "role": "summary",
     "text": "Why ##"
   },
   {
@@ -563,6 +558,11 @@
     "exception": null,
     "role": "summary",
     "text": "The numbers behind that \u00b7 # level, # rows"
+  },
+  {
+    "exception": null,
+    "role": "summary",
+    "text": "How these figures relate"
   },
   {
     "exception": null,
@@ -602,6 +602,11 @@
   {
     "exception": null,
     "role": "summary",
+    "text": "Across the run \u00b7 # level, # rows"
+  },
+  {
+    "exception": null,
+    "role": "summary",
     "text": "Hard gates \u00b7 # level, # rows"
   },
   {
@@ -628,11 +633,6 @@
     "exception": null,
     "role": "summary",
     "text": "Joint saving \u00b7 # level, # rows"
-  },
-  {
-    "exception": null,
-    "role": "summary",
-    "text": "Optimization horizon \u00b7 # level, # rows"
   },
   {
     "exception": null,
@@ -1683,6 +1683,11 @@
     "exception": null,
     "role": "th",
     "text": "Before clamping"
+  },
+  {
+    "exception": null,
+    "role": "th",
+    "text": "Builder"
   },
   {
     "exception": null,

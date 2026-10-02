@@ -290,6 +290,7 @@ which kind of question. The three entry points:
 | **work on the codebase** | [`docs/design/architecture.md`](docs/design/architecture.md) — all three planes as one system, and every extension beyond the spec |
 | **look something up** | [`docs/guides/cli.md`](docs/guides/cli.md) — every command, flag and exit code |
 | **know what changed** since the build you installed | [`CHANGELOG.md`](CHANGELOG.md) — each release records a contract state, not a date |
+| **see it change a real build** | [`docs/cases/serial-giant-jobserver.md`](docs/cases/serial-giant-jobserver.md) — both captures: one giant element, `--jobserver auto` on 16 cores, -57.0 % at `max-jobs: 3` and -19.2 % at bst's default 8 |
 
 ## Development
 
@@ -328,7 +329,8 @@ rather than a reading dated to one afternoon.
      takes it to 341 lines: the Quick start block's Confidence/Efficiency Score pair is no
      longer adjacent in the report - `remote-execution-whatif` now fires between them - so an
      elision marker sits where the two used to touch, three lines to declare the cut rather
-     than silently reordering the paste, plus this note. The budget is a
+     than silently reordering the paste, plus this note. `UX-902` takes it to 343 lines: one
+     entry-point row to the first case with both captures, and this sentence. The budget is a
      measured target, not a law - but exceeding it silently is what turned 420 into "430" once
      before, so the number is here rather than in a commit message. -->
 

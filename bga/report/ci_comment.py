@@ -239,11 +239,15 @@ def _band_members(comparison) -> str:
 
 
 def _band_selection(args) -> str:
-    """`UX-1285`: how many runs of the class `--band-from-class` skipped for host."""
+    """Where `--band-from-class` read its members (`UX-1286`) and how many it skipped for host (`UX-1285`)."""
+    text = ""
+    bundles = getattr(args, 'bundles', None)
+    if bundles and getattr(args, 'band_from_class', None):
+        text += f" — read from the bundles under `{bundles}`"
     skipped = getattr(args, 'band_skipped_for_host', 0) or 0
-    if not skipped:
-        return ""
-    return f" — {plural(skipped, 'run')} of this class skipped, measured on another host"
+    if skipped:
+        text += f" — {plural(skipped, 'run')} of this class skipped, measured on another host"
+    return text
 
 
 def _never_read_by_element(native_report: Optional[dict]) -> Optional[dict]:

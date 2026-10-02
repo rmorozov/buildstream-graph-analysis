@@ -80,6 +80,16 @@ kept, and both the refusal and the comment say how many were skipped
 for host. The comment names the runs the band was drawn from, so a
 reviewer can see a window that reached back across a toolchain bump.
 
+A review runner that holds only the candidate reads the band from the
+bundles CI kept instead (`UX-1286`) — no `project.conf`, no `.bga` left
+behind; the tree is read through a temporary store deleted on exit, and
+the comment names it as the band's source:
+
+```bash
+bga compare "$BASELINE" "$CANDIDATE" --band-from-class \
+    --bundles kept-bundles/ --fail-on-regression --format ci-comment
+```
+
 **Which gate to reach for.** `--fail-on-regression` asks "did it get
 slower", which a growing project fails legitimately.
 `--fail-on-efficiency-regression` asks "did it get *worse*", and

@@ -223,15 +223,18 @@ def declared_host(run_dir: str) -> Optional[dict]:
 def _run_context(run_dir: str) -> dict:
     for name in ("run-context.json", "run_context.json"):
         path = os.path.join(run_dir, name)
-        if not os.path.isfile(path):
-            continue
-        try:
-            with open(path, encoding="utf-8") as handle:
-                context = json.load(handle)
-        except (OSError, ValueError):
-            return {}
-        return context if isinstance(context, dict) else {}
+        if os.path.isfile(path):
+            return _json_dict(path)
     return {}
+
+
+def _json_dict(path: str) -> dict:
+    try:
+        with open(path, encoding="utf-8") as handle:
+            data = json.load(handle)
+    except (OSError, ValueError):
+        return {}
+    return data if isinstance(data, dict) else {}
 
 
 def runs_of_class(
@@ -498,13 +501,7 @@ def read_config(project: str) -> dict:
     report already records what actually ran (`UX-95`/`UX-113`), so
     stickiness cannot make a capture *claim* something it did not do.
     """
-    path = os.path.join(store_dir(project), CONFIG_NAME)
-    try:
-        with open(path, encoding="utf-8") as handle:
-            data = json.load(handle)
-    except (OSError, ValueError):
-        return {}
-    return data if isinstance(data, dict) else {}
+    return _json_dict(os.path.join(store_dir(project), CONFIG_NAME))
 
 
 def public_junctions(project: str) -> dict:

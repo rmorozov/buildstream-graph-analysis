@@ -51,6 +51,7 @@ from .exceptions import (
     EXIT_BAND_UNAVAILABLE,
     EXIT_EFFICIENCY_REGRESSION,
     EXIT_GENERAL,
+    EXIT_INGESTION,
     EXIT_MISMATCHED_RUNS,
     EXIT_OK,
     EXIT_REGRESSION,
@@ -1245,7 +1246,24 @@ def _resolve_band_from_class(args: argparse.Namespace) -> Optional[int]:
     from .buildclass import label as class_label
 
     candidate = str(Path(args.candidate).resolve())
-    project = run_store.project_root(candidate)
+    exclude = [candidate, str(Path(args.baseline).resolve())]
+    band_store = getattr(args, 'band_store', None)
+    project = band_store or run_store.project_root(candidate)
+    holds = f"the bundles under {args.bundles} hold" if band_store else "this store holds"
+    if band_store:
+        from . import bundle
+        from .compare import _band_source
+
+        try:
+            bundle.load_tree(args.bundles, band_store)
+        except bundle.BundleError as error:
+            print(f"Error: {error}", file=sys.stderr)
+            return EXIT_INGESTION
+        # A principal also kept in the tree is excluded by its stamp, as the store excludes it by path.
+        exclude += [
+            os.path.join(run_store.runs_dir(band_store), _band_source(Path(p))['run'], run_store.RUN_SUBDIR)
+            for p in exclude[:2]
+        ]
     if project is None:
         print(
             f"Error: --band-from-class needs a run store to select from, and no "
@@ -1263,7 +1281,7 @@ def _resolve_band_from_class(args: argparse.Namespace) -> Optional[int]:
         project,
         declared,
         window,
-        exclude=(candidate, str(Path(args.baseline).resolve())),
+        exclude=tuple(exclude),
         host=host,
     )
     args.band_skipped_for_host = len(skipped)
@@ -1271,7 +1289,7 @@ def _resolve_band_from_class(args: argparse.Namespace) -> Optional[int]:
         print(
             f"Band gate REFUSED: the candidate declares "
             f"{class_label(declared) or 'no build class'} "
-            f"and this store holds other {plural(len(selected), 'run')} of that class "
+            f"and {holds} other {plural(len(selected), 'run')} of that class "
             f"within the last {window}"
             + (f" on its host ({len(skipped)} skipped for host: {_skipped_hosts(skipped, host)})" if skipped else "")
             + f", below the {MIN_BASELINE_RUNS} a measured "
@@ -1657,7 +1675,23 @@ def cmd_compare(args: argparse.Namespace) -> int:
     itself a failure condition. `--fail-on-regression` opts into a
     distinct exit code when the candidate genuinely regressed (UX-03's
     CI gate) - see _compare_exit_code."""
-    return _execute_compare_and_write(args)
+    if getattr(args, 'bundles', None) is None:
+        return _execute_compare_and_write(args)
+    if getattr(args, 'band_from_class', None) is None:
+        print(
+            "Error: --bundles names where the band's members are kept; pass --band-from-class to select them.",
+            file=sys.stderr,
+        )
+        return EXIT_GENERAL
+    import shutil
+    import tempfile
+
+    # UX-1286: the tree is read through a store deleted on exit, as `bga snapshot --bundles` reads it.
+    args.band_store = tempfile.mkdtemp(prefix="bga-bundles-")
+    try:
+        return _execute_compare_and_write(args)
+    finally:
+        shutil.rmtree(args.band_store, ignore_errors=True)
 
 
 def cmd_whatif(args: argparse.Namespace) -> int:
@@ -2738,6 +2772,13 @@ def _add_compare_subcommand(subparsers) -> None:
         help=f'Band from the last N (default {DEFAULT_BAND_WINDOW}) store runs '
         f'of the candidate\'s own class; exit {EXIT_CODE_BAND_UNAVAILABLE} '
         f'below {MIN_BASELINE_RUNS}.',
+    )
+    compare_parser.add_argument(
+        '--bundles',
+        default=None,
+        metavar='DIR',
+        help='UX-1286: with --band-from-class, select the band from the bundles '
+        'kept under DIR, read through a temporary store deleted on exit.',
     )
     # UX-104 item 2: a memory *note*, not a gate. Two flags rather than
     # one because the envelope is a fact about a run and the two runs are

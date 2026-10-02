@@ -8,16 +8,6 @@ Same verification discipline as the closed backlog (see `docs/contributing/fixin
 
 | Status | Meaning |
 |---|---|
-| UX-1258 | [the capacity-bound first action row has no numbered "Why #1" disclosure](UX-1258-the-capacity-bound-first-action-has-no-why-disclosure.md) | viewer | Low | R1 | 🔴 Not Started |
-| UX-1259 | [UX-861's host-core cap keeps a builder-bound run at 4 builders while the CPU could feed 18](UX-1259-the-host-core-cap-holds-a-builder-bound-run-whose-cpu-idles.md) | analysis | Medium | R1, R5 | 🔴 Not Started |
-| UX-1260 | [the binary-jump landing is unguarded at 1440 with the rail open, and UX-1236's several-candidates branch has no page](UX-1260-the-binary-jump-landing-guard-misses-1440-rail-open.md) | guards | Low | R1 | 🔴 Not Started |
-| UX-1261 | [#binary_cost's answer sentence names `make` over a pair table whose first page does not show make](UX-1261-the-binary-cost-answer-names-a-binary-its-first-page-does-not-show.md) | viewer | Low | R1 | 🔴 Not Started |
-| UX-1262 | [`pages.export_uri` copies only the snapshot, so no page guard has ever rendered a comparison](UX-1262-no-page-guard-has-rendered-a-comparison-from-an-exported-page.md) | guards | Medium | R1, R4 | 🔴 Not Started |
-| UX-1263 | [a run passed as a relative path keeps the path and drops the snapshot and compare steps](UX-1263-a-relative-run-path-drops-the-snapshot-and-compare-steps.md) | analysis | Low | R1 | 🔴 Not Started |
-| UX-1264 | [no fixture has resource_wait as its biggest wait category, so wait-category's step is unexercised](UX-1264-no-fixture-has-resource-wait-as-its-biggest-wait-category.md) | guards | Low | R1 | 🔴 Not Started |
-| UX-1265 | [the graph-width finding lost the total element count and "whatever the capacity" from its title](UX-1265-the-graph-width-finding-lost-its-total-and-its-capacity-clause.md) | analysis | Low | R1 | 🔴 Not Started |
-| UX-1266 | [joint-saving and optimization-horizon name the same element set on macro_micro](UX-1266-joint-saving-and-optimization-horizon-name-the-same-set.md) | analysis | Low | R1 | 🔴 Not Started |
-| UX-1267 | [ranked element cards never show the map rows ("On the path")](UX-1267-ranked-element-cards-never-show-the-map-rows.md) | viewer | Medium | R1, R5 | 🔴 Not Started |
 | 🔴 Not Started | No work begun |
 | 🟡 In Progress | Work underway, or claimed-done-but-unverified |
 | 🟢 Done | Acceptance test run for real, output pasted into the task file |
@@ -40,6 +30,16 @@ task file, which is the only place it ever lived twice.
 | UX-1014 | [the "safe cap plus auto" default is measured on more shapes and hosts before it is anyone's default](UX-1014-the-builders-and-auto-default-is-measured-on-more-shapes-and-hosts.md) | capture | High | R4, R5 | 🔴 Not Started |
 | UX-1134 | [`--jobserver auto` with no plan widens a memory-bound giant into the OOM killer](UX-1134-auto-oom-kills-a-memory-bound-giant-with-no-plan.md) | capture | High | R4, R5 | 🔴 Not Started |
 | UX-1040 | [a paired reading decides whether implementers move to opus at low effort](UX-1040-a-paired-reading-decides-the-implementers-model.md) | guards | Medium | every round's implementer spend | 🔴 Not Started |
+| UX-1258 | [the capacity-bound first action row has no numbered "Why #1" disclosure](UX-1258-the-capacity-bound-first-action-has-no-why-disclosure.md) | viewer | Low | R1 | 🔴 Not Started |
+| UX-1259 | [UX-861's host-core cap keeps a builder-bound run at 4 builders while the CPU could feed 18](UX-1259-the-host-core-cap-holds-a-builder-bound-run-whose-cpu-idles.md) | analysis | Medium | R1, R5 | 🔴 Not Started |
+| UX-1260 | [the binary-jump landing is unguarded at 1440 with the rail open, and UX-1236's several-candidates branch has no page](UX-1260-the-binary-jump-landing-guard-misses-1440-rail-open.md) | guards | Low | R1 | 🔴 Not Started |
+| UX-1261 | [#binary_cost's answer sentence names `make` over a pair table whose first page does not show make](UX-1261-the-binary-cost-answer-names-a-binary-its-first-page-does-not-show.md) | viewer | Low | R1 | 🔴 Not Started |
+| UX-1262 | [`pages.export_uri` copies only the snapshot, so no page guard has ever rendered a comparison](UX-1262-no-page-guard-has-rendered-a-comparison-from-an-exported-page.md) | guards | Medium | R1, R4 | 🔴 Not Started |
+| UX-1263 | [a run passed as a relative path keeps the path and drops the snapshot and compare steps](UX-1263-a-relative-run-path-drops-the-snapshot-and-compare-steps.md) | analysis | Low | R1 | 🔴 Not Started |
+| UX-1264 | [no fixture has resource_wait as its biggest wait category, so wait-category's step is unexercised](UX-1264-no-fixture-has-resource-wait-as-its-biggest-wait-category.md) | guards | Low | R1 | 🔴 Not Started |
+| UX-1265 | [the graph-width finding lost the total element count and "whatever the capacity" from its title](UX-1265-the-graph-width-finding-lost-its-total-and-its-capacity-clause.md) | analysis | Low | R1 | 🔴 Not Started |
+| UX-1266 | [joint-saving and optimization-horizon name the same element set on macro_micro](UX-1266-joint-saving-and-optimization-horizon-name-the-same-set.md) | analysis | Low | R1 | 🔴 Not Started |
+| UX-1267 | [ranked element cards never show the map rows ("On the path")](UX-1267-ranked-element-cards-never-show-the-map-rows.md) | viewer | Medium | R1, R5 | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

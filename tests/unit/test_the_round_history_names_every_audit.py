@@ -48,7 +48,8 @@ from dev_close_task import closed_rows
 
 AUDITS = "docs/audits"
 DIRECTIONS = "docs/design/directions.md"
-README = "docs/README.md"
+#: `UX-1289`: the round list left the docs index for the audits directory's own.
+README = "docs/audits/README.md"
 SCENARIOS = "docs/backlog/scenarios"
 HISTORY_HEADING = "## Round history"
 
@@ -96,7 +97,7 @@ def _named_documents():
         sorted(
             p
             for p in _tracked()
-            if posixpath.dirname(p) == AUDITS and not re.search(r"round-\d+", posixpath.basename(p))
+            if posixpath.dirname(p) == AUDITS and not re.search(r"round-\d+", posixpath.basename(p)) and p != README
         )
     )
 
@@ -109,8 +110,9 @@ def _readme_table_links():
         if not line.startswith("| "):
             continue
         for _label, target in LINK.findall(line):
-            if target.startswith("audits/"):
-                found.append(os.path.normpath(posixpath.join(here, target)))
+            resolved = os.path.normpath(posixpath.join(here, target))
+            if posixpath.dirname(resolved) == AUDITS:
+                found.append(resolved)
     return tuple(found)
 
 
@@ -148,7 +150,7 @@ def _table_links():
 def _audits_links():
     """Every link into `docs/audits/` from the two hand-typed documents."""
     return [(DIRECTIONS,) + link for link in _links(DIRECTIONS, "../audits/")] + [
-        (README,) + link for link in _links(README, "audits/")
+        (README,) + link for link in _links(README, "") if posixpath.dirname(link[2]) == AUDITS
     ]
 
 

@@ -61,12 +61,12 @@ counted twice - it is the same finding the tool already read.
 Write `docs/audits/retro-<date>.md`: the class-count table `dev_retro.py`
 printed, the command that produced it, and up to three proposals for
 the top classes, each marked `optimization` (`UX-994`'s cap does not
-apply to them). Add its `docs/README.md` audit-table row -
+apply to them). Add its `docs/audits/README.md` table row -
 `test_every_named_audit_document_has_a_readme_table_row` reddens
 without one. Then:
 
 ```bash
-git add docs/audits/retro-<date>.md docs/README.md
+git add docs/audits/retro-<date>.md docs/audits/README.md
 git commit -m "retro: <date>"
 gh pr create --title "retro: <date>" --body "the table and the command"
 ```

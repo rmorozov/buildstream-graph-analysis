@@ -52,7 +52,7 @@ FIXTURE = REPO / "tests/fixtures/macro_micro/plane2.json"
 #: catches and a reading does not.
 DESCRIBING = (
     "docs/design/architecture.md",
-    "docs/README.md",
+    "docs/guides/json-contracts.md",
 )
 
 

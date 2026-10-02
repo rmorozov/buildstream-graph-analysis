@@ -3916,12 +3916,19 @@ _ANALYZE_HINTS = {
                 },
             },
             "memory": {
-                "description": "At most: the largest per-element peak RSS times the builders, as if all peak at once.",
+                "description": "The largest peak RSS times the builders: at most, from an element's whole peak; "
+                "at least, from one process's, since an element runs several at once.",
                 "properties": {
+                    "bound": {
+                        "description": "Upper for the memory envelope's element peak; lower for a single process's."
+                    },
                     "basis": {
                         "description": "Envelope when read from the host's memory envelope; process peak when from Plane 2's per-element peaks."
                     },
-                    "per_element_bytes": {QUANTITY: "bytes", "description": "The largest element's peak RSS."},
+                    "per_element_bytes": {
+                        QUANTITY: "bytes",
+                        "description": "The largest element's peak RSS, or the largest single process's.",
+                    },
                     "builders": {QUANTITY: "count", "description": "The builders it is multiplied by."},
                     "bytes": {QUANTITY: "bytes", "description": "Per-element peak times the builders."},
                 },

@@ -92,6 +92,12 @@ def pytest_collection_modifyitems(config, items):
 # family passes; a whole file adopting the reason does not. `0` means
 # "never seen more than a handful", which is the original behaviour.
 KNOWN_SKIP_REASONS = {
+    # `UX-1256`: a fixture whose dominant wait is resource wait reads a Plane 2-conditioned
+    # step, which its own guard holds; 0 on the committed fixtures.
+    "resource wait is conditioned on Plane 2; test_plane2_conditioned_capacity_advice holds it": (
+        "the plain hint is not the step when the advice is conditioned on Plane 2",
+        0,
+    ),
     "not a dev environment by its own account (BGA_EXPECT_DEV is unset)": (
         "the dev-extras canary, which only asserts where the environment "
         "claims to be a dev environment (CI sets BGA_EXPECT_DEV)",

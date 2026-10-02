@@ -727,6 +727,38 @@ pairing for every merged row from round 103 on.
 | 161 | implementer | sonnet | track W: UX-1234 (+36 B) | 79k | 74 | 17.8 m | complete | track W |
 | 161 | implementer | opus | track T: UX-1224,1223,1227,1225 (+263 B) | 148k | 132 | 52.3 m | complete | track T |
 | 161 | verifier | sonnet | track T | 44k | 29 | 3.6 m | see round-161 | 4 PASS, UX-1177 assertion swap mild weakening (UX-1235) |
+| 163 | architect | opus | shape, wave 1 of 3 (ids not in the brief) | 58k | — | 2.8 m | see round-163 | architect Decisions on the 16 rows |
+| 163 | architect | opus | shape, wave 2 of 3 (ids not in the brief) | 68k | — | 2.7 m | see round-163 | architect Decisions on the 16 rows |
+| 163 | architect | opus | shape, wave 3 of 3 (ids not in the brief) | 92k | — | 4.4 m | see round-163 | architect Decisions on the 16 rows |
+| 163 | implementer | opus | track A: UX-1253, UX-1244 | 158k | — | — | see round-163 | tool calls and wall not in the brief |
+| 163 | implementer | opus | track A fix round: UX-1253, UX-1244 | 195k | — | — | see round-163 | verifier fix; tool calls and wall not in the brief |
+| 163 | implementer | opus | track B: UX-1245, UX-1246 | 152k | — | 28 m | see round-163 | tool calls not in the brief |
+| 163 | implementer | opus | track C: UX-1254 | 183k | — | — | see round-163 | tool calls and wall not in the brief |
+| 163 | implementer | opus | track C fix round: UX-1254 | 203k | — | — | see round-163 | verifier fix; tool calls and wall not in the brief |
+| 163 | implementer | opus | track F: UX-1250, UX-1256, UX-1248 | 316k | — | 95 m | see round-163 | tool calls not in the brief |
+| 163 | implementer | opus | track G: UX-1247 | 195k | — | 44 m | see round-163 | tool calls not in the brief |
+| 163 | implementer | opus | track K: UX-1257 | 105k | — | — | see round-163 | tool calls and wall not in the brief |
+| 163 | implementer | opus | track K fix round: UX-1257 | 124k | — | — | see round-163 | verifier fix; tool calls and wall not in the brief |
+| 163 | implementer | opus | track D: UX-1249 | 163k | — | 121 m | see round-163 | tool calls not in the brief |
+| 163 | implementer | opus | track H: UX-1255 | 176k | — | — | see round-163 | tool calls and wall not in the brief |
+| 163 | implementer | opus | track H fix round: UX-1255 | 206k | — | — | see round-163 | verifier fix; tool calls and wall not in the brief |
+| 163 | implementer | opus | track J: UX-1252 | 159k | — | — | see round-163 | tool calls and wall not in the brief |
+| 163 | implementer | opus | track J fix round: UX-1252 | 181k | — | — | see round-163 | verifier fix; tool calls and wall not in the brief |
+| 163 | implementer | sonnet | track V: UX-1251 | 45k | — | — | see round-163 | tool calls and wall not in the brief |
+| 163 | implementer | sonnet | track V fix round: UX-1251 | 62k | — | — | see round-163 | verifier fix; tool calls and wall not in the brief |
+| 163 | implementer | sonnet | track W: UX-1235, UX-1236 | 58k | — | — | see round-163 | tool calls and wall not in the brief |
+| 163 | implementer | sonnet | track W fix round: UX-1235, UX-1236 | 65k | — | — | see round-163 | verifier fix; tool calls and wall not in the brief |
+| 163 | verifier | sonnet | UX-1245, UX-1246 verifier (track B) | 40k | — | — | see round-163 | tool calls and wall not in the brief |
+| 163 | verifier | sonnet | UX-1253, UX-1244 verifier (track A) | 56k | — | — | see round-163 | tool calls and wall not in the brief |
+| 163 | verifier | sonnet | UX-1247 verifier (track G) | 64k | — | — | see round-163 | tool calls and wall not in the brief |
+| 163 | verifier | sonnet | UX-1251, UX-1235, UX-1236 verifier (track V+W) | 42k | — | — | see round-163 | tool calls and wall not in the brief |
+| 163 | verifier | sonnet | UX-1257 verifier (track K) | 34k | — | — | see round-163 | tool calls and wall not in the brief |
+| 163 | verifier | sonnet | UX-1254 verifier (track C) | 63k | — | — | see round-163 | tool calls and wall not in the brief |
+| 163 | verifier | sonnet | UX-1250, UX-1256, UX-1248 verifier (track F) | 52k | — | — | see round-163 | tool calls and wall not in the brief |
+| 163 | verifier | sonnet | UX-1249 verifier (track D) | 47k | — | — | see round-163 | tool calls and wall not in the brief |
+| 163 | verifier | sonnet | UX-1255 verifier (track H) | 34k | — | — | see round-163 | tool calls and wall not in the brief |
+| 163 | verifier | sonnet | UX-1252 verifier (track J) | 48k | — | — | see round-163 | tool calls and wall not in the brief |
+| 163 | integrator | sonnet | integrator: six parts, 16 rows | 321k | — | — | see round-163 | figure is approximate (~) over six parts; tool calls and wall not in the brief |
 
 Round 101's four tracks are **not** here: this session could not
 identify their transcripts with certainty after a context rebuild, and
@@ -739,7 +771,7 @@ committed cleanly once told to run in the foreground. Three of the five
 left a derived figure or a §6 context-map row behind - the same class
 the round itself was about, arriving in the tracks' own work.
 
-What the seven hundred and ten rows already say: a researcher that reads a document
+What the seven hundred and forty-two rows already say: a researcher that reads a document
 whole costs 100-180k; a walker that drives every control costs 336k;
 the two cuts cost a re-run each. The `walk` and `design-review`
 skills fix the report shape so the next rows are smaller, and the

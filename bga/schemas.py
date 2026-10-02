@@ -5902,8 +5902,19 @@ _COMPARE_HINTS = {
                             "this finding: 2 is the baseline and the candidate; each earlier "
                             "published analysis holding it adds one.",
                         },
+                        "age_exact": {
+                            "description": "False when the walk stopped on a run with no usable "
+                            "published analysis, so `age` is a floor: at least that many.",
+                        },
                     },
                 },
+            },
+            "not_compared": {
+                "description": "Findings on one side only that are neither new nor resolved, "
+                "because the two runs recorded different planes.",
+            },
+            "not_compared_reason": {
+                "description": "Why `not_compared` is not empty, as one clause the page shows; null when it is.",
             },
         },
     },

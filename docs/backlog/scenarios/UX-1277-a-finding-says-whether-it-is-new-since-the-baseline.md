@@ -51,37 +51,43 @@ read as first seen.
 
 ### The close, measured
 
-`compare_runs` publishes `findings_diff` `{new, persisting[{id,title,age}], resolved}`
-keyed on finding id (`null` on `not_comparable`); `age` is consecutive
-snapshots ending at the candidate, walking the `--baseline-run` published
-analyses newest first. `markSince` in `chapters.js`, called once after
-`chapters()`, marks each `article.finding` and appends one resolved line.
-Declared in `bga:always_written` (null on a refusal, as `verdict_provenance`);
-`docs/guides/cli.md` names the three keys and its surface figure moves 611 -> 615.
-`tests/pages.two_plane_run(--layers 8 --width 14, runs=4)`, `bga_view.payloads(@last)`
-(no published analyses in a gen-synthetic store, so age stays 2):
+`compare_runs` publishes `findings_diff` `{new, persisting[{id,title,age,age_exact}],
+resolved, not_compared, not_compared_reason}` keyed on finding id (`null` on
+`not_comparable`). `age` walks the `--baseline-run` published analyses newest
+first; `age_exact` is false when the walk stops on a run with no published
+analysis, one another producer stamp wrote, or other planes. Sides whose Plane 2
+presence differs (`plane2_coverage`; findings carry no plane of their own) put
+one-side findings in `not_compared`, "Plane 2 recorded on one side only".
+`markSince` in `chapters.js` marks each card ("Still open · at least N runs" on a
+floor) and writes the resolved and not-compared lines. `bga:always_written`;
+`docs/guides/cli.md` names the keys, surface 611 -> 618.
 
-```text
-verdict regressed
-{"new": [["capacity-recommendation", null], ["costliest-binary", null]],
- "persisting": [["wait-category", 2], ... 11 rows ..., ["efficiency-score", 2]], "resolved": []}
-findings 13 unique 13
-```
+Verifier finding, measured on the first guard's own store (only @last had Plane 2):
+`capacity-recommendation`, `costliest-binary` read New and `shared-source-blast`
+Resolved on an identical project. Now: none new, none resolved, all three in the
+not-compared line (`test_a_plane_one_side_lacks_is_neither_new_nor_resolved`).
 
-The guard's store (3 runs, oldest two published, @prev edited) marks
-`Still open · 3 runs` / `· 2 runs`, the dropped id new, and the resolved line
-names `ux1277-gone` plus the genuinely resolved `shared-source-blast`.
+Limit: the baseline side reads its published `analyze.json` only when its
+fingerprint (producer stamp, input digests, options) equals a live one, else it
+is analysed live (UX-1073). Two builds under one version and contract list share
+a stamp, so their findings code may differ unseen. The walk's earlier runs are
+never analysed live (UX-296: O(store) analyses per page load); a foreign stamp
+ends the walk as a floor.
 
 ```text
 $ PYTHONPATH=. python3 -m pytest -p no:xdist -q tests/unit/test_a_finding_says_whether_it_is_new_since_the_baseline.py
-2 passed in 7.41s
+4 passed in 9.62s
 ```
 
-### Mutations verified red and reverted (4)
+### Mutations verified red and reverted (8)
 
 | # | mutation | reddened |
 |---|---|---|
-| M1 | `markSince` builds the resolved line and never appends it | page clause, 1 failed, 1 passed |
-| M2 | the diff keyed on `title` instead of `id` | page clause (new set grew, persisting shrank), 1 failed, 1 passed |
-| M3 | age walk skipped (`for ids in ():`) | `Still open · 2 runs` != `· 3 runs`, 1 failed, 1 passed |
+| M1 | `markSince` builds the resolved line and never appends it | page clause, 1 failed, 1 passed (first commit) |
+| M2 | the diff keyed on `title` instead of `id` | page clause, 1 failed, 1 passed (first commit) |
+| M3 | age walk skipped (`for ids in ():`) | `· 2 runs` != `· 3 runs`, 1 failed, 1 passed (first commit) |
 | M4 | `report/json.py` publishes `findings + findings[:1]` | `test_finding_ids_are_unique_per_document`, 1 failed, 1 passed |
+| M5 | `same_planes = True` (plane check removed) | `test_a_plane_one_side_lacks_is_neither_new_nor_resolved`, 1 failed, 3 passed |
+| M6 | an unreadable run skipped, not a stop (`break` -> `continue`) | `test_an_age_the_walk_could_not_finish_is_a_floor`, 1 failed, 3 passed |
+| M7 | a run lacking the finding leaves `age_exact` false | same, 1 failed, 3 passed |
+| M8 | the page drops "at least " | same, 1 failed, 3 passed |

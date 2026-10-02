@@ -101,8 +101,8 @@ export function markSince(root, comparison) {
   if (!diff || !section) return;
   const since = new Map([
     ...(diff.new ?? []).map((row) => [row.id, { since: "new", text: "New since the run before" }]),
-    ...(diff.persisting ?? []).map((row) => [row.id,
-      { since: "persisting", text: `Still open · ${quantity(row.age, "count")} runs` }]),
+    ...(diff.persisting ?? []).map((row) => [row.id, { since: "persisting",
+      text: `Still open · ${row.age_exact ? "" : "at least "}${quantity(row.age, "count")} runs` }]),
   ]);
   for (const article of section.querySelectorAll("article.finding[data-finding-id]")) {
     const mark = since.get(article.getAttribute("data-finding-id"));
@@ -111,13 +111,16 @@ export function markSince(root, comparison) {
     article.querySelector(".title .badge")?.after(
       el("span", { class: "badge since", "data-since": mark.since }, mark.text));
   }
-  const gone = diff.resolved ?? [];
-  if (!gone.length) return;
-  section.querySelector('[data-role="findings-resolved"]')?.remove();
-  section.append(el("p", { class: "muted", "data-role": "findings-resolved" },
-    `Resolved since the run before (${gone.length}): `,
-    ...gone.flatMap((row, i) => [i ? ", " : "",
-      el("span", { "data-finding-id": row.id }, row.title ?? row.id)])));
+  const line = (role, lead, rows) => {
+    section.querySelector(`[data-role="${role}"]`)?.remove();
+    if (rows?.length) section.append(el("p", { class: "muted", "data-role": role },
+      `${lead} (${rows.length}): `,
+      ...rows.flatMap((row, i) => [i ? ", " : "",
+        el("span", { "data-finding-id": row.id }, row.title ?? row.id)])));
+  };
+  line("findings-resolved", "Resolved since the run before", diff.resolved);
+  line("findings-not-compared", `Not compared, ${diff.not_compared_reason ?? "planes differ"}`,
+       diff.not_compared);
 }
 
 // The chapters, in the order the document reads. Each names the

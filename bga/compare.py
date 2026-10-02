@@ -1408,44 +1408,84 @@ def _side_findings(result) -> Optional[list]:
     return [f for f in found or [] if isinstance(f, dict) and f.get('id')]
 
 
-def _earlier_ids(baseline_dir: Path, baseline_runs: list) -> Iterator[set]:
-    """Finding ids of each published analysis older than the baseline, newest first."""
+def _planes(result=None, document: Optional[dict] = None) -> tuple:
+    """The planes one side recorded: Plane 2 where its analysis attached coverage."""
+    document = document if document is not None else getattr(result, 'published_document', None)
+    coverage = document.get('plane2_coverage') if document is not None else getattr(result, 'plane2_coverage', None)
+    return (1, 2) if coverage else (1,)
+
+
+def _earlier_ids(baseline_dir: Path, baseline_runs: list, planes: tuple) -> Iterator[Optional[set]]:
+    """Finding ids of each run older than the baseline, newest first; None where
+    the run has no published analysis this bga wrote, or other planes."""
+    from . import producer
+
     label = _band_source(baseline_dir)['run']
     older = sorted(
         (run for run in baseline_runs if _band_source(run)['run'] < label),
         key=lambda run: _band_source(run)['run'],
         reverse=True,
     )
+    stamp = producer.stamp()
     for run in older:
         document = _published(run)
-        if document is None:
-            return
+        usable = (
+            document is not None
+            and (document.get('fingerprint') or {}).get('producer') == stamp
+            and _planes(document=document) == planes
+        )
+        if document is None or not usable:
+            yield None
+            continue
         yield {f.get('id') for f in document.get('findings') or [] if isinstance(f, dict)}
 
 
+#: `UX-1277`: why a finding on one side only is not called new or resolved.
+NOT_COMPARED_PLANES = 'Plane 2 recorded on one side only'
+
+
 def findings_diff(baseline_result, candidate_result, baseline_dir: Path, baseline_runs=None) -> Optional[dict]:
-    """`UX-1277`: new, persisting (with its age in consecutive snapshots) and resolved, by finding id."""
+    """`UX-1277`: new, persisting (with its age in consecutive snapshots) and resolved, by finding id.
+
+    A finding on one side only is `not_compared` when the sides recorded different
+    planes; `age_exact` is false when the walk stopped on a run it could not read.
+    """
     before, after = _side_findings(baseline_result), _side_findings(candidate_result)
     if before is None or after is None:
         return None
+    planes = _planes(candidate_result)
+    same_planes = _planes(baseline_result) == planes
     held = {f['id'] for f in before}
     now = {f['id'] for f in after}
     age = dict.fromkeys(now & held, 2)
+    exact: dict = {}
     alive = set(age)
-    for ids in _earlier_ids(Path(baseline_dir), list(baseline_runs or [])):
-        alive &= ids
-        if not alive:
+    for ids in _earlier_ids(Path(baseline_dir), list(baseline_runs or []), planes):
+        if ids is None:
             break
+        exact.update(dict.fromkeys(alive - ids, True))
+        alive &= ids
         for fid in alive:
             age[fid] += 1
+        if not alive:
+            break
+    else:
+        # The walk reached the store's start - known only when a history was supplied.
+        exact.update(dict.fromkeys(alive, bool(baseline_runs)))
 
     def row(finding: dict) -> dict:
         return {'id': finding['id'], 'title': finding.get('title')}
 
+    new = [row(f) for f in after if f['id'] not in held]
+    resolved = [row(f) for f in before if f['id'] not in now]
     return {
-        'new': [row(f) for f in after if f['id'] not in held],
-        'persisting': [{**row(f), 'age': age[f['id']]} for f in after if f['id'] in held],
-        'resolved': [row(f) for f in before if f['id'] not in now],
+        'new': new if same_planes else [],
+        'persisting': [
+            {**row(f), 'age': age[f['id']], 'age_exact': exact.get(f['id'], False)} for f in after if f['id'] in held
+        ],
+        'resolved': resolved if same_planes else [],
+        'not_compared': [] if same_planes else new + resolved,
+        'not_compared_reason': None if same_planes else NOT_COMPARED_PLANES,
     }
 
 

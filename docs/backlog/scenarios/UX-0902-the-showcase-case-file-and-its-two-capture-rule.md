@@ -1,6 +1,6 @@
 # UX-902: a showcase case is two captures, and there is nowhere to put one
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-891 (the CPU floor, which the first case reads), UX-172 (blast) | **Found by:** the 2026-09-20 rollout brief ([`continuous-build-improvement.md`](../../design/continuous-build-improvement.md), section 7) — adoption needs stories that can be shown, and the owner named the first two | **Serves:** R1 and R2 (the developers being asked to adopt it), R8 (the manager being asked to fund the time) | **Topic:** docs | **Area:** unassigned | **Shape:** mechanical
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-891 (the CPU floor, which the first case reads), UX-172 (blast) | **Found by:** the 2026-09-20 rollout brief ([`continuous-build-improvement.md`](../../design/continuous-build-improvement.md), section 7) — adoption needs stories that can be shown, and the owner named the first two | **Serves:** R1 and R2 (the developers being asked to adopt it), R8 (the manager being asked to fund the time) | **Topic:** docs | **Area:** unassigned | **Shape:** mechanical
 
 **Guard:** test_a_case_carries_both_captures.py
 

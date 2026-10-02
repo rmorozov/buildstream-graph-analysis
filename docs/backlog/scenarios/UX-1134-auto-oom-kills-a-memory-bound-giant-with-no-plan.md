@@ -1,6 +1,6 @@
 # UX-1134: `--jobserver auto` with no plan widens a memory-bound giant into the OOM killer
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-1132 | **Found by:** round 152's Graviton arms, `memgiant` leg (bga-bench runs 36597448095 and 36602046680) | **Serves:** R4, R5 | **Topic:** capture | **Area:** tools | **Shape:** mechanical | **Reading:** owner:CodSpeed Graviton
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-1132 | **Found by:** round 152's Graviton arms, `memgiant` leg (bga-bench runs 36597448095 and 36602046680) | **Serves:** R4, R5 | **Topic:** capture | **Area:** tools | **Shape:** mechanical | **Reading:** owner:CodSpeed Graviton
 
 **Guard:** test_the_pool_withholds_for_measured_rss_with_no_plan.py, test_the_auto_advice_names_its_memory_bound.py
 

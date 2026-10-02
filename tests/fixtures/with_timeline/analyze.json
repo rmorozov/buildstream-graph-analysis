@@ -263,10 +263,8 @@
         {
             "id": "graph-width",
             "severity": "info",
-            "title": "2 elements at most can ever build at once \u2014 the widest of 10 dependency stages",
-            "detail": [
-                "    11 elements in all; no number of builders lifts this ceiling"
-            ],
+            "title": "The widest of 10 dependency levels holds 2 of 11 elements",
+            "detail": [],
             "elements": [],
             "evidence": {
                 "element_count": 11,
@@ -274,10 +272,10 @@
                 "widest_stage": 2
             },
             "step": {
-                "why_none": "a ceiling the dependency graph sets; only its dependencies move it"
+                "why_none": "a shape the dependency graph has; only its dependencies move it"
             },
             "reader": "graph-owner",
-            "copy_text": "BGA finding: 2 elements at most can ever build at once \u2014 the widest of 10 dependency stages\n      11 elements in all; no number of builders lifts this ceiling\n  element_count 11\n  dependency_stages 10\n  widest_stage 2\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
+            "copy_text": "BGA finding: The widest of 10 dependency levels holds 2 of 11 elements\n  element_count 11\n  dependency_stages 10\n  widest_stage 2\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
             "trace_query": "graph-levels"
         },
         {
@@ -2350,10 +2348,10 @@
         }
     ],
     "document_shape": {
-        "leaves": 1578,
+        "leaves": 1577,
         "deepest_depth": 6,
         "deepest_path": "findings.[].evidence.rows.[].element_uid",
-        "deeper_than_three": 957,
-        "deeper_than_three_share": 0.6064638783269962
+        "deeper_than_three": 956,
+        "deeper_than_three_share": 0.6062143310082435
     }
 }

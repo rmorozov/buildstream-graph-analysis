@@ -2,7 +2,7 @@
 
 **Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-163 verification of UX-1248 (2026-10-02) | **Serves:** R1 | **Topic:** analysis | **Area:** bga | **Shape:** judgement | **Reading:** container
 
-**Guard:** test_the_shape_conclusions_have_a_negative_case.py::test_the_text_report_states_the_total_and_the_capacity_clause
+**Guard:** test_the_shape_conclusions_have_a_negative_case.py::test_the_text_report_states_the_total_and_claims_no_ceiling
 
 ## Motivation
 
@@ -50,21 +50,25 @@ The text report states the total and the capacity clause for graph-width. Mutati
 
 ### The close, measured
 
+The verifier showed the capacity clause false: the widest depth level bounds
+nothing (A; B, C after A; D after B; E free: widest level 2, yet C, D, E can run
+at once), so the title's "at most can ever build at once" was false too. Both
+go; the title states the level and keeps the total, with no capacity clause:
+
 ```text
-  2 elements at most can ever build at once — the widest of 10 dependency stages
-    11 elements in all; no number of builders lifts this ceiling
+  The widest of 10 dependency levels holds 2 of 11 elements
   0.0% cache hits — caches off: all 11 elements built from source, none reused
 ```
 
-Title and `why_none` unchanged. `with_timeline/analyze.json` and golden's
-`expected_output.json` regenerated (`dev_refresh_analysis.py --write`): one
-detail line and its `copy_text` line each, `leaves` +1. The README's quick-start
-line count moved 110 -> 111 (`test_the_readme_block_is_the_real_output`).
+`why_none` reads "a shape the dependency graph has"; the `dependency_stages` and
+`widest_stage` schema descriptions drop "whatever the capacity" and "the ceiling".
+Both committed analyses regenerated (`dev_refresh_analysis.py --write`). README
+quick start 107 -> 106 lines.
 
 ### Mutations verified red and reverted (3)
 
 | # | mutation | reddened |
 |---|---|---|
-| M1 | drop graph-width's `detail=` | text-report clause, 1 failed, 22 passed |
-| M2 | detail prints `widest` for the total | text-report clause, 1 failed, 22 passed |
-| M3 | "no number of builders lifts" -> "more builders lift" | text-report clause, 1 failed, 22 passed |
+| M1 | "no number of builders lifts this ceiling" back as detail | text-report clause, 1 failed, 22 passed |
+| M2 | "at most can ever build at once" back in the title | text-report clause, 1 failed, 22 passed |
+| M3 | title drops the total | text-report + chain clauses, 2 failed, 21 passed |

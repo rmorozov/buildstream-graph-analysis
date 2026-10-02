@@ -1693,14 +1693,14 @@ _EVIDENCE_FIELDS = {
     "blast_count": ("count", "Elements a change here rebuilds, transitively."),
     "dependency_stages": (
         "count",
-        "Levels the graph's elements group into by their dependencies "
-        "alone — nothing in a stage can start before the stage above it "
-        "finishes, whatever the capacity.",
+        "Levels the graph's elements group into by their longest "
+        "dependency chain — an element sits one level below its deepest "
+        "dependency.",
     ),
     "widest_stage": (
         "count",
-        "Elements in the largest dependency stage — the ceiling on how "
-        "many can ever build at once, which no number of builders lifts.",
+        "Elements in the largest dependency level — how many share one "
+        "depth, not a bound on how many can build at once.",
     ),
     "zero_slack_off_path": (
         "count",

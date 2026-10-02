@@ -194,10 +194,8 @@
         {
             "id": "graph-width",
             "severity": "info",
-            "title": "2 elements at most can ever build at once \u2014 the widest of 3 dependency stages",
-            "detail": [
-                "    4 elements in all; no number of builders lifts this ceiling"
-            ],
+            "title": "The widest of 3 dependency levels holds 2 of 4 elements",
+            "detail": [],
             "elements": [],
             "evidence": {
                 "element_count": 4,
@@ -205,10 +203,10 @@
                 "widest_stage": 2
             },
             "step": {
-                "why_none": "a ceiling the dependency graph sets; only its dependencies move it"
+                "why_none": "a shape the dependency graph has; only its dependencies move it"
             },
             "reader": "graph-owner",
-            "copy_text": "BGA finding: 2 elements at most can ever build at once \u2014 the widest of 3 dependency stages\n      4 elements in all; no number of builders lifts this ceiling\n  element_count 4\n  dependency_stages 3\n  widest_stage 2\n  Run: golden-fixture-manifest-hash-v1",
+            "copy_text": "BGA finding: The widest of 3 dependency levels holds 2 of 4 elements\n  element_count 4\n  dependency_stages 3\n  widest_stage 2\n  Run: golden-fixture-manifest-hash-v1",
             "trace_query": "graph-levels"
         },
         {
@@ -1280,10 +1278,10 @@
         }
     ],
     "document_shape": {
-        "leaves": 856,
+        "leaves": 855,
         "deepest_depth": 6,
         "deepest_path": "findings.[].evidence.rows.[].element_uid",
-        "deeper_than_three": 443,
-        "deeper_than_three_share": 0.5175233644859814
+        "deeper_than_three": 442,
+        "deeper_than_three_share": 0.5169590643274854
     }
 }

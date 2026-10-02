@@ -1025,11 +1025,9 @@ def _graph_shape_findings(result: AnalysisResult) -> list[dict]:
     not a reader about shape.
 
     This one reads `elements.unweighted_depth` and nothing else. Group
-    the elements by depth and you have the dependency stages: nothing
-    in a stage can start before the stage above it finishes, whatever
-    the capacity, so the widest stage is a **ceiling on concurrency
-    that no number of builders can lift**. That is the shape making
-    something impossible, stated as the number it is.
+    the elements by depth and you have the dependency levels; the widest
+    is how many share one depth. It bounds nothing: an element waits on
+    its own dependencies, not on its whole level above (UX-1265).
 
     It is silent on the one shape that imposes nothing - a single stage,
     where every element is independent and the widest stage is the whole
@@ -1051,10 +1049,9 @@ def _graph_shape_findings(result: AnalysisResult) -> list[dict]:
         _finding(
             'graph-width',
             SEVERITY_INFO,
-            f"{plural(widest, 'element')} at most can ever build at once — the widest of {stages:,} dependency stages",
-            detail=[f"    {len(depth):,} elements in all; no number of builders lifts this ceiling"],
+            f"The widest of {stages:,} dependency levels holds {widest:,} of {len(depth):,} elements",
             evidence={'element_count': len(depth), 'dependency_stages': stages, 'widest_stage': widest},
-            step=_none("a ceiling the dependency graph sets; only its dependencies move it"),
+            step=_none("a shape the dependency graph has; only its dependencies move it"),
         )
     ]
 

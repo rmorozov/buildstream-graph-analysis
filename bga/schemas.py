@@ -3866,6 +3866,17 @@ _ANALYZE_HINTS = {
                 "measured peak RSS per element and a host "
                 "memory total.",
             },
+            # UX-1274: the curve the knee is read off, drawn as a series under the recommendation.
+            "sweep": {
+                GROWS: False,
+                "maxItems": 32,
+                "items": {QUANTITY: "duration_us", "description": "The replayed wall at this many builders."},
+                SERIES: "builder",
+                QUANTITY: "duration_us",
+                "description": "The replayed wall at 1, 2, … builders, up to the larger of twice the "
+                "builders, twice the host's cores and the graph's widest stage, capped at 32. A replay of "
+                "observed durations with no contention: what the schedule could do, not this host.",
+            },
             "sweep_binding": {
                 "description": "Which of the sweep's own two "
                 "capacities — the graph's knee or "
@@ -3888,7 +3899,11 @@ _ANALYZE_HINTS = {
                         QUANTITY: "count",
                         "description": "Builders the capacity recommendation settles on.",
                     },
-                    "graph_ceiling": {QUANTITY: "count", "description": "Builders the sweep's knee allows."},
+                    "graph_ceiling": {
+                        QUANTITY: "count",
+                        "description": "Builders the sweep's knee allows; at the most builders swept, no knee within the range.",
+                    },
+                    "swept_to": {QUANTITY: "count", "description": "The most builders the sweep replayed."},
                     "observed": {QUANTITY: "count", "description": "Builders this run was given."},
                 },
             },

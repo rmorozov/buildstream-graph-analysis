@@ -443,6 +443,7 @@
         "builders": {
             "recommended": null,
             "graph_ceiling": null,
+            "swept_to": null,
             "observed": 2,
             "source": null
         },
@@ -1347,10 +1348,10 @@
         }
     ],
     "document_shape": {
-        "leaves": 895,
+        "leaves": 896,
         "deepest_depth": 7,
         "deepest_path": "findings.[].evidence.steps.[].entering.[]",
         "deeper_than_three": 472,
-        "deeper_than_three_share": 0.5273743016759777
+        "deeper_than_three_share": 0.5267857142857143
     }
 }

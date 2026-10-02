@@ -426,11 +426,8 @@ def _capacity_recommendation(analyzer, result, context, native_report: Optional[
     recommendation can say "at least" when the knee lands at the ceiling
     of what was swept instead of asserting a number it did not reach.
     """
-    from bga.correlate import (
-        _RECOMMENDATION_SWEEP_CAP,
-        _RECOMMENDATION_SWEEP_HEADROOM,
-        compute_capacity_recommendation,
-    )
+    from bga import sweep_curve
+    from bga.correlate import compute_capacity_recommendation
 
     plane2 = getattr(result, 'plane2_capacity', None) or {}
     builders = getattr(context, 'max_jobs', None)
@@ -438,10 +435,7 @@ def _capacity_recommendation(analyzer, result, context, native_report: Optional[
     if not plane2.get('cores_busy') or not host_cores or not builders:
         return {}
 
-    top = min(
-        max(builders, host_cores) * _RECOMMENDATION_SWEEP_HEADROOM,
-        _RECOMMENDATION_SWEEP_CAP,
-    )
+    top = sweep_curve.sweep_top(builders, host_cores, sweep_curve.graph_width(getattr(result, 'signals', None)))
     # UX-678: the same measured peak RSS and host RAM `_max_jobs_advice`
     # reads, so the sweep can check its own replayed concurrency against
     # memory rather than leave that to `_memory_allows`'s top-N sum.
@@ -469,6 +463,8 @@ def _capacity_recommendation(analyzer, result, context, native_report: Optional[
     )
     if not recommendation:
         return recommendation
+    # UX-1274: the curve the knee was read off, replayed wall per builder count from 1.
+    recommendation['sweep'] = sweep_curve.curve(sweep.sweeps)
     # UX-678: additive - the sweep's own memory-feasible ceiling (summed
     # over its replay's real concurrent set at each step, not the
     # envelope's top-N peaks) and which of the two capacities is

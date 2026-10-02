@@ -502,9 +502,11 @@ function sizingCard(value, hint) {
     src ? el("a", { href: `#${src}`, "data-section-link": src }, title(src)) : null);
   const { builders: b = {}, cores: c, memory: m } = value;
   const of = (n, text) => (typeof n === "number" ? text.replace("#", tally(n)) : null);
+  // UX-1274: a ceiling at the sweep's top is where the range stopped, not a knee.
+  const edge = typeof b.swept_to === "number" && b.graph_ceiling >= b.swept_to;
   return el("section", { "data-section": "agent_sizing", "data-rail": heading("agent_sizing", hint).rail },
     sectionHead("agent_sizing", hint), el("ul", {},
-    row("builders", "Builders: " + [of(b.recommended, "# recommended"), of(b.graph_ceiling, "the graph allows #"),
+    row("builders", "Builders: " + [of(b.recommended, "# recommended"), of(b.graph_ceiling, edge ? "no knee within #" : "the graph allows #"),
       of(b.observed, "this run had #")].filter(Boolean).join("; "), b.source),
     c ? row("cores", `Cores: ${c.average.toFixed(2)}${typeof c.host === "number" ? ` of ${tally(c.host)}` : ""} busy on average`, c.source) : null,
     c?.peak_source ? row("cores_peak", `Cores: ${c.peak.toFixed(2)} busy at p95`, c.peak_source) : null,

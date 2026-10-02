@@ -42,7 +42,7 @@ import math
 from dataclasses import dataclass, field
 from typing import Optional
 
-from . import schemas
+from . import schemas, sweep_curve
 from . import shown as qty
 from .findings import SEVERITY_HIGH, SEVERITY_INFO, SEVERITY_MEDIUM
 from .floors.capacity import compute_default_capacities
@@ -1139,28 +1139,23 @@ def resource_profile(native_report: dict) -> dict:
     return profile
 
 
-# UX-116: how far the sweep is run when the joint recommendation needs a
-# knee. The sweep's own default is "one configuration per task", which on
-# a 1200-element project is 1200 replays to answer a question about a
-# 4-core host. The recommendation only concerns the neighbourhood of what
-# is settable, so the range is bounded by the host and the current
-# setting - and when the knee lands at the top of that range, the block
-# says the graph wants "at least" that many rather than inventing a
-# number it did not reach.
-_RECOMMENDATION_SWEEP_HEADROOM = 2
-_RECOMMENDATION_SWEEP_CAP = 32
-
-
-def _allows_clause(constraint: dict) -> str:
+def _allows_clause(constraint: dict, knee_range_top: Optional[int] = None) -> str:
     if constraint['name'] == 'host_cores':
         return f"the host's cores allow {constraint['allows']}"
+    if constraint['name'] == 'graph' and sweep_curve.at_edge(constraint['allows'], knee_range_top):
+        return f"the graph shows no knee within {constraint['allows']}"
     return f"the {constraint['name']} allows {constraint['allows']}"
 
 
 def capacity_verdict_sentence(
-    builders: int, host_cores: int, cores_busy: float, constraints: list, binding: dict
+    builders: int,
+    plane2_capacity: dict,
+    constraints: list,
+    binding: dict,
+    knee_range_top: Optional[int] = None,
 ) -> str:
     """UX-1143: the recommendation as one sentence - what to set, and why the binding constraint binds."""
+    host_cores, cores_busy = plane2_capacity['host_cpu_count'], plane2_capacity['cores_busy']
     recommended = binding['allows']
     if recommended == builders:
         action = f"Keep {_count(builders, 'builder')}"
@@ -1179,11 +1174,11 @@ def capacity_verdict_sentence(
             f"each building element drew {per:.2f} cores, so the host's {_count(host_cores, 'core')} feed {recommended}"
         )
     elif binding['name'] == 'graph':
-        why = f"the graph binds — the sweep's knee is at {_count(recommended, 'builder')}"
+        why = f"the graph binds — {sweep_curve.knee_reason(recommended, knee_range_top).split(':')[0]}"
     else:
         why = f"{binding['name']} binds at {recommended}"
     others = [c for c in constraints if c is not binding]
-    rest = "; " + ", ".join(_allows_clause(c) for c in others) if others else ""
+    rest = "; " + ", ".join(_allows_clause(c, knee_range_top) for c in others) if others else ""
     tail = " — a hypothesis to time, not a setting to apply" if recommended > builders else ""
     return f"{action}: {why}{rest}{tail}."
 
@@ -1238,14 +1233,7 @@ def compute_capacity_recommendation(
             {
                 'name': 'graph',
                 'allows': knee,
-                'reason': (
-                    f"the sweep's knee is at {knee} builder{'' if knee == 1 else 's'}"
-                    + (
-                        ", the top of the range swept, so the graph may want more"
-                        if knee_range_top and knee >= knee_range_top
-                        else ""
-                    )
-                ),
+                'reason': sweep_curve.knee_reason(knee, knee_range_top),
             }
         )
     cpu_allows = int(host_cores * builders / cores_busy) if cores_busy > 0 else None
@@ -1285,7 +1273,7 @@ def compute_capacity_recommendation(
     binding = min(constraints, key=lambda c: (c['allows'], c['name'] not in ('CPU', 'host_cores'), c['name']))
     pinned = (plane2_capacity or {}).get('pinned_elements') or []
     return {
-        'verdict': capacity_verdict_sentence(builders, host_cores, cores_busy, constraints, binding),
+        'verdict': capacity_verdict_sentence(builders, plane2_capacity, constraints, binding, knee_range_top),
         'builders': builders,
         'native_max_jobs': native_max_jobs,
         'host_cpu_count': host_cores,
@@ -1320,6 +1308,8 @@ def compute_agent_sizing(result, builders: Optional[int] = None) -> dict:
     sized = {
         'recommended': recommended,
         'graph_ceiling': graph,
+        # UX-1274: a ceiling at the range's top is no knee, and the card says so.
+        'swept_to': len(rec.get('sweep') or []) or None,
         'observed': observed,
         'source': 'capacity_recommendation' if rec else None,
     }

@@ -240,6 +240,7 @@ bga/report/            text.py, json.py, ci_comment.py - renderers · _shared.py
 bga/compare.py         two runs, the noise band, the verdict, the culprits
 bga/blast.py           what rebuilds if one resource changes
 bga/correlate.py       the two planes joined on element uid
+bga/sweep_curve.py     the builder sweep's range, its curve, a knee or the range's edge
 bga/whatif.py          the projection for a chosen set of fixes (UX-230)
 bga/junction_cost.py   N variant builds priced against one junctioned invocation
 bga/cache_trend.py     a series of runs, not a pair

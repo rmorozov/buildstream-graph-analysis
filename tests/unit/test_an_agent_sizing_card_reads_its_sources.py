@@ -68,6 +68,7 @@ def test_each_value_equals_its_source_section(two_plane):
     assert card["builders"] == {
         "recommended": rec["recommended_builders"],
         "graph_ceiling": graph,
+        "swept_to": len(rec["sweep"]),
         "observed": rec["builders"],
         "source": "capacity_recommendation",
     }

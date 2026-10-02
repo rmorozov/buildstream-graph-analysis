@@ -112,7 +112,7 @@ def test_the_clamp_is_told_in_the_sentence():
     )
     assert got["verdict"].startswith("Keep 4 builders:"), got["verdict"]
     assert "could feed 31" in got["verdict"] and "the host's 4 cores cap it" in got["verdict"], got["verdict"]
-    assert "the graph allows 8" in got["verdict"], got["verdict"]
+    assert "the graph shows no knee within 8" in got["verdict"], got["verdict"]
 
 
 def test_a_raise_is_a_hypothesis_and_a_cut_is_a_cut():

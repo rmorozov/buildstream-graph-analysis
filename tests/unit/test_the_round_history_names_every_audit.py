@@ -47,7 +47,8 @@ import dev_track_cost
 from dev_close_task import closed_rows
 
 AUDITS = "docs/audits"
-DIRECTIONS = "docs/design/directions.md"
+#: `UX-1293`: the round history left `docs/design/directions.md` for the audits directory.
+DIRECTIONS = "docs/audits/directions-history.md"
 #: `UX-1289`: the round list left the docs index for the audits directory's own.
 README = "docs/audits/README.md"
 SCENARIOS = "docs/backlog/scenarios"
@@ -149,7 +150,7 @@ def _table_links():
 
 def _audits_links():
     """Every link into `docs/audits/` from the two hand-typed documents."""
-    return [(DIRECTIONS,) + link for link in _links(DIRECTIONS, "../audits/")] + [
+    return [(DIRECTIONS,) + link for link in _links(DIRECTIONS, "") if posixpath.dirname(link[2]) == AUDITS] + [
         (README,) + link for link in _links(README, "") if posixpath.dirname(link[2]) == AUDITS
     ]
 

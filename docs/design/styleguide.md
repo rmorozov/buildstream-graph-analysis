@@ -770,7 +770,7 @@ column re-read in round 73:
                  elements   landed   opened    words   controls    nodes
 golden                  4    3,800   15,618    7,144        427    2,498
 macro_micro            11    5,965   31,804   12,002        750    5,686
-budget, to 50 elts             7,600   39,188   13,500        872    7,900
+budget, to 50 elts             7,600   39,188   13,700        874    7,900
 
 scale               1,202    4,763   26,242   36,542      1,941   24,294
 budget, to 4,000 elts          7,000   32,000   41,000      2,300   27,500
@@ -797,7 +797,7 @@ in it hidden, and the class is bounded at both ends:
                  elements   landed   opened    words   controls    nodes
 scale               1,202    5,007   26,584    8,259        787    4,732
 xl                  4,002    4,937   27,230    8,275        812    4,960
-budget, to 4,100 elts          7,600   46,822   13,600      1,192    7,800
+budget, to 4,100 elts          7,600   46,822   14,100      1,192    8,070
 ```
 
 Height does not move at all — a bounded row costs no pixels, which is
@@ -928,7 +928,7 @@ and Depends on lists, open, as links. The bounds they push over moved by
 exactly the measured delta: the small class's height 38,400 -> 39,188 and
 controls 800 -> 868 (`macro_micro` +788, +68); the 4,100 class's height
 44,629 -> 46,822 and controls 1,020 -> 1,192 (`xl_both` +2,193, +172);
-its nodes bound stays 7,500 - the merged round reads 7,284.
+its nodes bound stayed 7,500 then (that merged round read 7,284).
 
 `UX-1254`'s sizing card moved the small class's controls 868 -> 872:
 its rail link, fold, JSON door and three source links, +6 on
@@ -937,6 +937,11 @@ its rail link, fold, JSON door and three source links, +6 on
 `UX-1267` folded the map rows into every ranked card: the 4,100 class's
 words 13,200 -> 13,600 and nodes 7,500 -> 7,800 (`xl_both` 13,540 words,
 7,799 nodes) - the owner-call default, reversible.
+
+Round 165's merge, five tracks each under alone: the small class's words
+13,500 -> 13,700 and controls 872 -> 874 (`macro_micro` 13,697, 874); the
+4,100 class's words 13,600 -> 14,100 and nodes 7,800 -> 8,070 (`xl_both`
+14,099, 8,066) - the owner-call default, reversible.
 
 `UX-1152`'s card links read section titles, not ids; alone they took
 `macro_micro` to 38,201 px and 13,441 words. Round 154's merged tree,

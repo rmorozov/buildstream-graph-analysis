@@ -39,6 +39,7 @@ meaningful once the document they point into exists.
 
 from typing import Any, Optional
 
+from . import correlate as _correlate
 from . import findings as _findings
 from . import schemas as _schemas
 from . import shown as qty
@@ -739,8 +740,8 @@ _CLAIMS = {
         ),
         (),
     ),
-    # UX-1255: Plane 2's three. The binary and configure cite no path: a citation would serve their sections
-    # to R2 in `schemas._SECTION_READERS`, a page-role change; their figures are the finding's own evidence.
+    # UX-1255: Plane 2's three cite no path: a citation would serve their sections to R2 in
+    # `schemas._SECTION_READERS`, a page-role change; their figures are the finding's own evidence.
     "costliest-binary": (
         (),
         _rule(
@@ -753,14 +754,15 @@ _CLAIMS = {
         (),
     ),
     "jobs-waiting": (
-        ("capacity_recommendation.cores_busy", "capacity_recommendation.builders"),
+        (),
         _rule(
-            "PLANE2_WAITING_OF_REQUESTED",
-            _findings.PLANE2_WAITING_OF_REQUESTED,
+            "_COMPUTE_BOUND_CORES",
+            _correlate._COMPUTE_BOUND_CORES,
             "<",
             None,
-            "Cores busy per builder is under this fraction of an element's requested jobs, "
-            "with no graph knee below the builders.",
+            "An element that asked for more than one job ran under this many cores busy, "
+            "its own CPU over its own wall - the line `bga correlate` calls waiting, not computing.",
+            module="bga/correlate.py",
         ),
         (),
     ),

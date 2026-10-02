@@ -48,33 +48,37 @@ gated off (`scratchpad/<worktree>/accept.py before`):
 
 ```text
 before 14 findings; Plane 2 ones: []
-  by_binary[0] make cpu_us 36,000,000; capacity cores_busy/builders 0.21; configure_share 0.0
+  by_binary[0] make cpu_us 36,000,000; configure_share 0.0
+  element_join rows under 1.25 with jobs > 1: 2,300, median 0.17054389866718134
 ```
 
 The close measured, same page and probe (`accept.py after`):
 
 ```text
 after 16 findings; Plane 2 ones: ['jobs-waiting', 'costliest-binary']
-  costliest-binary  '36.0 s of CPU in make, the costliest of 601 binaries, across 2,400 elements' -> #by_binary
-  jobs-waiting      '0.21 cores per building element against 4 jobs requested by 2,400 elements: waiting, not computing' -> #capacity_recommendation
-  equal: True True          (evidence cpu_us = by_binary[0].cpu_us; cores_per_element = the verdict's 0.21)
+  costliest-binary '36.0 s of CPU in make, the costliest of 601 binaries, across 2,400 elements' -> #by_binary
+  jobs-waiting '2,300 elements asked for 4 jobs and ran at a median 0.17 cores busy: waiting, not computing' -> #element_join
+  equal: True True    (evidence cpu_us = by_binary[0].cpu_us; element_count = the join's rows under the line)
 macro_micro (export, the volume guards' instruments), before -> after: data half 100,075 -> 100,075 B,
   opened height 39,346 -> 39,346 px, words 13,162, controls 872, nodes 6,889 - unchanged: no Plane 2 finding fires there
 golden (Plane 1 only): none of the three
 ```
 
 The lines. `PLANE2_BINARY_FLOOR_SHARE` is `OPPORTUNITY_FLOOR_PCT` (1%): a binary under Plane 1's own floor for a
-wait category is noise, and `make` at 1.5% of 601 binaries' CPU clears it. `PLANE2_WAITING_OF_REQUESTED` 0.25: under
-a quarter of the jobs asked for, three of four requested slots idle - "far below"; at 0.5 a `-j4` element sharing a
-jobserver under two builders reads as waiting. Cores busy is `plane2_capacity.cores_busy` (UX-1245's source) over the
-builders, the capacity verdict's own division, and holds back when the sweep's graph knee sits below the builders:
-then builders idle and the division understates each element (`macro_micro`: knee 2 of 4, 0.40 cores). `PLANE2_CONFIGURE_SHARE`
-0.10: one CPU second in ten re-deriving the build system, `TRANSFER_SHARE_NOTABLE`'s line for the other non-build cost.
+wait category is noise, and `make` at 1.5% of 601 binaries' CPU clears it. `jobs-waiting` reads each element's own
+CPU over its own wall - `correlate._plane2_view`, the `element_join` row's `cores_busy` - and reuses
+`correlate._COMPUTE_BOUND_CORES` (1.25), so it and `bga correlate`'s "waiting, not computing" never disagree on one
+run; only elements that asked for more than one job count, a `-j1` element being `pinned_to_one_job`'s finding. A first
+cut divided run-wide `cores_busy` by builders, a proxy (fixing guide §5): 0.98 on the heavy run, which is 3.9 cores
+busy. On `macro_micro` every multi-job element ran at 1.38+ and `core.bst` (0.90) asked for one: nothing fires.
+`PLANE2_CONFIGURE_SHARE` 0.10: one CPU second in ten re-deriving the build system, `TRANSFER_SHARE_NOTABLE`'s line
+for the other non-build cost.
 
 | mutation | reddened | count |
 |---|---|---|
-| `_plane2_findings` returns `[]` | binary, waiting, configure[0.1] | 3 failed, 4 passed |
-| binary reads `rows[1]` | binary row zero | 1 failed, 6 passed |
-| `PLANE2_WAITING_OF_REQUESTED` 0.25 -> 0.2 | waiting (heavy run: 0.98 vs 4 jobs) | 1 failed, 6 passed |
-| graph-knee gate removed | knee below the builders emits none | 1 failed, 6 passed |
-| configure `>=` -> `>` | configure[0.1] | 1 failed, 6 passed |
+| `_plane2_findings` returns `[]` | binary, waiting, line, configure[0.1] | 4 failed, 4 passed |
+| binary reads `rows[1]` | binary row zero | 1 failed, 7 passed |
+| waiting `<` -> `<=` the line | the line is correlate's | 1 failed, 7 passed |
+| `requested_jobs > 1` gate dropped | line/one-job; macro_micro emits none | 2 failed, 6 passed |
+| median -> mean | join rows and their median | 1 failed, 7 passed |
+| configure `>=` -> `>` | configure[0.1] | 1 failed, 7 passed |

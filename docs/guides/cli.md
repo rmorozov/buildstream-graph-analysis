@@ -390,6 +390,37 @@ re-run here. `--key-fingerprint` must match the project's local map or
 the command refuses (`Error: map key fingerprint … does not match the
 bundle's …`, exit 2) before it touches stdin. Cuts: none.
 
+**`--anonymize` sends a capture out with every name replaced**
+(`UX-1295`). It pseudonymizes under the project's key, `.bga/anon/key`,
+created 0600 on first use, and records each pseudonym in
+`.bga/anon/map.json` beside it, the map `--resolve` reads. Before
+writing it shows one review screen and asks; anything but `y` writes
+nothing, map included. With no terminal on stdin it prints the review
+and refuses, and a name the residue scan finds refuses whatever the
+answer. It goes with `--export` alone, not `--no-plane2`:
+
+```console
+$ bga bundle --export @last --anonymize -o out.bga-bundle.tar.gz
+Anonymized bundle out.bga-bundle.tar.gz: 4 members
+  members: run/graph.json, run/trace.json, run/run-context.json, plane2.json
+  dropped: none
+  values rewritten, per class: A 451 · E 15 · F credential 12 · F dropped 34 · F rebuilt 40 · H 13
+  kept verbatim (71): --cyan, --help, --progress-dir, …
+  residue scan: clean over 47 dictionary tokens; a tripwire, blind to a name it never held
+  the graph's shape alone can identify a project (anonymized-bundle.md 6.5)
+  key fingerprint 4dd12723ed46370a; the map stays on this machine
+Write this bundle? [y/N] y
+Wrote out.bga-bundle.tar.gz
+  4 members, 43.6K before compression
+  read a reply with: bga bundle --resolve --key-fingerprint 4dd12723ed46370a
+```
+
+*Kept, not current*: 2026-10-02, `tests/fixtures/macro_micro` copied
+into a scratch project as one snapshot, answered on a pty. Cuts: the
+output path shortened, and the `kept verbatim` list after its third
+entry. The guard is
+`tests/unit/test_bundle_export_has_an_anonymize_switch.py`.
+
 For the CI direction — publishing to a git ref rather than one file —
 see `bga baseline` and the capture-ref scheme below.
 

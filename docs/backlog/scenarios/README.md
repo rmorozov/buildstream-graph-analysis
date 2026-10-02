@@ -44,7 +44,6 @@ task file, which is the only place it ever lived twice.
 | UX-1292 | [the stale claims the docs audit found are corrected, and the retired stub is removed](UX-1292-stale-and-retired-doc-pages-are-corrected.md) | docs | Medium | R1, R5 | 🔴 Not Started |
 | UX-1293 | [`design/directions.md` holds the directions in order, and its round history moves to `audits/`](UX-1293-design-directions-holds-directions-not-round-history.md) | docs | Low | contributors | 🔴 Not Started |
 | UX-1294 | [the CHANGELOG's task links resolve from the repository root](UX-1294-changelog-links-resolve-from-the-repo-root.md) | docs | Medium | R1, R8 | 🔴 Not Started |
-| UX-1295 | [`bga bundle --export` has an `--anonymize` switch, so a pilot can share a capture without a Python call](UX-1295-bundle-export-has-an-anonymize-switch.md) | cli | High | R4, R5 | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

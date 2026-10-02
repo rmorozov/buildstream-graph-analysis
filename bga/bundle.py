@@ -811,8 +811,7 @@ def export_anonymized(
     """Every member walked by its `disclosure` treatment and policy, packed
     with neutral metadata (6.9), residue-scanned decoded, then shown to
     `approve`; nothing is written, map included, unless it returns true.
-
-    Unreleased: no command reaches this until `UX-1063`'s guard is green.
+    `bga bundle --export STAMP --anonymize` reaches it (`UX-1295`).
     """
     if not os.path.isdir(snapshot):
         raise BundleError(f"{snapshot} is not a snapshot directory")

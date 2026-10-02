@@ -13,6 +13,7 @@ even the same project.
 import json
 import logging
 import statistics
+from collections.abc import Iterator
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Optional
@@ -339,6 +340,8 @@ class ComparisonResult:
     # "nothing was checked", which a `0` exit code alone cannot say.
     efficiency_gate_evaluated: Optional[bool] = None
     efficiency_gate_signal: Optional[dict] = None
+    # `UX-1277`: which findings are new, persisting or resolved, keyed on finding id.
+    findings_diff: Optional[dict] = None
 
     def to_dict(self) -> dict:
         document = {
@@ -380,6 +383,7 @@ class ComparisonResult:
             # you say chain-bound"; before this the answer was in a
             # different command's output.
             'candidate_diagnosis': self.candidate_diagnosis,
+            'findings_diff': self.findings_diff,
         }
         # `UX-610`: the chain behind the *verdict*, at the top level
         # where the verdict is. Resolved against the document above and
@@ -1392,6 +1396,59 @@ def _analyze_side(
     return result, graph.elements, graph.dependencies
 
 
+def _side_findings(result) -> Optional[list]:
+    """One side's published findings, or None when they cannot be had."""
+    from .findings import compute_findings
+
+    document = getattr(result, 'published_document', None)
+    try:
+        found = document.get('findings') if document is not None else compute_findings(result)
+    except Exception:  # pragma: no cover - an enrichment never costs the comparison
+        return None
+    return [f for f in found or [] if isinstance(f, dict) and f.get('id')]
+
+
+def _earlier_ids(baseline_dir: Path, baseline_runs: list) -> Iterator[set]:
+    """Finding ids of each published analysis older than the baseline, newest first."""
+    label = _band_source(baseline_dir)['run']
+    older = sorted(
+        (run for run in baseline_runs if _band_source(run)['run'] < label),
+        key=lambda run: _band_source(run)['run'],
+        reverse=True,
+    )
+    for run in older:
+        document = _published(run)
+        if document is None:
+            return
+        yield {f.get('id') for f in document.get('findings') or [] if isinstance(f, dict)}
+
+
+def findings_diff(baseline_result, candidate_result, baseline_dir: Path, baseline_runs=None) -> Optional[dict]:
+    """`UX-1277`: new, persisting (with its age in consecutive snapshots) and resolved, by finding id."""
+    before, after = _side_findings(baseline_result), _side_findings(candidate_result)
+    if before is None or after is None:
+        return None
+    held = {f['id'] for f in before}
+    now = {f['id'] for f in after}
+    age = dict.fromkeys(now & held, 2)
+    alive = set(age)
+    for ids in _earlier_ids(Path(baseline_dir), list(baseline_runs or [])):
+        alive &= ids
+        if not alive:
+            break
+        for fid in alive:
+            age[fid] += 1
+
+    def row(finding: dict) -> dict:
+        return {'id': finding['id'], 'title': finding.get('title')}
+
+    return {
+        'new': [row(f) for f in after if f['id'] not in held],
+        'persisting': [{**row(f), 'age': age[f['id']]} for f in after if f['id'] in held],
+        'resolved': [row(f) for f in before if f['id'] not in now],
+    }
+
+
 def compare_runs(
     baseline_dir: Path,
     candidate_dir: Path,
@@ -1466,7 +1523,7 @@ def compare_runs(
                 'required': MIN_BASELINE_RUNS,
             }
 
-    return _compare_results(
+    comparison = _compare_results(
         baseline_result,
         candidate_result,
         baseline_elements,
@@ -1476,6 +1533,9 @@ def compare_runs(
         baseline_band_sources=band_sources,
         candidate_dependencies=candidate_dependencies,
     )
+    if comparison.verdict_kind != 'not_comparable':
+        comparison.findings_diff = findings_diff(baseline_result, candidate_result, baseline_dir, baseline_runs)
+    return comparison
 
 
 def regression_exceeds_threshold(comparison: ComparisonResult, threshold_pct: Optional[float] = None) -> bool:

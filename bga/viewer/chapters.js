@@ -39,7 +39,7 @@
  * belongs to rather than in a bucket at the end.
  */
 
-import { duration, quantity, title } from "./format.js";
+import { duration, el, quantity, title } from "./format.js";
 import { headRow } from "./primitives.js";
 
 /**
@@ -92,6 +92,32 @@ export function compareDelta(comparison) {
 export function compareLead(comparison) {
   const delta = compareDelta(comparison);
   return delta && `${delta}, ${BAND[comparison.verdict_kind]}.`;
+}
+
+/** `UX-1277`: each finding card marked new or still open from `findings_diff`, resolved ones in one line under them. */
+export function markSince(root, comparison) {
+  const diff = comparison?.findings_diff;
+  const section = root?.querySelector?.('[data-section="findings"]');
+  if (!diff || !section) return;
+  const since = new Map([
+    ...(diff.new ?? []).map((row) => [row.id, { since: "new", text: "New since the run before" }]),
+    ...(diff.persisting ?? []).map((row) => [row.id,
+      { since: "persisting", text: `Still open · ${quantity(row.age, "count")} runs` }]),
+  ]);
+  for (const article of section.querySelectorAll("article.finding[data-finding-id]")) {
+    const mark = since.get(article.getAttribute("data-finding-id"));
+    if (!mark || article.hasAttribute("data-since")) continue;
+    article.setAttribute("data-since", mark.since);
+    article.querySelector(".title .badge")?.after(
+      el("span", { class: "badge since", "data-since": mark.since }, mark.text));
+  }
+  const gone = diff.resolved ?? [];
+  if (!gone.length) return;
+  section.querySelector('[data-role="findings-resolved"]')?.remove();
+  section.append(el("p", { class: "muted", "data-role": "findings-resolved" },
+    `Resolved since the run before (${gone.length}): `,
+    ...gone.flatMap((row, i) => [i ? ", " : "",
+      el("span", { "data-finding-id": row.id }, row.title ?? row.id)])));
 }
 
 // The chapters, in the order the document reads. Each names the

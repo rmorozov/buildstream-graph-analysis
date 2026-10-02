@@ -1358,7 +1358,7 @@ def compute_agent_sizing(result, builders: Optional[int] = None) -> dict:
         else:
             why = f"{'were' if two else 'was'} not measured by this capture"
         absence = f"{' and '.join(missing).capitalize()} {why}."
-    return {'builders': sized, 'cores': cores, 'memory': memory, 'caveat': rec.get('caveat'), 'absence': absence}
+    return {'builders': sized, 'cores': cores, 'memory': memory, 'absence': absence}
 
 
 def compute_ready_set_width(replay_scheduler) -> Optional[int]:

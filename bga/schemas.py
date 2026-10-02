@@ -3906,7 +3906,6 @@ _ANALYZE_HINTS = {
                     "bytes": {QUANTITY: "bytes", "description": "The product."},
                 },
             },
-            "caveat": {"description": "The recommendation's own caveat."},
             "absence": {"description": "Which of cores and memory this run did not measure, and why."},
         },
     },

@@ -79,7 +79,7 @@ def test_each_value_equals_its_source_section(two_plane):
     assert memory["basis"] == "envelope", memory
     for field in ("builders", "cores", "memory"):
         assert card[field]["source"] in two_plane, (field, card[field]["source"])
-    assert card["absence"] is None and card["caveat"] == rec["caveat"]
+    assert card["absence"] is None and "caveat" not in card, card
 
 
 def test_plane1_only_says_cores_and_memory_are_absent(plane1):

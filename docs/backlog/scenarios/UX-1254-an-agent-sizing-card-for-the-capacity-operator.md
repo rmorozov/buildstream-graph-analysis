@@ -78,6 +78,10 @@ peaks, when no host RAM was recorded - the 2,402 page).
 `PAGE_BUDGET_B` 165,000; data half +2,244 B and +1,750 B. `macro_micro`'s
 opened page: 872 controls (card +6 on 866).
 
+Round 163's merged tree: `agent_sizing.caveat` dropped from the payload, the card reads
+`capacity_recommendation.caveat`; macro_micro's data half 100,165 -> 99,891 B (99,981 under `-n 2`),
+the guard's own measure against 100,000. M9: the key restored - equals-its-source: 1 failed.
+
 ### Mutations verified red and reverted (8)
 
 | # | mutation | reddened |

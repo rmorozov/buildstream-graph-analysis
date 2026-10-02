@@ -542,7 +542,6 @@
         },
         "cores": null,
         "memory": null,
-        "caveat": null,
         "absence": "Cores and memory need Plane 2, which this run did not capture."
     },
     "utilization_envelope": {
@@ -2418,10 +2417,10 @@
         }
     ],
     "document_shape": {
-        "leaves": 1618,
+        "leaves": 1617,
         "deepest_depth": 7,
         "deepest_path": "findings.[].evidence.steps.[].entering.[]",
         "deeper_than_three": 986,
-        "deeper_than_three_share": 0.6093943139678616
+        "deeper_than_three_share": 0.6097711811997526
     }
 }

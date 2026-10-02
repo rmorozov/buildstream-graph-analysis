@@ -91,6 +91,7 @@ def seen(tmp_path_factory):
         for (const term of s.querySelectorAll("dt")) {
           const value = term.nextElementSibling;
           rows.push({
+            key: term.getAttribute("data-key"),
             label: (term.textContent || "").replace(/\\s*\\?\\s*$/, "").trim(),
             advice: [...(value?.querySelectorAll("p.run-advice") ?? [])]
               .map((p) => (p.textContent || "").trim()),
@@ -162,18 +163,17 @@ class TestOneSection:
         )
         for row in rows:
             assert len(row["advice"]) == 1, row
-        # Each bucket's own sentence, matched by the label it sits under.
+        # Each bucket's own sentence, matched by the key it sits under (`UX-1269`: the label is `TERMS`').
         for bucket, hint in payload["attribution_hints"].items():
-            label = bucket.removesuffix("_us").replace("_", " ").capitalize()
-            mine = [row for row in rows if row["label"].lower() == label.lower()]
-            assert mine, (label, [row["label"] for row in rows])
+            mine = [row for row in rows if row["key"] == bucket]
+            assert mine, (bucket, [row["key"] for row in rows])
             assert mine[0]["advice"] == [_typeset(hint)], mine[0]
 
     def test_no_label_prints_the_unit_the_value_carries(self, seen):
         """`UX-351`, on the eight labels that never got the sweep."""
         offenders = [label for label in seen["attribution"]["labels"] if label.endswith(UNIT_SUFFIXES)]
         assert offenders == [], offenders
-        assert "Execution on chain" in seen["attribution"]["labels"]
+        assert "Execution on the chain" in seen["attribution"]["labels"]
 
 
 class TestItIsDeclaredRatherThanSniffed:

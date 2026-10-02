@@ -232,7 +232,7 @@
   {
     "exception": null,
     "role": "heading",
-    "text": "How much work was waiting to start?"
+    "text": "How much ready work had not started?"
   },
   {
     "exception": null,
@@ -547,6 +547,11 @@
   {
     "exception": null,
     "role": "summary",
+    "text": "How these figures relate"
+  },
+  {
+    "exception": null,
+    "role": "summary",
     "text": "Why ##"
   },
   {
@@ -817,7 +822,7 @@
   {
     "exception": null,
     "role": "rail-entry",
-    "text": "How much work was waiting to start?"
+    "text": "How much ready work had not started?"
   },
   {
     "exception": null,

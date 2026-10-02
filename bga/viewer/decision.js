@@ -723,7 +723,7 @@ export function renderDecision(payload, investigate = null, copy = null,
   const split = document.createElement("dl");
   split.className = "pairs opportunity";
   for (const [label, key, kind] of [
-    ["Certified headroom", "certified_headroom_us", "duration_us"],
+    [TERMS.certified_headroom_us, "certified_headroom_us", "duration_us"],
     [TERMS.scheduling_gap_us, "scheduling_gap_us", "duration_us"],
   ]) {
     const value = headline[key];

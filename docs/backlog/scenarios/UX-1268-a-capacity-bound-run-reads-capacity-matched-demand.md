@@ -2,7 +2,7 @@
 
 **Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the round-163 walk of the merged page (2026-10-02) | **Serves:** R1, R5 | **Topic:** analysis | **Area:** bga, bga/viewer | **Shape:** mechanical | **Reading:** container
 
-**Guard:** none — open, no guard named yet
+**Guard:** `tests/unit/test_the_page_checks_its_verdicts_agree.py`
 
 ## Motivation
 
@@ -34,3 +34,21 @@ UX-861's host-core cap (UX-1259).
 ## Acceptance Test
 
 On this page the verdict, the ready-queue reading and the diagnosis agree, or `#violations` names the pair; golden and macro_micro unchanged. Mutation: drop the new pair or wording, and the guard reds.
+
+## Outcome
+
+The gap measured, at `b35c30e31`, the Motivation's page (`two_plane_run(shape=(--layers 40 --width 60 --workload
+binaries), runs=2)`, `bga analyze --format json`): `headline.diagnosis` `capacity_bound`, `capacity_verdict`
+`{'oversubscribed': False, 'undersubscribed': False, 'checks_ran': True}`, `verdict_disagreement` records `[]`.
+
+The close measured, same page exported, Chromium 1440, `#violations` textContent: `Pair
+capacity_bound_vs_capacity_verdict ... headline.diagnosis reads capacity_bound; capacity_verdict reads capacity matched
+demand, checks ran`. golden and macro_micro publish no `verdict_disagreement` (`test_the_committed_fixtures_report_none`).
+The pair is silent on an undersubscribed verdict and on unran checks (UX-1259's cap untouched). The ready-queue half
+closes with UX-1273's heading and gloss. Guard: 15 passed (26.4 s; the page case 24.8 s).
+
+| mutation | reddened | run printed |
+|---|---|---|
+| the new Pair never fires (`and False`) | the page case, the pair's DISAGREEING case | 2 failed, 13 passed |
+| drop `capacity_undersubscribed is False` | `[capacity_bound_beside_an_undersubscribed_verdict]` | 1 failed, 3 passed |
+| reverted | | 15 passed |

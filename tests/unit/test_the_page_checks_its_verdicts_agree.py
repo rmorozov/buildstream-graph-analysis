@@ -23,15 +23,20 @@ AGREEING = {
     'potential_oversubscription': False,
     'capacity_checks_ran': True,
     'capacity_oversubscribed': False,
+    'capacity_undersubscribed': False,
     'builders_change': 0,
 }
+
+#: A capacity verdict that agrees with a capacity-bound diagnosis.
+OVER = {'capacity_oversubscribed': True}
 
 #: One contradiction per pair, the 2,402-element page's readings.
 DISAGREEING = {
     'diagnosis_vs_floors': {'diagnosis': 'scheduler_bound', 'lb_us': 2_817_875_000, 't_infinity_us': 277_500_000},
     'oversubscription_vs_capacity_verdict': {'potential_oversubscription': True},
     'binding_constraint_vs_cpu_floor': {'binding_constraint': 'CPU'},
-    'capacity_bound_vs_recommendation': {'diagnosis': 'capacity_bound'},
+    'capacity_bound_vs_recommendation': {'diagnosis': 'capacity_bound', **OVER},
+    'capacity_bound_vs_capacity_verdict': {'diagnosis': 'capacity_bound', 'builders_change': 2},
 }
 
 #: The same sides read consistently: each pair's silent case.
@@ -41,8 +46,24 @@ SILENT = {
         'lb_us': 2_817_875_000,
         't_infinity_us': 277_500_000,
         'builders_change': 2,
+        **OVER,
     },
-    'capacity_bound_beside_a_host_cap_keep': {'diagnosis': 'capacity_bound', 'binding_constraint': 'host_cores'},
+    'capacity_bound_beside_a_host_cap_keep': {
+        'diagnosis': 'capacity_bound',
+        'binding_constraint': 'host_cores',
+        **OVER,
+    },
+    # UX-1268: undersubscribed is UX-1259's host-core call, not this pair's.
+    'capacity_bound_beside_an_undersubscribed_verdict': {
+        'diagnosis': 'capacity_bound',
+        'builders_change': 2,
+        'capacity_undersubscribed': True,
+    },
+    'capacity_bound_beside_unran_checks': {
+        'diagnosis': 'capacity_bound',
+        'builders_change': 2,
+        'capacity_checks_ran': False,
+    },
 }
 
 
@@ -106,3 +127,26 @@ def test_the_json_and_text_reports_publish_a_disagreement():
     assert published == ['oversubscription_vs_capacity_verdict']
     assert result.violations == before
     assert 'verdicts disagree: utilisation.potential_oversubscription reads oversubscribed' in format_text(result)
+
+
+#: `UX-1268`: the 2,402-element two-plane page, capacity-bound with a matched capacity verdict.
+PAGE_SHAPE = ('--layers', '40', '--width', '60', '--workload', 'binaries')
+_VIOLATIONS_TEXT = "document.getElementById('violations')?.textContent ?? ''"
+
+
+def test_a_capacity_bound_page_names_the_matched_verdict(tmp_path):
+    sys.path.insert(0, str(REPO))
+    import tools.bga_view as view
+    from tests import pages
+    from tests.browser import NO_BROWSER, Browser, find_chrome
+
+    chrome = find_chrome()
+    if chrome is None:
+        pytest.skip(NO_BROWSER)
+    run = pages.two_plane_run(tmp_path, shape=PAGE_SHAPE, runs=2)
+    page = tmp_path / 'report.html'
+    view.export(str(run), str(page))
+    with Browser(chrome) as opened:
+        text = opened.measure(page.as_uri(), _VIOLATIONS_TEXT)
+    assert 'capacity_bound_vs_capacity_verdict' in text, text
+    assert 'headline.diagnosis reads capacity_bound; capacity_verdict reads capacity matched demand' in text, text

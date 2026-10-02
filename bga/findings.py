@@ -2306,6 +2306,15 @@ def _plane2_findings(result: AnalysisResult) -> list[dict]:
     if rows and measured and rows[0]['cpu_us'] / measured >= PLANE2_BINARY_FLOOR_SHARE:
         top = rows[0]
         reach = plural(top['elements'], 'element', shown=f"{top['elements']:,}")
+        # UX-1269: a lever is a share of the run's capacity, not of the CPU Plane 2 measured.
+        capacity = (getattr(result, 'utilisation', None) or {}).get('capacity_cpu_us')
+        of_capacity = top['cpu_us'] / capacity if capacity else None
+        step = _step(f"Start with {top['binary']}: no other binary spent as much CPU.")
+        if of_capacity is not None and of_capacity < PLANE2_BINARY_FLOOR_SHARE:
+            step = _none(
+                f"{top['binary']} is {qty.share(of_capacity)} of the run's CPU capacity, under the "
+                f"{OPPORTUNITY_FLOOR_PCT:.0f}% opportunity floor: context, not a lever."
+            )
         out.append(
             _finding(
                 'costliest-binary',
@@ -2317,7 +2326,7 @@ def _plane2_findings(result: AnalysisResult) -> list[dict]:
                     'cpu_us': top['cpu_us'],
                     'share': round(top['cpu_us'] / measured, 3),
                 },
-                step=_step(f"Start with {top['binary']}: no other binary spent as much CPU."),
+                step=step,
             )
             | {'section': 'by_binary'}
         )

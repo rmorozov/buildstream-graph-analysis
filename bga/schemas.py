@@ -3116,19 +3116,21 @@ _SIGNALS_TABLES = {
         },
     },
     "ready_queue": {
-        "description": "How much work was ready to run and had nowhere to run it.",
+        "description": "How much ready work had not started; Counts says which.",
         "properties": {
+            "counts": {
+                "enum": ["builder_free", "dependency_ready"],
+                "description": "With builder slots recorded, only work with a builder free; a full "
+                "builder's wait is resource wait. Without, every dependency-ready task.",
+            },
             "average_depth": {
                 QUANTITY: "ratio",
-                "description": "How many elements were ready and waiting, averaged over the build.",
+                "description": "How many such elements were waiting, averaged over the build.",
             },
-            "peak_depth": {QUANTITY: "count", "description": "The most elements ready and waiting at once."},
+            "peak_depth": {QUANTITY: "count", "description": "The most such elements waiting at once."},
             "nonzero_fraction": {
                 QUANTITY: "share",
-                "description": "The share of the build spent with "
-                "anything waiting. High means "
-                "capacity bound, not graph "
-                "bound.",
+                "description": "The share of the build with any of them waiting, as Counts defines them.",
             },
         },
     },
@@ -4124,14 +4126,14 @@ _ANALYZE_HINTS = {
             "total": "total_duration_us",
             "quantity": "duration_us",
             "parts": [
-                {"path": "attribution.execution_on_chain_us", "key": "execution", "label": "work on the chain"},
-                {"path": "attribution.dependency_wait_us", "key": "dependency", "label": "waiting upstream"},
-                {"path": "attribution.resource_wait_us", "key": "resource", "label": "capacity full"},
-                {"path": "attribution.scheduler_wait_us", "key": "scheduler", "label": "nothing dispatched"},
-                {"path": "attribution.idle_us", "key": "idle", "label": "nothing ready"},
+                {"path": "attribution.execution_on_chain_us", "key": "execution", "label": "execution on the chain"},
+                {"path": "attribution.dependency_wait_us", "key": "dependency", "label": "waiting on dependencies"},
+                {"path": "attribution.resource_wait_us", "key": "resource", "label": "waiting on resources"},
+                {"path": "attribution.scheduler_wait_us", "key": "scheduler", "label": "waiting on the scheduler"},
+                {"path": "attribution.idle_us", "key": "idle", "label": "idle"},
                 {"path": "attribution.retry_wait_us", "key": "retry", "label": "retries"},
                 {"path": "attribution.untracked_head_us", "key": "head", "label": "before the first task"},
-                {"path": "attribution.untracked_tail_us", "key": "tail", "label": "after the last"},
+                {"path": "attribution.untracked_tail_us", "key": "tail", "label": "after the last task"},
             ],
         },
         # `UX-390`: and the run's advice for each bucket, drawn on the
@@ -4936,7 +4938,9 @@ _ANALYZE_HINTS = {
                 },
                 "wall_us": {
                     QUANTITY: "duration_us",
-                    "description": "Wall-clock those calls spanned, summed the same way; absent with CPU.",
+                    "description": "Each call's process lifetime, summed over every call in every "
+                    "element: overlapping and nested calls each count, so it can exceed the run's "
+                    "wall clock. Absent with CPU.",
                 },
                 "calls": {QUANTITY: "count", "description": "How many times the whole run ran it."},
                 "elements": {QUANTITY: "count", "description": "How many elements ran it; absent with CPU."},
@@ -5274,7 +5278,8 @@ _ANALYZE_HINTS = {
             "effective_cpus": {
                 INLINE: "name",
                 QUANTITY: "count",
-                "description": "The capacity this accounting divides by. Builder slots as recorded, not host cores.",
+                "description": "The capacity this accounting divides by, in CPUs: measured, a declared CPU budget "
+                "or detected host cores, as the source line says.",
             },
             "effective_cpus_source": {
                 INLINE: "caveat",
@@ -5409,7 +5414,7 @@ _LIFTED_HINTS = {
     "fetch_build_overlap": ('act', 'Did fetching wait for building?'),
     "wall_clock_share_us": ('prove', 'How much of the run did each task hold?'),
     "task_durations_us": ('prove', 'How long did each task run?'),
-    "ready_queue": ('prove', 'How much work was waiting to start?'),
+    "ready_queue": ('prove', 'How much ready work had not started?'),
     "leaf_analysis": ('investigate', 'Which elements does nothing wait on?'),
     "element_duration_distribution": ('investigate', "How are this run's element durations spread?"),
     "blast_radius_distribution": ('investigate', 'How are blast radii spread across this graph?'),

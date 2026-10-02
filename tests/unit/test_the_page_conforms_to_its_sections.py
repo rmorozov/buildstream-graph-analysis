@@ -72,6 +72,7 @@ LAYOUT_FOLDS = {
     "why-ranked": "one ranked reason, one block each - same",
     "long-text": "`UX-269`'s truncation: it shows the string it cut, and the rest is the same string",
     "question-group": "counted already, in its own summary - `scheduling (3)`",
+    "also-noted": "counted already, in its own summary - `Also noted · 4`, one level of cards (`UX-1249`)",
 }
 
 

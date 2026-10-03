@@ -813,16 +813,16 @@ pairing for every merged row from round 103 on.
 | 168 | implementer | sonnet | UX-1312 overrides from a file | 69k | 42 | 477 s | merged | two edge cases fixed at merge |
 | 168 | verifier | sonnet | UX-1312 verifier | 56k | 33 | 499 s | PASS | inline `#` and a spaced path; see round-168 |
 | 169 | architect | opus | architect: the sweep's shape, 22 lines | 124k | 91 | 9.1 m | complete | see round-169 |
-| 169 | implementer | opus | track A styleguide guard ledger, with the fix resume | 741k | 106 | 69 m | merged | see round-169 |
-| 169 | implementer | opus | track B viewer Escape and forward | 94k | 99 | 27.5 m | merged | see round-169 |
-| 169 | implementer | sonnet | track C analysis sentences, with the fix resume | 540k | 98 | 78.8 m | merged | see round-169 |
-| 169 | implementer | sonnet | track D dev tools and process docs | 98k | 43 | 15.9 m | merged | see round-169 |
-| 169 | verifier | sonnet | track A verifier | 48k | 29 | 5.1 m | complete | see round-169 |
-| 169 | verifier | sonnet | track B verifier | 41k | 10 | 14.9 m | complete | see round-169 |
-| 169 | verifier | sonnet | track C verifier | 38k | 24 | 11 m | complete | see round-169 |
-| 169 | verifier | sonnet | track D verifier | 61k | 17 | 15.8 m | complete | see round-169 |
+| 169 | implementer | opus | UX-998 track A styleguide guard ledger, with the fix resume | 741k | 106 | 69 m | merged | see round-169 |
+| 169 | implementer | opus | UX-998 track B viewer Escape and forward | 94k | 99 | 27.5 m | merged | see round-169 |
+| 169 | implementer | sonnet | UX-998 track C analysis sentences, with the fix resume | 540k | 98 | 78.8 m | merged | see round-169 |
+| 169 | implementer | sonnet | UX-998 track D dev tools and process docs | 98k | 43 | 15.9 m | merged | see round-169 |
+| 169 | verifier | sonnet | UX-998 track A verifier | 48k | 29 | 5.1 m | complete | see round-169 |
+| 169 | verifier | sonnet | UX-998 track B verifier | 41k | 10 | 14.9 m | complete | see round-169 |
+| 169 | verifier | sonnet | UX-998 track C verifier | 38k | 24 | 11 m | complete | see round-169 |
+| 169 | verifier | sonnet | UX-998 track D verifier | 61k | 17 | 15.8 m | complete | see round-169 |
 | 169 | integrator | opus | integrator: merge tracks A-D | 145k | 55 | 32.2 m | merged | see round-169 |
-| 169 | closer | sonnet | closer: ledger, round document, history | 43k | 13 | 1.3 m | complete | see round-169 |
+| 169 | closer | sonnet | closer: ledger, round document, history | 57k | 26 | 14.6 m | complete | see round-169 |
 
 Round 101's four tracks are **not** here: this session could not
 identify their transcripts with certainty after a context rebuild, and

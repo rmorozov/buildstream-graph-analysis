@@ -8,7 +8,7 @@ Start here: find the job, open the one page beside it.
 | **optimise a real project** — capture, read, fix, prove | [`guides/real-project.md`](guides/real-project.md) |
 | **run a pilot in CI** — the script, and every switch in one table | [`guides/pilot.md`](guides/pilot.md) |
 | **gate pull requests** — baselines, the noise band, the PR comment | [`guides/ci-comment.md`](guides/ci-comment.md) |
-| **share a capture** with another machine, or a pseudonymised one with an outside reader | [`guides/cli.md`](guides/cli.md#carrying-a-capture-to-another-machine-ux-520) |
+| **share a capture** with another machine, or a pseudonymised one with an outside reader | [`guides/sharing-a-capture.md`](guides/sharing-a-capture.md) |
 | **read the report**, and know when to drop into Perfetto | [`guides/what-the-viewer-answers.md`](guides/what-the-viewer-answers.md) |
 | **pair `--jobserver auto`** with a builder count | [`guides/jobserver.md`](guides/jobserver.md) |
 | **see it change a real build** | [`cases/serial-giant-jobserver.md`](cases/serial-giant-jobserver.md) |

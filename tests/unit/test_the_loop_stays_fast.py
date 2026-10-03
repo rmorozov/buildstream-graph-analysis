@@ -182,7 +182,8 @@ class TestTheSelectorStillSelects:
     # The pilot-kit round's merged tree (UX-1285/1286/1295/1288's guards run `bga.cli`): median 41, p90 67, max 196 over 814.
     # `UX-1296`'s pilot guard reads `bga.compare.MIN_BASELINE_RUNS`, and `compare` is the p90 module: median 41, p90 68, max 196 over 814.
     # `UX-1290`'s command-section guard reads `bga.cli`'s parser: median 41, p90 68, max 197 over 816.
-    CEILING = {"median": 41, "p90": 68, "max": 197}
+    # `UX-1291`'s sharing-guide guard runs `bga.cli.main`: median 41, p90 68, max 198 over 817.
+    CEILING = {"median": 41, "p90": 68, "max": 198}
     POPULATION_FLOOR = 60
     #: `UX-645`: **13 census + 14 of your own**. The census floor is
     #: inside this bound because those files run - the figure is what

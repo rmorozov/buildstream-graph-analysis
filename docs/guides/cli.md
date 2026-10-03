@@ -362,6 +362,9 @@ guide](real-project.md) for the store at big-project scale.
 
 ### Carrying a capture to another machine (`UX-520`)
 
+The steps in order, and what each discloses, are
+[`sharing-a-capture.md`](sharing-a-capture.md); this is every flag.
+
 **`run/` is not the capture.** It holds Plane 1 — `graph.json`,
 `trace.json`, `run-context.json` — and the Plane 2 report, the raw
 per-process trace, the host samples, the published analysis and the
@@ -1327,7 +1330,7 @@ Is the cache getting worse? A series of runs, not a pair — `bga cache-trend @p
 
 ## `bga bundle`
 
-Pack a capture into one file, load one, or resolve pseudonyms. See [its modes](#carrying-a-capture-to-another-machine-ux-520).
+Pack a capture into one file, load one, or resolve pseudonyms. See [its modes](#carrying-a-capture-to-another-machine-ux-520), and [`sharing-a-capture.md`](sharing-a-capture.md) for the five steps in order.
 
 ## `bga view`
 

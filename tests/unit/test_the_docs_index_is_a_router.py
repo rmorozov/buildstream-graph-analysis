@@ -12,7 +12,7 @@ JOBS = {
     "try it": "../README.md",
     "optimise a real project": "guides/real-project.md",
     "run a pilot in CI": "guides/pilot.md",
-    "share a capture": "guides/cli.md",
+    "share a capture": "guides/sharing-a-capture.md",
     "read the report": "guides/what-the-viewer-answers.md",
     "look up a command": "guides/cli.md",
     "look up a contract": "guides/json-contracts.md",

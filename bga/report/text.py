@@ -1759,6 +1759,10 @@ def format_compare_text(comparison) -> str:
         if pct is not None
         else None
     )
+    if comparison.verdict_kind == 'different_work':
+        from ..compare import different_work_line
+
+        reason = f"The two runs built different elements: {different_work_line(comparison.element_deltas)}"
     if reason:
         lines.append(f"Verdict: {head.upper()}")
         lines.append(f"  {reason}")

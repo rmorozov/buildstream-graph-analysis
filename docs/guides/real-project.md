@@ -35,8 +35,9 @@ bga snapshot -- bst build <your-target>
 ```
 
 The first prints the analysis. The second prints the analysis **and**
-the comparison against the first — `IMPROVED`, `REGRESSED`, or
-`NO SIGNIFICANT CHANGE`, with the deltas under it.
+the comparison against the first — `IMPROVED`, `REGRESSED`,
+`NO SIGNIFICANT CHANGE`, or `DIFFERENT WORK` when the two rebuilt
+different elements, with the deltas under it.
 
 `bga snapshot` is `bga capture run` + `bga extract` + `bga analyze` +
 `bga compare`, run for you, into `.bga/runs/<UTC-stamp>/` under the

@@ -831,7 +831,7 @@ def _verdict_strings():
     from bga.compare import VERDICT_SENTENCES
 
     verdicts = set(VERDICT_SENTENCES.values())
-    assert len(verdicts) == 4, f"the significance chain now emits {sorted(verdicts)}"
+    assert len(verdicts) == 5, f"the significance chain now emits {sorted(verdicts)}"  # UX-1323: different work
     return verdicts
 
 

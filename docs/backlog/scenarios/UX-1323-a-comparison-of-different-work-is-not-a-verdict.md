@@ -2,7 +2,7 @@
 
 **Priority:** High | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the junction-heavy onboarding walk, 2026-10-03 (`/mnt/project-files/onboarding-walk-2026-10-03/onboarding-walk.md`) | **Serves:** R1, R4 | **Topic:** analysis | **Area:** bga | **Shape:** judgement | **Reading:** container
 
-**Guard:** none — open, no guard named yet
+**Guard:** `tests/unit/test_a_comparison_of_different_work_is_not_a_verdict.py`
 
 ## Motivation
 
@@ -46,3 +46,39 @@ On the stand-in, the browser-then-shell pair reads `different work`, and a guard
 runs with disjoint built sets asserts it in text and json. Reading taken in this container.
 
 ## Outcome
+
+**Gap measured** (`bga compare 20261003T135218Z/run 20261003T135337Z/run` on `/root/walk/jproj/.bga/runs`, at `44afd957`):
+
+```text
+Verdict: IMPROVED  (total duration -5.36s, -56.3%, 9.51s -> 4.15s)
+  Why: ... - so improved. No element present in both runs shrank, so what moved is in the elements this change added or removed.
+```
+
+The cold-vs-incremental refusal (`135009Z` vs `135218Z`) printed the check and `--allow-mismatch`, no next step.
+
+**Close measured** (same pair, this container, exit 0):
+
+```text
+Verdict: DIFFERENT WORK
+  The two runs built different elements: only the baseline built apps/browser.bst; only the candidate built apps/shell.bst
+  Not a verdict, for reference only: total duration -5.36s, -56.3%, 9.51s -> 4.15s
+```
+
+`--format json`: `"verdict": "different work"`, `"verdict_kind": "different_work"`; `--format ci-comment` heads `**DIFFERENT WORK**` with the same line. The refusal now adds `Next: the next snapshot compares incremental against incremental; for the project-wide picture, capture with a fresh cache: XDG_CACHE_HOME=$(mktemp -d) bga snapshot -- bst build <target>`. The rule: built sets differ and the common elements' summed |delta| is inside the run's own band (fixed 1% or the baseline band); `different_work` joins `VERDICT_KINDS` (an added enum value, no schema bump - json-contracts.md's rule), marker `square`. `--fail-on-regression` is unchanged; `--band-from-class`'s gate keeps its direction on a `different_work` pair.
+
+**Mutation table** (`python3 -m pytest -n 1 -q tests/unit/test_a_comparison_of_different_work_is_not_a_verdict.py`, 9 tests; counts below the first eight rows are from the 7-test run):
+
+| mutation | reddened | count |
+|---|---|---|
+| `_is_different_work` always False | text, ci-comment, json | 3 failed, 4 passed |
+| drop the built-set equality check | same built set keeps its verdict | 1 failed, 6 passed |
+| common elements' moved sum forced to 0 | common element that moved keeps its verdict | 1 failed, 6 passed |
+| band gate's different_work branch removed | band gate still fails a slower pair | 1 failed, 6 passed |
+| refusal's `Next:` print removed | refusal says what to run | 1 failed, 6 passed |
+| text's different-work line removed | text | 1 failed, 6 passed |
+| ci-comment's line removed | ci-comment | 1 failed, 6 passed |
+| common rows inherit the run kind | json rows | 1 failed, 6 passed |
+| summed abs(delta) -> abs of the signed sum (verifier's survivor) | common +0.5 s/-0.5 s pair keeps improved | 1 failed, 8 passed |
+| duration gate returns False on different_work | `--fail-on-regression` exits 4; band gate | 2 failed, 7 passed |
+
+Reverted from copies; 9 passed.

@@ -140,7 +140,7 @@ Either way, comparing two runs is one command — `bga snapshot` calls it for yo
 bga compare /tmp/my-run-before /tmp/my-run-after
 ```
 
-It reports a signed delta for every certified floor, both efficiency signals, and each attribution category, plus a verdict (`improved`/`regressed`/`no significant change`, or `within the baseline set's own observed range` when a duration your own baselines already reached falls outside their band) — gated on confidence. Two runs that are not comparable are **refused** rather than compared, with an exit code of their own ([`cli.md`](docs/guides/cli.md#exit-codes)).
+It reports a signed delta for every certified floor, both efficiency signals, and each attribution category, plus a verdict (`improved`/`regressed`/`no significant change`/`different work` when the two runs built different elements, or `within the baseline set's own observed range` when a duration your own baselines already reached falls outside their band) — gated on confidence. Two runs that are not comparable are **refused** rather than compared, with an exit code of their own ([`cli.md`](docs/guides/cli.md#exit-codes)).
 
 > **One capture is not a baseline.** Five captures of the *same* freedesktop-sdk commit,
 > nothing changed, span **33%** (3614.2s → 2712.4s) against a default significance rule of 1%.

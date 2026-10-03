@@ -1627,6 +1627,8 @@ def _execute_compare_and_write(args: argparse.Namespace) -> int:
             )
             for mismatch in comparison.mismatches:
                 print(f"  - {mismatch['message']}", file=sys.stderr)
+                if mismatch.get('next'):
+                    print(f"    Next: {mismatch['next']}", file=sys.stderr)
             print(
                 "Pass --allow-mismatch to compare anyway (the comparison is then "
                 "printed with the warning above, as it was before UX-78).",

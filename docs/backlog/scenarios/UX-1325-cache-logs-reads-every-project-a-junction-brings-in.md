@@ -2,7 +2,7 @@
 
 **Priority:** High | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the junction-heavy onboarding walk, 2026-10-03 (`/mnt/project-files/onboarding-walk-2026-10-03/onboarding-walk.md`) | **Serves:** R1, R3 | **Topic:** analysis | **Area:** tools | **Shape:** judgement | **Reading:** container
 
-**Guard:** none — open, no guard named yet
+**Guard:** `tests/unit/test_cache_logs_reads_every_junctioned_project.py`
 
 ## Motivation
 
@@ -41,3 +41,46 @@ with junction-qualified names; a guard over a three-project log tree fixture ass
 taken in this container.
 
 ## Outcome
+
+### The gap, measured
+
+```text
+$ bga cache-logs /root/walk/jproj      # at 44afd957, this container
+Read 15 log(s), 9 of them builds, from acme-os
+  apps/browser.bst ... pkgs/zlib.bst ... apps/editor.bst ... apps/shell.bst
+```
+
+4 of the 13 building elements; no line named `acme-platform` or `acme-base`.
+
+### The close, measured
+
+```text
+$ bga cache-logs /root/walk/jproj
+Read 41 log(s), 20 of them builds, from acme-base (via junctions/platform.bst:junctions/base.bst), acme-os, acme-platform (via junctions/platform.bst)
+distinct building elements in the records read (stacks excluded): 13
+  apps/{browser,editor,shell}.bst  pkgs/zlib.bst
+  junctions/platform.bst:pkgs/{dbus,mesa,systemd,zlib}.bst
+  junctions/platform.bst:junctions/base.bst:pkgs/{gcc-libs,glib,openssl,zlib}.bst
+  junctions/platform.bst:junctions/base.bst:toolchain.bst
+$ bga cache-logs /root/walk/carbon
+  junctions/bootstrap.bst: a git junction with no local checkout to name its project - read its logs with --project NAME (`--list` names them)
+  (and one such line each for bst-plugins-experimental.bst (git), bst-plugins.bst (tar))
+$ pytest -n 1 -q tests/unit/test_cache_logs_reads_every_junctioned_project.py tests/unit/test_cache_logs.py
+54 passed, 1 skipped
+```
+
+The phase table lists 12: `toolchain.bst` is an import whose build took 0 s, and
+`phase_breakdown` has always left out zero-duration builds. The log count went from 38 to 41
+during the session because other tracks were building.
+
+### Mutation table
+
+| mutation (`tools/bst_cache_logs.py`) | reddened | run |
+|---|---|---|
+| nested junction not recursed into | prefixes, qualified elements, header | 3 failed, 1 passed |
+| element names left as the log wrote them | qualified elements (the standalone `gcc.bst` log) | 1 failed, 3 passed |
+| `main` skips the junction walk | qualified elements, header | 2 failed, 2 passed |
+| unresolved junction not printed | header | 1 failed, 3 passed |
+| `--project` walks junctions too | `--project` reads one project | 1 failed, 3 passed |
+
+Reverted from the copy: 4 passed.

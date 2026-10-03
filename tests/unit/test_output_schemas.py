@@ -255,8 +255,10 @@ class TestTheSchemaCannotBeLoosenedToPass:
 
     def test_blasts_schema_requires_every_key_it_emits(self):
         payload = json.loads(_bga(["blast", "base.bst", GOLDEN, "--format", "json", "--no-cost"]).stdout)
-        required = set(schemas.schema(schemas.BLAST)["required"])
-        assert not sorted(set(payload) - required), (
+        schema = schemas.schema(schemas.BLAST)
+        required = set(schema["required"])
+        always_written = set(schema.get("bga:always_written", ()))
+        assert not sorted(set(payload) - required - always_written), (
             "every key `bga blast` emits is unconditional and should be required"
         )
 

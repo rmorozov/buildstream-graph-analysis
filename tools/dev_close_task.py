@@ -1073,6 +1073,7 @@ def _close_one(uid: str, note: str, path, line: str, topic) -> str:
         if said.startswith(opener):
             said = said[len(opener) :].strip()
             break
+    said = re.sub(r"(?<!\\)\|", r"\\|", said)
     closed_row = f"| {uid} | {scenario} | {priority} | {serves} | 🟢 Done — {said} | [{uid}]({path.name}) |"
 
     text = INDEX.read_text(encoding="utf-8")

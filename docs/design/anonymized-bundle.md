@@ -59,7 +59,7 @@ unit is the **value class**:
 | E. content hashes | `cache_key`, `manifest_hash`, `run_identity_hash`, source refs | re-keyed by HMAC: equal stays equal, unlinkable to the owner's artifact server |
 | F. free text | `plane2.log.gz` `cmd=` lines, `redundant_operations[].example_cmd` and `signature`, `build.log`, `capture-context.txt`, finding prose naming elements | tokenized line by line, raw logs included (`UX-1066`) |
 | G. secrets | userinfo in remote-cache URLs, tokens in env or `-D` values | dropped, never pseudonymized: a pseudonym would copy the secret into the local map |
-| H. time | absolute `ts_us`, wall-clock stamps, the snapshot stamp | shifted to epoch 0, every delta exact |
+| H. time | absolute `ts_us`, wall-clock stamps, the snapshot stamp | shifted to epoch 0, every delta exact; the three raw logs keep `ts=`, `wall=` and the wrapper stamp verbatim (`UX-1066`'s deviation) |
 
 An allowlist, never a denylist: a denylist fails open on the next field
 anyone adds. The class does **not** live in `bga/schemas.py`: that module
@@ -230,7 +230,7 @@ other kept string whose contents vary by project.
 5. The commutation guard.
 6. Resolve, and the viewer taking a map.
 7. Public-junction passthrough.
-8. Tokenized raw logs, only when a real diagnosis needs them.
+8. Tokenized raw logs (`UX-1066`, round 152).
 
 Stages 1, 3 and 5 are **release criteria** for the first anonymized
 export, though each is its own task: stage 4 drops `analyze.json` and

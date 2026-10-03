@@ -20,7 +20,7 @@
     "bga/cache_effectiveness.py": {"duplicate_blocks": 0, "file_lines": 563, "longest_function": 170},
     "bga/cache_trend.py": {"duplicate_blocks": 0, "file_lines": 439, "longest_function": 71},
     "bga/capacity_model.py": {"duplicate_blocks": 0, "file_lines": 340, "longest_function": 72},
-    "bga/cli.py": {"duplicate_blocks": 0, "file_lines": 3679, "longest_function": 246},
+    "bga/cli.py": {"duplicate_blocks": 0, "file_lines": 3722, "longest_function": 246},
     "bga/compare.py": {"duplicate_blocks": 0, "file_lines": 1777, "longest_function": 281},
     "bga/consistency.py": {"duplicate_blocks": 0, "file_lines": 130, "longest_function": 21},
     "bga/contracts.py": {"duplicate_blocks": 0, "file_lines": 175, "longest_function": 26},

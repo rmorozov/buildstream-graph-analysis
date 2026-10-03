@@ -663,7 +663,7 @@ def create_parser() -> argparse.ArgumentParser:
         action="append",
         default=[],
         metavar="SPEC",
-        help="'STYLE:GLOB ...', per element, as `capture run`.",
+        help="'STYLE:GLOB ...' or @PATH (one group per line), per element, as `capture run`.",
     )
     parser.add_argument("--lto-cap", default=None, metavar="N", help="The flto shim's -flto=N, as `capture run`.")
     parser.add_argument("--wrapper-dir", default=None, metavar="PATH", help="Own wrapper directory, as `capture run`.")

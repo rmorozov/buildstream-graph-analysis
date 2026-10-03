@@ -68,3 +68,14 @@ def test_the_annotation_example_parses_to_its_style():
 def test_the_guides_that_name_the_jobserver_point_here(guide):
     text = (ROOT / "docs/guides" / guide).read_text(encoding="utf-8")
     assert "jobserver.md#one-element-not-the-whole-build" in text
+
+
+def test_the_file_example_resolves_each_named_element(monkeypatch, tmp_path):
+    (block,) = _fenced("conf")
+    (tmp_path / "overrides.conf").write_text(block, encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("BST_TRACE_JOBSERVER_AUTH_MAP", raising=False)
+    _translate_capture_jobserver_auth_override(["capture", "run", "--jobserver-auth-override", "@overrides.conf"])
+    auth_map = os.environ["BST_TRACE_JOBSERVER_AUTH_MAP"]
+    for element, style in (("giant.bst", "off"), ("libbar.bst", "fd"), ("llvm/x.bst", "flto")):
+        assert resolve_auth_override(auth_map, element) == style

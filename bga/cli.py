@@ -22,6 +22,7 @@ import argparse
 import json
 import logging
 import os
+import re
 import sys
 from pathlib import Path
 from typing import NoReturn, Optional
@@ -3292,9 +3293,51 @@ def _translate_capture_jobserver(argv: list) -> list:
     return argv[:2] + new_rest
 
 
+#: The shim's `_AUTH_OVERRIDE_STYLES`; a guard holds the two equal.
+AUTH_OVERRIDE_STYLES = frozenset({'fd', 'fifo', 'off', 'flto'})
+
+
+def _auth_override_groups(value: str) -> str:
+    """One `--jobserver-auth-override` value -> `;`-joined groups; an `@PATH` word is read as a file (UX-1312).
+
+    File lines are `style:glob[,glob ...]` (globs comma- or whitespace-separated); blank lines
+    and `#` comments are skipped; a bad style or a missing file exits 2, naming file and line.
+    """
+    groups = []
+    # A whole value naming a file is one path, so a path may hold spaces.
+    words = [value] if value.startswith('@') and os.path.isfile(value[1:]) else value.split()
+    for word in words:
+        if not word.startswith('@'):
+            groups.append(word)
+            continue
+        path = word[1:]
+        try:
+            with open(path, encoding='utf-8') as handle:
+                lines = handle.read().splitlines()
+        except (OSError, UnicodeDecodeError) as exc:
+            print(f'bga: error: --jobserver-auth-override: cannot read {path}: {exc}', file=sys.stderr)
+            raise SystemExit(2) from exc
+        for number, line in enumerate(lines, 1):
+            line = line.split('#', 1)[0].strip()
+            if not line:
+                continue
+            style, _, rest = line.partition(':')
+            style = style.strip()
+            globs = [g for g in re.split(r'[,\s]+', rest) if g]
+            if style not in AUTH_OVERRIDE_STYLES or not globs:
+                print(
+                    f'bga: error: --jobserver-auth-override: {path}:{number}: expected '
+                    f'{"|".join(sorted(AUTH_OVERRIDE_STYLES))}:GLOB[,GLOB], got {line!r}',
+                    file=sys.stderr,
+                )
+                raise SystemExit(2)
+            groups.append(f'{style}:{",".join(globs)}')
+    return ';'.join(groups)
+
+
 def _translate_capture_jobserver_auth_override(argv: list) -> list:
     """`bga capture run ... --jobserver-auth-override 'fd:<glob>[,<glob>]
-    fifo:<glob> off:<glob>' ...` (UX-879) -> `BST_TRACE_JOBSERVER_AUTH_MAP`
+    fifo:<glob> off:<glob>' ...` (UX-879; `@PATH` words read a file, UX-1312) -> `BST_TRACE_JOBSERVER_AUTH_MAP`
     in this process's own environment, and the flag stripped from argv -
     the tracer's own argparse never sees it. Repeatable (each occurrence's
     groups join into the one map, `;`-separated) or one value with
@@ -3322,11 +3365,11 @@ def _translate_capture_jobserver_auth_override(argv: list) -> list:
     while i < len(tracer_args):
         tok = tracer_args[i]
         if tok == '--jobserver-auth-override' and i + 1 < len(tracer_args):
-            groups.append(';'.join(tracer_args[i + 1].split()))
+            groups.append(_auth_override_groups(tracer_args[i + 1]))
             i += 2
             continue
         if tok.startswith('--jobserver-auth-override='):
-            groups.append(';'.join(tok.split('=', 1)[1].split()))
+            groups.append(_auth_override_groups(tok.split('=', 1)[1]))
             i += 1
             continue
         out.append(tok)
@@ -3448,7 +3491,7 @@ def apply_capture_env_flags(tokens: list) -> list:
 
 #: UX-1301: the flags the `_translate_capture_*` functions strip before the tracer's argparse, so its `--help` cannot list them.
 CAPTURE_RUN_BGA_FLAGS = {
-    '--jobserver-auth-override': "'STYLE:GLOB ...'  per-element fd|fifo|off|flto, repeatable",
+    '--jobserver-auth-override': "'STYLE:GLOB ...' | @PATH  per-element fd|fifo|off|flto, repeatable; @PATH: one group per line",
     '--lto-cap': 'N  the flto shim\'s static -flto=N (default nproc)',
     '--wrapper-dir': 'PATH  an operator\'s own wrapper directory',
     '--wrapper-dir-mode': 'augment|replace  ahead of the shipped shims, or instead',

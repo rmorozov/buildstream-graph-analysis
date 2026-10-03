@@ -112,6 +112,18 @@ public:
     jobserver-auth: off
 ```
 
+A long list reads from a file, `@PATH` (relative to the cwd, mixable
+with inline groups): one group per line, globs comma- or
+whitespace-separated, `#` comments and blank lines skipped. A missing file
+or a style outside the four exits 2, naming `PATH:LINE`.
+
+```conf
+# overrides.conf  ->  --jobserver-auth-override @overrides.conf
+off:giant.bst
+fd:libfoo-*.bst libbar.bst
+flto:llvm/*.bst   # inside a junction: no junction prefix
+```
+
 Globs match the element name, the first matching group wins, and the
 flag repeats. A style outside the four is ignored, as is a malformed
 `public:` block: the element falls through to `auto`.

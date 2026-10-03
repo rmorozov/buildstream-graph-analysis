@@ -1393,6 +1393,7 @@ Open a run's report in a browser (`tools.bga_view`). See [the page, chapter by c
 Plane 2: trace processes inside sandboxes (`tools.bst_native_build_tracer`). See [its flags](#what-each-flag-does-in-full).
 
 - `bga capture run --host-samples PATH` — where to write the host's memory series while the build runs: JSON Lines (`host-samples/v1`), one sample every `HOST_SAMPLE_INTERVAL_S` seconds, of `/proc/meminfo` keys. It sits beside the report, not inside it.
+- A junctioned element is keyed by its full Plane 1 name (`junctions/platform.bst:pkgs/zlib.bst`): when any sandbox ran outside the top project, `bga capture run` pays one `bst show --format '%{name}<US>%{vars}<US>%{build-deps}'` after the build for each element's `project-name`. A project two junctions reach keeps a `<project>/<element>` key, warned once and listed in the report's `junction_names` (`UX-1320`).
 
 ## `bga wrap`
 

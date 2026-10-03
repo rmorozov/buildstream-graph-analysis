@@ -552,6 +552,9 @@ POLICIES = {
         "invocation_correlation.intervals_used": "C",
         "invocation_correlation.relabelled_processes": "C",
         "invocation_correlation.resolved.{C}": "A",
+        "junction_names.projects": "C",
+        "junction_names.relabelled_sandboxes": "C",
+        "junction_names.ambiguous_projects[]": "A",
         **{
             f"opens_captured.{_PER_ELEMENT}.{key}": "C"
             for key in ("dropped", "paths", "processes", "windows", "relative", "dirfd")

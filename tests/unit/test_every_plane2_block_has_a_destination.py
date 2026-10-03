@@ -99,9 +99,10 @@ class TestTheInventoryCoversTheReport:
 
         `resource_pressure` is the deliberate exception - `UX-379` added
         it to the hook and this fixture predates the rusage fields, so
-        it is declared and absent here.
+        it is declared and absent here. `junction_names` (UX-1320) likewise
+        postdates the fixture.
         """
-        stale = sorted(set(plane2.DESTINATIONS) - set(report) - {"resource_pressure"})
+        stale = sorted(set(plane2.DESTINATIONS) - set(report) - {"resource_pressure", "junction_names"})
         assert stale == [], f"declared destinations for blocks no capture writes: {stale}"
 
     def test_every_destination_is_one_of_three(self):

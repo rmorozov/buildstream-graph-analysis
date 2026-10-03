@@ -2,7 +2,7 @@
 
 **Priority:** High | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the junction-heavy onboarding walk, 2026-10-03 (`/mnt/project-files/onboarding-walk-2026-10-03/onboarding-walk.md`) | **Serves:** R1, R2 | **Topic:** capture | **Area:** tools | **Shape:** judgement | **Reading:** container
 
-**Guard:** none — open, no guard named yet
+**Guard:** `tests/unit/test_plane2_keys_a_junctioned_element_by_its_full_name.py`
 
 ## Motivation
 
@@ -58,3 +58,59 @@ guard reads a recorded or synthesized three-project Plane 2 log and asserts the 
 Reading taken in this container.
 
 ## Outcome
+
+### The gap, measured
+
+The walk's snapshot `20261003T135009Z` of `/root/walk/jproj` (copied), correlated at `44afd957`:
+
+```text
+$ bga correlate @20261003T135009Z -f json   # coverage
+{'joined_elements': 10, 'plane1_elements': 16, 'plane2_elements': 10} undeclared 6
+plane1_only_with_impact ['junctions/platform.bst:junctions/base.bst:pkgs/gcc-libs.bst']
+zlib rows with CPU: ['pkgs/zlib.bst']
+$ grep -c unpriced logs/snapshot-1-cold.log; grep -c 'staged no files' logs/snapshot-1-cold.log
+6
+7
+```
+
+### The close, measured
+
+A cold `bga snapshot -- bst build groups/all.bst` on a fresh copy (`/tmp/ux1320-jproj`, private
+`XDG_CACHE_HOME`, bst 2.8.1, `PYTHONPATH` the track's worktree):
+
+```text
+$ bga correlate @last
+Joined 12 elements on element UID (16 in Plane 1, 12 traced in Plane 2)
+$ bga correlate @last -f json   # coverage, then the zlib rows
+{'joined_elements': 12, 'plane1_elements': 16, 'plane2_elements': 12,
+ 'plane1_only_with_impact': [], 'undeclared_plane2_elements': [], ...}
+pkgs/zlib.bst                                             cpu_us 1221618
+junctions/platform.bst:junctions/base.bst:pkgs/zlib.bst   cpu_us 1213784
+junctions/platform.bst:pkgs/zlib.bst                      cpu_us 1241411
+$ grep -c unpriced snapshot.log; grep -c 'staged no files' snapshot.log
+0
+0
+Declared build dependencies never read: 10 candidate(s) across 8 element(s); 12 dependency edge(s) confirmed used
+  Computed over ... 12 of 12 element(s) had every process covered.
+plane2.json junction_names: {'projects': 3, 'relabelled_sandboxes': 8, 'ambiguous_projects': []}
+```
+
+12, not 13: the project has `12 kind: cmake`, `1 kind: import` (toolchain), `3 kind: stack`
+(`grep -h ^kind -r elements subprojects --include=*.bst | sort | uniq -c`); the four unjoined rows
+are exactly the import and the three stacks, which run no sandbox. The walk's 13 counts the import.
+
+### Mutations verified red and reverted (9)
+
+`tests/unit/test_plane2_keys_a_junctioned_element_by_its_full_name.py`, 10 tests:
+
+| # | mutation | reddened |
+|---|---|---|
+| M1 | `project_from_build_root` returns `None` | 1 of 10 |
+| M2 | no junction relabel (`name = None`) | 2 of 10 |
+| M3 | ambiguity ignored (`ambiguous = []`) | 1 of 10 |
+| M4 | top-vs-junction collision uncounted (UX-1311's `":" in owner` back) | 1 of 10 |
+| M5 | plain `list-contents` batching | 1 of 10 |
+| M6 | `list-contents` heading by full name only | 1 of 10 |
+| M7 | a projectless sandbox guessed from its short name | 1 of 10 |
+| M8 | the `bst show` gate always off | 1 of 10 |
+| M9 | the shim never records `project` | 4 of 10 |

@@ -253,6 +253,20 @@ def element_from_build_root(path: str) -> Optional[str]:
     return parts[-1] if parts else None
 
 
+def project_from_build_root(path: str) -> Optional[str]:
+    """UX-1320: the `<project>` of `buildstream/<project>/<element>`; `None` for any other build root."""
+    parts = [part for part in path.strip("/").split("/") if part]
+    return parts[1] if len(parts) >= 3 and parts[0] == _BUILD_ROOT else None
+
+
+def extract_element_project(opts: list[str]) -> Optional[str]:
+    """UX-1320: the project `extract_element_name`'s `--dir` names, or `None`."""
+    for i, opt in enumerate(opts):
+        if opt == "--dir" and i + 1 < len(opts):
+            return project_from_build_root(opts[i + 1])
+    return None
+
+
 # make/autotools compose `MAKEFLAGS: -j%{max-jobs}`; cmake composes
 # `JOBS: -j%{max-jobs}` too, but meson composes `JOBS` as a bare
 # integer (verified: `bst show --format '%{env}'` on a `notparallel`
@@ -1208,7 +1222,11 @@ def spine_for_element(
 
 
 def record_invocation(
-    log_path: Optional[str], invocation_id: int, dir_tag: Optional[str], spine_traced: bool = False
+    log_path: Optional[str],
+    invocation_id: int,
+    dir_tag: Optional[str],
+    spine_traced: bool = False,
+    project: Optional[str] = None,
 ) -> bool:
     """UX-56: one line per sandbox - `{id, started_at, dir_tag}`.
 
@@ -1240,6 +1258,8 @@ def record_invocation(
                     # policy skipped look identical in the trace, and only one of
                     # them is a coverage gap.
                     "spine_traced": spine_traced,
+                    # UX-1320: `--dir`'s project segment, the half a junctioned name needs.
+                    **({"project": project} if project else {}),
                 },
                 sort_keys=True,
             )
@@ -1965,6 +1985,7 @@ def main() -> int:
         invocation_id,
         element,
         spine_traced=bool(spine),
+        project=extract_element_project(sys.argv[1:]),
     )
     # UX-146: the bisection a user cannot otherwise perform. With this
     # set the shim is still on `$PATH` and still exec'd by

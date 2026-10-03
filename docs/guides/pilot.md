@@ -60,9 +60,10 @@ baseline and runs `bga compare --band-from-class --bundles` against
 the kept tree with both regression gates and `--format ci-comment`
 (`UX-1286`; the band skips members from another host, `UX-1285`). It
 prints the comment, appends one line to `PILOT_KEEP_DIR/verdicts.tsv`,
-and exits 0 whatever the verdict. Below three kept runs of the class
-the band refuses (exit 8); the kit then comments against the fixed 1%
-rule, which the comment names.
+and exits 0 whatever the verdict. Below 4 kept runs of the class before
+this build the band refuses (exit 8): the band needs 3 runs besides the
+two it compares, and the baseline is one of the kept. The kit then
+comments against the fixed 1% rule, which the comment names.
 
 ## Every switch
 
@@ -129,8 +130,8 @@ one unless `PILOT_ENFORCE=on`:
 | 0 | compared; no gate failed | comments |
 | 4 | slower than the band (or the 1% rule), or an element FAILED in either run — stderr names which | comments; fails the job only when enforcing |
 | 5 | less efficient | comments; fails the job only when enforcing |
-| 6 | refused: another host or class, or not comparable | logs the refusal, no comment |
-| 8 | fewer than 3 kept runs of the class | comments against the 1% rule |
+| 6 | refused: another host or class, or not comparable | comments; the refusal is on stderr |
+| 8 | fewer than 4 kept runs of the class before this build | comments against the 1% rule |
 
 ## What two weeks measure
 

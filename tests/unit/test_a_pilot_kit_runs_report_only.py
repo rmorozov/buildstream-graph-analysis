@@ -5,7 +5,8 @@ The guide's switch table, the script's switch block and the workflow's
 Every `bga` command and flag the kit runs or the guide names exists. A
 dry run of `capture` then `report` - a stub standing in for the build -
 prints a ci-comment and exits 0 on a slower verdict, through
-`UX-1286`'s real `--bundles`.
+`UX-1286`'s real `--bundles`. The guide's band threshold and exit-6
+row are what the kit does (`UX-1296`).
 """
 
 import json
@@ -143,7 +144,7 @@ FAKE_CAPTURE = textwrap.dedent(
 )
 
 
-def _run_dir(path: Path, seconds: float) -> Path:
+def _run_dir(path: Path, seconds: float, host=None) -> Path:
     """The golden run, `app.bst` lasting `seconds`, declaring `review` - `test_the_band_comes_from_the_class`'s shape."""
     from bga import buildclass
 
@@ -155,6 +156,8 @@ def _run_dir(path: Path, seconds: float) -> Path:
     context = json.loads((GOLDEN / "run-context.json").read_text())
     context["wall_clock"]["end_us"] = max(s["ts_us"] + s["dur_us"] for s in trace["spans"])
     context["build_class"] = buildclass.declare("review", {})
+    if host:
+        context["host_manifest"] = host
     (path / "graph.json").write_text((GOLDEN / "graph.json").read_text())
     (path / "trace.json").write_text(json.dumps(trace))
     (path / "run-context.json").write_text(json.dumps(context))
@@ -184,8 +187,8 @@ class Pilot:
         (tmp / "tmpdir/bga-pilot/ready").touch()
         self.path = f"{bin_dir}:{os.environ['PATH']}"
 
-    def keep(self, stamp: str, seconds: float) -> None:
-        snapshot = _run_dir(self.tmp / "snapshots" / stamp / "run", seconds).parent
+    def keep(self, stamp: str, seconds: float, host=None) -> None:
+        snapshot = _run_dir(self.tmp / "snapshots" / stamp / "run", seconds, host).parent
         target = self.kept / "review/default"
         target.mkdir(parents=True, exist_ok=True)
         done = subprocess.run(
@@ -205,8 +208,8 @@ class Pilot:
         )
         assert done.returncode == 0, done.stderr
 
-    def run(self, sub: str, candidate_seconds: float = 130, **switches):
-        source = _run_dir(self.tmp / f"candidate-{len(list(self.tmp.glob('candidate-*')))}", candidate_seconds)
+    def run(self, sub: str, candidate_seconds: float = 130, host=None, **switches):
+        source = _run_dir(self.tmp / f"candidate-{len(list(self.tmp.glob('candidate-*')))}", candidate_seconds, host)
         settings = {
             "PATH": self.path,
             "TMPDIR": str(self.tmp / "tmpdir"),
@@ -314,3 +317,52 @@ class TestReport:
         assert done.returncode == 0, done.stderr
         assert "judged against the band" in done.stderr
         assert "\tband\t4" in (pilot.kept / "verdicts.tsv").read_text()
+
+
+HOST_4 = {"schema": "host/v2", "cpu_model": "Xeon A", "cpu_count": 4, "memory_bytes": 16 << 30}
+HOST_8 = {"schema": "host/v2", "cpu_model": "EPYC B", "cpu_count": 8, "memory_bytes": 32 << 30}
+
+
+def _exit_row(code: str) -> list:
+    section = GUIDE.read_text(encoding="utf-8").split("## What the exit codes mean here", 1)[1].split("\n## ", 1)[0]
+    rows = [
+        [c.strip() for c in line.strip().strip("|").split("|")] for line in section.splitlines() if line.startswith("|")
+    ]
+    return next(r for r in rows if r[0] == code)
+
+
+class TestTheBandThreshold:
+    """UX-1296: the band excludes both principals, and the kit's baseline is a kept run."""
+
+    @pytest.mark.parametrize("prior, judged", [(3, "rule"), (4, "band")])
+    def test_the_band_needs_four_kept_runs_before_the_candidate(self, pilot, prior, judged):
+        for day in range(1, prior + 1):
+            pilot.keep(f"202609{day:02d}T000000Z", 99 + day % 3)
+        assert pilot.run("capture").returncode == 0
+
+        done = pilot.run("report")
+
+        assert done.returncode == 0, done.stderr
+        assert (pilot.kept / "verdicts.tsv").read_text().split("\t")[3] == judged, done.stderr
+
+    def test_the_guide_reads_the_threshold_off_min_baseline_runs(self):
+        from bga.compare import MIN_BASELINE_RUNS
+
+        prose = GUIDE.read_text(encoding="utf-8").split("**`report`**", 1)[1].split("\n## ", 1)[0]
+        below = re.search(r"Below (\d+) kept runs of the class before\s+this build", prose)
+        row = re.fullmatch(r"fewer than (\d+) kept runs of the class before this build", _exit_row("8")[1])
+        assert below and row, "the guide's band threshold sentence or exit-8 row moved"
+        assert int(below.group(1)) == int(row.group(1)) == MIN_BASELINE_RUNS + 1
+
+    def test_a_cross_host_refusal_still_comments(self, pilot):
+        for day in range(1, 5):
+            pilot.keep(f"202609{day:02d}T000000Z", 100, host=HOST_4)
+        assert pilot.run("capture", host=HOST_8).returncode == 0
+
+        done = pilot.run("report")
+
+        assert done.returncode == 0, done.stderr
+        assert done.stdout.startswith("<!-- bga-ci-comment -->"), done.stderr
+        assert "\trule\t6" in (pilot.kept / "verdicts.tsv").read_text()
+        assert "Cross-host gate FAILED" in done.stderr
+        assert _exit_row("6")[2].startswith("comments"), "the guide's exit-6 row says the kit does not comment"

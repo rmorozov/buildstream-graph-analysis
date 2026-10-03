@@ -171,7 +171,7 @@ cmd_report() {
     rm -f "$comment"
     bga compare "${compare[@]}" --band-from-class "$PILOT_BAND_WINDOW" --bundles "$kept" || rc=$?
     if [ "$rc" -eq 8 ]; then
-        # Exit 8: under three kept runs of this class. The comment says it is the fixed 1% rule.
+        # Exit 8: under three kept runs of this class besides the baseline. The comment says it is the fixed 1% rule.
         say "band refused (exit 8): too few kept runs of this class yet; commenting against the fixed 1% rule"
         judged=rule
         rc=0

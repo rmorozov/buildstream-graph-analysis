@@ -357,6 +357,7 @@ lives in `agent-runs.md`'s rows, counted per round from there.
 | [165](round-165.md) | the round-163 residue and the round-164 review's rows - `UX-1258`, `UX-1260`-`UX-1277` in six opus tracks (a finding's Why #1 from its own step, `analyze/v7` `findings_diff` and `blocked_unparented`, the capacity page's `counts`, the replayed sweep knee, a comparison page guarded); owner-call defaults taken for the `xl_both`/`macro_micro` budgets, `joint-saving`, `builds_per_day`; the log re-grounded as `UX-1278` |
 | [166](round-166.md) | the memory-bound giant and two closes - `UX-902` (the serial-giant case, two Graviton cases), `UX-1279` (a sort button names its next press), `UX-1134` (the no-plan memory gate, autocap completes at 10 jobs); `UX-1280`, `UX-1281` filed |
 | [168](round-168.md) | the per-element jobserver switches and a docs gap audit - `UX-1300` (the jobserver guide names all four switches and the four styles); `UX-1301`..`UX-1308` filed from the audit |
+| [170](round-170.md) | the junction-heavy onboarding walk's rows - `UX-1320`..`UX-1331` in seven tracks (Plane 2 keys a junctioned element by its full name, `blast` reads a junction, a wrapped build is captured, a comparison of different work is no verdict, `analyze` rolls up by junction, `doctor` and `--help` first-run fixes); five verifier holds closed |
 
 ## Verification Log
 

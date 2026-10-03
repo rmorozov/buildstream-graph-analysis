@@ -142,7 +142,9 @@ class TestTheCensusChecksAreTwoDifferentThings:
         findings = {f["id"]: f for f in check_staged_sources(str(bare_project))}
 
         assert findings["staged-sources"]["status"] == WARN
-        assert "stage_runtimes.sh" not in findings["staged-sources"]["remedy"], "bga's scripts are not the user's remedy"
+        assert "stage_runtimes.sh" not in findings["staged-sources"]["remedy"], (
+            "bga's scripts are not the user's remedy"
+        )
 
     def test_inside_a_bga_example_the_stage_script_is_the_remedy(self, tmp_path, bare_project):
         examples = tmp_path / "examples"

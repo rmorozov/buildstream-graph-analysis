@@ -2303,6 +2303,12 @@ def _tool_help() -> str:
     return format_tool_help()
 
 
+def _start_here() -> str:
+    from .tools_dispatch import START_HERE
+
+    return START_HERE
+
+
 def _snapshot_completer(prefix, parsed_args, **_kwargs):
     """`@last`, `@prev`, and this project's own snapshot stamps.
 
@@ -2962,7 +2968,8 @@ def create_parser() -> argparse.ArgumentParser:
     """
     parser = _UsageErrorParser(
         prog='bga',
-        description='BuildStream Build Efficiency Analyzer - Analyze build traces for efficiency metrics',
+        description=_start_here()
+        + '\nBuildStream Build Efficiency Analyzer - Analyze build traces for efficiency metrics',
         epilog=(
             # UX-67: the aliases are listed here rather than registered as
             # argparse subcommands, because registering them would import

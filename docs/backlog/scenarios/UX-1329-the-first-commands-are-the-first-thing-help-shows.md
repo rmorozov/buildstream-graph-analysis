@@ -2,7 +2,7 @@
 
 **Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the junction-heavy onboarding walk, 2026-10-03 (`/mnt/project-files/onboarding-walk-2026-10-03/onboarding-walk.md`) | **Serves:** R1 | **Topic:** docs | **Area:** bga | **Shape:** judgement | **Reading:** container
 
-**Guard:** none — open, no guard named yet
+**Guard:** `tests/unit/test_the_first_commands_are_the_first_thing_help_shows.py`
 
 ## Motivation
 
@@ -44,3 +44,24 @@ A PyPI wheel; reordering the remaining commands.
 directory beside the clone; guards hold both. Reading taken in this container.
 
 ## Outcome
+
+**The gap measured.** `bga --help` at `19f1fd73`: 35 commands, `doctor`/`snapshot`/`view` in the bottom alias
+block beside `release-notes`; README line 101 `pip install -e ".[bst]"` (also line 22).
+
+**The close measured.** `python3 -m bga.cli --help | head -7` opens with `Start here:` then `bga doctor .`,
+`bga snapshot -- bst build TARGET`, `bga view`. `release-notes` is under a separate `maintainer tools` heading
+(still runnable, still in `TOOL_ALIASES`, so the cli.md alias-table walk stays green). README lines 22 and 101 read
+`pip install "./buildstream-graph-analysis[bst]"`. `tests/unit/test_help_is_short.py` `TOP_LEVEL_CAP` 51 -> 57
+(5-line block + 1 heading). 203 passed over docs-links, contracts, alias-table, help-length and the new file;
+`test_every_command_has_a_section_in_cli_md.py` + register: 1591 passed.
+
+**Mutation table.**
+
+| Mutation | Reddened | Count |
+|---|---|---|
+| drop the `bga view` line | order test | 1 failed |
+| swap `doctor` and `snapshot` | order test | 1 failed |
+| `MAINTAINER_ALIASES = ()` | release-notes test | 1 failed |
+| description without the block | order + opens-first | 2 failed |
+| README back to `pip install -e ".[bst]"` | install-line + no-`-e` | 2 failed |
+| README without the `[bst]` extra | install-line test | 1 failed |

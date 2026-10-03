@@ -10,7 +10,7 @@ QUALIFIED = "junctions/platform.bst:junctions/base.bst:pkgs/gcc-libs.bst"
 
 def _refusal(selected, uids):
     graph = SimpleNamespace(elements=[SimpleNamespace(uid=uid) for uid in uids])
-    [refusal] = whatif._refusals(graph, {uid: 1 for uid in uids}, selected)
+    [refusal] = whatif._refusals(graph, dict.fromkeys(uids, 1), selected)
     return refusal
 
 

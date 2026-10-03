@@ -19,7 +19,7 @@ pip install ./buildstream-graph-analysis   # or the git URL directly
 ```
 
 Needs **Python 3.9** or newer — that is `requires-python` in `pyproject.toml`, and CI runs 3.9-3.12. Plane 1 and Plane 3 work on that alone; capturing Plane 2 also needs a real `bst` and `bubblewrap`
-in the same venv (`pip install -e ".[bst]"`, or your project's own BuildStream install; `bga[all]`
+in the same venv (`pip install "./buildstream-graph-analysis[bst]"`, or your project's own BuildStream install; `bga[all]`
 is `bst` plus completion). `pip install -e .` from inside this checkout is the **contributor** mode,
 which is what `make test` and `make lint` expect and not what a user needs.
 
@@ -98,7 +98,7 @@ build.
 The short version is two commands, run from inside the project:
 
 ```bash
-pip install -e ".[bst]"   # needs a real bst binary + bubblewrap - see docs/spec/ingestion-pipeline.md
+pip install "./buildstream-graph-analysis[bst]"   # from beside your project, after the clone above; needs a real bst binary + bubblewrap - see docs/spec/ingestion-pipeline.md
 cd /path/to/your/project
 bga doctor .                          # is this machine able to capture at all?
 bga snapshot -- bst build <targets>   # capture + extract + analyze

@@ -310,6 +310,7 @@ can look one up.
 | key | what it is |
 |---|---|
 | `baseline_run_id`, `candidate_run_id` | The run id of each side, so a verdict can be traced to the two captures behind it. |
+| `verdict` | One of `improved`, `regressed`, `no significant change`, `within the baseline set's own observed range`, `different work` or a `not comparable (...)` refusal. `different work` (`UX-1323`): the runs built different element sets and no element in both moved past the threshold, so the total moved only through work one run did; a gate switching on the string must handle it. |
 | `deltas` | The run-level signed changes — makespan, contention, serialization and the rest, each `candidate - baseline`. |
 | `attribution_deltas` | The same, per wait category: `baseline_us`, `candidate_us`, `delta_us`, and each as a share of its own run's total — `baseline_share`, `candidate_share`, `delta_share` — since a category can grow in absolute time and shrink there, which is why both are published. |
 | `element_deltas` | Every element in either run with its duration on each side and the signed change, ranked by what moved most. Deliberately **not** banded. |

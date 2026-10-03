@@ -6899,6 +6899,14 @@ _CORRELATE_HINTS = {
 }
 
 
+def _compare_verdict_list() -> str:
+    """The verdict labels `compare.VERDICT_SENTENCES` emits, as prose."""
+    from .compare import VERDICT_SENTENCES  # compare imports this module
+
+    labels = [f"`{v}`" for v in VERDICT_SENTENCES.values()]
+    return ", ".join(labels[:-1]) + ", or " + labels[-1]
+
+
 # UX-1078: `tail/v1`, in the one unit per dimension UX-341 settled.
 _TAIL_HINTS = {
     "build_wall_us": {
@@ -6947,9 +6955,8 @@ _SCHEMAS = {
         "bga compare --format json",
         _COMPARE_REQUIRED,
         "Two runs, their signed deltas and the verdict — which is "
-        "`improved`, `regressed`, `no significant change`, `within the "
-        "baseline set's own observed range`, or a `not "
-        "comparable (...)` refusal.",
+        + _compare_verdict_list()
+        + "; or a `not comparable (...)` refusal.",
         optional=_COMPARE_OPTIONAL,
         hints=_COMPARE_HINTS,
         always_written=_COMPARE_ALWAYS_WRITTEN,

@@ -159,7 +159,7 @@ edge that cost 2.0s of critical path is not carrying anything.
 
 ## Reading it
 
-- **The headline** is the band verdict. With `--baseline-run` supplied
+- **The headline** is the band verdict: `improved`, `regressed`, `no significant change`, `within the baseline set's own observed range`, or `different work` (`UX-1323`: the runs built different element sets, so the total moved only through work one run did, and a line names each side's elements). With `--baseline-run` supplied
   three or more times (or via `bga baseline`, or selected by
   `--band-from-class`) the second line names the measured noise band
   instead of the fixed 1% rule, and then names the runs it was computed

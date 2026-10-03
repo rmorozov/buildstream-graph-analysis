@@ -1739,7 +1739,8 @@ def cmd_whatif(args: argparse.Namespace) -> int:
 def cmd_junction_cost(args: argparse.Namespace) -> int:
     """Execute `bga junction-cost RUN RUN [RUN...]` (UX-904): N variant builds against one junctioned invocation.
 
-    A question, not a gate: a refusal is the answer, so it exits 0.
+    A question, not a gate: a refusal is the answer, so it exits 0, bar `same_run`:
+    the same run twice is a mistake in the command, so it exits 2.
     """
     from bga.junction_cost import project, render, run_view
 
@@ -1763,7 +1764,7 @@ def cmd_junction_cost(args: argparse.Namespace) -> int:
             handle.write(output + "\n")
     else:
         print(output)
-    return 0
+    return 2 if any(r.get("check") == "same_run" for r in document["refusals"]) else 0
 
 
 def cmd_blast(args: argparse.Namespace) -> int:

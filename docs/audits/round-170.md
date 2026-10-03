@@ -29,6 +29,9 @@ spread   dev_touching.py --spread: 35-209 of 837 test files
 - `UX-1328`..`UX-1331`: `doctor` counts what a junction stages as
   unseen and points above the error; a short element name is offered its
   junction-qualified match; `--help` opens with the first three commands.
+- `UX-1332`..`UX-1334`: review 37's filings on this round, closed in it:
+  the contract names `variant-cost`, `compare/v2` derives its verdict
+  list, `cli.md` names the four unnamed changes. No separate verifier.
 
 ## Lessons
 
@@ -43,6 +46,10 @@ spread   dev_touching.py --spread: 35-209 of 837 test files
 - The merged tree reddened the schema-prose guard on `withheld`, and the
   blast emit guard needed an integration fix (`84548195`, surface 628).
 - `test_the_verification_log_is_true` fails at base `44afd957` too.
+- The full `make test` found 5 reds no track's selection reached (a bst
+  claim's anchor, three shim environment names, a sweep entry) and the
+  review cadence: 30 closed since review 36, so review 37 ran here.
+- Autosquashing after the close rewrote 19 cited shas; squash first.
 
 ## Agents
 

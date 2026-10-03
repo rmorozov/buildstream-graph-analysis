@@ -1,6 +1,6 @@
 # UX-1334: wrapper-script capture, `cache-logs` across junctions, doctor's junction check and help's start block are in no guide
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** review 37, checklist item 4 (2026-10-03) | **Serves:** R1, R2 | **Topic:** docs | **Area:** unassigned | **Shape:** judgement | **Reading:** container
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — | **Found by:** review 37, checklist item 4 (2026-10-03) | **Serves:** R1, R2 | **Topic:** docs | **Area:** unassigned | **Shape:** judgement | **Reading:** container
 
 **Guard:** test_the_cli_guide_names_the_junction_round_changes.py
 

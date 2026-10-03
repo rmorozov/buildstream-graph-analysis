@@ -1,6 +1,6 @@
 # UX-1332: `json-contracts.md` and the `junction-cost/v1` schema still name `bga junction-cost` as the emitter
 
-**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** review 37, checklist items 2 and 3 (2026-10-03) | **Serves:** R2 | **Topic:** docs | **Area:** unassigned | **Shape:** judgement | **Reading:** container
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** — | **Found by:** review 37, checklist items 2 and 3 (2026-10-03) | **Serves:** R2 | **Topic:** docs | **Area:** unassigned | **Shape:** judgement | **Reading:** container
 
 **Guard:** test_a_schema_names_a_command_bga_has.py
 

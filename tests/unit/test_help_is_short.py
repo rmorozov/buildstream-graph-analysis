@@ -320,11 +320,19 @@ def test_no_help_string_in_source_ends_on_a_dangling_space():
     """The signature of the cut, at the source rather than the render: a
     complete `help='...'` whose text ends with a space is a string whose
     continuation line was deleted."""
-    import glob
     import re
+    import subprocess
 
+    # Tracked files only: another guard writes a scratch module into tools/ and deletes it mid-run (UX-1313).
+    tracked = subprocess.run(
+        ["git", "ls-files", "bga/cli.py", ":(glob)tools/*.py", ":(glob)tools/native_trace/*.py"],
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.split()
+    assert "bga/cli.py" in tracked and len(tracked) > 50, tracked
     offenders = []
-    for path in ["bga/cli.py"] + glob.glob("tools/*.py") + glob.glob("tools/native_trace/*.py"):
+    for path in tracked:
         lines = open(path, encoding="utf-8").read().split("\n")
         for n, line in enumerate(lines):
             match = re.match(r"\s*help=f?(['\"])(.*)\1,?\s*$", line.rstrip())

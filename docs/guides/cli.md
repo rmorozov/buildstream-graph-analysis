@@ -318,8 +318,18 @@ jobserver: off -> auto (4)                            # the compare header names
 | `--jobserver auto\|N\|off` | Cap sandbox concurrency for this capture (default `off`) |
 | `--jobserver-auth fd\|fifo\|auto` | The `--jobserver-auth` style forwarded to the tracer (default `auto`), as `bga capture run --jobserver-auth` (`UX-841`, `UX-875`); unused when `--jobserver` is off |
 | `--plan @prev\|@last\|PATH` | Bias the jobserver by a prior run's own slack; needs `--jobserver auto\|N` |
+| `--jobserver-auth-override`, `--lto-cap`, `--wrapper-dir`, `--wrapper-dir-mode` | As `bga capture run`'s ([in full](#what-each-flag-does-in-full)): set into the capture's environment by `bga.cli.apply_capture_env_flags`, the code `capture run` runs (`UX-1302`) |
 | `prune --keep N` / `--older-than DAYS` / `--max-store SIZE` | Delete old snapshots; `--dry-run` says what would go |
 | `--prune` | The flag form of the same deletion; needs `--keep`, `--older-than` and/or `--max-store`, and `--keep`, `--older-than`, `--max-store` and `--dry-run` read as "with `--prune`" |
+
+Eleven `bga capture run` flags are `capture run` only (`comm -23` of
+the two `--help` outputs). `bga snapshot` writes `--wrapped-log`,
+`--run-dir`, `--raw-log` and `--host-samples` itself, into the snapshot
+directory (`take_snapshot`), and resolves `--jobserver-seed` from its
+own `--jobserver`. `--jobserver-pool`, `--jobserver-capacity`,
+`--argv-log`, `--invocation-log`, `--no-invocation-log` and `--json` it
+does not take, so a snapshot's capture runs their defaults (a `dynamic`
+pool among them): use `bga capture run` to set one.
 
 `bga snapshot` exits with **the wrapped build's own exit code**. A
 failed build is not a successful snapshot; equally, a comparison verdict

@@ -3434,6 +3434,18 @@ def _translate_capture_wrapper_dir(argv: list) -> list:
     return argv[:2] + new_rest
 
 
+def apply_capture_env_flags(tokens: list) -> list:
+    """UX-1302: set or clear the env the per-element translators own, from `tokens` as `capture run` takes them; returns the rest."""
+    argv = ['capture', 'run', *tokens]
+    for translate in (
+        _translate_capture_jobserver_auth_override,
+        _translate_capture_lto_cap,
+        _translate_capture_wrapper_dir,
+    ):
+        argv = translate(argv)
+    return argv[2:]
+
+
 #: UX-1301: the flags the `_translate_capture_*` functions strip before the tracer's argparse, so its `--help` cannot list them.
 CAPTURE_RUN_BGA_FLAGS = {
     '--jobserver-auth-override': "'STYLE:GLOB ...'  per-element fd|fifo|off|flto, repeatable",

@@ -64,7 +64,7 @@ that applies wins (`tools/native_trace/bwrap_shim.py`'s
 |---|---|---|
 | `--jobserver off` | the command line | every element: no pool at all |
 | `notparallel: True` (its `make` composed `-j1`) | the element's `variables` | pinned: nothing is injected, the element builds serially, whatever the two rows below say |
-| `--jobserver-auth-override 'style:glob ...'` | the `bga capture run` command line | one capture; `bga snapshot` has no such flag |
+| `--jobserver-auth-override 'style:glob ...'` | the `bga capture run` or `bga snapshot` command line | one capture |
 | `public: bga: jobserver-auth: style` | the element's `.bst`, committed | every capture of the project |
 
 An element none of them names gets `auto`, and what `auto` gives it

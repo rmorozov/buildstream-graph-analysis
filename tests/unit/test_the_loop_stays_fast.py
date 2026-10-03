@@ -185,7 +185,8 @@ class TestTheSelectorStillSelects:
     # `UX-1291`'s sharing-guide guard runs `bga.cli.main`: median 41, p90 68, max 198 over 817.
     # `UX-1300`'s jobserver-guide guard imports `bga.cli`: median 41, p90 68, max 199 over 818.
     # `UX-1301`'s help guard reads `bga.cli`'s translators: median 41, p90 68, max 200 over 819.
-    CEILING = {"median": 41, "p90": 68, "max": 200}
+    # `UX-1302`'s snapshot guard runs `bga.cli.main`: median 41, p90 68, max 201 over 820.
+    CEILING = {"median": 41, "p90": 68, "max": 201}
     POPULATION_FLOOR = 60
     #: `UX-645`: **13 census + 14 of your own**. The census floor is
     #: inside this bound because those files run - the figure is what

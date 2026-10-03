@@ -327,6 +327,7 @@ def take_snapshot(
     jobserver_auth: str = "auto",
     plan: Optional[str] = None,
     cpu_count: Optional[int] = None,
+    capture_env_flags: tuple = (),
 ) -> tuple[str, int]:
     """Capture into a new snapshot directory. Returns it and the build's
     own exit code - which is the build's answer, not the capture's.
@@ -343,12 +344,16 @@ def take_snapshot(
     `--jobserver-auth` unchanged - the tracer resolves it
     (`jobserver_auth_style`), this only carries it through.
 
+    `capture_env_flags` (UX-1302): `--jobserver-auth-override`/`--lto-cap`/
+    `--wrapper-dir`/`--wrapper-dir-mode` tokens, set (or cleared) in the
+    environment by `bga.cli.apply_capture_env_flags`, as `capture run` does.
+
     `BGA_BASELINE_RUN_DIR` (UX-1083): set by `_set_baseline_run_dir_env`,
     the same `BGA_JOBSERVER_MODE` shape (UX-856) - the tracer's `run`
     reads it straight from the environment, no CLI flag, so `--help`
     never grows.
     """
-    from bga.cli import resolve_jobserver_ceiling, set_jobserver_mode_env
+    from bga.cli import apply_capture_env_flags, resolve_jobserver_ceiling, set_jobserver_mode_env
 
     from .bst_native_build_tracer import main as capture_main
 
@@ -401,6 +406,7 @@ def take_snapshot(
         argv += ["--plan", plan]
     argv += [project, os.path.join(snapshot, PLANE2_NAME), "--"] + list(command)
 
+    apply_capture_env_flags(list(capture_env_flags))
     print(f"Capturing into {snapshot}", file=sys.stderr)
     exit_code = capture_main(argv)
     if keep_raw and os.path.exists(os.path.join(snapshot, RAW_LOG_NAME[:-3])):
@@ -652,8 +658,39 @@ def create_parser() -> argparse.ArgumentParser:
         "beside its run), naming this project's own slack (UX-849). "
         "Needs --jobserver auto|N.",
     )
+    parser.add_argument(
+        "--jobserver-auth-override",
+        action="append",
+        default=[],
+        metavar="SPEC",
+        help="'STYLE:GLOB ...', per element, as `capture run`.",
+    )
+    parser.add_argument("--lto-cap", default=None, metavar="N", help="The flto shim's -flto=N, as `capture run`.")
+    parser.add_argument("--wrapper-dir", default=None, metavar="PATH", help="Own wrapper directory, as `capture run`.")
+    parser.add_argument(
+        "--wrapper-dir-mode",
+        choices=("augment", "replace"),
+        default=None,
+        metavar="MODE",
+        help="augment|replace, as `capture run`.",
+    )
     parser.add_argument("cmd", nargs=argparse.REMAINDER, help="The build to run, e.g. -- bst build all.bst.")
     return parser
+
+
+def capture_env_tokens(args: argparse.Namespace) -> tuple:
+    """UX-1302: the per-element flags `snapshot` forwards, as `capture run` spells them."""
+    tokens = []
+    for spec in args.jobserver_auth_override:
+        tokens += ["--jobserver-auth-override", spec]
+    for flag, value in (
+        ("--lto-cap", args.lto_cap),
+        ("--wrapper-dir", args.wrapper_dir),
+        ("--wrapper-dir-mode", args.wrapper_dir_mode),
+    ):
+        if value:
+            tokens += [flag, value]
+    return tuple(tokens)
 
 
 def main(argv: Optional[list[str]] = None) -> int:
@@ -814,6 +851,7 @@ def main(argv: Optional[list[str]] = None) -> int:
         jobserver=args.jobserver,
         jobserver_auth=args.jobserver_auth,
         plan=plan_path,
+        capture_env_flags=capture_env_tokens(args),
     )
 
     if args.no_inject:

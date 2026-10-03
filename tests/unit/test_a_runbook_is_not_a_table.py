@@ -18,6 +18,8 @@ three commands a reader runs in order.
 panel keeps the steps and `follows_from` renders as the target section's
 own question. `UX-1146`: the section that was one link to the panel is
 the rail's sub-entry into it now.
+
+Styleguide §1e.
 """
 
 import pathlib

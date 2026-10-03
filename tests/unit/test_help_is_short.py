@@ -46,8 +46,9 @@ CAPTURE_RUN_CAP = CAP + 6
 # The top level is a *list*: one line per command, and there are 23 of
 # them. Its length is the command count, not prose, so it gets its own
 # bound - the thing to guard here is that no entry grows to two lines.
-# Raised by one per command added: 50 -> 51 for `bundle` (`UX-520`).
-TOP_LEVEL_CAP = 51
+# Raised by one per command added: 50 -> 51 for `bundle` (`UX-520`); 51 -> 57 for the
+# "Start here" block and the maintainer-tools heading (`UX-1329`).
+TOP_LEVEL_CAP = 57
 
 # UX-179: `blast` was outside this list, so neither the line cap nor the
 # terminator check ran over its help - a guard that does not cover the
@@ -72,6 +73,7 @@ SUBCOMMANDS = [
     "baseline",
     "doctor",
     "whatif",
+    "variant-cost",
     "junction-cost",
     "bundle",
 ]

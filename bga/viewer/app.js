@@ -202,6 +202,12 @@ export function foldOnNarrow(nav, doc) {
   nav.addEventListener?.("click", (event) => {
     if (narrow?.matches && event.target?.closest?.("a[href^='#'],[data-all],[data-step]")) apply(true);
   }, true);
+  // UX-998: Escape folds the narrow list back to its toggle; wide, the rail stays open and the title disabled.
+  nav.addEventListener?.("keydown", (event) => {
+    if (event.key !== "Escape") return;
+    apply(!title.disabled);
+    title.focus();
+  });
   // `addEventListener` on a MediaQueryList is the modern spelling and
   // the only one worth carrying; a browser without it keeps whatever
   // the first `apply` decided, which is correct for its width.

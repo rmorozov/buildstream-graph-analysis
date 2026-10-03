@@ -8,6 +8,7 @@ write, on both the single-id and the batch path (UX-709's population).
 """
 
 import pathlib
+import re
 import shutil
 import subprocess
 import sys
@@ -83,6 +84,18 @@ class TestNoteFileNeverTransitsAShellWord:
         closed = "\n".join(closed_rows(scenarios))
         assert "`backtick span`" in closed
         assert "| UX-9911 |" in closed
+
+
+class TestAPipeInANoteStaysInItsCell:
+    def test_an_unescaped_pipe_is_escaped_so_the_row_keeps_six_cells(self, tmp_path):
+        scenarios = _one_open_row(tmp_path)
+        note_path = tmp_path / "note.md"
+        note_path.write_text("a | b\n", encoding="utf-8")
+        done = _run("UX-9911", "--move", "--note-file", str(note_path), "--scenarios", str(scenarios))
+        assert done.returncode == 0, done.stdout + done.stderr
+        row = next(r for r in closed_rows(scenarios) if r.startswith("| UX-9911 |"))
+        assert "a \\| b" in row
+        assert len(re.split(r"(?<!\\)\|", row.strip())) == 8  # 6 cells + the two outer empties
 
 
 class TestASubstitutedNoteIsRefused:

@@ -3,6 +3,8 @@
 A two-run store, the older run analysed: every argv stays short and
 path-free, and each run-taking step resolves, from the project
 directory, to the run it was printed for.
+
+Styleguide §1d.
 """
 
 import os

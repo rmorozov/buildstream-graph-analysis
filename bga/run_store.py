@@ -826,7 +826,7 @@ CAPTURE_LAYOUT = (
         f"{STORE_DIRNAME}/{RUNS_DIRNAME}/<stamp>/capture-context.txt",
         CONDITIONAL,
         None,
-        "what the capture did and why, in prose - the diagnostics `UX-146` writes. Never parsed.",
+        "what the capture did and why, in prose - the diagnostics `UX-146` writes; only its `command=` line is read, for the closing hint (`UX-1322`).",
     ),
     (
         f"{STORE_DIRNAME}/{RUNS_DIRNAME}/<stamp>/{SIZE_CACHE_NAME}",

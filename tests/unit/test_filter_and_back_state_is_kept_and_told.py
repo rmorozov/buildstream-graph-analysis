@@ -14,6 +14,8 @@ two rows draws no strip, a bound under a filter reads `K of N matched`
 and Jump boxes say when nothing matches.
 Chromium (`tests/browser.py`) on `golden`, `macro_micro` and the
 two-plane review page.
+
+Styleguide §4c.
 """
 
 import json

@@ -2,6 +2,8 @@
 
 Every description prints (paper has no `?`), and every count of held-back rows
 that the screen shows is still on paper.
+
+Styleguide §2b.
 """
 
 import functools

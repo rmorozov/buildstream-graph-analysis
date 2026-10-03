@@ -1,4 +1,6 @@
-"""UX-1254: one card answers what this build wants from this host, each value read off the section it links."""
+"""UX-1254: one card answers what this build wants from this host, each value read off the section it links.
+
+Styleguide §3a."""
 
 import json
 import os

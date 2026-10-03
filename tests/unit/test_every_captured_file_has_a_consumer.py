@@ -121,8 +121,6 @@ RAW = [
 NO_CONSUMER_DECLARED = {
     ".gitignore": "written for git, not for a `bga` reader (`UX-189`). Its consumer "
     "is the clone that does not ship the capture archive.",
-    "runs/<stamp>/capture-context.txt": "prose for a person. The capture layout's own row says `Never "
-    "parsed`, which is a decision rather than a gap (`UX-146`).",
 }
 
 #: Capture-layout file rows this fixture does not carry, with the reason.

@@ -171,6 +171,8 @@ def test_the_covering_set_writes_the_same_bytes_twice(tmp_path):
         # ordering zeros left it produced by nothing: the covering set
         # had no shape where a ranking by reach carries information.
         "a_chain_beside_a_crowd",
+        # `UX-1327`: the one junctioned capture, reaching `junction-cache-gap`.
+        "nested_junctions",
     }
 
 

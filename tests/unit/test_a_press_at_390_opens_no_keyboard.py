@@ -5,6 +5,8 @@ rows the press filtered to. Headless Chromium draws no keyboard, so the
 guard reads the focused element: at 390x844 with touch emulated, the
 Elements heading; without it, the filter box (`UX-1214`). Read on the
 two-plane page (`gen-synthetic --seed 1 --store --layers 8 --width 14`).
+
+Styleguide §3f.
 """
 
 import pathlib

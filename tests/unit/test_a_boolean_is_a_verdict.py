@@ -3,6 +3,8 @@
 `#capacity_verdict` answered "Was the capacity right?" with "Oversubscribed
 false / Undersubscribed false / Checks ran true"; other pairs read "true" or
 "false", and absence read "—" in some places and "none" in others.
+
+Styleguide §6e rule 12.
 """
 
 import functools

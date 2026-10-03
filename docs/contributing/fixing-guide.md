@@ -243,6 +243,7 @@ bga/correlate.py       the two planes joined on element uid
 bga/sweep_curve.py     the builder sweep's range, its curve, a knee or the range's edge
 bga/whatif.py          the projection for a chosen set of fixes (UX-230)
 bga/junction_cost.py   N variant builds priced against one junctioned invocation
+bga/junction_rollup.py one run rolled up by junction prefix
 bga/cache_trend.py     a series of runs, not a pair
 bga/cache_effectiveness.py  the cache's own numbers
 bga/cache_capacity.py  what the cache was configured to hold (UX-896)
@@ -290,10 +291,11 @@ correlate       bga/correlate.py
 diagnostics     bga/diagnostics/
 floors          bga/floors/
 graph           bga/graph/
-junction-cost   bga/junction_cost.py
+junction-cost   bga/junction_cost.py   the old name of variant-cost
 replay          bga/replay/
 sweep           bga/replay/        the capacity sweep, not a slice of one analysis
 utilisation     bga/utilisation/
+variant-cost    bga/junction_cost.py
 whatif          bga/whatif.py
 baseline          tools/bst_baseline_set.py
 cache-logs        tools/bst_cache_logs.py

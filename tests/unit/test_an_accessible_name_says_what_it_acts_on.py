@@ -7,6 +7,8 @@ doors in one name, 19 Focus in one, 57 marks in three, 14 "Investigate in
 Perfetto" and 7 "Copy command" in one each, 74 folds named as their heading,
 10 of 16 drawings named by a range alone. Two controls may share a name only
 when they act on the same thing (one command, one query on one element).
+
+Styleguide §4c.
 """
 
 import collections

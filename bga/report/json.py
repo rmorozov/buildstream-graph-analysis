@@ -285,6 +285,12 @@ def _add_resource_blast(data, result, section, by_kind):
             data['resource_blast'] = blast
 
 
+def _add_by_junction(data, result, section, by_kind):
+    # UX-1327: additive; absent, not empty, when no element is junctioned.
+    if section in (None, 'graph') and getattr(result, 'by_junction', None):
+        data['by_junction'] = result.by_junction
+
+
 def _add_capacity_verdict(data, result, section, by_kind):
     # UX-35: the already-decided capacity verdict the hints above are
     # conditioned on - published so a consumer can see *why* a hint
@@ -645,6 +651,7 @@ _SECTIONS = (
     _add_findings,
     _add_floors,
     _add_resource_blast,
+    _add_by_junction,
     _add_capacity_verdict,
     _add_duration_resolution,
     _add_capacity_recommendation,

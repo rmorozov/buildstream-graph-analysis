@@ -86,6 +86,8 @@ ANALYSIS_ADDITIONS = {
     "builder_pool_recommendation",
     # `UX-1073`: what the analysis was computed from, for `compare`'s reuse.
     "fingerprint",
+    # `UX-1327`: the run rolled up by junction prefix.
+    "by_junction",
 }
 
 # Likewise for 32.1's six against what `load_run_context` reads.

@@ -35,6 +35,8 @@ words.
 in `bga/findings.py` beside the findings it ranks, so the CI comment
 and the report cannot route differently (Direction 7). The page reads
 a field.
+
+Styleguide §5b.
 """
 
 import pathlib

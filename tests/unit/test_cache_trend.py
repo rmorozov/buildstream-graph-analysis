@@ -148,3 +148,46 @@ def test_the_table_renders_the_churn_labels_ux93_settled():
     text = format_trend_text(build_trend(rows))
     assert '0+25r' in text
     assert 'n/a' in text
+
+
+def test_churn_counts_built_elements_not_every_element_with_a_task():
+    from pathlib import Path
+
+    from bga.cache_trend import trend_from_run_dirs
+
+    run = Path(__file__).resolve().parents[1] / "fixtures/a_build_that_pulls/run"
+    rows = trend_from_run_dirs([run] * 4)["runs"]
+    for row in rows[1:]:
+        assert row["churn"]["rebuilt_in_both_count"] <= row["built_elements"]
+        assert row["churn"]["rebuilt_in_both_elements"] == ["lib3.bst"]
+
+
+def test_each_side_of_the_churn_is_its_own_built_population():
+    from pathlib import Path
+
+    from bga.analyzer import BuildEfficiencyAnalyzer
+    from bga.cache_trend import _element_durations, _row
+
+    run = Path(__file__).resolve().parents[1] / "fixtures/a_build_that_pulls/run"
+    analyzer = BuildEfficiencyAnalyzer()
+    analyzer.load(run)
+    result = analyzer.analyze(run)
+    durations = _element_durations(result)
+    previous = {
+        "elements": analyzer.graph.elements,
+        "durations": durations,
+        "built": {"lib0.bst"},
+        "run_mode": (result.confidence or {}).get("run_mode"),
+    }
+    assert len(durations) > 1
+    churn = _row("x", analyzer, result, previous)["churn"]
+    assert churn["rebuilt_in_both_elements"] == []
+
+
+def test_rebuild_seconds_are_read_for_a_run_with_a_build_task():
+    from pathlib import Path
+
+    from bga.cache_trend import trend_from_run_dirs
+
+    run = Path(__file__).resolve().parents[1] / "fixtures/a_build_that_pulls/run"
+    assert trend_from_run_dirs([run])["runs"][0]["rebuild_us"] > 0

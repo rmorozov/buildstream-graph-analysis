@@ -391,6 +391,11 @@ def _churn_precondition(
     return None
 
 
+def built_elements(tasks) -> set[str]:
+    """Elements with a BUILD task: the built population churn is measured over."""
+    return {t.task_key.element_uid for t in tasks or [] if t.task_key.task_kind.value == 'BUILD'}
+
+
 def compute_cache_churn(
     baseline_elements,
     candidate_elements,

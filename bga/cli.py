@@ -462,6 +462,7 @@ def _capacity_recommendation(analyzer, result, context, native_report: Optional[
         knee_range_top=top,
         builders=builders,
         native_max_jobs=getattr(context, 'native_max_jobs', None),
+        built_elements=((getattr(result, 'signals', None) or {}).get('cache') or {}).get('built_elements'),
     )
     if not recommendation:
         return recommendation
@@ -1627,6 +1628,8 @@ def _execute_compare_and_write(args: argparse.Namespace) -> int:
             )
             for mismatch in comparison.mismatches:
                 print(f"  - {mismatch['message']}", file=sys.stderr)
+                if mismatch.get('next'):
+                    print(f"    Next: {mismatch['next']}", file=sys.stderr)
             print(
                 "Pass --allow-mismatch to compare anyway (the comparison is then "
                 "printed with the warning above, as it was before UX-78).",
@@ -1737,9 +1740,10 @@ def cmd_whatif(args: argparse.Namespace) -> int:
 
 
 def cmd_junction_cost(args: argparse.Namespace) -> int:
-    """Execute `bga junction-cost RUN RUN [RUN...]` (UX-904): N variant builds against one junctioned invocation.
+    """Execute `bga variant-cost RUN RUN [RUN...]`, alias `junction-cost` (UX-904): N variants or one invocation.
 
-    A question, not a gate: a refusal is the answer, so it exits 0.
+    A question, not a gate: a refusal is the answer, so it exits 0, bar `same_run`:
+    the same run twice is a mistake in the command, so it exits 2.
     """
     from bga.junction_cost import project, render, run_view
 
@@ -1763,7 +1767,7 @@ def cmd_junction_cost(args: argparse.Namespace) -> int:
             handle.write(output + "\n")
     else:
         print(output)
-    return 0
+    return 2 if any(r.get("check") == "same_run" for r in document["refusals"]) else 0
 
 
 def cmd_blast(args: argparse.Namespace) -> int:
@@ -1773,9 +1777,21 @@ def cmd_blast(args: argparse.Namespace) -> int:
     just as it does on an answer of two hundred. The refusal grammar
     lives in `compare`, where a gate belongs.
     """
-    from bga.blast import blast, format_blast_json, format_blast_text
-    from bga.run_store import project_root
+    from bga.blast import blast, blast_from_project, format_blast_json, format_blast_text
+    from bga.run_store import list_runs, project_root
 
+    project = args.project or project_root() or "."
+    # UX-1326: the structural half needs no run - with none yet, read the project itself.
+    no_snapshot = os.path.isfile(os.path.join(project, 'project.conf')) and not list_runs(project)
+    if getattr(args, 'no_cost', False) and args.run == '@last' and no_snapshot:
+        try:
+            answer = blast_from_project(project, args.target, targets=args.bst_target or ())
+        except (RuntimeError, OSError) as error:
+            print(f"Error: no snapshot here, and `bst show` could not read the project: {error}", file=sys.stderr)
+            if not args.bst_target:
+                print("Pass --target ELEMENT to read the graph from one element instead.", file=sys.stderr)
+            return 2
+        return _emit_blast(args, answer, format_blast_json, format_blast_text)
     try:
         run_dir = resolve_run_alias(args.run)
     except StoreError as error:
@@ -1784,7 +1800,6 @@ def cmd_blast(args: argparse.Namespace) -> int:
     if not Path(run_dir).is_dir():
         print(f"Error: not a run directory: {run_dir}", file=sys.stderr)
         return 2
-    project = args.project or project_root() or "."
     try:
         answer = blast(run_dir, args.target, project_dir=project, measure=not getattr(args, 'no_cost', False))
     except (FileNotFoundError, ValueError) as error:
@@ -1797,6 +1812,10 @@ def cmd_blast(args: argparse.Namespace) -> int:
             file=sys.stderr,
         )
         return 2
+    return _emit_blast(args, answer, format_blast_json, format_blast_text)
+
+
+def _emit_blast(args, answer, format_blast_json, format_blast_text) -> int:
     output = format_blast_json(answer) if args.format == 'json' else format_blast_text(answer)
     if getattr(args, 'output', None):
         with open(args.output, 'w', encoding='utf-8') as handle:
@@ -2288,6 +2307,17 @@ class _UsageErrorParser(argparse.ArgumentParser):
         self.exit(EXIT_GENERAL, f"{self.prog}: error: {message}\n")
 
 
+class _CommandListHelp(argparse.RawDescriptionHelpFormatter):
+    """argparse measures a command name one indent short of where it prints it; measure it where it prints."""
+
+    def add_argument(self, action):
+        super().add_argument(action)
+        if action.help is not argparse.SUPPRESS:
+            for sub in self._iter_indented_subactions(action):
+                width = len(self._format_action_invocation(sub)) + self._current_indent
+                self._action_max_length = max(self._action_max_length, width)
+
+
 class _CompactSubParser(_UsageErrorParser):
     """A subparser that inherits the compact help layout without every
     `add_parser` call having to remember to pass it (`UX-158`)."""
@@ -2301,6 +2331,12 @@ def _tool_help() -> str:
     from .tools_dispatch import format_tool_help
 
     return format_tool_help()
+
+
+def _start_here() -> str:
+    from .tools_dispatch import START_HERE
+
+    return START_HERE
 
 
 def _snapshot_completer(prefix, parsed_args, **_kwargs):
@@ -2616,7 +2652,18 @@ def _add_blast_subcommand(subparsers) -> None:
         action='store_true',
         help='Skip the measured rebuild time. The rest of the answer comes from\n'
         'the graph and the source inventory alone, which on a large project\n'
-        'is the difference between a lookup and a full analysis.',
+        'is the difference between a lookup and a full analysis. With no\n'
+        'snapshot yet, it reads the project with `bst show` instead.',
+    )
+    blast_parser.add_argument(
+        '--target',
+        dest='bst_target',
+        action='append',
+        default=None,
+        metavar='ELEMENT',
+        help='With --no-cost and no snapshot: the element `bst show` reads the\n'
+        'graph from (repeatable). Defaults to the project\'s `defaults: targets`,\n'
+        'or every element when it declares none.',
     )
     blast_parser.add_argument(
         '-f',
@@ -2668,30 +2715,34 @@ def _add_whatif_subcommand(subparsers) -> None:
 
 
 def _add_junction_cost_subcommand(subparsers) -> None:
-    junction_parser = subparsers.add_parser(
-        'junction-cost',
-        help="N variant builds, or one junctioned invocation?",
-        description='Price N separate builds of one type under different '
-        'variants against one junctioned invocation: elements shared by '
-        'cache key, the pipeline paid N times, the union floor and a '
-        'lower bound on one invocation. A projection with its assumptions '
-        'stated; refusals are answers, so it always exits 0.',
-    )
-    junction_parser.add_argument('run_dirs', nargs='+', metavar='RUN', help='A run of one variant. Two or more.')
-    junction_parser.add_argument(
-        '-f',
-        '--format',
-        choices=['text', 'json'],
-        default='text',
-        help='Output format: text (human-readable), json (machine-readable).',
-    )
-    junction_parser.add_argument(
-        '-o',
-        '--output',
-        default=None,
-        help='Write output to PATH instead of stdout.',
-    )
-    junction_parser.set_defaults(func=cmd_junction_cost)
+    # UX-1327: `variant-cost` is the name; `junction-cost`, its old one, is an alias kept out of the listing.
+    for name, listed in (('variant-cost', True), ('junction-cost', False)):
+        help_kwargs = {'help': "N variants or one junctioned invocation? (was junction-cost)"} if listed else {}
+        junction_parser = subparsers.add_parser(
+            name,
+            description=('' if listed else 'An alias of `bga variant-cost`, its old name. ')
+            + 'Price N separate builds of one type under different '
+            'variants against one junctioned invocation: elements shared by '
+            'cache key, the pipeline paid N times, the union floor and a '
+            'lower bound on one invocation. A projection with its assumptions '
+            'stated; refusals are answers, so it always exits 0.',
+            **help_kwargs,
+        )
+        junction_parser.add_argument('run_dirs', nargs='+', metavar='RUN', help='A run of one variant. Two or more.')
+        junction_parser.add_argument(
+            '-f',
+            '--format',
+            choices=['text', 'json'],
+            default='text',
+            help='Output format: text (human-readable), json (machine-readable).',
+        )
+        junction_parser.add_argument(
+            '-o',
+            '--output',
+            default=None,
+            help='Write output to PATH instead of stdout.',
+        )
+        junction_parser.set_defaults(func=cmd_junction_cost)
 
 
 def _add_cache_trend_subcommand(subparsers) -> None:
@@ -2962,14 +3013,15 @@ def create_parser() -> argparse.ArgumentParser:
     """
     parser = _UsageErrorParser(
         prog='bga',
-        description='BuildStream Build Efficiency Analyzer - Analyze build traces for efficiency metrics',
+        description=_start_here()
+        + '\nBuildStream Build Efficiency Analyzer - Analyze build traces for efficiency metrics',
         epilog=(
             # UX-67: the aliases are listed here rather than registered as
             # argparse subcommands, because registering them would import
             # every tool to build the parser - on every `bga analyze`.
             _tool_help() + "\n\nSee docs/guides/cli.md for detailed usage examples and workflows."
         ),
-        formatter_class=argparse.RawDescriptionHelpFormatter,
+        formatter_class=_CommandListHelp,
     )
 
     parser.add_argument(
@@ -3052,6 +3104,7 @@ _SCHEMA_BY_COMMAND = {
     # which is why the guard over this table is structural now rather
     # than a second list somebody has to remember.
     "whatif": schemas.WHATIF,
+    "variant-cost": schemas.JUNCTION_COST,
     "junction-cost": schemas.JUNCTION_COST,
     # UX-339: and the capacity sweep, which is `R5`'s command and was
     # the one printed document a consumer could not version-check.

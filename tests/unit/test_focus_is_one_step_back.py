@@ -2,6 +2,8 @@
 
 Measured before, on the 1,202-element page: a card landed at y 28,301,
 Focus, Back: no entry pushed, y 0 (1440 and 390).
+
+Styleguide §4c.
 """
 
 import pytest

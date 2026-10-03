@@ -5,6 +5,8 @@ Unweighted depth, Duration / Element durations, Kind / Element kind.
 Read on the two-plane page (`gen-synthetic --seed 1 --store --layers 20
 --width 60`, 1,202 elements), its `--workload binaries` variant and
 `macro_micro`: the first element of every Elements view, its card opened.
+
+Styleguide §6e rule 2.
 """
 
 import json

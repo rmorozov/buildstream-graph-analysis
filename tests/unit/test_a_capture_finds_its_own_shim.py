@@ -122,7 +122,7 @@ class TestThePathsTheBuildInherits:
         here = os.getcwd()
         os.chdir(tmp_path)
         try:
-            code = run_traced_build("proj", ["true"], str(tmp_path / "raw.log"))
+            code = run_traced_build("proj", ["bst", "build", "all.bst"], str(tmp_path / "raw.log"))
         finally:
             os.chdir(here)
         assert code == 0

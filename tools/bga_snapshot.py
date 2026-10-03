@@ -47,6 +47,8 @@ from typing import Optional
 from bga import build_rate, progress, run_store
 from bga.plural import plural
 
+from . import bst_run_wrapped
+
 # What a snapshot is made of. Deliberately the layout the published
 # capture refs already use (UX-81/UX-96), so nothing downstream learns a
 # second shape.
@@ -816,6 +818,10 @@ def main(argv: Optional[list[str]] = None) -> int:
         print(refusal, file=sys.stderr)
         return 2
 
+    if args.jobserver not in ("off", "0") and not bst_run_wrapped.is_bst_command(command):
+        print(bst_run_wrapped.WRAPPER_JOBSERVER_REFUSAL, file=sys.stderr)
+        return 2
+
     # UX-856: a plan biases the jobserver, so one named without a
     # jobserver running has nothing to bias - refused before any write,
     # the same posture as the two refusals above.
@@ -853,6 +859,12 @@ def main(argv: Optional[list[str]] = None) -> int:
         plan=plan_path,
         capture_env_flags=capture_env_tokens(args),
     )
+    if not bst_run_wrapped.is_bst_command(command) and not os.path.exists(os.path.join(snapshot, WRAPPED_LOG_NAME)):
+        # UX-1322: the tracer already said no `bst build` ran; a kept directory would list as a build.
+        progress.reset_ledger()
+        shutil.rmtree(snapshot, ignore_errors=True)
+        print(f"Nothing was kept: {snapshot} was removed.", file=sys.stderr)
+        return build_exit or 2
 
     if args.no_inject:
         # Nothing was captured, so there is nothing to analyze and

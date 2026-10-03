@@ -166,6 +166,14 @@ DESTINATIONS = {
         "reader needs; the per-element breakdown is for diagnosing a "
         "capture, which is `bga doctor`'s job.",
     ),
+    "junction_names": (
+        TERMINAL,
+        "",
+        "How many sandboxes the junction map relabelled, and which "
+        "projects two junctions reach. Apparatus like "
+        "`invocation_correlation`: every join row already carries the "
+        "full name it produced.",
+    ),
     "redundant_operations_coverage": (
         TERMINAL,
         "",

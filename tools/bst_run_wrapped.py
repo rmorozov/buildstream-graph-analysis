@@ -24,9 +24,8 @@ clock rather than a saved log file's mtime-derived guess.
 Usage:
     python3 -m tools.bst_run_wrapped PROJECT_DIR OUTPUT_LOG -- bst --builders 2 build all.bst
 
-The command must start with "bst " (matches bst_log_to_chrome_trace.py's
-own is_bst detection) for the resulting log to parse as a real BuildStream
-invocation under --format wrapped.
+A command not starting with `bst` (a wrapper script) runs with a `bst` shim
+first on its PATH, which records its first `bst build` the same way (UX-1322).
 """
 
 import argparse
@@ -35,8 +34,10 @@ import os
 import re
 import select
 import signal
+import stat
 import subprocess
 import sys
+import tempfile
 import time
 from datetime import datetime, timezone
 from typing import Optional
@@ -261,6 +262,209 @@ def read_clock_pairs(log_path: str) -> dict:
     return pairs
 
 
+# UX-870: the `cli` click group's own options in
+# `buildstream/_frontend/cli.py` (BuildStream 2.8.0, this box), read off
+# the installed package rather than guessed - `-o`/`--option` is the
+# only one that takes two values (`click.Tuple([str, str])`); the rest
+# below take exactly one; anything else the group defines (`--verbose`,
+# `--strict`, `--pull-buildtrees`, ...) is a bare flag, zero.
+_BST_GLOBAL_OPTIONS_TWO_VALUES = frozenset({"-o", "--option"})
+_BST_GLOBAL_OPTIONS_ONE_VALUE = frozenset(
+    {
+        "--config",
+        "-c",
+        "--directory",
+        "-C",
+        "--on-error",
+        "--fetchers",
+        "--builders",
+        "--pushers",
+        "--max-jobs",
+        "--network-retries",
+        "--error-lines",
+        "--message-lines",
+        "--log-file",
+        "--default-mirror",
+        "--cache-buildtrees",
+    }
+)
+
+
+def _bst_global_options(cmd: list[str]) -> tuple[list[str], bool]:
+    """UX-870: the tokens between `cmd[0]` and the subcommand, each
+    consumed by its own arity so a value (`c.yml`, a second `-o` value)
+    is never mistaken for the subcommand itself. `(opts, True)` once a
+    bare token is reached - the subcommand, discarded here since the
+    caller always inserts its own `show`. `(opts, False)` when the whole
+    of `cmd[1:]` parses as option-shaped and no subcommand ever turns
+    up - the one case this read cannot graft `show` onto at all."""
+    opts: list[str] = []
+    i, n = 1, len(cmd)
+    while i < n:
+        tok = cmd[i]
+        if not tok.startswith("-"):
+            return opts, True
+        if tok in _BST_GLOBAL_OPTIONS_TWO_VALUES and i + 3 <= n:
+            opts.extend(cmd[i : i + 3])
+            i += 3
+        elif tok in _BST_GLOBAL_OPTIONS_ONE_VALUE and i + 2 <= n:
+            opts.extend(cmd[i : i + 2])
+            i += 2
+        else:
+            opts.append(tok)
+            i += 1
+    return opts, False
+
+
+def is_bst_command(cmd) -> bool:
+    """`cmd` runs `bst` itself, rather than a wrapper that may (UX-1322)."""
+    return bool(cmd) and (cmd[0] == "bst" or cmd[0].endswith("/bst"))
+
+
+def bst_subcommand(cmd: list[str]) -> Optional[str]:
+    """`build` of `bst --on-error continue build t.bst`; `None` when absent."""
+    opts, found = _bst_global_options(cmd)
+    return cmd[1 + len(opts)] if found else None
+
+
+# UX-1322: the wrapper sits between bga and the shim, so the channel is the environment.
+SHIM_LOG_ENV = "BGA_BST_SHIM_LOG"
+SHIM_DIR_ENV = "BGA_BST_SHIM_DIR"
+SHIM_INHIBIT_ENV = "BGA_BST_SHIM_INHIBIT"
+MORE_BUILDS_NAME = "more-builds.txt"
+NO_BST_BUILD_EXIT = 2
+WRAPPER_JOBSERVER_REFUSAL = (
+    "Error: --jobserver needs the `bst` command itself (`-- bst build TARGET`): it reads the "
+    "target before the build, and a wrapper's `bst` argv is only known once it runs. "
+    "Nothing was captured."
+)
+
+
+class NoBstBuild(Exception):
+    """The wrapper command exited without running `bst build` (UX-1322)."""
+
+    def __init__(self, cmd: list, returncode: int):
+        self.returncode = returncode
+        super().__init__(
+            f"Error: `{' '.join(cmd)}` exited {returncode} without running `bst build`, "
+            f"so there was no build to capture. bga records the first `bst build` a "
+            f"wrapper runs through `bst` on its PATH."
+        )
+
+
+def _path_without(shim_dir: str, path: Optional[str] = None) -> list[str]:
+    shim = os.path.realpath(shim_dir)
+    entries = (os.environ.get("PATH", "") if path is None else path).split(os.pathsep)
+    return [entry for entry in entries if entry and os.path.realpath(entry) != shim]
+
+
+def find_real_bst(shim_dir: str, path: Optional[str] = None) -> Optional[str]:
+    """The first `bst` on PATH outside `shim_dir` - never the shim itself."""
+    for entry in _path_without(shim_dir, path):
+        candidate = os.path.join(entry, "bst")
+        if os.path.isfile(candidate) and os.access(candidate, os.X_OK):
+            return candidate
+    return None
+
+
+def write_bst_shim(shim_dir: str) -> str:
+    """`<shim_dir>/bst`: this interpreter, importing this copy of this module."""
+    package = __package__ or "tools"
+    top = sys.modules.get(package.split(".")[0])
+    anchor = getattr(top, "__file__", None) or os.path.join(os.path.dirname(os.path.abspath(__file__)), "x")
+    root = os.path.dirname(os.path.dirname(os.path.abspath(anchor)))
+    path = os.path.join(shim_dir, "bst")
+    with open(path, "w", encoding="utf-8") as handle:
+        handle.write(
+            f"#!{sys.executable}\nimport sys\nsys.path.insert(0, {root!r})\n"
+            f"from {package}.bst_run_wrapped import shim_main\nsys.exit(shim_main(sys.argv[1:]))\n"
+        )
+    os.chmod(path, os.stat(path).st_mode | stat.S_IXUSR)
+    return path
+
+
+def shim_main(argv: list[str]) -> int:
+    """The `bst` a wrapper finds: records its first `build`, passes the rest through."""
+    shim_dir = os.environ.get(SHIM_DIR_ENV) or os.path.dirname(os.path.abspath(sys.argv[0]))
+    real = find_real_bst(shim_dir)
+    if real is None:
+        print("bga: no real `bst` on PATH behind bga's own `bst` shim.", file=sys.stderr)
+        return 127
+    log_path = os.environ.get(SHIM_LOG_ENV)
+    if log_path and bst_subcommand(["bst", *argv]) == "build":
+        try:
+            fd = os.open(log_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644)
+        except FileExistsError:
+            with open(os.path.join(shim_dir, MORE_BUILDS_NAME), "a", encoding="utf-8") as handle:
+                handle.write(" ".join(["bst", *argv]) + "\n")
+        else:
+            # The recorded argv stays `bst ...`; the launch finds `real` on a PATH without the shim.
+            env = dict(os.environ, PATH=os.pathsep.join(_path_without(shim_dir)))
+            with os.fdopen(fd, "w", encoding="utf-8") as out_f:
+                try:
+                    inhibit = bool(os.environ.get(SHIM_INHIBIT_ENV))
+                    return run_wrapped(os.getcwd(), ["bst", *argv], out_f, env=env, inhibit=inhibit)
+                except KeyboardInterrupt:
+                    return 130
+    os.execv(real, ["bst", *argv])
+    return 127
+
+
+def run_wrapper_command(project_dir: str, cmd: list, log_path: str, env=None, shim_root: Optional[str] = None) -> int:
+    """Run a non-`bst` `cmd` with the `bst` shim first on PATH; its exit code.
+
+    `shim_root`: a directory to hold the shim (the capture's scratch), else a temporary one.
+    `SHIM_INHIBIT_ENV` in `env` asks the shim for `run_wrapped(inhibit=True)`.
+    Raises `NoBstBuild` when no `bst build` ran, so `log_path` was never written.
+    """
+    env = dict(os.environ if env is None else env)
+    log_path = os.path.abspath(log_path)
+    with contextlib.ExitStack() as stack:
+        if shim_root is None:
+            shim_root = stack.enter_context(tempfile.TemporaryDirectory(prefix="bga-bst-shim-"))
+        shim_dir = os.path.abspath(os.path.join(shim_root, "bst-shim"))
+        os.makedirs(shim_dir, exist_ok=True)
+        write_bst_shim(shim_dir)
+        with contextlib.suppress(FileNotFoundError):
+            os.remove(log_path)
+        env["PATH"] = shim_dir + os.pathsep + env.get("PATH", "")
+        env[SHIM_DIR_ENV] = shim_dir
+        env[SHIM_LOG_ENV] = log_path
+        proc = subprocess.Popen(cmd, cwd=project_dir, env=env, start_new_session=True)
+        try:
+            returncode = proc.wait()
+        except BaseException:
+            shutdown_build_group(proc)
+            raise
+        try:
+            with open(os.path.join(shim_dir, MORE_BUILDS_NAME), encoding="utf-8") as handle:
+                more = [line.strip() for line in handle if line.strip()]
+        except OSError:
+            more = []
+    if not os.path.exists(log_path):
+        raise NoBstBuild(cmd, returncode)
+    if more:
+        print(
+            f"Note: `{' '.join(cmd)}` ran `bst build` {len(more)} more time(s) after the first; "
+            f"only the first is captured (not captured: {'; '.join(more)}).",
+            file=sys.stderr,
+        )
+    return returncode
+
+
+EXEC_LINE_RE = re.compile(r"INFO: Executing command: (.*)$")
+
+
+def recorded_bst_argv(log_path: str) -> Optional[list[str]]:
+    """The `bst` argv a wrapped log's first line recorded, or `None`."""
+    try:
+        with open(log_path, encoding="utf-8", errors="replace") as handle:
+            found = EXEC_LINE_RE.search(handle.readline().rstrip("\n"))
+    except OSError:
+        return None
+    return found.group(1).split() if found else None
+
+
 def run_wrapped(project_dir: str, cmd: list, out_f, env=None, inhibit: bool = False) -> int:
     """`env`: UX-24 - when given, replaces the subprocess's own
     environment entirely (matching `subprocess.Popen`'s own semantics),
@@ -271,7 +475,7 @@ def run_wrapped(project_dir: str, cmd: list, out_f, env=None, inhibit: bool = Fa
     shadowing/LD_PRELOAD env vars have to reach the same subprocess this
     function spawns, not a second, separate one. `None` (the default)
     reproduces this function's own prior behavior exactly, unchanged."""
-    if not cmd or not (cmd[0] == "bst" or cmd[0].endswith("/bst")):
+    if not is_bst_command(cmd):
         raise ValueError(f"command must start with 'bst', got: {cmd!r}")
 
     def emit(line: str):
@@ -307,7 +511,7 @@ def run_wrapped(project_dir: str, cmd: list, out_f, env=None, inhibit: bool = Fa
         if notice:
             emit(notice)
         else:
-            launch = suspend.inhibit_argv(cmd)
+            launch = suspend.inhibit_argv(launch)
             emit(f"Inhibiting sleep for this build: {' '.join(launch[:4])} ...")
 
     proc = subprocess.Popen(
@@ -371,6 +575,12 @@ def main() -> int:
     if not cmd:
         parser.error("no command given (pass it after --, e.g. -- bst build all.bst)")
 
+    if not is_bst_command(cmd):
+        try:
+            return run_wrapper_command(args.project_dir, cmd, args.output_log)
+        except NoBstBuild as refusal:
+            print(refusal, file=sys.stderr)
+            return NO_BST_BUILD_EXIT
     with open(args.output_log, "w", encoding="utf-8") as out_f:
         returncode = run_wrapped(args.project_dir, cmd, out_f)
 

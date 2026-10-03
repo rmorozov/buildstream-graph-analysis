@@ -1082,14 +1082,24 @@ def _pct(share: float) -> str:
 
 def format_report_text(report: dict) -> str:
     provenance = report['provenance']
+    junctions = provenance.get('junctions') or {}
+    named = [f"{p} (via {junctions[p]})" if p in junctions else p for p in provenance['projects']]
     lines = [
         '=' * 60,
         'Cached Build Logs (Plane 3)',
         '=' * 60,
         f"Read {provenance['logs_read']} log(s), {provenance['build_logs']} of them "
-        f"builds, from {', '.join(provenance['projects']) or 'no project'}",
-        '',
+        f"builds, from {', '.join(named) or 'no project'}",
     ]
+    for name, prefix in sorted(junctions.items()):
+        if name not in provenance['projects']:
+            lines.append(f"  {name} (via {prefix}): no logs yet")
+    for entry in provenance.get('unresolved_junctions') or []:
+        kinds = '/'.join(entry['source_kinds']) or 'no'
+        lines.append(
+            f"  {entry['prefix']}: a {kinds} junction with no local checkout to name its project - read its logs with --project NAME (`--list` names them)"
+        )
+    lines.append('')
 
     rows = report['phase_breakdown']
     if not rows:
@@ -1342,6 +1352,77 @@ def is_project_dir(path: str) -> bool:
     return os.path.isfile(os.path.join(path, 'project.conf'))
 
 
+_JUNCTION_KIND_RE = re.compile(r'^kind:\s*junction\s*$', re.MULTILINE)
+
+
+def _load_yaml(path: str) -> Optional[dict]:
+    import yaml
+
+    try:
+        with open(path, encoding='utf-8', errors='replace') as handle:
+            data = yaml.safe_load(handle)
+    except (OSError, yaml.YAMLError):
+        return None
+    return data if isinstance(data, dict) else None
+
+
+def junction_projects(project_dir: str) -> tuple[list[dict], list[dict]]:
+    """UX-1325: every project a project directory's junctions bring in.
+
+    Returns `(resolved, unresolved)`: `resolved` rows carry `project` (the
+    checkout's `name:`) and `prefix` (`junctions/a.bst:junctions/b.bst`),
+    nested junctions included; `unresolved` rows carry the `prefix` of a
+    junction with no local checkout to read a name from.
+    """
+    resolved: list[dict] = []
+    unresolved: list[dict] = []
+    seen = {os.path.realpath(project_dir)}
+
+    def walk(directory: str, prefix: str) -> None:
+        conf = _load_yaml(os.path.join(directory, 'project.conf')) or {}
+        element_root = os.path.join(directory, str(conf.get('element-path') or '.'))
+        for dirpath, dirnames, filenames in os.walk(element_root):
+            dirnames.sort()
+            for filename in sorted(filenames):
+                if not filename.endswith('.bst'):
+                    continue
+                path = os.path.join(dirpath, filename)
+                try:
+                    with open(path, encoding='utf-8', errors='replace') as handle:
+                        if not _JUNCTION_KIND_RE.search(handle.read()):
+                            continue
+                except OSError:
+                    continue
+                element = os.path.relpath(path, element_root).replace(os.sep, '/')
+                qualified = f"{prefix}:{element}" if prefix else element
+                sources = (_load_yaml(path) or {}).get('sources') or []
+                local = [s for s in sources if isinstance(s, dict) and s.get('kind') == 'local' and s.get('path')]
+                checkout = os.path.join(directory, str(local[0]['path'])) if len(local) == 1 else None
+                name = project_name_from_dir(checkout) if checkout else None
+                if checkout is None or not name:
+                    kinds = sorted({str(s.get('kind')) for s in sources if isinstance(s, dict)})
+                    unresolved.append({'prefix': qualified, 'source_kinds': kinds})
+                    continue
+                real = os.path.realpath(checkout)
+                if real in seen:
+                    continue
+                seen.add(real)
+                resolved.append({'project': name, 'prefix': qualified})
+                walk(checkout, qualified)
+
+    walk(project_dir, '')
+    return resolved, unresolved
+
+
+def qualify_records(records: list[dict], prefix: str) -> list[dict]:
+    """Junction-prefix each record's element, as Plane 1 names it."""
+    for record in records:
+        if record.get('element'):
+            record['element'] = f"{prefix}:{record['element'].rsplit(':', 1)[-1]}"
+        record['junction'] = prefix
+    return records
+
+
 def summarize_log_tree(root: str) -> list[dict]:
     """What the log tree holds, per project: counts and time span.
 
@@ -1514,6 +1595,17 @@ def main(argv: Optional[list[str]] = None) -> int:
         return 0
 
     records = scan_log_tree(root, project=project)
+    junctions: list[dict] = []
+    unresolved: list[dict] = []
+    if project_dir and not args.project:
+        junctions, unresolved = junction_projects(project_dir)
+        read = {project}
+        for entry in junctions:
+            if entry['project'] in read:
+                continue
+            read.add(entry['project'])
+            records.extend(qualify_records(scan_log_tree(root, project=entry['project']), entry['prefix']))
+        records.sort(key=lambda r: (r['element'] or '', r['action'], r['started_us'] or 0, r['path']))
     if not records:
         # UX-127 item 3: a redirect rather than a confidently wrong
         # "nothing to report". Handing this tool the obvious argument -
@@ -1584,6 +1676,12 @@ def main(argv: Optional[list[str]] = None) -> int:
         native_report=native_report,
         dependencies=dependencies,
     )
+    if junctions or unresolved:
+        prefixes: dict[str, str] = {}
+        for entry in junctions:
+            prefixes.setdefault(entry['project'], entry['prefix'])
+        report['provenance']['junctions'] = prefixes
+        report['provenance']['unresolved_junctions'] = unresolved
     output = json.dumps(report, indent=2) if args.format == 'json' else format_report_text(report)
     if args.output:
         with open(args.output, 'w', encoding='utf-8') as handle:

@@ -33,6 +33,8 @@ and `strip` were both written and both correct.
 And one defect in what *was* drawn: coincident marks printed on top of
 each other, `19.1 s (p95)` over `19.1 s max`, because on an eleven-
 element population the 95th percentile is the largest value.
+
+Styleguide §2.
 """
 
 import json

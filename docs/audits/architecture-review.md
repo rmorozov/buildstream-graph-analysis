@@ -108,6 +108,7 @@ would have caught it; a bound at it would only just have.
 | 34 | 2026-10-01 | 1169 | one bookkeeping line filed, no task file, nothing fixed - round 160 and `UX-1240`..`UX-1241` (27 closed) and the shape is review 33's again: **guards that landed without a section to be found from.** 7 of the 8 tests the window added read 0 in `styleguide.md` and cite no §, and the `r155` and `r158` lines on 25 more are still open; this is `r160`. Sound: 27 ids, 10 printable, 10 superseded, 11 schemas; `analyze/v6` 64 properties as the new `architecture.md` entry says; `_consumer_surface()` 607 as `cli.md:1150` says; 24 `bga:` hints emitted and *of the 24* in `format.js`; 23 viewer modules; `PAGE_BUDGET_B` 160,000; `CLAUDE.md`'s 117 of 330 and 318k/249k at `--runs 232`; `report.json` 57 sections; 1169 closed, 18 open in `dev_close_task.py --counts` |
 | 35 | 2026-10-02 | 1202 | one bookkeeping line filed, no task file, nothing fixed - round 161 (`UX-1219`..`UX-1236`) and round 163 (`UX-1244`..`UX-1257`; 33 closed) and the shape is review 34's again: **guards that landed without a section to be found from.** 12 of the 14 tests the window added read 0 in `styleguide.md` and cite no §, the `r155`, `r158` and `r160` lines on 32 more are still open; this is `r163`. Sound: 28 ids, 10 printable, 11 superseded, 11 schemas (`analyze/v6` moved to superseded, `analyze/v7` published); `analyze/v7` 65 properties as `architecture.md:514` says; `_consumer_surface()` 611 as `cli.md:1157` says; 24 hint rows in the styleguide and *of the 24* in `format.js`; 23 viewer modules; `PAGE_BUDGET_B` 165,000 at `tools/bga_view.py:782` and `cli.md:2268`; `CLAUDE.md`'s 117 of 353 and 318k/249k at `--runs 232`; `bga/consistency.py` in the fixing guide §6 map; 1202 closed, 14 open in `dev_close_task.py --counts` |
 | 36 | 2026-10-02 | 1234 | four rows filed, `UX-1296`..`UX-1299`, nothing fixed - rounds 165, 166 and 167 (32 closed, `UX-1258`..`UX-1295`), scoped to the documents round 167 created or changed, and the shape is a **new page whose sentences describe the code's neighbour rather than the code**: `pilot.md` says the band refuses below three kept runs and exit 6 posts no comment, and the kit judges the band at four prior runs and comments on exit 6 (`UX-1296`); its two-week readings are kept by no step of the shipped workflow on a pull request (`UX-1297`); `UX-1285`/`UX-1286` put the band's skipped-for-host count and its tree in the comment and in no `compare/v2` key (`UX-1298`); and `UX-1293`'s move left two pointers at the old round table and the audits index says the review log is newest last (`UX-1299`). Sound: 28 ids, 10 printable, 11 superseded, 3 read; `json-contracts.md`'s *last eighteen*, *eleven*, *other ten*; the pilot's switch table, overhead and jobserver figures against `real-project.md:355-358` and `jobserver.md:14-54`; `COMPARED_FIELDS` as `ci-comment.md` says; doctor's `c-compiler`; `--anonymize` refusing `--no-plane2`; README 339 lines; 118 round links both ways; 1234 closed, 14 open in `dev_close_task.py --counts` |
+| 37 | 2026-10-03 | 1264 | three rows filed, `UX-1332`..`UX-1334`, nothing fixed - round 170 (30 closed, `UX-1296`..`UX-1331`), scoped to the documents it moved, and the shape is review 31's: **a later row's rename or addition that the neighbouring prose does not restate.** `UX-1327` renamed `junction-cost` to `variant-cost` in `cli.md`, `architecture.md`, `docs/README.md` and `graph-owner.md`, and `json-contracts.md:23,717,722` and `schemas.py:7041` (the published `emitted_by`) still name the old command (`UX-1332`); `UX-1323`'s fifth verdict, `different work`, is in `cli.md`, README and `real-project.md` and not in the `compare/v2` schema description (`UX-1333`); `UX-1322`, `UX-1325`, `UX-1328`, `UX-1329` and `UX-1331` are in no guide (`UX-1334`). Sound: 28 ids, 10 printable, 11 superseded, 11 schemas; `analyze/v7` 66 properties as `architecture.md` says; `_consumer_surface()` 639 as `json-contracts.md:183` says; `bga --help` lists `variant-cost` and opens with *Start here*; 1264 closed, 13 open in `dev_close_task.py --counts` |
 
 ### Review 11 — 2026-09-02
 
@@ -1566,6 +1567,40 @@ six named plus §1a were checked. The §6 module map's ~103 per-row
 descriptions were checked for the CI-workflow block only — `UX-780`
 came out of that block, which is a reason to think the rest is worth a
 pass. `UX-689` owns the map's structural half.
+
+## Review 37 — 2026-10-03, at 1264 closed rows
+
+Run by one reader over round 170 (`closed.md` 1234 to 1264: 30 closes,
+`UX-1296`..`UX-1331`), scoped to the documents
+`git diff --stat 44afd957 HEAD -- docs README.md` lists: `cli.md`,
+`json-contracts.md`, the README, `docs/README.md`, the fixing guide's §6,
+`architecture.md`, `graph-owner.md` and `real-project.md`. Three rows
+filed, nothing fixed.
+
+**The shape** is a rename or addition that landed in some documents and
+not the contract prose beside them:
+
+```text
+$ git grep -n "bga junction-cost" -- docs/guides/json-contracts.md bga/schemas.py
+docs/guides/json-contracts.md:23, :717, :722; bga/schemas.py:7041
+$ git grep -n "different_work" -- bga/compare.py bga/schemas.py docs/guides/json-contracts.md
+bga/compare.py:91        # no hit in the schema description at schemas.py:6948
+```
+
+### The five checks
+
+| check | result |
+|---|---|
+| code does what it says | `cli.md`'s blast junction reading, `--no-cost` project read and `different work` verdict match `blast.py` and `compare.py`; `variant-cost` is listed and `junction-cost` an unlisted alias (`bga/cli.py:2718`); **`schemas.py:6948` omits the fifth verdict (`UX-1333`)** |
+| contracts have a home | `ids()` 28, `printable()` 10, `superseded()` 11, `names()` 11; `analyze/v7` 66 properties as `architecture.md` says; `by_junction`, `read_from`, `project_targets`, `did_you_mean` are in `json-contracts.md`; **`:23,717,722` and `schemas.py:7041` name the old emitter (`UX-1332`)** |
+| figures invalidated | `_consumer_surface()` 639, `json-contracts.md:183` *639 keys*; `docs/README.md`'s `variant-cost` rows; §6's `junction_rollup.py` row resolves |
+| shipped, no document names it | **`UX-1322`, `1325`, `1328`, `1329`, `1331` are in no guide (`UX-1334`)**; `UX-1320`, `1321`, `1323`, `1324`, `1326`, `1327`, `1330` are |
+| last-updated claims | `architecture.md`'s *Updated 2026-10-03 (after `UX-1327`)* and `cli.md` last touched 2026-10-03 agree; `real-project.md:267`'s `pip install -e ".[bst]"` is the contributor mode the README names |
+
+### One gap in this sweep
+
+`cli.md` outside the round's hunks was not re-read (`UX-1290` splits it),
+and the twelve task files' own pasted readings are dated records, not re-run.
 
 ## Review 36 — 2026-10-02, at 1234 closed rows
 

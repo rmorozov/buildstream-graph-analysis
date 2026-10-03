@@ -248,6 +248,7 @@ class TestDoctorSuggestsIt:
     def test_it_speaks_only_where_a_sleep_policy_is_detectable(self, monkeypatch):
         from tools import bga_doctor
 
+        monkeypatch.setattr(bga_doctor, "_container_kind", lambda: None)
         monkeypatch.setattr(bga_doctor.shutil, "which", lambda _name: None)
         assert bga_doctor.check_sleep_policy() is None, "a machine with no systemctl has no sleep policy to warn about"
 
@@ -259,6 +260,48 @@ class TestDoctorSuggestsIt:
             assert found["status"] in ("ok", "warn")
             if found["status"] == "warn":
                 assert "--inhibit" in found["remedy"]
+
+    @pytest.mark.parametrize("marker", ["/.dockerenv", "/run/.containerenv"])
+    def test_a_container_marker_file_reports_ok_naming_the_container(self, monkeypatch, marker):
+        from tools import bga_doctor
+
+        monkeypatch.delenv("container", raising=False)
+        monkeypatch.setattr(bga_doctor.os.path, "exists", lambda path: path == marker)
+        found = bga_doctor.check_sleep_policy()
+        assert found["status"] == "ok" and "container" in found["summary"] and marker in found["summary"]
+
+    def test_the_container_env_var_and_a_non_systemd_pid_1_each_count(self, monkeypatch):
+        from tools import bga_doctor
+
+        monkeypatch.setattr(bga_doctor.os.path, "exists", lambda path: False)
+        monkeypatch.setenv("container", "podman")
+        assert "podman" in bga_doctor.check_sleep_policy()["summary"]
+        monkeypatch.delenv("container")
+        self._proc(monkeypatch, comm="process_api\n")
+        assert "pid 1 is process_api" in bga_doctor.check_sleep_policy()["summary"]
+
+    @staticmethod
+    def _proc(monkeypatch, comm="", cgroup=""):
+        from tools import bga_doctor
+
+        monkeypatch.delenv("container", raising=False)
+        monkeypatch.setattr(bga_doctor.os.path, "exists", lambda path: False)
+        files = {"/proc/1/comm": comm, "/proc/self/cgroup": cgroup}
+        monkeypatch.setattr(bga_doctor, "_read_proc", lambda path: files[path])
+
+    @pytest.mark.parametrize("init", ["systemd", "init", "openrc-init", "runit", "s6-svscan", "dinit"])
+    def test_a_host_with_a_real_init_as_pid_1_is_not_a_container(self, monkeypatch, init):
+        from tools import bga_doctor
+
+        self._proc(monkeypatch, comm=f"{init}\n", cgroup="0::/user.slice\n")
+        assert bga_doctor._container_kind() is None
+
+    @pytest.mark.parametrize("name", ["docker", "kubepods", "containerd", "lxc", "libpod"])
+    def test_a_cgroup_naming_a_runtime_is_a_container_even_under_a_real_init(self, monkeypatch, name):
+        from tools import bga_doctor
+
+        self._proc(monkeypatch, comm="systemd\n", cgroup=f"0::/{name}/abc\n")
+        assert name in bga_doctor._container_kind()
 
 
 if __name__ == "__main__":  # pragma: no cover

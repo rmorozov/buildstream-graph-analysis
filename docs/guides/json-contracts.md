@@ -20,7 +20,7 @@ contracts. Twenty-eight ids, and what writes each:
 | `blast/v2` | `bga blast --format json` — what a change to one resource rebuilds |
 | `correlate/v2` | `bga correlate --format json` — Plane 1 and Plane 2 joined on element uid |
 | `whatif/v1` | `bga whatif --format json` — what the build drops to if a chosen set is fixed, and whether the savings add (`UX-230`) |
-| `junction-cost/v1` | `bga junction-cost RUN RUN --format json` — N builds of one type under different variants priced against one junctioned invocation: the elements shared by cache key, the pipeline paid N times, the union floor, each figure citing its assumption (`UX-904`) |
+| `junction-cost/v1` | `bga variant-cost RUN RUN --format json` — N builds of one type under different variants priced against one junctioned invocation: the elements shared by cache key, the pipeline paid N times, the union floor, each figure citing its assumption (`UX-904`) |
 | `store/v1` | `bga snapshot --list --format json` — the runs in this project's `.bga/runs` |
 | `store-aggregate/v1` | `bga snapshot --aggregate --format json` — the store as a distribution, per host class (`UX-234`) |
 | `capacity-model/v1` | `bga snapshot --capacity N,RATE --format json` — a builder count and an arrival rate as a queue: utilization, the wait before a build starts and the number waiting, per host class, each figure carrying the assumptions its own arithmetic used (`UX-613`) |
@@ -180,7 +180,7 @@ the blocks a reader meets first, and `certified_headroom`, the number
 Key Findings leads with, had never been in the population at all. It was
 302 such keys when that was filed and 305 when it landed. One level and
 no further: `blast_radius_distribution.deciles` is in the population and
-its own nine buckets are not. The surface is **626 keys** today, and
+its own nine buckets are not. The surface is **639 keys** today, and
 that figure is derived from the walk rather than typed here.
 
 So the statement of coverage, which is now a statement and not a
@@ -244,6 +244,7 @@ can look one up.
 | `joint_saving` | What fixing the top candidates *together* is worth, simulated, beside `sum_of_individual_us` — they differ when savings overlap or compound. `relation` says which (`add`, `overlap`, `compound`); `worth_more_after` names the candidates worth more once the ones above them are fixed. |
 | `serialization_point_risks` | Where the run is forced to serialize. Each entry carries `pinned_elements` (what was pinned, and to what), `governing_cores` (the cores they competed for) and `typical_max_jobs` (the `-j` their own builds used). |
 | `resource_blast` | What one shared resource rebuilds. `null` where no source inventory was captured. |
+| `by_junction` | `UX-1327`: the run rolled up by junction prefix (everything before an element's last `:`), Plane 1 only. One row per prefix, the top project first: each element counts under its deepest prefix, and every ancestor prefix is a row. Absent when no element is junctioned. |
 | `fingerprint` | `UX-1073`: what this analysis was computed from - the producer stamp, a sha256 of each run-directory input and of the Plane 2 report attached, and every result-affecting option. `bga compare` reads a published `analyze.json` instead of analyzing again only when this equals its own; `--reanalyse` never reads it. |
 | `run_instance.jobserver` | `UX-851`: the jobserver `bga capture` ran with, inside `run_instance` (`UX-404`'s capture identity, which also carries `started_at_us` - when the capture began - and `host_manifest.cpu_count`/`.memory_bytes` - what the host reported, the ceilings are computed against). `mode` (`off`/`auto`/`n`), `ceiling` (the token count given or derived, `null` when off), `seed` (tokens the FIFO opened holding, `UX-858`: `max(0, ceiling - builders)` under `auto`, `ceiling - 1` otherwise, `null` when off), `auth` (`fd`/`fifo`, `null` when off), `project_max_jobs` (the target element's own declared `max-jobs`, `null` when `bst` was unavailable). Absent, not defaulted, on a capture older than the field - `bga compare`'s header reads that absence as `jobserver off`. |
 | `jobserver` | `UX-847`: the pool's own record - `mode` (`fixed`/`dynamic`), `pool_ceiling`, `tokens_idle_share` (controller ticks with cores idle and tokens still in the pool) and `tokens_starved_share` (cores idle with the pool empty) - and `per_element`, keyed by uid: `joined` (`yes`/`pinned`/`held`/`unknown_kind`), `UX-1012`'s `peak_work_concurrency` against the element's own `max_jobs` and the `verdict` read from the two (`drew` when joined and the peak exceeded `max_jobs`; `offered, not drawn` when joined at a peak no wider; `outside the pool` when `pinned`/`unknown_kind` and the peak exceeded `max_jobs` + 1, `UX-1008`; else `pinned`/`held`/`unknown_kind` repeat `joined`), `admission_wait_us` (time the shim blocked the element on its admission token, `UX-1005` - its slot, not a draw), `tokens_held_p50`/`tokens_held_max` (UX-846's own acquire rows joined to this element by the pid that acquired them, `null` when the element ran no wrapped tool), and `UX-892`'s width over time: `tokens_held_series` (`[t_us, tokens]` steps, an acquire opening an interval and a release closing one - absent, not empty, when the element ran no wrapped tool), `tokens_series_coverage` (the share of the element's token-holding tools that wrote those rows - a real `make` reads the pipe itself and logs nothing), `tokens_series_open` (intervals no release closed, UX-852's leak) and `tokens_series_truncated` (whether the series hit its per-element cap). Present only when `--plane2`'s report carries a mode. |
@@ -301,6 +302,7 @@ can look one up.
 | `plane1_only_with_impact`, `undeclared_plane2_elements` | In `element_join_coverage`, elements only one plane saw that still carry a published finding, and elements Plane 2 measured that BuildStream's own manifest never declared. |
 | `aggregating_dependencies` | The Plane 2 half of an `element_join` row (`correlate/v2`'s `ElementJoin`): dependencies this element's own redundancy folded together. |
 | `recommended_deferrals` | In `deferrability`, elements a later build could safely postpone — a subset of elements, no cap. |
+| `graph_elements`, `build_us`, `assembling`, `bump_blast_elements` | In `by_junction` (`UX-1327`): the graph's element count, and in a row the BUILD tasks' summed time (work, not wall clock), the elements of a kind that assembles beside `building`, and what bumping that junction rebuilds - every element behind the prefix, nested ones too, plus their downstream closure; `null` for the top project. `built` is an element with a BUILD task in this run, `cached` one without. |
 | `staged_at` | In a `resource_blast.rows` entry, the elements the shared resource was staged at, beside `direct_elements` and `blast_elements` — no run-scaled cap. |
 
 `compare/v2`:
@@ -308,6 +310,7 @@ can look one up.
 | key | what it is |
 |---|---|
 | `baseline_run_id`, `candidate_run_id` | The run id of each side, so a verdict can be traced to the two captures behind it. |
+| `verdict` | One of `improved`, `regressed`, `no significant change`, `within the baseline set's own observed range`, `different work` or a `not comparable (...)` refusal. `different work` (`UX-1323`): the runs built different element sets and no element in both moved past the threshold, so the total moved only through work one run did; a gate switching on the string must handle it. |
 | `deltas` | The run-level signed changes — makespan, contention, serialization and the rest, each `candidate - baseline`. |
 | `attribution_deltas` | The same, per wait category: `baseline_us`, `candidate_us`, `delta_us`, and each as a share of its own run's total — `baseline_share`, `candidate_share`, `delta_share` — since a category can grow in absolute time and shrink there, which is why both are published. |
 | `element_deltas` | Every element in either run with its duration on each side and the signed change, ranked by what moved most. Deliberately **not** banded. |
@@ -322,7 +325,10 @@ can look one up.
 
 | key | what it is |
 |---|---|
-| `resolved_as` | Which reading of the target the command used — `url`, `path` or `element`. Published because the order is a heuristic. |
+| `resolved_as` | Which reading of the target the command used — `junction`, `url`, `path` or `element`. Published because the order is a heuristic. |
+| `junction` | The junction the target is (`name`, `source_kind`, `url`, `checkout`, `behind_count`), or whose local checkout a path is inside (`name`, `checkout`, `identity`, `resolved`); `null` otherwise. |
+| `read_from` | `run`, or `project` when `--no-cost` found no snapshot and read `bst show` instead (`UX-1326`). |
+| `project_targets` | The targets that `bst show` read — `[]` is every element, BuildStream's default; `null` from a run. |
 | `also_matched` | The other readings that would also have matched, so a deterministic pick is not a silent one. |
 | `keying` | How the matched resource is keyed (`url`, `ref`, …) when the target resolved as a repository. |
 | `direct_elements`, `direct_count` | The elements that depend on the target directly. The first hop only. |
@@ -333,6 +339,7 @@ can look one up.
 | `element_count` | Elements in the project, as the denominator for the reach above. |
 | `has_inventory` | Whether the run carried a source inventory; without one, a url or path target cannot be resolved. |
 | `element_exists` | Whether an element-named target is in the graph at all — so "rebuilds nothing" can be told from "is not there". |
+| `did_you_mean` | When an element-named target is not in the graph: the junction-qualified elements whose last `:` component is the name given (`UX-1330`); empty otherwise. Permitted rather than required, and written on every answer (`UX-629`). |
 
 `correlate/v2`:
 
@@ -708,12 +715,12 @@ statement rather than a missing field.
 
 ### N variant builds, or one junctioned invocation (`UX-904`)
 
-`bga junction-cost` prices N separate builds of one type under
+`bga variant-cost` (alias `junction-cost`) prices N separate builds of one type under
 different variants against one BuildStream invocation that junctions
 them together:
 
 ```bash
-bga junction-cost RUN-x86/ RUN-arm/ --format json
+bga variant-cost RUN-x86/ RUN-arm/ --format json
 ```
 
 Two elements in different variants are one element only when their
@@ -721,7 +728,8 @@ cache key is identical; a name is not an identity, because an asan and
 a release compile of one source share a name and not a key. The runs
 must declare one build type (`UX-898`); variants differ by design.
 A single run, mixed build types, or a run with no cache keys is
-**refused by name**, and a refusal still exits 0.
+**refused by name**, and a refusal still exits 0, bar `same_run` (the same
+run named twice), which exits 2.
 
 **The payload: `junction-cost/v1`.** `runs` lists each run's
 `run_id`, `build_class`, `elements`, `keyed_elements` and

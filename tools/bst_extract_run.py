@@ -320,7 +320,7 @@ _GRAPH_OPTIONS_FLAGS = frozenset({"--strict", "--no-strict"})
 def _graph_affecting_options(bst_global_options: Optional[Sequence[str]]) -> list:
     """UX-1083: the build's own `-o`/`--config`/`--directory`/`--strict`
     tokens, in order, from the arity-parsed list the tracer hands over."""
-    from .bst_native_build_tracer import _BST_GLOBAL_OPTIONS_ONE_VALUE
+    from .bst_run_wrapped import _BST_GLOBAL_OPTIONS_ONE_VALUE
 
     opts = list(bst_global_options or [])
     kept: list = []

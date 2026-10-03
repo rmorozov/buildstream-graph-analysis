@@ -1,0 +1,177 @@
+{
+  "elements": [
+    {
+      "uid": "junctions/platform.bst:junctions/base.bst:toolchain.bst",
+      "cache_key": "k0",
+      "requested_target": false,
+      "element_kind": "import"
+    },
+    {
+      "uid": "junctions/platform.bst:junctions/base.bst:pkgs/a.bst",
+      "cache_key": "k1",
+      "requested_target": false,
+      "element_kind": "cmake"
+    },
+    {
+      "uid": "junctions/platform.bst:junctions/base.bst:pkgs/b.bst",
+      "cache_key": "k2",
+      "requested_target": false,
+      "element_kind": "cmake"
+    },
+    {
+      "uid": "junctions/platform.bst:junctions/base.bst:pkgs/c.bst",
+      "cache_key": "k3",
+      "requested_target": false,
+      "element_kind": "cmake"
+    },
+    {
+      "uid": "junctions/platform.bst:junctions/base.bst:pkgs/d.bst",
+      "cache_key": "k4",
+      "requested_target": false,
+      "element_kind": "cmake"
+    },
+    {
+      "uid": "junctions/platform.bst:junctions/base.bst:base.bst",
+      "cache_key": "k5",
+      "requested_target": false,
+      "element_kind": "stack"
+    },
+    {
+      "uid": "junctions/platform.bst:pkgs/e.bst",
+      "cache_key": "k6",
+      "requested_target": false,
+      "element_kind": "cmake"
+    },
+    {
+      "uid": "junctions/platform.bst:pkgs/f.bst",
+      "cache_key": "k7",
+      "requested_target": false,
+      "element_kind": "cmake"
+    },
+    {
+      "uid": "junctions/platform.bst:pkgs/g.bst",
+      "cache_key": "k8",
+      "requested_target": false,
+      "element_kind": "cmake"
+    },
+    {
+      "uid": "junctions/platform.bst:pkgs/h.bst",
+      "cache_key": "k9",
+      "requested_target": false,
+      "element_kind": "cmake"
+    },
+    {
+      "uid": "junctions/platform.bst:platform.bst",
+      "cache_key": "k10",
+      "requested_target": false,
+      "element_kind": "stack"
+    },
+    {
+      "uid": "apps/one.bst",
+      "cache_key": "k11",
+      "requested_target": false,
+      "element_kind": "cmake"
+    },
+    {
+      "uid": "apps/two.bst",
+      "cache_key": "k12",
+      "requested_target": false,
+      "element_kind": "cmake"
+    },
+    {
+      "uid": "apps/three.bst",
+      "cache_key": "k13",
+      "requested_target": false,
+      "element_kind": "cmake"
+    },
+    {
+      "uid": "apps/four.bst",
+      "cache_key": "k14",
+      "requested_target": false,
+      "element_kind": "cmake"
+    },
+    {
+      "uid": "groups/all.bst",
+      "cache_key": "k15",
+      "requested_target": true,
+      "element_kind": "stack"
+    }
+  ],
+  "dependencies": [
+    {
+      "predecessor": "junctions/platform.bst:junctions/base.bst:toolchain.bst",
+      "successor": "junctions/platform.bst:junctions/base.bst:pkgs/a.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "junctions/platform.bst:junctions/base.bst:pkgs/a.bst",
+      "successor": "junctions/platform.bst:junctions/base.bst:pkgs/b.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "junctions/platform.bst:junctions/base.bst:pkgs/b.bst",
+      "successor": "junctions/platform.bst:junctions/base.bst:base.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "junctions/platform.bst:junctions/base.bst:pkgs/c.bst",
+      "successor": "junctions/platform.bst:junctions/base.bst:base.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "junctions/platform.bst:junctions/base.bst:pkgs/d.bst",
+      "successor": "junctions/platform.bst:junctions/base.bst:base.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "junctions/platform.bst:junctions/base.bst:base.bst",
+      "successor": "junctions/platform.bst:pkgs/e.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "junctions/platform.bst:pkgs/e.bst",
+      "successor": "junctions/platform.bst:pkgs/f.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "junctions/platform.bst:pkgs/f.bst",
+      "successor": "junctions/platform.bst:platform.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "junctions/platform.bst:pkgs/g.bst",
+      "successor": "junctions/platform.bst:platform.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "junctions/platform.bst:pkgs/h.bst",
+      "successor": "junctions/platform.bst:platform.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "junctions/platform.bst:platform.bst",
+      "successor": "apps/four.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "apps/one.bst",
+      "successor": "groups/all.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "apps/two.bst",
+      "successor": "groups/all.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "apps/three.bst",
+      "successor": "groups/all.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "apps/four.bst",
+      "successor": "groups/all.bst",
+      "dependency_type": "build"
+    }
+  ]
+}

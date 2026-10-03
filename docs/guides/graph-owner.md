@@ -116,40 +116,41 @@ is what the chain becomes. Re-run `bga whatif @last --element A` against
 `--element A --element B` and keep the pair only if the second number
 exceeds the first.
 
-## 4. Several variants: `bga junction-cost`
+## 4. Several variants: `bga variant-cost`
 
 N builds of one project under different variants, priced against one
 junctioned invocation. Two elements are one only when their cache keys
-are identical. The pair below is not two variants: `with_timeline` is a
-second capture of the same `macro_micro` build (same run id, same 11
-cache keys, plus a Chrome trace and `sources.json`), so every key is
-shared and the saving is the largest the command can print; real
-variants share fewer. Each run line ends `(not declared)`: that is the
+are identical. The pair below is not two variants: `host_cpu` is a
+second capture of the same `macro_micro` build (a different run id, the
+same 11 cache keys, shorter durations), so every key is shared and the
+saving is the largest the command can print; real variants share fewer.
+Name one run twice and the command refuses (`same_run`, exit 2): two
+copies of one run are one invocation, not N=2. Each run line ends
+`(not declared)`: that is the
 run's build type, which you declare when extracting
 (`bga extract ... --build-type night --variant arch=aarch64`) so that
 runs of different types are refused rather than joined (`UX-898`).
-On your own runs, name the N store runs: `bga junction-cost @prev @last`
-(or any two or more stamp prefixes or run directories).
+On your own runs, name the N store runs: `bga variant-cost @prev @last`
+(or any two or more stamp prefixes or run directories). `junction-cost`,
+its old name, still works.
 
 ```console
-$ bga junction-cost tests/fixtures/macro_micro/run tests/fixtures/with_timeline/run
+$ bga variant-cost tests/fixtures/macro_micro/run tests/fixtures/host_cpu/run
 N separate invocations against one junctioned build: 2 runs
   054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec: (not declared), 11/11 keyed
-[... elided: the second run, the same line ...]
-  Shared: 11 elements shared by cache key; building each once saves 50.200s of work.
-  Pipeline paid once instead of N times saves 1.441s [pipeline_once]
-  Total saving 51.641s (upper bound)
-  Floors: separate 43.200s, 43.200s; union 43.200s [unlimited_capacity]
+  b51434222e77485a2204bc64ab6cf9ad2310dbfa67e211821d889878c814b6a6: (not declared), 11/11 keyed
+  Shared: 11 elements shared by cache key; building each once saves 27.950s of work.
+  Pipeline paid once instead of N times saves 0.676s [pipeline_once]
+  Total saving 28.626s (upper bound)
+  Floors: separate 43.200s, 24.950s; union 43.200s [unlimited_capacity]
   One invocation costs at least 44.641s, plus junction staging (not measured) [junction_staging]
 [... elided: the four assumptions each figure cites, and the closing caveat ...]
 ```
 
-The floor does not move (union 43.2 s); the saving is the repeated work.
-It can exceed the 46.1 s build because it is a sum of element durations,
-not wall clock (`Work is the sum of those elements' own durations`, as
-`bga blast` prints): the 11 elements sum to 50.2 s (the 43.2 s chain plus
-`codegen.bst`'s 7.0 s beside it), and one copy of that work is saved,
-plus 1.441 s of pipeline.
+The floor does not move (union 43.2 s, the longer of the two chains);
+the saving is the repeated work. Each shared element is built once, at
+the longer of its two durations, so the saving is the shorter copy's
+work: `host_cpu`'s 11 elements sum to 27.95 s, plus 0.676 s of pipeline.
 Against a different project the same command prints `No element is
 shared` and a saving of `0.000s`. Junction staging is not measured, so
 the figure is a bound, not a forecast. The payload is

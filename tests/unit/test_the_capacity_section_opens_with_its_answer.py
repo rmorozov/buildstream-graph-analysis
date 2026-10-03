@@ -3,6 +3,8 @@
 The section drew four inputs, a constraints table and "Binding constraint
 CPU", with no sentence saying what to set; the clamp from 31 was told only
 in the finding's title, and the finding repeated the section's evidence.
+
+Styleguide §6.
 """
 
 import functools

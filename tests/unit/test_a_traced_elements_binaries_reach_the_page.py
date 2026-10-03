@@ -5,6 +5,8 @@ exec'ing 214-499 distinct binaries): `binary_cost` kept the top 5 by CPU
 and the top 5 by count, at most 10 rows per element, so `layer02/mod006`
 showed 5 of its 499 binaries. The card's "+N more" lands on
 `binary_cost` filtered to the element, pressed and opened fresh.
+
+Styleguide §1b.
 """
 
 import base64

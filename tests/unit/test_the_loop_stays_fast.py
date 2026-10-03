@@ -186,7 +186,8 @@ class TestTheSelectorStillSelects:
     # `UX-1300`'s jobserver-guide guard imports `bga.cli`: median 41, p90 68, max 199 over 818.
     # `UX-1301`'s help guard reads `bga.cli`'s translators: median 41, p90 68, max 200 over 819.
     # `UX-1302`'s snapshot guard runs `bga.cli.main`: median 41, p90 68, max 201 over 820.
-    CEILING = {"median": 41, "p90": 68, "max": 201}
+    # Round 168's merged tree (UX-1304/1311/1312's guards over the shim, the tracer and `bga.cli`): median 41, p90 68, max 204 over 827.
+    CEILING = {"median": 41, "p90": 68, "max": 204}
     POPULATION_FLOOR = 60
     #: `UX-645`: **13 census + 14 of your own**. The census floor is
     #: inside this bound because those files run - the figure is what
@@ -262,6 +263,8 @@ class TestTheSelectorStillSelects:
         # Round 165: 49 = 30 census + 19 named, one over `HANDFUL`. Wide by **name**: UX-1264/1271's
         # step guard imports the resource-wait hint it checks from `bga.report._shared`.
         "bga/report/_shared.py",
+        # Round 168: wide by **name**: the documented-invocations guard reads it for the build-class flags.
+        "tools/_run_context_common.py",
         # `UX-740`, round 102: 46 = 31 census + 16 named, one over the
         # bound. Wide by **name**: loading a fixture run is what a guard
         # does to get one, so `from bga.ingest.loader import load_all`

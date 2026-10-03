@@ -787,6 +787,31 @@ pairing for every merged row from round 103 on.
 | 166 | verifier | sonnet | UX-902 verifier | 48k | 27 | 406 s | complete | see round-166 |
 | 166 | verifier | sonnet | UX-1279 verifier | 49k | 33 | 471 s | complete | see round-166 |
 | 168 | researcher | sonnet | docs gap audit for UX-1300's thread (UX-1301..1308) | 66k | 24 | 203 s | complete | the flag scan read 41 `--help` outputs, which hide the four translated flags; found only by reading `bga/cli.py` |
+| 168 | implementer | sonnet | UX-1303 .bga/config section | 49k | 34 | 444 s | merged | see round-168 |
+| 168 | implementer | sonnet | UX-1303 fix loop | 61k | 19 | 203 s | merged | see round-168 |
+| 168 | verifier | sonnet | UX-1303 verifier | 34k | 11 | 123 s | complete | see round-168 |
+| 168 | implementer | sonnet | UX-1308 graph owner guide | 71k | 39 | 621 s | merged | see round-168 |
+| 168 | implementer | sonnet | UX-1308 fix loop | 85k | 10 | 205 s | merged | see round-168 |
+| 168 | verifier | sonnet | UX-1308 verifier | 41k | 22 | 132 s | complete | see round-168 |
+| 168 | implementer | sonnet | UX-1307 flags named in cli.md | 92k | 39 | 653 s | merged | see round-168 |
+| 168 | implementer | sonnet | UX-1307 fix loop | 107k | 54 | 1047 s | merged | see round-168 |
+| 168 | implementer | sonnet | UX-1307 fix loop | 132k | 17 | 336 s | merged | see round-168 |
+| 168 | verifier | sonnet | UX-1307 verifier | 56k | 30 | 157 s | complete | see round-168 |
+| 168 | implementer | sonnet | UX-1305, UX-1306 real-project guide | 101k | 76 | 1271 s | merged | see round-168 |
+| 168 | implementer | sonnet | UX-1305, UX-1306 fix loop | 118k | 28 | 282 s | merged | see round-168 |
+| 168 | verifier | sonnet | UX-1305, UX-1306 verifier | 49k | 21 | 118 s | complete | see round-168 |
+| 168 | implementer | opus | UX-1301, UX-1302 help and snapshot | 132k | 113 | 1709 s | merged | see round-168 |
+| 168 | verifier | sonnet | UX-1301, UX-1302 verifier | 44k | 19 | 150 s | complete | see round-168 |
+| 168 | implementer | opus | UX-1304 declared jobserver env | 118k | 83 | 855 s | merged | see round-168 |
+| 168 | implementer | opus | UX-1304 fix loop | 153k | 35 | 524 s | merged | see round-168 |
+| 168 | implementer | opus | UX-1304 fix loop | 168k | 16 | 385 s | merged | see round-168 |
+| 168 | verifier | opus | UX-1304 verifier | 54k | 22 | 191 s | FAIL | widened a -j1 element; see round-168 |
+| 168 | verifier | opus | UX-1304 re-verify | 66k | 12 | 130 s | FAIL | other declared NAMEs still set |
+| 168 | verifier | opus | UX-1304 re-verify | 72k | 8 | 83 s | PASS | see round-168 |
+| 168 | implementer | sonnet | UX-1311 junctioned annotation | 52k | 26 | 427 s | merged | one unguarded clause, guarded at merge |
+| 168 | verifier | sonnet | UX-1311 verifier | 34k | 18 | 415 s | PASS | see round-168 |
+| 168 | implementer | sonnet | UX-1312 overrides from a file | 69k | 42 | 477 s | merged | two edge cases fixed at merge |
+| 168 | verifier | sonnet | UX-1312 verifier | 56k | 33 | 499 s | PASS | inline `#` and a spaced path; see round-168 |
 
 Round 101's four tracks are **not** here: this session could not
 identify their transcripts with certainty after a context rebuild, and
@@ -799,7 +824,7 @@ committed cleanly once told to run in the foreground. Three of the five
 left a derived figure or a §6 context-map row behind - the same class
 the round itself was about, arriving in the tracks' own work.
 
-What the seven hundred and seventy rows already say: a researcher that reads a document
+What the seven hundred and ninety-five rows already say: a researcher that reads a document
 whole costs 100-180k; a walker that drives every control costs 336k;
 the two cuts cost a re-run each. The `walk` and `design-review`
 skills fix the report shape so the next rows are smaller, and the

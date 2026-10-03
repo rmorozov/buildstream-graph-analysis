@@ -1,6 +1,6 @@
 """UX-998 (round 169, walk seed 4): Escape folds the open narrow Sections list.
 
-Styleguide §6e.8: Escape leaves what the keyboard opened, and focus
+Styleguide §4c: Escape leaves what the keyboard opened, and focus
 returns to the control that opened it. Measured before, at 390x844 on
 `macro_micro`: Toggle open, Escape -> `data-folded="false"`, focus kept.
 """

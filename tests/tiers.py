@@ -680,6 +680,8 @@ LARGE = (
     "tests/unit/test_the_builder_sweep_is_drawn.py",  #   33.3s
     "tests/unit/test_the_ready_queue_asks_what_it_counts.py",  #   26.1s
     "tests/unit/test_the_page_checks_its_verdicts_agree.py",  #   23.1s
+    # Round 169's merged tree, alone in one process: 16.92 / 16.97s.
+    "tests/unit/test_forward_returns_to_the_offset_it_left.py",  #   17.0s
 )
 
 MEDIUM = (
@@ -1236,4 +1238,6 @@ MEDIUM = (
     "tests/unit/test_the_rail_mark_is_drawn_where_it_is_seen.py",  #    2.0s
     # `UX-1288`, measured single-process on landing.
     "tests/unit/test_a_pilot_kit_runs_report_only.py",  #    8.4s
+    # Round 169's merged tree, alone in one process: 2.26 / 2.13s.
+    "tests/unit/test_escape_folds_the_narrow_sections_list.py",  #    2.2s
 )

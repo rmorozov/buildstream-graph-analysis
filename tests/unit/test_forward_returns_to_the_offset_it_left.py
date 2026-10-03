@@ -1,6 +1,6 @@
 """UX-998 (round 169, walk seed 4): Forward after two Back steps puts the anchor where it was left.
 
-Styleguide §6e.8: a traversal returns the reader to the place they read.
+Styleguide §4c: a traversal returns the reader to the place they read.
 Walk seed 4 read `scrollY` 8218 vs 7952; measured on `macro_micro`, the
 anchor holds to 0.4 px while `scrollY` moves 337 px (1440) and
 260 px (390): a later entry opened content above it. No drift.

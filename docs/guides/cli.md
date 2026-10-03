@@ -153,7 +153,7 @@ flags, not variables (`--trace-opens`, `--trace-spine`, `--jobserver`).
 `BGA_BASELINE_RUN_DIR` and `BGA_JOBSERVER_MODE` are written by
 `bga snapshot` and `bga capture` into the child they start.
 
-Four more names sit in the same namespace and are **not** switches to
+More names sit in the same namespace and are **not** switches to
 use. They are listed because a reader who greps the tree finds them and
 deserves an answer:
 
@@ -165,6 +165,9 @@ deserves an answer:
 | `BGA_STRICT_HINTS` | not an environment variable at all — a page global, set from the browser console, that makes the report complain about a number carrying no declared `bga:quantity` | `bga/viewer/format.js` |
 | `BGA_TIER_ANY` | set into the child environment by `make test-touching` and by the pre-commit selector, and read by nothing in this tree (`UX-630`) | `tools/dev_touching.py` |
 | `BGA_WRAPPER_TOOL` | set by a jobserver wrapper on itself before running the real tool or its `--help`, so a re-entry (a symlink or a relocated copy that fooled `bga_find_real`) refuses outright rather than recursing (`UX-846`, a post-merge incident) | `tools/native_trace/wrappers/_common.sh` |
+| `BGA_BST_SHIM_DIR` | the directory holding the `bst` shim, set by `tools/bst_run_wrapped.py` into the wrapped `bst` so the shim and the wrapper agree on one place (`UX-1322`); plumbing between wrapper and shim, not a switch | `tools/bst_run_wrapped.py` |
+| `BGA_BST_SHIM_INHIBIT` | read by the shim to run `run_wrapped(inhibit=True)`, set when the wrapper asks for it (`UX-1322`); plumbing between wrapper and shim, not a switch | `tools/bst_run_wrapped.py` |
+| `BGA_BST_SHIM_LOG` | the log path the shim writes and the wrapper reads back after the build (`UX-1322`); plumbing between wrapper and shim, not a switch | `tools/bst_run_wrapped.py` |
 
 The capture path's own namespace, `BST_TRACE_*` — how `bga snapshot`
 drives the `bwrap` shim, the `LD_PRELOAD` hook and the ptrace spine,

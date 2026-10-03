@@ -357,6 +357,7 @@ lives in `agent-runs.md`'s rows, counted per round from there.
 | [165](round-165.md) | the round-163 residue and the round-164 review's rows - `UX-1258`, `UX-1260`-`UX-1277` in six opus tracks (a finding's Why #1 from its own step, `analyze/v7` `findings_diff` and `blocked_unparented`, the capacity page's `counts`, the replayed sweep knee, a comparison page guarded); owner-call defaults taken for the `xl_both`/`macro_micro` budgets, `joint-saving`, `builds_per_day`; the log re-grounded as `UX-1278` |
 | [166](round-166.md) | the memory-bound giant and two closes - `UX-902` (the serial-giant case, two Graviton cases), `UX-1279` (a sort button names its next press), `UX-1134` (the no-plan memory gate, autocap completes at 10 jobs); `UX-1280`, `UX-1281` filed |
 | [168](round-168.md) | the per-element jobserver switches and a docs gap audit - `UX-1300` (the jobserver guide names all four switches and the four styles); `UX-1301`..`UX-1308` filed from the audit |
+| [169](round-169.md) | the bookkeeping sweep - 22 ledger lines resolved under `UX-998` (12 swept in four tracks, 1 promoted as `UX-1314`, 6 dropped as fixed); every browser guard cites a styleguide § or is named in `UNCITED`; the exported page at 166,249 of 166,250 B |
 
 ## Verification Log
 

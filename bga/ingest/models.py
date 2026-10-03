@@ -698,6 +698,8 @@ class AnalysisResult:
     # it was never attempted, same "not looked for" reason `run_instance`
     # is absent rather than empty (UX-697: was set but undeclared).
     resource_blast: Optional[dict] = None
+    # UX-1327: the run rolled up by junction prefix; `None` when no element is junctioned.
+    by_junction: Optional[dict] = None
     # UX-202: Plane 2's own coverage of this build, set by
     # `cli._attach_plane2_capacity` when a Plane 2 report is in hand.
     # `None` without one (UX-697: was set but undeclared).

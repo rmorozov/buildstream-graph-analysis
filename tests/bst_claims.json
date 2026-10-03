@@ -135,7 +135,7 @@
       "id": "cli-group-option-arities",
       "claim": "in the `cli` click group, `-o`/`--option` is the only global option taking two values; the rest take exactly one value, or are bare flags",
       "sites": [
-        {"path": "tools/bst_native_build_tracer.py", "anchor": "`buildstream/_frontend/cli.py` (BuildStream 2.8.0, this box), read off"}
+        {"path": "tools/bst_run_wrapped.py", "anchor": "`buildstream/_frontend/cli.py` (BuildStream 2.8.0, this box), read off"}
       ],
       "confirmed_on": "2.8.1",
       "confirmed_by": "UX-990",

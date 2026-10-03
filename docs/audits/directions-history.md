@@ -358,6 +358,7 @@ lives in `agent-runs.md`'s rows, counted per round from there.
 | [166](round-166.md) | the memory-bound giant and two closes - `UX-902` (the serial-giant case, two Graviton cases), `UX-1279` (a sort button names its next press), `UX-1134` (the no-plan memory gate, autocap completes at 10 jobs); `UX-1280`, `UX-1281` filed |
 | [168](round-168.md) | the per-element jobserver switches and a docs gap audit - `UX-1300` (the jobserver guide names all four switches and the four styles); `UX-1301`..`UX-1308` filed from the audit |
 | [169](round-169.md) | the bookkeeping sweep - 22 ledger lines resolved under `UX-998` (12 swept in four tracks, 1 promoted as `UX-1314`, 6 dropped as fixed); every browser guard cites a styleguide § or is named in `UNCITED`; the exported page at 166,249 of 166,250 B |
+| [170](round-170.md) | the junction-heavy onboarding walk's rows - `UX-1320`..`UX-1331` in seven tracks (Plane 2 keys a junctioned element by its full name, `blast` reads a junction, a wrapped build is captured, a comparison of different work is no verdict, `analyze` rolls up by junction, `doctor` and `--help` first-run fixes); five verifier holds closed |
 
 ## Verification Log
 

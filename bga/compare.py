@@ -87,7 +87,12 @@ VERDICT_SENTENCES = {
     "no_significant_change": "no significant change",
     "improved": "improved",
     "regressed": "regressed",
+    # UX-1323: the total moved only through elements one run built.
+    "different_work": "different work",
 }
+
+# How many element names each side of a different-work line names.
+DIFFERENT_WORK_NAMED = 4
 
 
 def widen_band(band: dict, baseline_total_us: float) -> dict:
@@ -559,6 +564,9 @@ def _element_deltas(
     of scope here - and the schema says so where a reader will meet it.
     """
     declined = ('within_observed_range', 'no_significant_change')
+    if run_verdict_kind == 'different_work':
+        # By construction no common element moved, so its rows are uncoloured.
+        run_verdict_kind = 'no_significant_change'
     baseline_durations = _element_durations(baseline_result)
     candidate_durations = _element_durations(candidate_result)
     inside_noise = run_verdict_kind in declined
@@ -791,6 +799,16 @@ def _check_run_modes(baseline_result: AnalysisResult, candidate_result: Analysis
     )
 
 
+def _run_mode_next_step(candidate_result: AnalysisResult) -> str:
+    """`UX-1323`: what to do after a run_mode refusal, in one sentence."""
+    mode = (candidate_result.confidence or {}).get('run_mode')
+    return (
+        f"the next snapshot compares {mode} against {mode}; for the project-wide "
+        "picture, capture with a fresh cache: "
+        "XDG_CACHE_HOME=$(mktemp -d) bga snapshot -- bst build <target>"
+    )
+
+
 def _candidate_diagnosis(candidate_result: AnalysisResult) -> Optional[dict]:
     """UX-229: the candidate's own headline claim, with its chain.
 
@@ -822,6 +840,37 @@ def _candidate_diagnosis(candidate_result: AnalysisResult) -> Optional[dict]:
     if not record:
         return None
     return {'diagnosis': headline.get('diagnosis'), 'sentence': headline.get('sentence'), 'provenance': record}
+
+
+def _is_different_work(
+    baseline_result: AnalysisResult,
+    candidate_result: AnalysisResult,
+    baseline_total_us: float,
+    band: Optional[dict],
+) -> bool:
+    """`UX-1323`: the built sets differ and the common elements' summed |delta| stays inside the run's band."""
+    before = _element_durations(baseline_result)
+    after = _element_durations(candidate_result)
+    if set(before) == set(after):
+        return False
+    moved_us = sum(abs((after[uid] or 0) - (before[uid] or 0)) for uid in set(before) & set(after))
+    if band is not None:
+        return moved_us * 2 < band['high_us'] - band['low_us']
+    return moved_us * 100 < baseline_total_us * _SIGNIFICANCE_PCT
+
+
+def different_work_line(element_deltas: Optional[dict]) -> str:
+    """The elements each run built that the other did not, as one line."""
+    rows = (element_deltas or {}).get('rows') or []
+
+    def named(presence: str) -> str:
+        uids = sorted(row['element_uid'] for row in rows if row.get('presence') == presence)
+        if not uids:
+            return "nothing"
+        more = len(uids) - DIFFERENT_WORK_NAMED
+        return ", ".join(uids[:DIFFERENT_WORK_NAMED]) + (f" (+{more} more)" if more > 0 else "")
+
+    return f"only the baseline built {named('disappeared')}; only the candidate built {named('appeared')}"
 
 
 # UX-593: the claim id the run verdict's chain is published under, and
@@ -875,8 +924,15 @@ def _verdict_rule(kind: str, document: dict) -> dict:
             f"(no baseline set was supplied, so no measured band was "
             f"derived)"
         )
-    crossed = kind in ('regressed', 'improved', 'within_observed_range')
-    if kind == 'within_observed_range':
+    crossed = kind in ('regressed', 'improved', 'within_observed_range', 'different_work')
+    if kind == 'different_work':
+        sentence = (
+            f"{against}, which is outside {where} - but no element present "
+            f"in both runs moved by that much between them, so what moved is "
+            f"the elements only one run built: different_work, and no "
+            f"direction is claimed for the build."
+        )
+    elif kind == 'within_observed_range':
         sentence = (
             f"{against}, which is outside {where} but inside the range "
             f"the baseline runs themselves reached - so "
@@ -947,6 +1003,8 @@ def verdict_provenance(comparison, document: Optional[dict] = None) -> Optional[
     if document.get('baseline_band'):
         paths += ['baseline_band.n', 'baseline_band.low_us', 'baseline_band.high_us']
     crossing = _CROSSING_COUNT.get(kind)
+    if kind == 'different_work':
+        paths += ['element_deltas.counts.appeared', 'element_deltas.counts.disappeared']
     if crossing:
         paths.append(f'element_deltas.counts.{crossing}')
         rows = (document.get('element_deltas') or {}).get('rows') or []
@@ -1074,7 +1132,7 @@ def _compare_results(
     # is the same kind of mistake.
     mode_warning = _check_run_modes(baseline_result, candidate_result)
     if mode_warning:
-        mismatches.append({'check': 'run_mode', 'message': mode_warning})
+        mismatches.append({'check': 'run_mode', 'message': mode_warning, 'next': _run_mode_next_step(candidate_result)})
         comparability_warning = f"{comparability_warning}; {mode_warning}" if comparability_warning else mode_warning
 
     # UX-186: and whether the two were measured on the same machine at
@@ -1227,6 +1285,10 @@ def _compare_results(
             verdict_kind = "no_significant_change"
         else:
             verdict_kind = "improved" if delta_total_us < 0 else "regressed"
+        if verdict_kind in ("improved", "regressed") and _is_different_work(
+            baseline_result, candidate_result, baseline_total, baseline_band
+        ):
+            verdict_kind = "different_work"
         verdict = VERDICT_SENTENCES[verdict_kind]
 
     attribution_deltas = _attribution_deltas(
@@ -1665,6 +1727,9 @@ def regression_gate_failed(
     Without the flag this is `regression_exceeds_threshold`, unchanged.
     """
     if against_band and comparison.baseline_band:
+        # `UX-1323`'s different_work replaces a band verdict; the gate keeps its direction.
+        if comparison.verdict_kind == "different_work":
+            return (comparison.deltas.get('total_duration_us') or 0) > 0
         return comparison.verdict_kind == "regressed"
     return regression_exceeds_threshold(comparison, threshold_pct)
 

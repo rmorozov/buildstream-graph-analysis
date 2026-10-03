@@ -63,6 +63,7 @@ VERDICT_MARKERS = {
     "no_significant_change": "circle",
     "within_observed_range": "circle-open",
     "not_comparable": "diamond",
+    "different_work": "square",
 }
 # UX-346: **where a value's sentence lives.** `UX-220` gave every
 # declared quantity a sentence and `UX-201` sourced it from here, so it
@@ -302,6 +303,7 @@ VERDICT_KINDS = (
     "no_significant_change",
     "within_observed_range",
     "not_comparable",
+    "different_work",
 )
 
 # What "better" means for a signed delta, so a viewer can colour it

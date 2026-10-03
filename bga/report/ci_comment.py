@@ -457,6 +457,10 @@ def render_ci_comment(comparison, args, native_report: Optional[dict] = None) ->
         headline += f" ({_signed_s(delta_total)}"
         headline += f", {pct:+.1f}%)" if pct is not None else ")"
     lines += [headline, "", _band_reason(comparison) + _band_selection(comparison), ""]
+    if comparison.verdict_kind == 'different_work':
+        from ..compare import different_work_line
+
+        lines += [f"The two runs built different elements: {different_work_line(comparison.element_deltas)}.", ""]
 
     if comparison.failed_runs:
         lines += [

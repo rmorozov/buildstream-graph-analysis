@@ -19,7 +19,7 @@ pip install ./buildstream-graph-analysis   # or the git URL directly
 ```
 
 Needs **Python 3.9** or newer — that is `requires-python` in `pyproject.toml`, and CI runs 3.9-3.12. Plane 1 and Plane 3 work on that alone; capturing Plane 2 also needs a real `bst` and `bubblewrap`
-in the same venv (`pip install -e ".[bst]"`, or your project's own BuildStream install; `bga[all]`
+in the same venv (`pip install "./buildstream-graph-analysis[bst]"`, or your project's own BuildStream install; `bga[all]`
 is `bst` plus completion). `pip install -e .` from inside this checkout is the **contributor** mode,
 which is what `make test` and `make lint` expect and not what a user needs.
 
@@ -98,7 +98,7 @@ build.
 The short version is two commands, run from inside the project:
 
 ```bash
-pip install -e ".[bst]"   # needs a real bst binary + bubblewrap - see docs/spec/ingestion-pipeline.md
+pip install "./buildstream-graph-analysis[bst]"   # from beside your project, after the clone above; needs a real bst binary + bubblewrap - see docs/spec/ingestion-pipeline.md
 cd /path/to/your/project
 bga doctor .                          # is this machine able to capture at all?
 bga snapshot -- bst build <targets>   # capture + extract + analyze
@@ -140,7 +140,7 @@ Either way, comparing two runs is one command — `bga snapshot` calls it for yo
 bga compare /tmp/my-run-before /tmp/my-run-after
 ```
 
-It reports a signed delta for every certified floor, both efficiency signals, and each attribution category, plus a verdict (`improved`/`regressed`/`no significant change`, or `within the baseline set's own observed range` when a duration your own baselines already reached falls outside their band) — gated on confidence. Two runs that are not comparable are **refused** rather than compared, with an exit code of their own ([`cli.md`](docs/guides/cli.md#exit-codes)).
+It reports a signed delta for every certified floor, both efficiency signals, and each attribution category, plus a verdict (`improved`/`regressed`/`no significant change`/`different work` when the two runs built different elements, or `within the baseline set's own observed range` when a duration your own baselines already reached falls outside their band) — gated on confidence. Two runs that are not comparable are **refused** rather than compared, with an exit code of their own ([`cli.md`](docs/guides/cli.md#exit-codes)).
 
 > **One capture is not a baseline.** Five captures of the *same* freedesktop-sdk commit,
 > nothing changed, span **33%** (3614.2s → 2712.4s) against a default significance rule of 1%.

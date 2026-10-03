@@ -64,6 +64,8 @@ wants the underlying program can find it. Dispatch is lazy — only the
 module actually invoked is imported, so `bga analyze` does not pay to
 import the native tracer and the trace converters on every run.
 
+`bga --help` opens with a three-line *Start here* (`UX-1329`) naming `bga doctor .`, `bga snapshot -- bst build TARGET` and `bga view`, in the order a first session runs them; `release-notes` is a maintainer command and is not listed among the user's.
+
 **The table below is that block**, alias for alias and module for
 module:
 [`test_the_alias_table_is_the_help.py`](../../tests/unit/test_the_alias_table_is_the_help.py)
@@ -153,7 +155,7 @@ flags, not variables (`--trace-opens`, `--trace-spine`, `--jobserver`).
 `BGA_BASELINE_RUN_DIR` and `BGA_JOBSERVER_MODE` are written by
 `bga snapshot` and `bga capture` into the child they start.
 
-Four more names sit in the same namespace and are **not** switches to
+More names sit in the same namespace and are **not** switches to
 use. They are listed because a reader who greps the tree finds them and
 deserves an answer:
 
@@ -165,6 +167,9 @@ deserves an answer:
 | `BGA_STRICT_HINTS` | not an environment variable at all — a page global, set from the browser console, that makes the report complain about a number carrying no declared `bga:quantity` | `bga/viewer/format.js` |
 | `BGA_TIER_ANY` | set into the child environment by `make test-touching` and by the pre-commit selector, and read by nothing in this tree (`UX-630`) | `tools/dev_touching.py` |
 | `BGA_WRAPPER_TOOL` | set by a jobserver wrapper on itself before running the real tool or its `--help`, so a re-entry (a symlink or a relocated copy that fooled `bga_find_real`) refuses outright rather than recursing (`UX-846`, a post-merge incident) | `tools/native_trace/wrappers/_common.sh` |
+| `BGA_BST_SHIM_DIR` | the directory holding the `bst` shim, set by `tools/bst_run_wrapped.py` into the wrapped `bst` so the shim and the wrapper agree on one place (`UX-1322`); plumbing between wrapper and shim, not a switch | `tools/bst_run_wrapped.py` |
+| `BGA_BST_SHIM_INHIBIT` | read by the shim to run `run_wrapped(inhibit=True)`, set when the wrapper asks for it (`UX-1322`); plumbing between wrapper and shim, not a switch | `tools/bst_run_wrapped.py` |
+| `BGA_BST_SHIM_LOG` | the log path the shim writes and the wrapper reads back after the build (`UX-1322`); plumbing between wrapper and shim, not a switch | `tools/bst_run_wrapped.py` |
 
 The capture path's own namespace, `BST_TRACE_*` — how `bga snapshot`
 drives the `bwrap` shim, the `LD_PRELOAD` hook and the ptrace spine,
@@ -206,6 +211,8 @@ Captures go to `.bga/runs/<UTC-stamp>/` under the project, holding
 `run/`, `plane2.json`, the wrapped log and a `capture-context.txt` — the
 same layout the published capture refs use, so nothing downstream learns
 a second shape. `.bga/` gitignores itself.
+
+The command after `--` need not start with `bst` (`UX-1322`): `bga snapshot -- ./build.sh` runs it with a `bst` shim first on `PATH` that execs the real `bst` and records the log of its `build` invocation. A command that ran no `bst build` is refused by name after it exits, leaving no snapshot claiming the build produced no elements; any refusal before the build comes before the hook compile.
 
 ### Naming runs: `@last`, `@prev`, `@<stamp-prefix>`
 
@@ -618,6 +625,7 @@ Read-only, one line per check, and a concrete remedy on every failure. It invent
 
 Details worth knowing:
 
+- **Containers and junctions** (`UX-1328`, `UX-1331`). The `sleep-policy` check reports ok, naming the container, where the host is one. The stage check counts what the project's local junctions stage too, and warns only when nothing in the project or them stages an executable and the project declares no junction or remote source; otherwise it reports what it could not see as info. Its remedy reads "read the error above", and names `examples/stage_*.sh` only inside this repository's example projects.
 - **bwrap is probed, not just found.** Presence is not the check that matters — bwrap's namespace setup succeeds and then the sandbox fails to bring up loopback, deep inside a build. `doctor` runs the same trivial sandboxed command CI's `bst-smoke` job does.
 - **The compiler is the capture's own, and it compiles the real hook** (`UX-1287`). `c-compiler` resolves `cc` then `gcc` exactly as `compile_hook` does and compiles `tools/native_trace/hook.c` once into a scratch directory it removes, so a missing compiler and one that cannot build the hook (no libc headers) are both a `FAIL` worded as the capture would raise it, naming `build-essential`. A compiler that cannot link `-static` stays a warning: only `--trace-spine` needs it.
 - **"No element plugin registered for kind" gets two different remedies**, because it has two different causes: the package is missing, or the project has not declared it. Telling a user to install what they already have is how a diagnostic loses its reader.
@@ -1178,9 +1186,23 @@ those heuristics, so the resource cell the `Shared Sources` table
 printed can be pasted straight back in (`UX-178`; `UX-192` stopped the
 table eliding long identities, which had reopened it).
 
+A **junction** — `junctions/x.bst`, its file `elements/junctions/x.bst`, or
+a nested `a.bst:b.bst` — is read before those three: every element behind
+its prefix is its source, so the answer is that set plus everything
+downstream, the most a bump rebuilds. A path inside a local junction's
+checkout is read as the identity the inventory stores for it
+(`junctions/x.bst:files/src`), never as "rebuilds nothing" (`UX-1321`).
+
+With `--no-cost` and **no snapshot yet**, the graph and the inventory come
+from the project itself — `bst show` on `--target`, else the project's
+`defaults: targets`, else every element — and the answer says it read the
+project, not a run. A project `bst show` cannot load prints `bst`'s error
+(`UX-1326`).
+
 | flag | what it does |
 |---|---|
 | `--project PATH` | the project a relative path resolves against; defaults to the enclosing BuildStream project |
+| `--target ELEMENT` | with `--no-cost` and no snapshot: the element `bst show` reads the graph from (repeatable) |
 | `--no-cost` | skip the measured rebuild time. The direct set, the closure and the kind split come from the graph and the inventory alone, which on a project of thousands of elements is the difference between a lookup and a full analysis — **0.10s against 3.22s** on the 1,202-element synthetic run (`UX-182`). The answer then says `Cost: not measured` rather than reporting zero |
 | `-f, --format` | `text` or `json` |
 | `-o, --output` | write to a file instead of stdout |
@@ -1201,7 +1223,7 @@ bga compare /path/to/before-run /path/to/after-run
 bga compare /path/to/before-run /path/to/after-run --format json | jq '.verdict'
 ```
 
-The verdict is one of `improved`/`regressed`/`no significant change`/`within the baseline set's own observed range` (`UX-170` — outside the band, but a duration the baseline runs themselves reached, so not evidence of a change)/`not comparable (baseline has no measurable duration)` (a >=1% change in total build duration, relative to the baseline, is the significance threshold), always followed by an explicit caveat when either run's confidence is below the "high" band, and a **refusal** (`UX-78`) when the two runs are not comparable at all — either their graphs share fewer than half their element UIDs (they may not even be the same project) or one is a caches-off run and the other incremental. A refusal prints the failing check to stderr, prints no comparison, and exits **6** — deliberately not 4 or 5, so a CI job keying on the gates cannot read a wrong-artifact-path bug as a regression. `--allow-mismatch` restores the older behaviour: the warning is printed above the comparison and the exit code is the gates' own. Otherwise the exit code is 0 for a successful comparison regardless of verdict — comparing is not itself a failure condition. `--capacity`, if given, applies symmetrically to both runs.
+The verdict is one of `improved`/`regressed`/`no significant change`/`within the baseline set's own observed range` (`UX-170` — outside the band, but a duration the baseline runs themselves reached, so not evidence of a change)/`different work` (`UX-1323` — the runs built different element sets and no element present in both moved past the threshold, so the total moved only through work one run did; a line names each side's elements, and the exit code is no-change's; the gates still read the total delta, so `--fail-on-regression` fails a slower different-work pair)/`not comparable (baseline has no measurable duration)` (a >=1% change in total build duration, relative to the baseline, is the significance threshold), always followed by an explicit caveat when either run's confidence is below the "high" band, and a **refusal** (`UX-78`) when the two runs are not comparable at all — either their graphs share fewer than half their element UIDs (they may not even be the same project) or one is a caches-off run and the other incremental (that refusal adds a `Next:` line: the next snapshot compares like with like, and a fresh cache directory gives the project-wide picture). A refusal prints the failing check to stderr, prints no comparison, and exits **6** — deliberately not 4 or 5, so a CI job keying on the gates cannot read a wrong-artifact-path bug as a regression. `--allow-mismatch` restores the older behaviour: the warning is printed above the comparison and the exit code is the gates' own. Otherwise the exit code is 0 for a successful comparison regardless of verdict — comparing is not itself a failure condition. `--capacity`, if given, applies symmetrically to both runs.
 
 `--band-k K` sets the noise band's width in scaled-MAD units; `bga baseline --band-k K` passes it through to this compare.
 
@@ -1367,9 +1389,13 @@ What would the build drop to if I fixed these? See [its contract and worked exam
 
 - `--element UID` — an element to treat as fixed (instant); repeatable. One longest-path recompute with every named element zeroed, never a sum of their individual savings.
 
+## `bga variant-cost`
+
+N variant builds, or one junctioned invocation? `bga junction-cost` is its old name, kept as an alias (`UX-1327`); a run's own junctions are `bga analyze`'s By Junction section. See [its contract and worked example](json-contracts.md#n-variant-builds-or-one-junctioned-invocation-ux-904).
+
 ## `bga junction-cost`
 
-N variant builds, or one junctioned invocation? See [its contract and worked example](json-contracts.md#n-variant-builds-or-one-junctioned-invocation-ux-904).
+The old name of [`bga variant-cost`](#bga-variant-cost), kept as an alias (`UX-1327`).
 
 ## `bga cache-trend`
 
@@ -1393,6 +1419,7 @@ Open a run's report in a browser (`tools.bga_view`). See [the page, chapter by c
 Plane 2: trace processes inside sandboxes (`tools.bst_native_build_tracer`). See [its flags](#what-each-flag-does-in-full).
 
 - `bga capture run --host-samples PATH` — where to write the host's memory series while the build runs: JSON Lines (`host-samples/v1`), one sample every `HOST_SAMPLE_INTERVAL_S` seconds, of `/proc/meminfo` keys. It sits beside the report, not inside it.
+- A junctioned element is keyed by its full Plane 1 name (`junctions/platform.bst:pkgs/zlib.bst`): when any sandbox ran outside the top project, `bga capture run` pays one `bst show --format '%{name}<US>%{vars}<US>%{build-deps}'` after the build for each element's `project-name`. A project two junctions reach keeps a `<project>/<element>` key, warned once and listed in the report's `junction_names` (`UX-1320`).
 
 ## `bga wrap`
 
@@ -1465,6 +1492,7 @@ Plane 2 trace to Chrome Trace JSON (`tools.native_trace_to_chrome_trace`); every
 Plane 3: mine BuildStream's own element logs (`tools.bst_cache_logs`); every flag is in `bga cache-logs --help`. Beyond the prose [above](#what-each-flag-does-in-full):
 
 - `--project NAME` — only this project's logs.
+- `bga cache-logs PROJECT_DIR` reads every junction's log tree too (`UX-1325`), resolving each junction's project name from its local checkout's `project.conf`, recursively; element names carry the junction prefix. A junction whose name it cannot resolve is named in one line, with `--project` as the way to add it.
 - `--all` — report over every project in the log tree at once (`UX-127`).
 - `--list` — list the projects the tree holds, with log counts and time spans, and exit.
 - `--graph RUN/graph.json` — a run directory's graph, so a rebuild caused by an upstream key change can be told from one whose own definition changed.
@@ -1568,7 +1596,9 @@ bga analyze tests/fixtures/macro_micro/run \
 
 Absent, not empty, when the block declines — the table below says when
 that is. Read `caveat` before acting on `recommended_builders`: it is a
-hypothesis to time, not a setting to apply.
+hypothesis to time, not a setting to apply. A run that built fewer
+elements than its builders measured no bound at that count, so
+`withheld` says so and `recommended_builders` is null (`UX-1324`).
 
 **How it is derived, and what it will not do.** One capture in, one
 recommendation out: no configuration is tried. The sweep replays the

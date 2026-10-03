@@ -50,7 +50,8 @@ def test_a_top_level_annotation_beats_a_junctions(tmp_path, monkeypatch):
 
 @pytest.mark.parametrize(
     ("names", "collisions"),
-    [(["x.bst", "a.bst:x.bst"], 0), (["a.bst:x.bst", "x.bst"], 0), (["a.bst:x.bst", "b.bst:x.bst"], 1)],
+    [(["x.bst", "a.bst:x.bst"], 1), (["a.bst:x.bst", "x.bst"], 1), (["a.bst:x.bst", "b.bst:x.bst"], 1)],
 )
-def test_only_two_junctions_sharing_a_short_name_count_as_a_collision(names, collisions):
+def test_any_two_names_sharing_a_short_name_count_as_a_collision(names, collisions):
+    # UX-1320: a top-level name shadowing a junctioned one counts too.
     assert _claim_short_names(names)[2] == collisions

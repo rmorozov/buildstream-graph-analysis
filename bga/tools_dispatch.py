@@ -129,6 +129,17 @@ TOOL_ALIASES: dict[str, tuple[str, str]] = {
 }
 
 
+# Maintainer tools: runnable as `bga <name>`, listed apart from the commands a user reads.
+MAINTAINER_ALIASES = ("release-notes",)
+
+START_HERE = (
+    "Start here:\n"
+    "  bga doctor .                          can this machine capture at all?\n"
+    "  bga snapshot -- bst build TARGET      capture, analyze and compare\n"
+    "  bga view                              the report, in a browser\n"
+)
+
+
 def format_tool_help() -> str:
     """The alias block for `bga --help`, listing what each one wraps.
 
@@ -137,6 +148,11 @@ def format_tool_help() -> str:
     its `--help`) needs to know where it lives.
     """
     width = max(len(name) for name in TOOL_ALIASES)
+
+    def line(alias):
+        module, help_text = TOOL_ALIASES[alias]
+        return f"  {alias:<{width}}  {help_text}  ({module})"
+
     lines = [
         # "capture & conversion" undersold what is in this list: three
         # of these (`capture`, `cache-logs`, `baseline`) are whole
@@ -146,14 +162,18 @@ def format_tool_help() -> str:
         "capture, analysis and conversion (thin aliases for the programs in",
         "tools/, which remain runnable directly as `python3 -m <module>`):",
     ]
-    for alias, (module, help_text) in TOOL_ALIASES.items():
+    for alias in TOOL_ALIASES:
+        if alias in MAINTAINER_ALIASES:
+            continue
         # UX-158: one line each, module included. The module used to get a
         # second line per alias, which doubled this block on the one
         # screen every user reads first - but dropping it outright was
         # wrong: these stay independently runnable, and a reader who
         # wants to script one needs to know where it lives (the test
         # above this behaviour caught that).
-        lines.append(f"  {alias:<{width}}  {help_text}  ({module})")
+        lines.append(line(alias))
+    lines.append("maintainer tools (not part of analysing a build):")
+    lines.extend(line(alias) for alias in MAINTAINER_ALIASES)
     return "\n".join(lines)
 
 

@@ -118,12 +118,63 @@ class TestAnUnrunnableCheckSaysSoRatherThanPassing:
         assert check_plane3()["status"] == WARN
 
 
+class TestTheRemedyPointsTheWayTheReportPrints:
+    def test_a_load_failure_says_the_error_is_above_its_remedy(self, tmp_path, monkeypatch):
+        import tools.bga_doctor as doctor
+
+        root = tmp_path / "p"
+        (root / "elements").mkdir(parents=True)
+        (root / "project.conf").write_text("name: p\nmin-version: 2.0\nelement-path: elements\n")
+        (root / "elements" / "a.bst").write_text("kind: manual\n")
+        monkeypatch.setattr(doctor.shutil, "which", lambda name: "/usr/bin/bst")
+        failed = subprocess.CompletedProcess([], 1, "", "Failed to load source plugin 'x'")
+        monkeypatch.setattr(doctor.subprocess, "run", lambda *a, **k: failed)
+
+        [finding] = doctor.check_project_loads(str(root))
+        text = doctor.format_text([finding], str(root))
+
+        assert "read the error above" in finding["remedy"]
+        assert text.index("Failed to load source plugin") < text.index("read the error above")
+
+
 class TestTheCensusChecksAreTwoDifferentThings:
     def test_a_project_staging_nothing_executable_is_warned_about(self, bare_project):
         findings = {f["id"]: f for f in check_staged_sources(str(bare_project))}
 
         assert findings["staged-sources"]["status"] == WARN
+        assert "stage_runtimes.sh" not in findings["staged-sources"]["remedy"], (
+            "bga's scripts are not the user's remedy"
+        )
+
+    def test_inside_a_bga_example_the_stage_script_is_the_remedy(self, tmp_path, bare_project):
+        examples = tmp_path / "examples"
+        examples.mkdir()
+        (examples / "stage_runtimes.sh").write_text("#!/bin/sh\n")
+        moved = examples / "01-bare"
+        bare_project.rename(moved)
+
+        findings = {f["id"]: f for f in check_staged_sources(str(moved))}
+
+        assert findings["staged-sources"]["status"] == WARN
         assert "stage_runtimes.sh" in findings["staged-sources"]["remedy"]
+
+    def test_a_junction_declared_means_the_toolchain_may_arrive_unseen(self, bare_project):
+        (bare_project / "elements" / "junctions").mkdir()
+        (bare_project / "elements" / "junctions" / "base.bst").write_text("kind: junction\n")
+
+        findings = {f["id"]: f for f in check_staged_sources(str(bare_project))}
+
+        assert findings["staged-sources"]["status"] == OK
+        assert "junctions/base.bst" in findings["staged-sources"]["summary"]
+        assert "not checked" in findings["staged-sources"]["summary"]
+
+    def test_a_remote_source_means_the_toolchain_may_arrive_unseen(self, bare_project):
+        (bare_project / "elements" / "tc.bst").write_text("kind: import\nsources:\n- kind: tar\n  url: x:y\n")
+
+        findings = {f["id"]: f for f in check_staged_sources(str(bare_project))}
+
+        assert findings["staged-sources"]["status"] == OK
+        assert "not local" in findings["staged-sources"]["summary"]
 
     def test_a_busybox_project_is_reported_as_a_blind_spot_not_a_failure(self):
         """`examples/01` builds perfectly and produces an empty Plane 2

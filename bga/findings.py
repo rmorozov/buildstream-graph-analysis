@@ -35,8 +35,8 @@ import os
 import statistics
 from typing import Optional
 
+from . import junction_rollup, sweep_curve
 from . import shown as qty
-from . import sweep_curve
 from .cache_effectiveness import (
     HEALTHY_HIT_RATIO,
     POOR_HIT_RATIO,
@@ -122,6 +122,8 @@ FINDING_READERS = {
     "confidence": "ci-gatekeeper",
     "efficiency-score": "ci-gatekeeper",
     "cache-hit-ratio": "ci-gatekeeper",
+    # UX-1327: which project a junction brings in rebuilt is the graph owner's question.
+    "junction-cache-gap": "graph-owner",
     "run-mode-incremental": "ci-gatekeeper",
     # R5 - the fleet.
     "memory-envelope": "capacity-operator",
@@ -423,6 +425,52 @@ def _run_command(result, *argv: str) -> Optional[list[str]]:
     """`bga <argv> <run>`, naming the run as `compute_next_steps` does; None without a run path."""
     run_dir = ((getattr(result, 'run_instance', None) or {}).get('run_dir') or '').strip()
     return ['bga', *argv, run_token(run_dir)] if run_dir else None
+
+
+def _junction_cache_findings(result: AnalysisResult) -> list[dict]:
+    """UX-1327: one finding when a junction's elements were reused far less than the top project's."""
+    if (result.confidence or {}).get('run_mode') != 'incremental':
+        return []
+    gaps = junction_rollup.cache_gaps(getattr(result, 'by_junction', None))
+    if not gaps:
+        return []
+    worst = gaps[0]
+    row = worst['row']
+    tail = row['prefix'].rpartition(':')[2]
+    against = f"against {qty.share(worst['top_hit_share'])} in the top project"
+    title = f"{qty.share(worst['hit_share'])} cache hits behind {tail} {against}"
+    if len(title) > 100:
+        title = f"{qty.share(worst['hit_share'])} cache hits behind one junction {against}"
+    gap_points = round(junction_rollup.HIT_SHARE_GAP * 100)
+    detail = [
+        f"    {gap['row']['prefix']}: {gap['row']['built']} of {gap['row']['elements']} elements built here, "
+        f"{qty.share(gap['hit_share'])} cached"
+        for gap in gaps
+    ]
+    detail.append(
+        f"    Published at {gap_points} points or more below the top project, over "
+        f"{junction_rollup.MIN_ELEMENTS} elements or more, on an incremental run"
+    )
+    return [
+        _finding(
+            'junction-cache-gap',
+            SEVERITY_MEDIUM,
+            title,
+            detail=detail,
+            evidence={
+                'prefix': row['prefix'],
+                'hit_share': worst['hit_share'],
+                'top_hit_share': worst['top_hit_share'],
+                'element_count': row['elements'],
+                'built_elements': row['built'],
+                'cached_elements': row['cached'],
+            },
+            step=_step(
+                f"Check what moved the cache keys behind {row['prefix']}: its ref, its options, "
+                f"or a cache server the top project reaches and it does not."
+            ),
+        )
+    ]
 
 
 def _cache_findings(result: AnalysisResult) -> list[dict]:
@@ -832,6 +880,8 @@ def _run_context_findings(result: AnalysisResult) -> list[dict]:
     # An incremental run's whole point is the cache, and until now the
     # report said "incremental" without ever saying how well that went.
     findings.extend(_cache_findings(result))
+    # UX-1327: beside the project-wide ratio it splits by junction.
+    findings.extend(_junction_cache_findings(result))
 
     primary = confidence.get('primary')
     if primary is not None:
@@ -1271,6 +1321,9 @@ def _capacity_recommendation_finding(result: AnalysisResult) -> list[dict]:
     recommendation = getattr(result, 'capacity_recommendation', None) or {}
     if not recommendation:
         return []
+    withheld = recommendation.get('withheld')
+    if withheld:
+        return [_capacity_withheld_finding(recommendation, withheld)]
 
     binding = recommendation['binding_constraint']
     recommended = recommendation['recommended_builders']
@@ -1410,6 +1463,29 @@ def _capacity_recommendation_finding(result: AnalysisResult) -> list[dict]:
         # UX-1143: the page section drawing this evidence; the card links there rather than repeating it.
         | {'section': 'capacity_recommendation'}
     ]
+
+
+def _capacity_withheld_finding(recommendation: dict, withheld: dict) -> dict:
+    """`UX-1324`: the recommendation's own withheld line, and no builders step."""
+    built, builders = withheld['built_elements'], recommendation['builders']
+    advice = recommendation.get('max_jobs_advice') or {}
+    return _finding(
+        'capacity-recommendation',
+        SEVERITY_INFO,
+        f"{plural(built, 'element')} built, too few to bound {plural(builders, 'builder')}: builders recommendation withheld",
+        # The per-element -j advice is not bounded by builders, so it stays where it changes something.
+        detail=_max_jobs_advice_detail(advice)
+        if any(r.get('max_jobs_change') for r in advice.get('elements') or [])
+        else [],
+        evidence={
+            'builders': builders,
+            'built_elements': built,
+            'binding_constraint': None,
+            'recommended_builders': None,
+            'builders_change': None,
+        },
+        step=_none(recommendation['caveat']),
+    ) | {'section': 'capacity_recommendation'}
 
 
 def _swap_observed_finding(result: AnalysisResult) -> list[dict]:
@@ -2811,6 +2887,22 @@ def run_token(run_dir: str) -> str:
     return token if run_store.is_alias(token) else run_dir
 
 
+def _wrapper_command(run_dir: str) -> Optional[list]:
+    """UX-1322: the wrapper the snapshot ran (`capture-context.txt`'s `command=`), or `None` for `bst`."""
+    try:
+        with open(
+            os.path.join(os.path.dirname(os.path.normpath(run_dir)), 'capture-context.txt'), encoding='utf-8'
+        ) as handle:
+            for line in handle:
+                if line.startswith('command='):
+                    argv = line[len('command=') :].split()
+                    first = argv[0] if argv else 'bst'
+                    return None if first == 'bst' or first.endswith('/bst') else argv
+    except OSError:
+        return None
+    return None
+
+
 def _store_run_modes(project: str) -> list[tuple]:
     """`(stamp, run_mode)` per run in the store, oldest first.
 
@@ -3004,11 +3096,12 @@ def compute_next_steps(result: AnalysisResult, headline: Optional[dict] = None) 
         # function: a command spelled approximately is worse than none.
         targets = [t for t in (instance.get('targets') or []) if t]
         if targets:
+            build = _wrapper_command(run_dir) or ['bst', 'build', *targets]
             steps.append(
                 {
                     'id': 'measure-again',
                     'reason': f"Make the change, then capture it the same way — run it in {project}.",
-                    'argv': ['bga', 'snapshot', '--', 'bst', 'build', *targets],
+                    'argv': ['bga', 'snapshot', '--', *build],
                     'follows_from': 'run_instance.targets',
                 }
             )

@@ -1240,4 +1240,8 @@ MEDIUM = (
     "tests/unit/test_a_pilot_kit_runs_report_only.py",  #    8.4s
     # Round 169's merged tree, alone in one process: 2.26 / 2.13s.
     "tests/unit/test_escape_folds_the_narrow_sections_list.py",  #    2.2s
+    # Round 170, measured single-process on landing.
+    "tests/unit/test_a_build_run_through_a_wrapper_script_is_captured.py",  #    1.0s
+    "tests/unit/test_a_comparison_of_different_work_is_not_a_verdict.py",  #    2.2s
+    "tests/unit/test_blast_answers_before_the_first_capture.py",  #    2.5s
 )

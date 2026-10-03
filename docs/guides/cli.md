@@ -1178,9 +1178,23 @@ those heuristics, so the resource cell the `Shared Sources` table
 printed can be pasted straight back in (`UX-178`; `UX-192` stopped the
 table eliding long identities, which had reopened it).
 
+A **junction** — `junctions/x.bst`, its file `elements/junctions/x.bst`, or
+a nested `a.bst:b.bst` — is read before those three: every element behind
+its prefix is its source, so the answer is that set plus everything
+downstream, the most a bump rebuilds. A path inside a local junction's
+checkout is read as the identity the inventory stores for it
+(`junctions/x.bst:files/src`), never as "rebuilds nothing" (`UX-1321`).
+
+With `--no-cost` and **no snapshot yet**, the graph and the inventory come
+from the project itself — `bst show` on `--target`, else the project's
+`defaults: targets`, else every element — and the answer says it read the
+project, not a run. A project `bst show` cannot load prints `bst`'s error
+(`UX-1326`).
+
 | flag | what it does |
 |---|---|
 | `--project PATH` | the project a relative path resolves against; defaults to the enclosing BuildStream project |
+| `--target ELEMENT` | with `--no-cost` and no snapshot: the element `bst show` reads the graph from (repeatable) |
 | `--no-cost` | skip the measured rebuild time. The direct set, the closure and the kind split come from the graph and the inventory alone, which on a project of thousands of elements is the difference between a lookup and a full analysis — **0.10s against 3.22s** on the 1,202-element synthetic run (`UX-182`). The answer then says `Cost: not measured` rather than reporting zero |
 | `-f, --format` | `text` or `json` |
 | `-o, --output` | write to a file instead of stdout |

@@ -1776,9 +1776,21 @@ def cmd_blast(args: argparse.Namespace) -> int:
     just as it does on an answer of two hundred. The refusal grammar
     lives in `compare`, where a gate belongs.
     """
-    from bga.blast import blast, format_blast_json, format_blast_text
-    from bga.run_store import project_root
+    from bga.blast import blast, blast_from_project, format_blast_json, format_blast_text
+    from bga.run_store import list_runs, project_root
 
+    project = args.project or project_root() or "."
+    # UX-1326: the structural half needs no run - with none yet, read the project itself.
+    no_snapshot = os.path.isfile(os.path.join(project, 'project.conf')) and not list_runs(project)
+    if getattr(args, 'no_cost', False) and args.run == '@last' and no_snapshot:
+        try:
+            answer = blast_from_project(project, args.target, targets=args.bst_target or ())
+        except (RuntimeError, OSError) as error:
+            print(f"Error: no snapshot here, and `bst show` could not read the project: {error}", file=sys.stderr)
+            if not args.bst_target:
+                print("Pass --target ELEMENT to read the graph from one element instead.", file=sys.stderr)
+            return 2
+        return _emit_blast(args, answer, format_blast_json, format_blast_text)
     try:
         run_dir = resolve_run_alias(args.run)
     except StoreError as error:
@@ -1787,7 +1799,6 @@ def cmd_blast(args: argparse.Namespace) -> int:
     if not Path(run_dir).is_dir():
         print(f"Error: not a run directory: {run_dir}", file=sys.stderr)
         return 2
-    project = args.project or project_root() or "."
     try:
         answer = blast(run_dir, args.target, project_dir=project, measure=not getattr(args, 'no_cost', False))
     except (FileNotFoundError, ValueError) as error:
@@ -1800,6 +1811,10 @@ def cmd_blast(args: argparse.Namespace) -> int:
             file=sys.stderr,
         )
         return 2
+    return _emit_blast(args, answer, format_blast_json, format_blast_text)
+
+
+def _emit_blast(args, answer, format_blast_json, format_blast_text) -> int:
     output = format_blast_json(answer) if args.format == 'json' else format_blast_text(answer)
     if getattr(args, 'output', None):
         with open(args.output, 'w', encoding='utf-8') as handle:
@@ -2636,7 +2651,18 @@ def _add_blast_subcommand(subparsers) -> None:
         action='store_true',
         help='Skip the measured rebuild time. The rest of the answer comes from\n'
         'the graph and the source inventory alone, which on a large project\n'
-        'is the difference between a lookup and a full analysis.',
+        'is the difference between a lookup and a full analysis. With no\n'
+        'snapshot yet, it reads the project with `bst show` instead.',
+    )
+    blast_parser.add_argument(
+        '--target',
+        dest='bst_target',
+        action='append',
+        default=None,
+        metavar='ELEMENT',
+        help='With --no-cost and no snapshot: the element `bst show` reads the\n'
+        'graph from (repeatable). Defaults to the project\'s `defaults: targets`,\n'
+        'or every element when it declares none.',
     )
     blast_parser.add_argument(
         '-f',

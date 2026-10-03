@@ -1304,10 +1304,14 @@ _BLAST_REQUIRED = {
     "measured": "boolean",
 }
 
-# `UX-1321`, `UX-1330`: written on every answer, so always-written rather than required (`UX-629`).
+# `UX-1321`, `UX-1326`, `UX-1330`: written on every answer, so always-written rather than required (`UX-629`).
 _BLAST_OPTIONAL = {
     # The junction the target is, or whose checkout a path is inside; `null` otherwise.
     "junction": "object",
+    # `run`, or `project` when `--no-cost` read `bst show` because no snapshot exists.
+    "read_from": "string",
+    # The targets `bst show` read (`[]`: every element, BuildStream's default); `null` from a run.
+    "project_targets": "array",
     "did_you_mean": "array",
 }
 

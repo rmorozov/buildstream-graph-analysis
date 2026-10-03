@@ -344,6 +344,23 @@ def _element_file(prefix: str, within: str, checkout: str, known: set[str]) -> s
     return {f"{prefix}:{within[len(element_path) :]}"} & known
 
 
+def _by_heuristic(inventory: dict, target: str, project_dir: Optional[str], known: set[str], shapes):
+    """`(direct, used, keying, kind, junction)` from the first shape that matches."""
+    junction = None
+    for shape in shapes:
+        if shape == "url":
+            direct, keying = _elements_for_url(inventory, target), "ref"
+        elif shape == "path":
+            junction = _junction_path(target, project_dir, known, inventory)
+            direct = junction.pop("direct") if junction else _elements_for_path(inventory, target, project_dir)
+            keying = "content"
+        else:
+            direct, keying = {_as_element_name(target, project_dir, known)} & known, None
+        if direct:
+            return direct, shape, keying, _kind_of(inventory, direct, keying), junction
+    return set(), None, None, None, junction
+
+
 def _kind_of(inventory: dict, direct: set[str], keying: Optional[str]) -> Optional[str]:
     """The source kind behind a heuristic match, when it is unambiguous.
 
@@ -379,12 +396,59 @@ def blast(run_dir, target: str, project_dir: Optional[str] = None, measure: bool
     _context, graph, _trace = load_all(run_dir)
     inventory = sources_mod.load_inventory(run_dir / "sources.json") or {}
     # UX-341: integer microseconds, kept exact.
-    durations = compute_element_durations(_tasks_of(run_dir)) if measure else {}
-    return answer(graph, inventory, target, project_dir, durations, measure)
+    durations = compute_element_durations(_tasks_of(run_dir)) if measure else None
+    return {
+        **answer(graph, inventory, target, project_dir, durations),
+        "read_from": "run",
+        "project_targets": None,
+    }
 
 
-def answer(graph, inventory: dict, target: str, project_dir: Optional[str], durations: dict, measure: bool) -> dict:
-    """The answer over a loaded graph and inventory."""
+def declared_default_targets(project_dir: str) -> list[str]:
+    """`project.conf`'s `defaults: targets`, or `[]` - BuildStream then reads every element."""
+    import yaml
+
+    try:
+        with open(os.path.join(project_dir, "project.conf"), encoding="utf-8") as handle:
+            data = yaml.safe_load(handle) or {}
+    except (OSError, yaml.YAMLError):
+        return []
+    targets = (data.get("defaults") or {}).get("targets") if isinstance(data, dict) else None
+    return [str(t) for t in targets] if isinstance(targets, list) else []
+
+
+def blast_from_project(project_dir: str, target: str, targets=(), bst_bin: str = "bst") -> dict:
+    """UX-1326: the `--no-cost` answer from `bst show` and the `.bst` files, with no run.
+
+    Raises `RuntimeError` (bst's own error) or `OSError` when the project cannot be read.
+    """
+    import tempfile
+
+    from .ingest.loader import load_graph
+
+    targets = list(targets) or declared_default_targets(project_dir)
+    document = _tool("tools.bst_show_to_graph").extract_graph(project_dir, targets, bst_bin=bst_bin)
+    extract = _tool("tools.bst_extract_run")
+    inventory = extract.build_source_inventory(
+        project_dir,
+        [element["uid"] for element in document["elements"]],
+        kind_map=extract._read_bga_source_kind_map(project_dir),
+    )
+    with tempfile.TemporaryDirectory() as scratch:
+        path = Path(scratch) / "graph.json"
+        path.write_text(json.dumps(document))
+        graph = load_graph(path)
+    return {
+        **answer(graph, inventory, target, project_dir, None),
+        "read_from": "project",
+        "project_targets": targets,
+    }
+
+
+def answer(graph, inventory: dict, target: str, project_dir: Optional[str], durations: Optional[dict]) -> dict:
+    """The answer over a loaded graph and inventory; `durations=None` is `--no-cost`."""
+    measure = durations is not None
+    durations = durations or {}
     downstream, _upstream = compute_reachability(graph)
     # UX-206: `downstream` is the transitive closure - every element a
     # change reaches, at any distance. The tree needs the *immediate*
@@ -425,21 +489,8 @@ def answer(graph, inventory: dict, target: str, project_dir: Optional[str], dura
     if junction is not None:
         direct, used, keying, kind = set(junction.pop("elements")), "junction", None, None
         shapes = ["junction"] + shapes
-    for shape in [] if direct or junction else shapes:
-        if shape == "url":
-            direct = _elements_for_url(inventory, target)
-            keying = "ref"
-        elif shape == "path":
-            junction = _junction_path(target, project_dir, known, inventory)
-            direct = junction.pop("direct") if junction else _elements_for_path(inventory, target, project_dir)
-            keying = "content"
-        else:
-            direct = {name} & known
-            keying = None
-        if direct:
-            used = shape
-            kind = _kind_of(inventory, direct, keying)
-            break
+    if not direct and junction is None:
+        direct, used, keying, kind, junction = _by_heuristic(inventory, target, project_dir, known, shapes)
     if used is None:
         used = shapes[0] if shapes else "element"
 
@@ -576,7 +627,7 @@ def _junction_lines(junction: dict, resolved_as: str) -> list[str]:
     elif junction.get('source_kind'):
         where = f" ({junction['url']})" if junction.get('url') else ""
         lines.append(
-            f"  Sourced by `{junction['source_kind']}`{where}: a ref bump rebuilds at most this; "
+            f"  Fetched by `{junction['source_kind']}`{where}: a ref bump rebuilds at most this; "
             "the fetch is not priced"
         )
     return lines
@@ -597,8 +648,41 @@ def _junction_miss(junction: dict, resolved_as: str) -> str:
     )
 
 
+def _read_from(answer: dict) -> list[str]:
+    """UX-1326: an answer read from the project says so, and which targets it read."""
+    if answer.get('read_from') != "project":
+        return []
+    targets = ", ".join(answer.get('project_targets') or []) or (
+        "every element in the project (BuildStream's default: project.conf declares no `defaults: targets`)"
+    )
+    return [f"  Read from the project, not a run - no snapshot here yet; `bst show` on {targets}"]
+
+
+def _miss_lines(answer: dict, junction: Optional[dict]) -> list[str]:
+    """The answer when nothing matched - which is not always "rebuilds nothing"."""
+    if junction is not None:
+        return [_junction_miss(junction, answer['resolved_as'])]
+    lines = _miss_reason(answer)
+    if answer.get('did_you_mean'):
+        lines.append(f"  Did you mean {', '.join(answer['did_you_mean'])}?")
+    return lines
+
+
+def _miss_reason(answer: dict) -> list[str]:
+    here = "the project's graph" if answer.get('read_from') == "project" else "this run"
+    if answer['resolved_as'] == 'element' and not answer['element_exists']:
+        # UX-178: the sentence `classify_target`'s comment promised and no code printed.
+        return [f"  No element of that name is in {here}. Check the spelling, or pass a path or a repository url."]
+    if answer['resolved_as'] != 'element' and not answer['has_inventory'] and answer.get('read_from') != "project":
+        return [
+            "  Nothing matched, and this run carries no source inventory - it was captured before `bga extract` wrote",
+            "  one, so a url or a path cannot be resolved against it.",
+        ]
+    return [f"  Nothing in {here} sources it. Touching it rebuilds nothing here."]
+
+
 def format_blast_text(answer: dict) -> str:
-    lines = [f"Blast radius: {answer['target']}"]
+    lines = [f"Blast radius: {answer['target']}", *_read_from(answer)]
     lines.append(
         f"  Resolved as {_article(answer['resolved_as'])}"
         + (
@@ -610,30 +694,7 @@ def format_blast_text(answer: dict) -> str:
     )
     junction = answer.get('junction')
     if not answer['direct_count']:
-        lines.append("")
-        if junction is not None:
-            lines.append(_junction_miss(junction, answer['resolved_as']))
-            return "\n".join(lines)
-        if answer['resolved_as'] == 'element' and not answer['element_exists']:
-            # UX-178: the sentence `classify_target`'s comment promised
-            # and no code printed.
-            lines.append(
-                "  No element of that name is in this run. Check the spelling, or pass a path or a repository url."
-            )
-            if answer.get('did_you_mean'):
-                lines.append(f"  Did you mean {', '.join(answer['did_you_mean'])}?")
-            return "\n".join(lines)
-        if answer['resolved_as'] != 'element' and not answer['has_inventory']:
-            lines.append(
-                "  Nothing matched, and this run carries no source "
-                "inventory - it was captured before `bga extract` wrote"
-            )
-            lines.append("  one, so a url or a path cannot be resolved against it.")
-        else:
-            lines.append("  Nothing in this run sources it. Touching it rebuilds nothing here.")
-        if answer.get('did_you_mean'):
-            lines.append(f"  Did you mean {', '.join(answer['did_you_mean'])}?")
-        return "\n".join(lines)
+        return "\n".join([*lines, "", *_miss_lines(answer, junction)])
 
     if junction is not None:
         lines += ["", *_junction_lines(junction, answer['resolved_as'])]
@@ -643,11 +704,13 @@ def format_blast_text(answer: dict) -> str:
         "",
         f"  Sourced directly by {plural(answer['direct_count'], 'element')}: {named}{more}",
         f"  Rebuilds {sources_mod.format_kind_split(answer['building_count'], answer['assembling_count'])}"
-        f" of {answer['element_count']} in this build",
+        f" of {answer['element_count']} in {'the project' if answer.get('read_from') == 'project' else 'this build'}",
     ]
     if answer['by_element_kind']:
         lines.append("    " + ", ".join(f"{count} {kind}" for kind, count in answer['by_element_kind'].items()))
-    if not answer.get('measured', True):
+    if answer.get('read_from') == "project":
+        lines.append("  Cost: not measured - no run yet; `bga snapshot -- bst build TARGET` takes one")
+    elif not answer.get('measured', True):
         lines.append("  Cost: not measured - re-run without --no-cost for the measured rebuild time")
     elif answer['measured_us'] is None:
         lines.append("  Cost: unmeasured - no element of the blast ran in this build")

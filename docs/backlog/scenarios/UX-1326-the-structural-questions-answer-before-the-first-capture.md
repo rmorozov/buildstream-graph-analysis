@@ -2,7 +2,7 @@
 
 **Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the junction-heavy onboarding walk, 2026-10-03 (`/mnt/project-files/onboarding-walk-2026-10-03/onboarding-walk.md`) | **Serves:** R1, R3 | **Topic:** analysis | **Area:** bga | **Shape:** judgement | **Reading:** container
 
-**Guard:** none — open, no guard named yet
+**Guard:** `tests/unit/test_blast_answers_before_the_first_capture.py`
 
 ## Motivation
 
@@ -42,3 +42,54 @@ On carbonOS, `bga blast junctions/bootstrap.bst:pkgs/glibc.bst --no-cost` with n
 with element counts; a guard with a fake `bst show` asserts it. Reading taken in this container.
 
 ## Outcome
+
+### The gap, measured
+
+The Motivation's reading at `19f1fd73`; the measured path still refuses the same way, as intended:
+
+```text
+$ cd /root/walk/carbon; bga blast junctions/bootstrap.bst:pkgs/glibc.bst
+Error: @last names a snapshot and /root/walk/carbon has none yet. `bga snapshot -- bst build TARGET` takes one.
+```
+
+### The close, measured
+
+bst 2.8.1 from `/root/walk/venv`, no `.bga` in either project:
+
+```text
+$ cd /root/walk/carbon; bga blast junctions/bootstrap.bst:pkgs/glibc.bst --no-cost --target groups/core.bst
+  Read from the project, not a run - no snapshot here yet; `bst show` on groups/core.bst
+  Resolved as an element (it also reads as a path; resolution order is url, path, element)
+  Sourced directly by 1 element: junctions/bootstrap.bst:pkgs/glibc.bst
+  Rebuilds 216 elements (202 that build, 14 that assemble) of 316 in the project
+  Cost: not measured - no run yet; `bga snapshot -- bst build TARGET` takes one
+real 0m7.014s
+$ cd /root/walk/carbon; bga blast junctions/bootstrap.bst:pkgs/glibc.bst --no-cost
+Error: no snapshot here, and `bst show` could not read the project: bst show failed (exit 255) for targets []: …
+pkgs/mozjs.bst: Malformed YAML:
+Duplicate key variables at line 35 column 0
+Pass --target ELEMENT to read the graph from one element instead.
+$ cd <copy of jproj without .bga>; bga blast junctions/platform.bst --no-cost
+  Read from the project, not a run - no snapshot here yet; `bst show` on every element in the project (BuildStream's default: project.conf declares no `defaults: targets`)
+  Resolved as a junction (…)
+$ python3 -m pytest -q tests/unit/test_blast_answers_before_the_first_capture.py
+7 passed
+```
+
+216 is the walk's `rebuild-set --cut` figure. carbonOS declares no `defaults: targets`, so its
+default is BuildStream's own, every element, and `bst show` with no target fails on
+`pkgs/mozjs.bst` by itself; the Acceptance Test's no-target reading needs `--target groups/core.bst`.
+
+### Mutations verified red and reverted (7)
+
+| # | mutation | reddened |
+|---|---|---|
+| N1 | `cmd_blast` never takes the project branch | 5 failed, 1 passed |
+| N2 | the project branch taken without `--no-cost` | 1 failed, 5 passed |
+| N3 | `--target` ignored | 1 failed, 5 passed |
+| N4 | `defaults: targets` not read | 1 failed, 5 passed |
+| N5 | the answer does not say it read the project | 3 failed, 3 passed |
+| N6 | bst's error not printed | 1 failed, 5 passed |
+| E | `no_snapshot` ignores `list_runs`, against a snapshot present (verifier) | 1 failed, 6 passed |
+
+Restored: 7 passed.

@@ -6,9 +6,11 @@ Every `bga` command and flag the kit runs or the guide names exists. A
 dry run of `capture` then `report` - a stub standing in for the build -
 prints a ci-comment and exits 0 on a slower verdict, through
 `UX-1286`'s real `--bundles`. The guide's band threshold and exit-6
-row are what the kit does (`UX-1296`).
+row are what the kit does (`UX-1296`), and every verdict and build wall
+reaches a step that keeps it, pull requests included (`UX-1297`).
 """
 
+import fnmatch
 import json
 import os
 import re
@@ -366,3 +368,49 @@ class TestTheBandThreshold:
         assert "\trule\t6" in (pilot.kept / "verdicts.tsv").read_text()
         assert "Cross-host gate FAILED" in done.stderr
         assert _exit_row("6")[2].startswith("comments"), "the guide's exit-6 row says the kit does not comment"
+
+
+LEDGERS = ("verdicts.tsv", "builds.tsv")
+
+
+def _steps() -> list:
+    return yaml.safe_load(WORKFLOW.read_text(encoding="utf-8"))["jobs"]["build"]["steps"]
+
+
+def _keeps_on_every_event(step: dict, ledger: str) -> bool:
+    """An artifact, on every event: a pull request's cache never leaves the pull request."""
+    keep = _workflow_switches()["PILOT_KEEP_DIR"]
+    path = str(step.get("with", {}).get("path", ""))
+    paths = [p.strip().replace("${{ env.PILOT_KEEP_DIR }}", keep) for p in path.splitlines()]
+    return (
+        str(step.get("uses", "")).startswith("actions/upload-artifact@")
+        and step.get("if") == "always()"
+        and any(fnmatch.fnmatch(f"{keep}/{ledger}", p) or p.rstrip("/") == keep for p in paths)
+    )
+
+
+class TestEveryReadingIsKept:
+    """UX-1297: every report's verdict and every build's wall reach a step that keeps it."""
+
+    @pytest.mark.parametrize("ledger", LEDGERS)
+    def test_the_workflow_keeps_the_ledger_after_the_report_on_every_event(self, ledger):
+        steps = _steps()
+        report = next(i for i, s in enumerate(steps) if "bga-pilot.sh report" in str(s.get("run", "")))
+        assert [s["name"] for s in steps[report + 1 :] if _keeps_on_every_event(s, ledger)], f"no step keeps {ledger}"
+
+    def test_the_guide_names_where_the_readings_land(self):
+        artifact = next(s for s in _steps() if _keeps_on_every_event(s, "verdicts.tsv"))["with"]["name"]
+        section = GUIDE.read_text(encoding="utf-8").split("## What two weeks measure", 1)[1].split("\n## ", 1)[0]
+        assert [n for n in (artifact, *LEDGERS) if f"`{n}`" not in section] == []
+
+    @pytest.mark.parametrize(
+        "arm, switches", [("captured", {}), ("plain", {"PILOT_REVIEW_SAMPLE": "0"}), ("unready", {})]
+    )
+    def test_every_build_writes_its_wall(self, pilot, arm, switches):
+        if arm == "unready":
+            (pilot.tmp / "tmpdir/bga-pilot/ready").unlink()
+
+        assert pilot.run("capture", **switches).returncode == 0
+
+        fields = (pilot.kept / "builds.tsv").read_text().rstrip("\n").split("\t")
+        assert fields[1:4] == ["review", "default", arm] and fields[4].isdigit() and fields[5] == "0", fields

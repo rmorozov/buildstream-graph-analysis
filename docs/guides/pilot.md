@@ -40,8 +40,9 @@ is not measured here.
 
 **`capture`** runs the build under `bga capture run`, declares its class
 (`BGA_BUILD_TYPE`, `BGA_BUILD_VARIANT`) and keeps the run as a bundle in
-`PILOT_KEEP_DIR/<type>/<variant>/`. The build's own exit code is the
-step's. Overhead, the one reading there is (`UX-895`,
+`PILOT_KEEP_DIR/<type>/<variant>/`. Every build, captured or plain,
+appends one line to `PILOT_KEEP_DIR/builds.tsv`. The build's own exit
+code is the step's. Overhead, the one reading there is (`UX-895`,
 [`real-project.md`](real-project.md), Step 0:
 CodSpeed Graviton, 16 cores, `examples/11-serial-giant`, n=3 per arm):
 
@@ -79,14 +80,14 @@ needed to find or turn off one.
 | `PILOT_BGA_REPO` | `https://github.com/rmorozov/buildstream-graph-analysis` | a git URL | where the pinned commit is fetched from — a mirror, if your agents have no internet |
 | `PILOT_BUILD_TYPE` | `review` | free text | the class's type (`BGA_BUILD_TYPE`); the workflow sets `night` on the schedule. Two types are two populations |
 | `PILOT_BUILD_VARIANT` | (empty) | `name=value,...` | the class's variant (`BGA_BUILD_VARIANT`), e.g. `arch=aarch64` |
-| `PILOT_REVIEW_SAMPLE` | `25` | 0-100 | percent of `review` builds captured; the rest build plain and are your overhead control. Other types are always captured; the workflow sets 100 on push to main |
+| `PILOT_REVIEW_SAMPLE` | `25` | 0-100 | percent of `review` builds captured; the rest build plain, `plain` in `builds.tsv`, and are your overhead control. Other types are always captured; the workflow sets 100 on push to main |
 | `PILOT_JOBSERVER` | `off` | `off`, `auto`, a token count | `bga capture run --jobserver`. **Off throughout the pilot** — see below |
 | `PILOT_ADMISSION` | `off` | `off`, `on` | `on` sets `BGA_ADMISSION=1`: sandbox admission under the jobserver. Measured slower, so opt-in |
 | `PILOT_TRACE_OPENS` | `off` | `off`, `on` | `--trace-opens`: the comment's "Declared, never read" column. +8.9% wall against +7.1% |
 | `PILOT_TRACE_SPINE` | `off` | `off`, `on`, `auto` | `--trace-spine`: the ptrace spine. No measured cost over the capture alone |
 | `PILOT_BAND_WINDOW` | `10` | 3-99 | `--band-from-class N`: how many kept runs of the class form the band |
 | `PILOT_CROSS_HOST` | `off` | `off`, `on` | `--allow-cross-host`: band members and baseline from other machines count. Only for a uniform fleet |
-| `PILOT_KEEP_DIR` | `bga-pilot-kept` | a directory | the kept bundle tree; the workflow restores and saves it as a cache |
+| `PILOT_KEEP_DIR` | `bga-pilot-kept` | a directory | the kept bundle tree and its two `.tsv` files; the workflow restores it from a cache, saves it off pull requests, and uploads the `.tsv` files from every run |
 | `PILOT_KEEP_LAST` | `30` | a count | bundles kept per class; older ones are deleted at capture |
 | `PILOT_ENFORCE` | `off` | `off`, `on` | `on` re-applies exit 4 or 5 to the job: the switch from report-only to gating |
 
@@ -135,13 +136,21 @@ one unless `PILOT_ENFORCE=on`:
 
 ## What two weeks measure
 
-- **Overhead on your shape**: captured against plain `review` builds,
-  which the sample rate supplies as a control.
+- **Overhead on your shape**: `builds.tsv` holds one line per build —
+  stamp, type, variant, `captured`, `plain` or `unready` (setup failed),
+  wall seconds, exit code. The `plain` `review` lines, which the sample
+  rate supplies, are the control for the `captured` ones.
 - **The band's width and its false alarms**: `verdicts.tsv` holds one
   line per report — stamp, type, variant, `band` or `rule`, exit code.
   An exit 4 on a change your team judges inert is a false alarm.
 - **Whether 10 runs is the window**: `PILOT_BAND_WINDOW` against the
   same tree, re-run on kept bundles.
+
+Both files sit in `PILOT_KEEP_DIR`. A pull request's cache is scoped to
+that pull request, so the workflow saves the cache off pull requests
+only, and every run, pull requests included, uploads both files as the
+`bga-pilot-lines` artifact. Each artifact repeats the cached lines
+before it: download them all and keep each line once (`sort -u`).
 
 Five captures of one unchanged freedesktop-sdk commit spanned **33%**
 (`UX-899`) — the reason the gate judges a band, not the last build.

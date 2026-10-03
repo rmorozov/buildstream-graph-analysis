@@ -58,6 +58,15 @@ class_dir() {
     printf '%s/%s/%s' "$PILOT_KEEP_DIR" "$PILOT_BUILD_TYPE" "$(printf '%s' "$variant" | tr ',=/ ' '_-__')"
 }
 
+# One line per build, captured or plain: the plain review builds are the overhead control.
+ledger_build() {
+    if ! { mkdir -p "$PILOT_KEEP_DIR" \
+        && printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$1" "$PILOT_BUILD_TYPE" "${PILOT_BUILD_VARIANT:-default}" "$2" "$3" "$4" \
+            >>"$PILOT_KEEP_DIR/builds.tsv"; }; then
+        say "cannot write $PILOT_KEEP_DIR/builds.tsv; this build's wall is not kept"
+    fi
+}
+
 cmd_setup() {
     case "$PILOT_BGA_COMMIT" in
         *[!0-9a-f]* | "") say "PILOT_BGA_COMMIT must be a full 40-character commit sha, got '$PILOT_BGA_COMMIT'"; exit 2 ;;
@@ -87,20 +96,23 @@ cmd_capture() {
     mkdir -p "$WORK_DIR"
     rm -f "$WORK_DIR/candidate"
 
-    local why=""
+    local stamp began rc=0 why="" arm=plain
+    stamp="$(date -u +%Y%m%dT%H%M%SZ)"
     if [ ! -e "$WORK_DIR/ready" ]; then
         why="setup did not pass"
+        arm=unready
     elif [ "$PILOT_BUILD_TYPE" = review ] && [ $((RANDOM % 100)) -ge "$PILOT_REVIEW_SAMPLE" ]; then
         why="not in the ${PILOT_REVIEW_SAMPLE}% review sample"
     fi
     if [ -n "$why" ]; then
         say "building without bga: $why"
-        (cd "$PILOT_PROJECT" && "${build[@]}")
-        return
+        began=$SECONDS
+        (cd "$PILOT_PROJECT" && "${build[@]}") || rc=$?
+        ledger_build "$stamp" "$arm" $((SECONDS - began)) "$rc"
+        return "$rc"
     fi
 
-    local stamp snapshot
-    stamp="$(date -u +%Y%m%dT%H%M%SZ)"
+    local snapshot
     snapshot="$WORK_DIR/$stamp"
     mkdir -p "$snapshot"
     export BGA_BUILD_TYPE="$PILOT_BUILD_TYPE"
@@ -111,8 +123,9 @@ cmd_capture() {
         --jobserver "$PILOT_JOBSERVER" --trace-spine "$PILOT_TRACE_SPINE")
     if [ "$PILOT_TRACE_OPENS" = on ]; then capture+=(--trace-opens); fi
 
-    local rc=0
+    began=$SECONDS
     bga capture run "${capture[@]}" "$PILOT_PROJECT" "$snapshot/plane2.json" -- "${build[@]}" || rc=$?
+    ledger_build "$stamp" captured $((SECONDS - began)) "$rc"
 
     # Keeping the bundle never fails the job; the build's own exit code does.
     if [ -d "$snapshot/run" ]; then

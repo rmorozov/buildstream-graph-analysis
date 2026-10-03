@@ -87,6 +87,17 @@ jobs:
                 owner, repo, issue_number, body });
             }
 
+      # A pull request's cache is scoped to it, so its verdict and wall leave only as an artifact.
+      - name: Keep this run's lines
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bga-pilot-lines
+          path: |
+            ${{ env.PILOT_KEEP_DIR }}/verdicts.tsv
+            ${{ env.PILOT_KEEP_DIR }}/builds.tsv
+          if-no-files-found: ignore
+
       - name: Keep the bundles
         if: always() && github.event_name != 'pull_request'
         uses: actions/cache/save@v4

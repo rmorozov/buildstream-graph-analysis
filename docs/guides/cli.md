@@ -381,7 +381,12 @@ runner needs no `project.conf` and keeps no `.bga`. A principal whose
 stamp is also in the tree does not vote on its own band; a bad bundle
 refuses the whole tree with exit `2` before anything is judged; and
 `--bundles` without `--band-from-class` is a usage error. The comment
-names the tree as the band's source.
+names the tree as the band's source, and `--format json` carries it as
+`baseline_band_origin` — `{"kind": "store"|"bundles", "path"}` — beside
+`baseline_band_skipped_for_host`, `{"count", "fields"}`: how many members
+were skipped as measured on another host and which host fields differed
+(`UX-1298`). Both are `null` when the band was not selected by class, and
+the comment's sentence is rendered from them.
 
 **`--resolve` rewrites pseudonyms back to real names, on this machine
 only** (`UX-1064`) — a fourth mode of the same mutually-exclusive group,
@@ -1136,7 +1141,8 @@ the real payload instead of by validation:
 
 ```bash
 bga compare --schema | jq '."bga:always_written"'
-# ["verdict_provenance", "build_class_comparison", "baseline_band_sources", "total_duration_delta_share", "findings_diff"]
+# ["verdict_provenance", "build_class_comparison", "baseline_band_sources", "baseline_band_origin",
+#  "baseline_band_skipped_for_host", "total_duration_delta_share", "findings_diff"]
 ```
 
 `compare/v2`'s `verdict_provenance` is the worked example. `UX-610`
@@ -1202,7 +1208,7 @@ the blocks a reader meets first, and `certified_headroom`, the number
 Key Findings leads with, had never been in the population at all. It was
 302 such keys when that was filed and 305 when it landed. One level and
 no further: `blast_radius_distribution.deciles` is in the population and
-its own nine buckets are not. The surface is **624 keys** today, and
+its own nine buckets are not. The surface is **626 keys** today, and
 that figure is derived from the walk rather than typed here.
 
 So the statement of coverage, which is now a statement and not a

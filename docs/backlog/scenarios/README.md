@@ -36,7 +36,6 @@ task file, which is the only place it ever lived twice.
 | UX-1284 | [a link step that peaks above every compile before it is reserved at the compile's size](UX-1284-a-late-memory-peak-is-under-reserved.md) | capture | Medium | R4, R5 | 🔴 Not Started |
 | UX-1290 | [`cli.md` is split into a command reference, a contracts page and a viewer page, and user switches are separated from internal variables](UX-1290-cli-md-is-split-into-commands-contracts-and-viewer.md) | docs | High | R1, R4, R5 | 🔴 Not Started |
 | UX-1291 | [one guide says how to keep, share, anonymise and reload a capture](UX-1291-a-sharing-a-capture-guide.md) | docs | Medium | R4, R5 | 🔴 Not Started |
-| UX-1298 | [`compare/v2` publishes where its band was read from and how many members it skipped for host](UX-1298-compare-publishes-where-its-band-came-from-and-what-it-skipped.md) | contracts | Medium | R4 | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

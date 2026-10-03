@@ -238,13 +238,13 @@ def _band_members(comparison) -> str:
     return f" — from {names}"
 
 
-def _band_selection(args) -> str:
-    """Where `--band-from-class` read its members (`UX-1286`) and how many it skipped for host (`UX-1285`)."""
+def _band_selection(comparison) -> str:
+    """Where `--band-from-class` read its members and how many it skipped for host, off `compare/v2` (`UX-1298`)."""
     text = ""
-    bundles = getattr(args, 'bundles', None)
-    if bundles and getattr(args, 'band_from_class', None):
-        text += f" — read from the bundles under `{bundles}`"
-    skipped = getattr(args, 'band_skipped_for_host', 0) or 0
+    origin = getattr(comparison, 'baseline_band_origin', None) or {}
+    if origin.get('kind') == 'bundles':
+        text += f" — read from the bundles under `{origin['path']}`"
+    skipped = (getattr(comparison, 'baseline_band_skipped_for_host', None) or {}).get('count') or 0
     if skipped:
         text += f" — {plural(skipped, 'run')} of this class skipped, measured on another host"
     return text
@@ -456,7 +456,7 @@ def render_ci_comment(comparison, args, native_report: Optional[dict] = None) ->
     if delta_total is not None:
         headline += f" ({_signed_s(delta_total)}"
         headline += f", {pct:+.1f}%)" if pct is not None else ")"
-    lines += [headline, "", _band_reason(comparison) + _band_selection(args), ""]
+    lines += [headline, "", _band_reason(comparison) + _band_selection(comparison), ""]
 
     if comparison.failed_runs:
         lines += [

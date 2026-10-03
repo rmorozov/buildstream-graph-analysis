@@ -1009,6 +1009,8 @@ def _produce_compare_output(args: argparse.Namespace):
     # A note, not a gate - there is no noise band for peak RSS, and this
     # codebase does not gate on a threshold it has not measured.
     comparison.memory_envelope_delta = _memory_envelope_delta(args)
+    comparison.baseline_band_origin = getattr(args, 'band_origin', None)
+    comparison.baseline_band_skipped_for_host = getattr(args, 'band_skipped_for_host', None)
 
     if args.format == 'json':
         output = json.dumps(schemas.stamp(comparison.to_dict(), schemas.COMPARE), indent=2, default=str)
@@ -1284,14 +1286,23 @@ def _resolve_band_from_class(args: argparse.Namespace) -> Optional[int]:
         exclude=tuple(exclude),
         host=host,
     )
-    args.band_skipped_for_host = len(skipped)
+    # `UX-1298`: published on `compare/v2`, so the comment and a JSON consumer read one answer.
+    args.band_origin = (
+        {'kind': 'bundles', 'path': str(args.bundles)} if band_store else {'kind': 'store', 'path': str(project)}
+    )
+    args.band_skipped_for_host = {'count': len(skipped), 'fields': _skipped_fields(skipped, host)}
     if len(selected) < MIN_BASELINE_RUNS:
         print(
             f"Band gate REFUSED: the candidate declares "
             f"{class_label(declared) or 'no build class'} "
             f"and {holds} other {plural(len(selected), 'run')} of that class "
             f"within the last {window}"
-            + (f" on its host ({len(skipped)} skipped for host: {_skipped_hosts(skipped, host)})" if skipped else "")
+            + (
+                f" on its host ({len(skipped)} skipped for host: "
+                f"{', '.join(args.band_skipped_for_host['fields'])}; pass --allow-cross-host to pool them)"
+                if skipped
+                else ""
+            )
             + f", below the {MIN_BASELINE_RUNS} a measured "
             f"band needs. This is a refusal to judge, not a verdict about the "
             f"build: falling back to the fixed 1% rule is exactly the "
@@ -1308,12 +1319,11 @@ def _resolve_band_from_class(args: argparse.Namespace) -> Optional[int]:
     return None
 
 
-def _skipped_hosts(skipped: list, host: Optional[dict]) -> str:
+def _skipped_fields(skipped: list, host: Optional[dict]) -> list:
     """Which fields set the skipped members apart, e.g. `cpu_model`."""
     from . import hostinfo, run_store
 
-    fields = sorted({f for run in skipped for f in hostinfo.differing_fields(run_store.declared_host(run), host)})
-    return ", ".join(fields) + "; pass --allow-cross-host to pool them"
+    return sorted({f for run in skipped for f in hostinfo.differing_fields(run_store.declared_host(run), host)})
 
 
 def _compare_exit_code(args: argparse.Namespace, comparison) -> int:

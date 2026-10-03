@@ -161,6 +161,47 @@ wrote, for builds that already happened. If you have ever built this
 project on this machine, you can run it right now, before reading any
 further.
 
+### Disk
+
+Every `bga snapshot` adds one directory to `.bga/runs/` and nothing removes
+it. The one real snapshot size on file is 311 KB for a 9-element,
+813-process capture (`.claude/skills/measure/SKILL.md`; not re-measured, and
+it grows with the process count through `plane2.log.gz`). Two smaller
+numbers bound the Plane 1 side, and neither is a snapshot
+(`du -sb`, bytes, 2026-10-03):
+
+```text
+$ du -sb tests/fixtures/macro_micro          # a committed fixture: 11-element run, plane2.json, README, xdg config; no plane2.log.gz
+60838 tests/fixtures/macro_micro
+$ bga gen-synthetic /tmp/scale --seed 1 && du -sb /tmp/scale   # 1,202 elements, Plane 1 only
+760213 /tmp/scale
+```
+
+`bga` prints what a capture weighed and what the store holds, and warns
+once the store passes 2 GB (`_SIZE_WARN_BYTES`, `tools/bga_snapshot.py`).
+
+Prune with the `bga snapshot` flags (`bga snapshot --help`); `--dry-run`
+deletes nothing and says what would go:
+
+```bash
+bga snapshot --prune --keep 20 --dry-run        # the newest 20 stay
+bga snapshot --prune --older-than 30            # delete snapshots older than 30 days
+bga snapshot --prune --max-store 20G --dry-run  # oldest first, until the store fits
+```
+
+`--prune` needs at least one of `--keep`, `--older-than` and `--max-store`;
+alone it refuses with `Error: prune needs --keep N, --older-than DAYS and/or
+--max-store SIZE. Nothing was deleted.` `@last`, `@prev` and the newest
+healthy run are never deleted ([`cli.md`](cli.md#bga-snapshot--the-local-loop-ux-126)).
+`--prune` always deletes a snapshot that has no `run/` directory, whatever
+`--keep` says (`UX-167`, the `husks` list in `tools/bga_snapshot.py`): an
+interrupted capture or a `--no-inject` one leaves exactly that. `run/` is
+extracted after the build (`bst_native_build_tracer.py`, `args.run_dir`), so
+by the code a capture still running has none yet: do not prune while one
+runs. (Read from the code, not reproduced.)
+The [pilot](pilot.md) keeps its own 30 bundles per class and does not touch
+`.bga/runs`.
+
 ---
 
 ## Step 0a — the evidence you already have (Plane 3)

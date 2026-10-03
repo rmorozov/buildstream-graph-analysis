@@ -201,6 +201,149 @@ def _elements_for_path(inventory: dict, target: str, project_dir: Optional[str])
     return found
 
 
+def _tool(name: str):
+    from .tools_dispatch import _import_tool
+
+    return _import_tool(name)
+
+
+def _element_path_of(project_dir: Optional[str]) -> Optional[str]:
+    if not project_dir or not os.path.isfile(os.path.join(project_dir, "project.conf")):
+        return None
+    return _tool("tools.bst_native_build_tracer").element_path(project_dir)
+
+
+def _as_element_name(target: str, project_dir: Optional[str], known: set[str]) -> str:
+    """UX-1321: `elements/junctions/x.bst` is the file of the element `junctions/x.bst`."""
+    head, colon, rest = target.partition(":")
+    element_path = _element_path_of(project_dir)
+    if target in known or not head.endswith(".bst") or element_path is None:
+        return target
+    candidates = [head]
+    if os.path.isabs(head) or _cwd_is_inside(project_dir):
+        with contextlib.suppress(ValueError):
+            candidates.insert(0, os.path.relpath(os.path.abspath(head), project_dir))
+    prefix = os.path.normpath(element_path).strip("/") + "/"
+    for candidate in candidates:
+        normalised = os.path.normpath(candidate).strip("/")
+        if normalised.startswith(prefix):
+            return normalised[len(prefix) :] + colon + rest
+    return target
+
+
+def _junction_checkout(project_dir: Optional[str], prefix: str) -> Optional[str]:
+    """The on-disk checkout of a (possibly nested) local junction, or None."""
+    if not project_dir:
+        return None
+    subproject = _tool("tools.bst_extract_run")._junction_subproject
+    current: Optional[str] = project_dir
+    for junction in prefix.split(":"):
+        current = subproject(current, junction) if current else None
+    return os.path.realpath(current) if current else None
+
+
+def _junction_declared(project_dir: Optional[str], name: str) -> Optional[dict]:
+    """`{"source_kind", "url"}` when `name`'s file says `kind: junction`, else None."""
+    if not project_dir:
+        return None
+    parent, _colon, last = name.rpartition(":")
+    where = _junction_checkout(project_dir, parent) if parent else project_dir
+    if not where:
+        return None
+    tracer = _tool("tools.bst_native_build_tracer")
+    data = tracer.read_element_yaml(os.path.join(tracer.elements_dir_for(where), last))
+    if not isinstance(data, dict) or data.get("kind") != "junction":
+        return None
+    first = next((s for s in data.get("sources") or [] if isinstance(s, dict)), {})
+    return {"source_kind": first.get("kind"), "url": first.get("url")}
+
+
+def _as_junction(name: str, project_dir: Optional[str], known: set[str]) -> Optional[dict]:
+    """A junction is a source of every element behind its prefix (UX-1321)."""
+    if not name.endswith(".bst"):
+        return None
+    behind = sorted(uid for uid in known if uid.startswith(name + ":"))
+    declared = _junction_declared(project_dir, name)
+    if not behind and declared is None:
+        return None
+    checkout = _junction_checkout(project_dir, name)
+    return {
+        "name": name,
+        "source_kind": (declared or {}).get("source_kind"),
+        "url": (declared or {}).get("url"),
+        "checkout": os.path.relpath(checkout, project_dir) if checkout and project_dir else None,
+        "behind_count": len(behind),
+        "elements": behind,
+    }
+
+
+def _absolute_candidates(target: str, project_dir: Optional[str]) -> list[str]:
+    if os.path.isabs(target):
+        return [os.path.realpath(target)]
+    found = [os.path.realpath(os.path.join(project_dir or ".", target))]
+    if _cwd_is_inside(project_dir):
+        found.insert(0, os.path.realpath(target))
+    return found
+
+
+def _junction_path(target: str, project_dir: Optional[str], known: set[str], inventory: dict) -> Optional[dict]:
+    """A path inside a local junction's checkout, as the identity the inventory stores (UX-1321).
+
+    `None` when the path is in no checkout and under no nested `project.conf`;
+    `resolved: False` when it is under one this run's junctions do not check out.
+    """
+    if not project_dir:
+        return None
+    prefixes = {":".join(uid.split(":")[:i]) for uid in known for i in range(1, uid.count(":") + 1)}
+    checkouts = {prefix: _junction_checkout(project_dir, prefix) for prefix in sorted(prefixes)}
+    root = os.path.realpath(project_dir)
+    for absolute in _absolute_candidates(target, project_dir):
+        inside = [
+            (len(where), prefix, where)
+            for prefix, where in checkouts.items()
+            if where and (absolute == where or absolute.startswith(where + os.sep))
+        ]
+        if inside:
+            _length, prefix, where = max(inside)
+            within = os.path.relpath(absolute, where)
+            within = "" if within == "." else within
+            return {
+                "name": prefix,
+                "checkout": os.path.relpath(where, root),
+                "identity": f"{prefix}:{within}",
+                "resolved": True,
+                "direct": _staging(inventory, prefix, within) | _element_file(prefix, within, where, known),
+            }
+    for absolute in _absolute_candidates(target, project_dir):
+        current = os.path.dirname(absolute) if not os.path.isdir(absolute) else absolute
+        while current.startswith(root + os.sep):
+            if os.path.isfile(os.path.join(current, "project.conf")):
+                return {"name": None, "checkout": os.path.relpath(current, root), "resolved": False, "direct": set()}
+            current = os.path.dirname(current)
+    return None
+
+
+def _staging(inventory: dict, prefix: str, within: str) -> set[str]:
+    """Elements whose content source, in the project behind `prefix`, stages `within`."""
+    found = set()
+    for uid, resources in (inventory.get("elements") or {}).items():
+        for resource in resources or []:
+            owner, _colon, staged = (resource.get("identity") or "").rpartition(":")
+            staged = os.path.normpath(staged).strip("/")
+            if resource.get("keying") != "content" or owner != prefix or not staged:
+                continue
+            if within == staged or within.startswith(staged + "/"):
+                found.add(uid)
+    return found
+
+
+def _element_file(prefix: str, within: str, checkout: str, known: set[str]) -> set[str]:
+    element_path = os.path.normpath(_element_path_of(checkout) or "elements").strip("/") + "/"
+    if not within.startswith(element_path) or not within.endswith(".bst"):
+        return set()
+    return {f"{prefix}:{within[len(element_path) :]}"} & known
+
+
 def _kind_of(inventory: dict, direct: set[str], keying: Optional[str]) -> Optional[str]:
     """The source kind behind a heuristic match, when it is unambiguous.
 
@@ -235,6 +378,13 @@ def blast(run_dir, target: str, project_dir: Optional[str] = None, measure: bool
     run_dir = Path(run_dir)
     _context, graph, _trace = load_all(run_dir)
     inventory = sources_mod.load_inventory(run_dir / "sources.json") or {}
+    # UX-341: integer microseconds, kept exact.
+    durations = compute_element_durations(_tasks_of(run_dir)) if measure else {}
+    return answer(graph, inventory, target, project_dir, durations, measure)
+
+
+def answer(graph, inventory: dict, target: str, project_dir: Optional[str], durations: dict, measure: bool) -> dict:
+    """The answer over a loaded graph and inventory."""
     downstream, _upstream = compute_reachability(graph)
     # UX-206: `downstream` is the transitive closure - every element a
     # change reaches, at any distance. The tree needs the *immediate*
@@ -270,15 +420,21 @@ def blast(run_dir, target: str, project_dir: Optional[str] = None, measure: bool
         # the answer, it does not hide that the name was ambiguous.
         if used not in shapes:
             shapes = [used] + shapes
-    for shape in [] if direct else shapes:
+    name = _as_element_name(target, project_dir, known)
+    junction = None if direct else _as_junction(name, project_dir, known)
+    if junction is not None:
+        direct, used, keying, kind = set(junction.pop("elements")), "junction", None, None
+        shapes = ["junction"] + shapes
+    for shape in [] if direct or junction else shapes:
         if shape == "url":
             direct = _elements_for_url(inventory, target)
             keying = "ref"
         elif shape == "path":
-            direct = _elements_for_path(inventory, target, project_dir)
+            junction = _junction_path(target, project_dir, known, inventory)
+            direct = junction.pop("direct") if junction else _elements_for_path(inventory, target, project_dir)
             keying = "content"
         else:
-            direct = {target} & known
+            direct = {name} & known
             keying = None
         if direct:
             used = shape
@@ -291,11 +447,6 @@ def blast(run_dir, target: str, project_dir: Optional[str] = None, measure: bool
     for uid in direct:
         reachable |= set(downstream.get(uid) or ())
     building, assembling = sources_mod.split_by_kind(reachable, kinds)
-    # UX-341: the durations arrive as integer microseconds and stay
-    # that way. This divided them by 1e6 to publish `measured_seconds`,
-    # which was a lossy downgrade of a value the tool already held
-    # exactly, and put a second spelling of time in the payload.
-    durations = compute_element_durations(_tasks_of(run_dir)) if measure else {}
     measured = [durations[uid] for uid in reachable if uid in durations]
     by_kind: dict[str, int] = {}
     for uid in reachable:
@@ -324,9 +475,11 @@ def blast(run_dir, target: str, project_dir: Optional[str] = None, measure: bool
         "has_inventory": bool(inventory),
         # UX-178: "this name is not an element here" and "this element
         # rebuilds nothing" are different answers.
-        "element_exists": target in known,
+        "element_exists": name in known,
         # UX-1330: junction-qualified elements whose last component is the name given.
-        "did_you_mean": [] if target in known else whatif_mod.did_you_mean(target, known),
+        "did_you_mean": [] if name in known or junction else whatif_mod.did_you_mean(name, known),
+        # UX-1321: the junction the target is, or whose checkout it is inside.
+        "junction": junction,
         # UX-182: "not measured because you asked for the cheap answer"
         # is a different fact from "this run measured nothing".
         "measured": measure,
@@ -395,11 +548,53 @@ def _tasks_of(run_dir: Path):
 
 # UX-178: the article follows pronunciation, not spelling - "an url" is
 # how a vowel check reads it and not how anybody says it.
-_ARTICLES = {"url": "a url", "path": "a path", "element": "an element"}
+_ARTICLES = {"url": "a url", "path": "a path", "element": "an element", "junction": "a junction"}
 
 
 def _article(shape: str) -> str:
     return _ARTICLES.get(shape, f"a {shape}")
+
+
+def _order(answer: dict) -> tuple:
+    return ("junction",) + RESOLUTION_ORDER if answer['resolved_as'] == "junction" else RESOLUTION_ORDER
+
+
+def _junction_lines(junction: dict, resolved_as: str) -> list[str]:
+    """UX-1321: what was read as a junction, and how."""
+    name = junction['name']
+    if resolved_as != "junction":
+        return [f"  Inside the checkout of junction {name} ({junction['checkout']}), read as {junction['identity']}"]
+    lines = [
+        f"  Read as a junction: every element behind `{name}:` is its source ({junction['behind_count']} here),"
+        " so a bump rebuilds at most the closure below"
+    ]
+    if junction.get('source_kind') == "local" and junction.get('checkout'):
+        lines.append(
+            f"  Checked out locally at {junction['checkout']}: a change there rebuilds only what stages it -"
+            " blast the path for that"
+        )
+    elif junction.get('source_kind'):
+        where = f" ({junction['url']})" if junction.get('url') else ""
+        lines.append(
+            f"  Sourced by `{junction['source_kind']}`{where}: a ref bump rebuilds at most this; "
+            "the fetch is not priced"
+        )
+    return lines
+
+
+def _junction_miss(junction: dict, resolved_as: str) -> str:
+    """UX-1321: never "rebuilds nothing" about a junction or a path inside one."""
+    if resolved_as == "junction":
+        return f"  Read as a junction, and no element behind `{junction['name']}:` is in this graph."
+    if not junction.get('resolved'):
+        return (
+            f"  It is inside another project ({junction['checkout']}/project.conf) that no junction in this "
+            "graph checks out here, so it could not be resolved."
+        )
+    return (
+        f"  It is inside the checkout of junction {junction['name']}, read as {junction['identity']}, and no "
+        f"source stages it. If it is that project's configuration, `bga blast {junction['name']}` prices it."
+    )
 
 
 def format_blast_text(answer: dict) -> str:
@@ -408,13 +603,17 @@ def format_blast_text(answer: dict) -> str:
         f"  Resolved as {_article(answer['resolved_as'])}"
         + (
             f" (it also reads as {', '.join(_article(s) for s in answer['also_matched'])};"
-            f" resolution order is {', '.join(RESOLUTION_ORDER)})"
+            f" resolution order is {', '.join(_order(answer))})"
             if answer['also_matched']
             else ""
         )
     )
+    junction = answer.get('junction')
     if not answer['direct_count']:
         lines.append("")
+        if junction is not None:
+            lines.append(_junction_miss(junction, answer['resolved_as']))
+            return "\n".join(lines)
         if answer['resolved_as'] == 'element' and not answer['element_exists']:
             # UX-178: the sentence `classify_target`'s comment promised
             # and no code printed.
@@ -436,6 +635,8 @@ def format_blast_text(answer: dict) -> str:
             lines.append(f"  Did you mean {', '.join(answer['did_you_mean'])}?")
         return "\n".join(lines)
 
+    if junction is not None:
+        lines += ["", *_junction_lines(junction, answer['resolved_as'])]
     named = ", ".join(answer['direct_elements'][:6])
     more = "" if len(answer['direct_elements']) <= 6 else f" (+{len(answer['direct_elements']) - 6} more)"
     lines += [

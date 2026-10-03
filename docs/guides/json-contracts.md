@@ -324,7 +324,8 @@ can look one up.
 
 | key | what it is |
 |---|---|
-| `resolved_as` | Which reading of the target the command used — `url`, `path` or `element`. Published because the order is a heuristic. |
+| `resolved_as` | Which reading of the target the command used — `junction`, `url`, `path` or `element`. Published because the order is a heuristic. |
+| `junction` | The junction the target is (`name`, `source_kind`, `url`, `checkout`, `behind_count`), or whose local checkout a path is inside (`name`, `checkout`, `identity`, `resolved`); `null` otherwise. |
 | `also_matched` | The other readings that would also have matched, so a deterministic pick is not a silent one. |
 | `keying` | How the matched resource is keyed (`url`, `ref`, …) when the target resolved as a repository. |
 | `direct_elements`, `direct_count` | The elements that depend on the target directly. The first hop only. |

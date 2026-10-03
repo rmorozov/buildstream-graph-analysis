@@ -12,7 +12,7 @@
     "bga/artifact_weight.py": {"duplicate_blocks": 0, "file_lines": 225, "longest_function": 46},
     "bga/attribution/__init__.py": {"duplicate_blocks": 0, "file_lines": 19, "longest_function": 0},
     "bga/attribution/blame_chain.py": {"duplicate_blocks": 0, "file_lines": 1633, "longest_function": 166},
-    "bga/blast.py": {"duplicate_blocks": 0, "file_lines": 463, "longest_function": 109},
+    "bga/blast.py": {"duplicate_blocks": 0, "file_lines": 664, "longest_function": 99},
     "bga/build_rate.py": {"duplicate_blocks": 0, "file_lines": 21, "longest_function": 6},
     "bga/buildclass.py": {"duplicate_blocks": 1, "file_lines": 228, "longest_function": 26},
     "bga/bundle.py": {"duplicate_blocks": 0, "file_lines": 1075, "longest_function": 55},

@@ -1304,10 +1304,12 @@ _BLAST_REQUIRED = {
     "measured": "boolean",
 }
 
-# `UX-1330`: permitted rather than required - a key entering `required` under the live `blast/v2` id
-# breaks a document already written (`UX-629`); `bga blast` writes it on every answer.
-_BLAST_OPTIONAL = {"did_you_mean": "array"}
-_BLAST_ALWAYS_WRITTEN = ("did_you_mean",)
+# `UX-1321`, `UX-1330`: written on every answer, so always-written rather than required (`UX-629`).
+_BLAST_OPTIONAL = {
+    # The junction the target is, or whose checkout a path is inside; `null` otherwise.
+    "junction": "object",
+    "did_you_mean": "array",
+}
 
 
 # The hints themselves. Kept beside the key lists they annotate, so a
@@ -6957,7 +6959,7 @@ _SCHEMAS = {
         "assemble, and the measured cost unless --no-cost was passed.",
         optional=_BLAST_OPTIONAL,
         hints=_BLAST_HINTS,
-        always_written=_BLAST_ALWAYS_WRITTEN,
+        always_written=tuple(_BLAST_OPTIONAL),
     ),
     CORRELATE: lambda: _document(
         CORRELATE,

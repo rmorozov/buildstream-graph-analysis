@@ -82,8 +82,9 @@ def walked(tmp_path, monkeypatch):
             continue
         stdin = _Terminal("y\n")
         if words[0] == "cat" and words[2] == "|":
-            pseudonym = next((k for k, v in _map(runner).items() if v.startswith("element\0")), "e-none")
+            pseudonym, real = next(((k, v) for k, v in _map(runner).items() if v.startswith("element\0")), ("e-none", ""))
             (runner / words[1]).write_text(f"rebuild {pseudonym} first\n")
+            (runner / "expected-reply.txt").write_text(f"rebuild {real.partition(chr(0))[2]} first\n")
             stdin, words = io.StringIO((runner / words[1]).read_text()), words[3:]
         assert words[0] == "bga", f"the guide runs something this guard cannot: {line!r}"
         words = [env.get(word[1:], word) if word.startswith("$") else word for word in words]
@@ -116,7 +117,7 @@ class TestTheGuideRuns:
         missing = [flag for flag in STEPS if flag not in lines]
         assert missing == [], f"step(s) with no command in the guide: {missing}"
 
-    def test_the_steps_do_what_the_guide_says(self, walked):
+    def test_the_steps_do_what_the_guide_says(self, walked, tmp_path):
         out = {line: text for line, _code, text in walked}
         [export] = [t for line, t in out.items() if "--export" in line and "--anonymize" not in line]
         [anon] = [t for line, t in out.items() if "--anonymize" in line]
@@ -126,7 +127,8 @@ class TestTheGuideRuns:
         assert "Wrote ci/101/run.bga-bundle.tar.gz" in export
         assert "residue scan: clean" in anon and "Wrote share.bga-bundle.tar.gz" in anon
         assert "Loaded 1 bundle from ci" in load and "1 snapshot in ci" in listed
-        assert re.search(r"rebuild lib-\w+ first", resolved), resolved
+        # the map's order follows set iteration, so the element is whichever came first
+        assert (tmp_path / "runner/expected-reply.txt").read_text() in resolved, resolved
 
     def test_the_key_is_kept_0600(self, walked, tmp_path):
         anon = tmp_path / "runner/.bga/anon"

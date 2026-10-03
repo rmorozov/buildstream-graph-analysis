@@ -5,19 +5,14 @@ was wrong and a summary of what shipped, written at the moment the work
 was verified — which is the only moment anyone knows the detail. There
 are 238 of them.
 
-Hand-writing a release body would make a **third** copy of those facts,
-after the task file's Outcome and the closed row. Two hand-maintained
-copies of one fact drifting apart is this repository's most-repeated
-defect by a wide margin; a third would be choosing to reproduce it
-knowingly. So the body is generated and only the *head* is written —
-the theme, the contract delta, and what a consumer has to do about it,
-which is the half worth reading and the half no generator can produce.
+A hand-written body would be a **third** copy of those facts, after the
+task file's Outcome and the closed row. So the body is generated and
+only the *head* is written: the theme, the contract delta, and what a
+consumer has to do about it.
 
-Markers are **closed-row counts**, the same unit the release ledger and
+Markers are **closed-row counts**, the unit the release ledger and
 `docs/audits/architecture-review.md` already use: `--from 238 --to 250`
-emits the rows that closed between those two states. Counts rather than
-dates because `closed.md` is append-ordered by when a row closed, and a
-count is what both ledgers already record.
+emits the rows that closed between those two states.
 
     bga release-notes --from 238 --to 250
 """
@@ -40,6 +35,10 @@ TOPIC_ORDER = ("contracts", "cli", "analysis", "capture", "viewer", "store", "gu
 
 _ID = re.compile(r"UX-(\d+)")
 _TOPIC = re.compile(r"\*\*Topic:\*\*\s*(\w+)")
+
+
+#: closed.md links are relative to docs/backlog/scenarios/; the body lands at the root.
+_REL_LINK = re.compile(r"\]\((?![a-z]+:|/|#|docs/)")
 
 
 def _rows():
@@ -102,7 +101,7 @@ def render(start: int, end: int) -> str:
         for row in grouped[topic]:
             lines.append(f"- {row['link']} — {_first_sentence(row['summary'])}")
         lines.append("")
-    return "\n".join(lines) + "\n"
+    return _REL_LINK.sub("](docs/backlog/scenarios/", "\n".join(lines) + "\n")
 
 
 def main(argv=None) -> int:

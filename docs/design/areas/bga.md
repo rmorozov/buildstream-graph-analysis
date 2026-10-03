@@ -1,6 +1,6 @@
 # The bga area
 
-Moved from [`docs/design/architecture.md`](../architecture.md)'s "Joining the planes", "What the 2026-08-16 audit round changed structurally", "What the real-capture rounds (7–10) changed structurally" and "Core invariants still load-bearing (Plane 1)" chapters (`UX-816`); no line of any of the four is read by a guard, so nothing but a pointer stays behind for them. "Real extensions beyond the original spec" is the fifth: its history table is read whole by `test_the_architecture_table_is_read_at_all` and `test_the_table_status_matches_the_task_files`, and every sentence around the table refers to it, so the whole chapter stays in architecture.md and this page points back to it instead of duplicating it.
+Moved from [`docs/design/architecture.md`](../architecture.md)'s "Joining the planes", "What the 2026-08-16 audit round changed structurally", "What the real-capture rounds (7–10) changed structurally" and "Core invariants still load-bearing (Plane 1)" chapters (`UX-816`); no line of any of the four is read by a guard, so nothing but a pointer stays behind for them. "Real extensions beyond the original spec" is the fifth: it stays in architecture.md as a link to the backlog (`UX-1293` retired its status table), and this page points back to it.
 
 ## Joining the planes (`UX-51`, `UX-100`)
 
@@ -123,4 +123,4 @@ The spec's invariants (full text: `docs/spec/specification.md`) remain the real 
 
 ## Real extensions beyond the original spec
 
-Every addition beyond the original spec, and its status, is architecture.md's own history table, kept there whole because `test_the_architecture_table_is_read_at_all` and `test_the_table_status_matches_the_task_files` read it: [`docs/design/architecture.md`](../architecture.md) (`UX-816`).
+Every addition beyond the original spec, and its status, is indexed in [`docs/backlog/scenarios/README.md`](../../backlog/scenarios/README.md); architecture.md's chapter of that name links it rather than copying it (`UX-816`, `UX-1293`).

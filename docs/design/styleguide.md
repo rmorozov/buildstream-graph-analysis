@@ -1849,7 +1849,7 @@ bad number but a good number answering an unasked question.
 
 **Closed, and where.** `UX-430` added `TRACE_TRACK_BUDGET`, the bound
 in the unit above; `UX-446` put all three in
-[`cli.md`](../guides/cli.md)'s ceilings table and derived that table
+the ceilings table (now in [`viewer.md`](../guides/viewer.md)) and derived that table
 from `bga_view.CEILINGS`, so a fourth bound in a fourth unit reddens a
 guard rather than waiting for a reader to be stuck. What is still open
 is the bound's *value*: `UX-445` measured the emitter's curve, could

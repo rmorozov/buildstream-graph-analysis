@@ -129,7 +129,7 @@ class TestTheProseNamesTheDirectionItRanks:
         assert "dependencies this element names" not in column["description"].lower()
 
 
-CLI_GUIDE = REPO / "docs/guides/cli.md"
+CLI_GUIDE = REPO / "docs/guides/json-contracts.md"
 
 
 class TestTheGuideOrdersTheSamePairTheSameWay:

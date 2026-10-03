@@ -99,6 +99,6 @@ class TestTheStyleIsReadableFromTheReport:
 class TestTheDocumentSaysSo:
     def test_the_cli_guide_names_both_new_keys(self):
         repo = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-        guide = open(os.path.join(repo, "docs", "guides", "cli.md"), encoding="utf-8").read()
+        guide = open(os.path.join(repo, "docs", "design", "areas", "tools-native_trace.md"), encoding="utf-8").read()
 
         assert "sandbox_make" in guide and "auth_style" in guide

@@ -36,7 +36,7 @@ sys.path.insert(0, str(REPO))
 
 from tools import bga_view as view
 
-CLI = REPO / "docs/guides/cli.md"
+CLI = REPO / "docs/guides/viewer.md"
 STYLEGUIDE = REPO / "docs/design/styleguide.md"
 
 #: What makes a module constant a *bound* rather than a number. Read
@@ -85,7 +85,7 @@ def test_every_declared_ceiling_has_a_row_a_reader_can_find():
     rows = _table_rows()
     missing = sorted(set(_declared()) - set(rows))
     assert missing == [], (
-        f"ceiling(s) with no row in docs/guides/cli.md: {missing} - which "
+        f"ceiling(s) with no row in docs/guides/viewer.md: {missing} - which "
         f"is the state UX-446 was filed on, where a refusal quotes a "
         f"number no document has"
     )
@@ -95,7 +95,9 @@ def test_the_table_names_no_bound_that_does_not_exist():
     """The other direction, so a bound deleted in code leaves a row a
     reader would go looking for."""
     extra = sorted(set(_table_rows()) - set(_declared()))
-    assert extra == [], f"docs/guides/cli.md's ceilings table names {extra}, which is not a declared ceiling any more"
+    assert extra == [], (
+        f"docs/guides/viewer.md's ceilings table names {extra}, which is not a declared ceiling any more"
+    )
 
 
 def test_each_row_carries_the_remedy_its_registry_entry_names():

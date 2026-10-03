@@ -25,7 +25,7 @@ import pytest
 REPO = pathlib.Path(__file__).resolve().parents[2]
 ARCHITECTURE = REPO / "docs/design/architecture.md"
 SPEC = REPO / "docs/spec/specification.md"
-CLI_GUIDE = REPO / "docs/guides/cli.md"
+CLI_GUIDE = REPO / "docs/guides/json-contracts.md"
 
 # `UX-628` froze the 80 keys already carrying no prose when this
 # population went from ids to keys; `UX-636` documented all 80 and the

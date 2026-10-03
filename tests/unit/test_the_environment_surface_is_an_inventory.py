@@ -28,6 +28,16 @@ GUIDE = REPO / "docs/guides/cli.md"
 #: too and a guard its own explanation satisfies checks nothing.
 SECTION = "## The environment `bga` reads"
 
+#: `UX-1290`: every home a row may live in, `(page, heading)`; the capture path's own namespace left the guide.
+HOMES = (
+    (GUIDE, SECTION),
+    (REPO / "docs/design/areas/tools-native_trace.md", "## `BST_TRACE_*` — Plane 2 and Plane 3"),
+)
+
+#: `UX-1290`: the table a user reads for what to set, and the cells each row of it owes.
+SWITCHES = "### Switches you set"
+SWITCH_HEADER = "| name | default | how to turn it off | cost | what it changes | where |"
+
 #: The namespaces, as they appear in source. `UX-635`: a **set**, not
 #: one prefix - `UX-630` scanned `BGA_` alone, and `BST_TRACE_*` is a
 #: second family the same size one namespace over, invisible to a guard
@@ -94,16 +104,8 @@ def _tracked():
     return set(listed.splitlines())
 
 
-@functools.lru_cache(maxsize=1)
-def _rows():
-    """`{name: the where cell}` from the section's table rows.
-
-    A row is a line whose first cell is one backticked name; the header,
-    the separator and every paragraph in the section are not.
-    """
-    text = GUIDE.read_text(encoding="utf-8")
-    assert SECTION in text, f"{GUIDE.name} has no `{SECTION}` section"
-    section = text.split(SECTION, 1)[1].split("\n## ", 1)[0]
+def _table(section: str) -> dict:
+    """`{name: cells}` for each line whose first cell is one backticked name."""
     rows = {}
     for line in section.splitlines():
         if not line.startswith("|"):
@@ -111,9 +113,39 @@ def _rows():
         cells = [cell.strip() for cell in line.strip("|").split("|")]
         first = ROW_NAME.fullmatch(cells[0])
         if first:
-            rows[first.group(1)] = cells[-1]
-    assert rows, f"no table rows under `{SECTION}` in {GUIDE.name}"
+            rows[first.group(1)] = cells
     return rows
+
+
+@functools.cache
+def _home(page: pathlib.Path, heading: str) -> dict:
+    """`{name: cells}` from the table rows under `heading` in `page`."""
+    text = page.read_text(encoding="utf-8")
+    assert heading in text, f"{page.name} has no `{heading}` section"
+    rows = _table(text.split(heading, 1)[1].split("\n## ", 1)[0])
+    assert rows, f"no table rows under `{heading}` in {page.name}"
+    return rows
+
+
+@functools.lru_cache(maxsize=1)
+def _rows():
+    """`{name: the where cell}` over every home in `HOMES`.
+
+    A row is a line whose first cell is one backticked name; the header,
+    the separator and every paragraph in the section are not.
+    """
+    rows = {}
+    for page, heading in HOMES:
+        for name, cells in _home(page, heading).items():
+            assert name not in rows, f"{name} has a row in two homes"
+            rows[name] = cells[-1]
+    return rows
+
+
+def _switches() -> str:
+    section = GUIDE.read_text(encoding="utf-8").split(SECTION, 1)[1]
+    assert SWITCHES in section, f"{GUIDE.name} has no `{SWITCHES}` under `{SECTION}`"
+    return section.split(SWITCHES, 1)[1].split("\n#", 1)[0]
 
 
 class TestTheInventoryIsTheTree:
@@ -122,7 +154,8 @@ class TestTheInventoryIsTheTree:
         missing = sorted(set(_scan()[0]) - set(_rows()))
         assert missing == [], (
             f"environment name(s) in {'/, '.join(ROOTS)}/ with no row under "
-            f"`{SECTION}` in docs/guides/cli.md: " + ", ".join(f"{n} ({', '.join(_scan()[0][n])})" for n in missing)
+            f"`{SECTION}` in docs/guides/cli.md, nor in any other home in HOMES: "
+            + ", ".join(f"{n} ({', '.join(_scan()[0][n])})" for n in missing)
         )
 
     def test_every_row_names_something_the_tree_still_has(self):
@@ -159,3 +192,25 @@ class TestTheInventoryIsTheTree:
                 elif name not in path.read_text(encoding="utf-8"):
                     wrong.append(f"{name}: {rel} does not name it")
         assert wrong == [], f"row(s) under `{SECTION}` citing a file that does not carry the name: {wrong}"
+
+
+class TestTheSwitchesAreTheUsersOwn:
+    """`UX-1290`: what a user sets is one table, with a default, an off and a cost per row."""
+
+    def test_no_capture_wiring_row_in_the_switches_table(self):
+        rows = _table(_switches())
+        assert rows, f"no rows under `{SWITCHES}`"
+        wiring = sorted(name for name in rows if name.startswith("BST_TRACE_"))
+        assert wiring == [], f"`{SWITCHES}` lists the capture path's own wiring: {wiring}"
+
+    def test_every_switch_states_its_default_its_off_and_its_cost(self):
+        assert SWITCH_HEADER in _switches(), f"`{SWITCHES}` is not headed {SWITCH_HEADER!r}"
+        short = {name: cells for name, cells in _table(_switches()).items() if len(cells) != 6 or not all(cells[1:4])}
+        assert short == {}, f"switch row(s) missing a default, an off or a cost: {sorted(short)}"
+
+    def test_every_capture_wiring_name_lives_in_the_area_page(self):
+        page, heading = HOMES[1]
+        guide = set(_home(GUIDE, SECTION))
+        stray = sorted(name for name in _scan()[0] if name.startswith("BST_TRACE_") and name in guide)
+        assert stray == [], f"`BST_TRACE_*` row(s) still in the guide: {stray}"
+        assert any(name.startswith("BST_TRACE_") for name in _home(page, heading))

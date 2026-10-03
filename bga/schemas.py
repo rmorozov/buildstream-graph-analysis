@@ -1230,6 +1230,8 @@ _COMPARE_ALWAYS_WRITTEN = (
     "verdict_provenance",
     "build_class_comparison",
     "baseline_band_sources",
+    "baseline_band_origin",
+    "baseline_band_skipped_for_host",
     "total_duration_delta_share",
     "findings_diff",
 )
@@ -1268,6 +1270,9 @@ _COMPARE_OPTIONAL = {
     # `_COMPARE_ALWAYS_WRITTEN` rather than required - the same third
     # state the two keys above are in.
     "baseline_band_sources": "array",
+    # `UX-1298`: `{"kind": "store"|"bundles", "path"}` and `{"count", "fields"}`; `null` without `--band-from-class`.
+    "baseline_band_origin": "object",
+    "baseline_band_skipped_for_host": "object",
     # `UX-1257`: the wall delta over the baseline's wall-clock; `null` with no baseline total.
     "total_duration_delta_share": "number",
     # `UX-1277`: findings new, persisting and resolved since the baseline, by id; `null` on a refusal.

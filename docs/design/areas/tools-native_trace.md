@@ -53,3 +53,72 @@ writes, and the code can leave for a separate project of BuildStream
 helpers without a call-site hunt. Not a plugin system: nothing here is
 discovered or loaded dynamically, and `bga` gains no second one for
 anything else this way.
+
+## `BST_TRACE_*` — Plane 2 and Plane 3 (`UX-635`)
+
+The capture path has a second namespace the same size, and until
+`UX-635` [`cli.md`](../../guides/cli.md#the-environment-bga-reads-ux-630)'s table's population was as wide as the one prefix somebody
+typed into the guard. These are not `bga`'s own switches in the sense of
+that table: they are how `bga snapshot` drives the `bwrap` shim, the
+`LD_PRELOAD` hook and the ptrace spine, and most of them are set *for*
+you. The three kinds are separated because a reader needs to know which
+is which before touching any of them.
+
+**What you may set, driving a capture by hand:**
+
+| name | what it changes | where |
+|---|---|---|
+| `BST_TRACE_OPENS` | records `open()` as well as `exec`, forwarded into the sandbox by the shim. The `opens` half of Plane 2, and the more expensive half | `tools/native_trace/bwrap_shim.py` |
+| `BST_TRACE_OPENS_SEEN` | the sandbox's table of path hashes already written, so a path its processes repeat is written once (`UX-1241`); set by the shim per invocation, a file in the bind directory | `tools/native_trace/bwrap_shim.py`, `tools/native_trace/hook.c` |
+| `BST_TRACE_SPINE` | turns the ptrace spine on for this element — Plane 3, which sees the processes `LD_PRELOAD` cannot | `tools/native_trace/bwrap_shim.py` |
+| `BST_TRACE_SPINE_POLICY` | `auto`, `on` or `off`; `auto` resolves per element against the census below rather than for the whole build | `tools/native_trace/bwrap_shim.py` |
+| `BST_TRACE_SPINE_CENSUS` | the census `auto` consults to decide whether this element is worth the spine's price | `tools/native_trace/bwrap_shim.py` |
+| `BST_TRACE_NO_INJECT` | `=1` runs the shim through to the real `bwrap` injecting nothing, so a refusal can be told from a capture defect. `bga snapshot --no-inject` sets it | `tools/native_trace/bwrap_shim.py` |
+| `BST_TRACE_DIAGNOSTICS` | a path the shim writes `bwrap`'s own stderr to, so a sandbox that refused says what it objected to | `tools/native_trace/bwrap_shim.py` |
+| `BST_TRACE_ARGV_MAX` | how much of a recorded `argv` is kept before truncation; the default is the shim's `DEFAULT_ARGV_RECORD_LIMIT` | `tools/native_trace/bwrap_shim.py` |
+| `BST_TRACE_WRAPPER_CAP` | the most tokens one jobserver wrapper (`ld.lld`, `lld`, `ld.gold`, `mold`, `ninja`) may acquire before running its tool — the pool's own ceiling, set only when `--jobserver` is on (`UX-846`) | `tools/native_trace/wrappers/_common.sh` |
+| `BST_TRACE_LTO_CAP` | the static `-flto=N` cap the GCC-driver shim (`gcc`/`g++`/`cc`/`c++`) rewrites an already-present `-flto`/`-flto=jobserver`/`-flto=auto` to — default `nproc`, the same ceiling `resolve_jobserver_ceiling`'s own `auto` uses; `bga capture run --lto-cap N` sets it (`UX-880`) | `tools/native_trace/wrappers/_common.sh` |
+| `BST_TRACE_WRAPPER_DIR_OVERRIDE` | an operator's own wrapper directory (`docs/guides/wrapper-contract.md`), mounted alongside or instead of the shipped one; `bga capture run --wrapper-dir PATH` sets it (`UX-881`) | `tools/native_trace/bwrap_shim.py` |
+| `BST_TRACE_WRAPPER_MODE` | `augment` (default) or `replace` — whether the operator's directory above adds to the shipped mount or takes its place entirely; `bga capture run --wrapper-dir-mode` sets it (`UX-881`) | `tools/native_trace/bwrap_shim.py` |
+
+**What the capture path sets for you.** Setting these by hand does not
+configure a capture, it desynchronises one — the tracer writes them
+into the child environment and the shim requires them:
+
+| name | what it is | where |
+|---|---|---|
+| `BST_TRACE_REAL_BWRAP` | the real `bwrap` the shim shadows and finally executes | `tools/bst_native_build_tracer.py` |
+| `BST_TRACE_BIND_SRC` | the host directory holding the hook and the spine | `tools/bst_native_build_tracer.py` |
+| `BST_TRACE_BIND_DST` | where that directory is bound inside the sandbox | `tools/bst_native_build_tracer.py` |
+| `BST_TRACE_PRELOAD_SO` | the hook's path *inside* the sandbox, for `LD_PRELOAD` | `tools/bst_native_build_tracer.py` |
+| `BST_TRACE_LOG_DST` | where the trace log lands inside the sandbox | `tools/bst_native_build_tracer.py` |
+| `BST_TRACE_LOG` | the same path as the hook and the spine read it | `tools/native_trace/bwrap_shim.py` |
+| `BST_TRACE_ELEMENT` | the element a record belongs to — the key Plane 1 joins on | `tools/native_trace/bwrap_shim.py` |
+| `BST_TRACE_INVOCATION` | which invocation of that element, so a retry is not merged into its first attempt | `tools/native_trace/bwrap_shim.py` |
+| `BST_TRACE_INVOCATION_LOG` | the host-side file the shim appends one line to per invocation | `tools/bst_native_build_tracer.py` |
+| `BST_TRACE_ARGV_LOG` | the host-side `argv` log, written only when argv recording is on | `tools/bst_native_build_tracer.py` |
+| `BST_TRACE_JOBSERVER` | the jobserver FIFO's path; `run --jobserver N` sets it, the shim opens it read-write and injects `MAKEFLAGS=--jobserver-auth` (`UX-679`, a spike) | `tools/native_trace/bwrap_shim.py` |
+| `BST_TRACE_JOBSERVER_AUTH` | `fd` or `fifo`, resolved from `--jobserver-auth` before the build starts; the shim reads it to choose which `--jobserver-auth` style to inject (`UX-841`) | `tools/native_trace/bwrap_shim.py` |
+| `BST_TRACE_JOBSERVER_AUTH_MAP` | `bga capture run --jobserver-auth-override`'s own map (`style:glob[,glob];...`, styles `fd`/`fifo`/`off`/`flto`), resolved in `bga/cli.py` and carried unchanged through `tools/bst_native_build_tracer.py`; the shim's `resolve_auth_override` matches it against the element name and forces the style, ahead of the auto/`compiler_safe` path (`UX-879`, `flto` `UX-880`) | `tools/native_trace/bwrap_shim.py` |
+| `BST_TRACE_PROJECT_MAX_JOBS` | the project's own `max-jobs`, read once from `bst show` before the build; the shim compares it against each sandbox's own `-j` to tell a `notparallel` pin from an element-level cap (`UX-842`) | `tools/native_trace/bwrap_shim.py` |
+| `BST_TRACE_JOBSERVER_DECISIONS` | the host-side path the shim appends one `{element, max_jobs, decision, kind, policy}` line to per sandbox, folded into the report as `jobserver_decisions` (`UX-842`/`UX-843`). An element the shim probed a sandbox `make` for also carries `sandbox_make` (that `make --version`'s first line) and `auth_style` (`fifo` for 4.4 and up, `fd` below it) - added as the file is copied out of the capture, since the probe cache dies with the FIFO (`UX-916`) | `tools/native_trace/bwrap_shim.py` |
+| `BST_TRACE_ELEMENT_KINDS` | a JSON `{name: kind}` map, read once from `bst show` before the build; the shim looks its own element up in it to pick a row from the per-kind environment table (`UX-843`) | `tools/native_trace/bwrap_shim.py` |
+| `BST_TRACE_ELEMENT_AUTH_MAP` | a JSON `{name: style}` map, read once from a *separate* `bst show --format '%{name}<US>%{public}<RS>'` before the build - each element's own `public: bga: jobserver-auth: fd\|fifo\|off\|flto` annotation, version-controlled in the project; the shim falls back to it in `resolve_auth_override or _annotation_style` only when `BST_TRACE_JOBSERVER_AUTH_MAP` (the command-line override) does not match the element (`UX-882`) | `tools/native_trace/bwrap_shim.py` |
+| `BST_TRACE_WRAPPER_DIR` | the host path of `tools/native_trace/wrappers/`, bound read-only at `wrappers/` under the trace bind (`/tmp/.bst-native-trace/wrappers`; the sandbox root is read-only, measured on examples/06) and prepended to `PATH` ahead of BuildStream's own (`UX-846`; also holds the `flto` shim's `gcc`/`g++`/`cc`/`c++` scripts, `UX-880`) | `tools/native_trace/bwrap_shim.py` |
+| `BST_TRACE_JOBSERVER_LEDGER` | the in-sandbox path a wrapper appends an acquire or release row to — the same file `PoolController`'s own ticks land in, under the existing trace bind (`UX-846`) | `tools/native_trace/wrappers/_common.sh` |
+| `BST_TRACE_FLTO_ACTIVE` | `1` when *this* element's own `--jobserver-auth-override` resolved to `flto` — and only then: `UX-913` keeps a cmake/meson element's auth without the shims, because `flto/` shadows the staged `cc`/`gcc` with a script that opens on `dirname`, which a staged-toolchain sandbox has not got (`examples/06` exit 255) — set only by `_jobserver_injection`, never by hand; the GCC-driver shim gates its entire strip-auth/rewrite-`-flto` transform on it, since the shim scripts sit in the one wrapper directory every jobserver-active sandbox mounts and would otherwise touch every element's compiler, matched or not (`UX-880`, verifier fix) | `tools/native_trace/bwrap_shim.py` |
+| `BST_TRACE_PROXY_DIR` | the host directory holding one jobserver proxy FIFO per element, set only when `run --plan` named an `analyze.json`; the shim looks its own element up in it and injects that proxy's auth instead of the global FIFO's when one exists — its path already lands under `BST_TRACE_BIND_DST`, no bind of its own (`UX-849`, `UX-869`) | `tools/native_trace/bwrap_shim.py` |
+| `BST_TRACE_ADMISSION_POOL` | a host-side admission FIFO's path, never bound into the sandbox; when set and the jobserver is active (`--jobserver off` leaves it unread, same as today) the shim reads one real token before starting `bwrap` and releases it only after `waitpid` returns, logging the wait as its own ledger row (`UX-1005` track B) | `tools/native_trace/bwrap_shim.py` |
+| `BST_TRACE_ADMISSION_BROKER_DIR` | the host directory an `AdmissionBroker` writes this element's own admission grant FIFO into and reads `requests.jsonl` from, set only when `run --plan` named an `analyze.json`; a waiting shim asks it for a ranked grant before falling back to the raw `BST_TRACE_ADMISSION_POOL` FIFO on any timeout or absence (`UX-1005` track C) | `tools/native_trace/bwrap_shim.py` |
+
+**What a test sets to reach a failure path.** The spine's degrade and
+refusal branches are unreachable on a machine that *has* `ptrace`, so
+these exist to reach them; `bwrap_shim.py` passes a fixed list of
+`BST_TRACE_*` through and none of these is on it:
+
+| name | what it forces | where |
+|---|---|---|
+| `BST_TRACE_SPINE_FAIL_SEIZE` | `PTRACE_SEIZE` fails, taking the branch every machine without `ptrace` takes | `tools/native_trace/spine.c` |
+| `BST_TRACE_SPINE_FAIL_CONT_AT` | a named restart site fails; the spine lists the known sites when the name is not one | `tools/native_trace/spine.c` |
+| `BST_TRACE_SPINE_DEGRADE_AFTER` | degrades after N events, which is `UX-117`'s hang reproduced on purpose | `tools/native_trace/spine.c` |
+| `BST_TRACE_SPINE_SELFTEST` | runs one self-test instead of a capture (`detach-signal`) | `tools/native_trace/spine.c` |

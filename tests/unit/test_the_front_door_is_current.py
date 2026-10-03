@@ -28,6 +28,7 @@ import pytest
 REPO = pathlib.Path(__file__).resolve().parents[2]
 FRONT_DOOR = ("README.md", "docs/README.md")
 CLI_GUIDE = "docs/guides/cli.md"
+CONTRACTS = "docs/guides/json-contracts.md"
 
 # A `tools/` alias may stay off the front door, because the front door
 # is what a reader *starts* with and these are not that. The exemption
@@ -123,12 +124,16 @@ class TestTheDoorNamesTheTool:
 
 class TestTheDoorNamesWhatItEmits:
     """ "What can this thing emit" is a question a reader has before
-    they have a run, and `docs/README.md` is where they ask it."""
+    they have a run: `docs/README.md` routes it to the contracts page (`UX-1289`)."""
+
+    def test_the_index_routes_to_the_contracts_page(self):
+        text = (REPO / "docs/README.md").read_text(encoding="utf-8")
+        assert "](guides/json-contracts.md)" in text, "docs/README.md does not link the contracts page"
 
     def test_every_published_schema_is_reachable_from_the_docs_index(self):
-        text = (REPO / "docs/README.md").read_text(encoding="utf-8")
+        text = (REPO / CONTRACTS).read_text(encoding="utf-8")
         missing = [name for name in _published_schemas() if name not in text]
-        assert missing == [], f"published schema(s) docs/README.md does not name: {missing}"
+        assert missing == [], f"published schema(s) {CONTRACTS} does not name: {missing}"
 
     def test_the_index_names_no_schema_the_code_does_not_publish(self):
         """The other direction. A retired id left in the index sends a
@@ -140,17 +145,17 @@ class TestTheDoorNamesWhatItEmits:
         """
         from bga import contracts
 
-        text = (REPO / "docs/README.md").read_text(encoding="utf-8")
+        text = (REPO / CONTRACTS).read_text(encoding="utf-8")
         published = set(_published_schemas()) | set(contracts.reads())
         named = set(re.findall(r"`([a-z][a-z-]*/v\d+)`", text))
         stale = sorted(named - published)
-        assert stale == [], f"docs/README.md names schema(s) nothing publishes: {stale}"
+        assert stale == [], f"{CONTRACTS} names schema(s) nothing publishes: {stale}"
 
     def test_the_index_says_how_to_read_a_contract(self):
         """The ids alone are a list; `--schema` is what makes them
         usable without opening `bga/schemas.py`."""
-        text = (REPO / "docs/README.md").read_text(encoding="utf-8")
-        assert "--schema" in text, "docs/README.md lists the schema ids without saying how to print one"
+        text = (REPO / CONTRACTS).read_text(encoding="utf-8")
+        assert "--schema" in text, f"{CONTRACTS} lists the schema ids without saying how to print one"
 
 
 if __name__ == "__main__":  # pragma: no cover

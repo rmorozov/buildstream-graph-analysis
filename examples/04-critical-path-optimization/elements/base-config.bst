@@ -3,7 +3,7 @@
 # steps that could just as well be one, each adding real serial time to
 # the critical path before core.bst can even start. The optimized/
 # variant merges both into a single, shorter step. See
-# docs/guides/optimization-walkthrough.md.
+# docs/audits/optimization-walkthrough-04.md.
 kind: manual
 depends:
 - filename: runtime.bst

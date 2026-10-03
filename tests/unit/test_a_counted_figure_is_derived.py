@@ -49,6 +49,7 @@ import dev_track_cost
 from bga import contracts
 
 INDEX = REPO / "docs/README.md"
+CONTRACTS = REPO / "docs/guides/json-contracts.md"
 ARCHITECTURE = REPO / "docs/design/architecture.md"
 CHANGELOG = REPO / "CHANGELOG.md"
 README = REPO / "README.md"
@@ -72,8 +73,8 @@ def _flat(text):
 
 
 def _emitted_block():
-    """`docs/README.md`'s "What it emits" section, subject only."""
-    text = INDEX.read_text(encoding="utf-8")
+    """The contracts page's "What it emits" section, subject only (`UX-1289` moved it)."""
+    text = CONTRACTS.read_text(encoding="utf-8")
     start = text.index("## What it emits")
     return text[start : text.index("\n## ", start + 4)]
 
@@ -351,7 +352,7 @@ class TestTheGuidesEvidenceBlockIsTheReport:
 # `_derived_sentences()` builds from the population, it names the ids it
 # counts, or it is a dated finding in `HISTORICAL`.
 
-CLI = REPO / "docs/guides/cli.md"
+CLI = REPO / "docs/guides/viewer.md"
 SKILL = REPO / ".claude/skills/measure/SKILL.md"
 HARNESS = REPO / "tools/dev_perfetto_queries.py"
 TIMELINE = REPO / "tools/bga_timeline.py"
@@ -524,7 +525,7 @@ def _derived_sentences():
     other = WORDS[len(rest)]
     return {
         "README.md": [f"sorts all {WORDS[total]} canned questions"],
-        "docs/guides/cli.md": [
+        "docs/guides/viewer.md": [
             f"— {WORDS[total]} paste-ready PerfettoSQL queries",
             f"{head} canned questions genuinely need the trip; {other} are sharper",
         ],

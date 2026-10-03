@@ -651,16 +651,15 @@ def _architecture_table_statuses():
     return statuses
 
 
-def test_the_architecture_table_is_read_at_all():
-    """Non-vacuity for the clause below: a heading rename or a table
-    moved out from under it must fail loudly, not pass by finding
-    nothing to disagree about."""
+def test_the_architecture_chapter_links_the_backlog_instead_of_copying_it():
+    """`UX-1293`: the third copy is gone, and the chapter is still read -
+    a heading rename fails here, and so does a status row typed back in."""
+    text = (REPO / "docs/design/architecture.md").read_text(encoding="utf-8")
+    assert _ARCHITECTURE_TABLE_HEADING in text, f"architecture.md lost {_ARCHITECTURE_TABLE_HEADING!r}"
+    chapter = text.split(_ARCHITECTURE_TABLE_HEADING, 1)[1].split("\n## ", 1)[0]
+    assert "](../backlog/scenarios/README.md)" in chapter, "the chapter no longer links the backlog"
     rows = _architecture_table_statuses()
-    assert rows, (
-        "docs/design/architecture.md's history table read as empty - "
-        f"expected the section starting {_ARCHITECTURE_TABLE_HEADING!r} "
-        "to hold `| UX-N | ... | marker |` rows"
-    )
+    assert rows == {}, f"architecture.md types {len(rows)} status row(s) the backlog already holds"
 
 
 def test_the_table_status_matches_the_task_files():
@@ -1599,7 +1598,7 @@ def test_the_code_span_sweep_reads_a_population():
     ]
     assert len(names) > 100, ("the code-span sweep reads too few names to be reading these documents", len(names))
     architecture = (REPO / "docs/design/architecture.md").read_text(encoding="utf-8")
-    assert "`optimization-walkthrough.md` (what that felt like)" in architecture, (
+    assert "`real-project.md` (what that felt like)" in architecture, (
         "the reading order's names are not code spans any more, so this guard is not what holds them"
     )
 

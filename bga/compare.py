@@ -307,6 +307,9 @@ class ComparisonResult:
     # reviewer cannot tell a wide band from a stale one. Empty when no
     # baseline set was supplied.
     baseline_band_sources: list = field(default_factory=list)
+    # `UX-1298`: set by the CLI from `--band-from-class`; `None` when the members were not selected by class.
+    baseline_band_origin: Optional[dict] = None
+    baseline_band_skipped_for_host: Optional[dict] = None
     # UX-79: what this change added, removed or moved, and how much of
     # the added work landed on the critical path. The whole-build gate is
     # an average and dilutes with project size; these two are marginal.
@@ -350,6 +353,8 @@ class ComparisonResult:
             'host_comparison': self.host_comparison,
             'build_class_comparison': self.build_class_comparison,
             'baseline_band_sources': self.baseline_band_sources,
+            'baseline_band_origin': self.baseline_band_origin,
+            'baseline_band_skipped_for_host': self.baseline_band_skipped_for_host,
             'baseline_run_instance': self.baseline_run_instance,
             'candidate_run_instance': self.candidate_run_instance,
             'memory_envelope_delta': self.memory_envelope_delta,

@@ -662,7 +662,7 @@ missed two, both caught by CI (`UX-763`). In order:
 5. The round document, its `## Agents` table from step 3's rows or
    stating none ran —
    `test_a_run_is_priced.py::TestEveryRegisteredRoundPricesItsAgents`.
-6. `directions.md`'s history row and the `docs/README.md` link —
+6. `docs/audits/directions-history.md`'s history row and the `docs/audits/README.md` link —
    `test_the_round_history_names_every_audit.py` (`UX-583`).
 7. The gate, last: `make push-check` on the commit about to push —
    `test_the_gate_covers_the_pushed_commit.py` (`UX-762`, `UX-948`).

@@ -25,7 +25,7 @@ from tools import bga_snapshot
 COLD = REPO / "tests/fixtures/same_build_twice_cold/run"
 INCREMENTAL = REPO / "tests/fixtures/same_build_twice_incremental/run"
 
-CLI_GUIDE = REPO / "docs/guides/cli.md"
+CLI_GUIDE = REPO / "docs/guides/viewer.md"
 
 # The seed store `UX-330` plants and the guide's block is taken from.
 DEMO_PATH = "/tmp/bga-demo"

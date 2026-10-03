@@ -193,6 +193,7 @@ KNOWN_SKIP_REASONS = {
         "that read it say so rather than passing on an empty tree",
         5,
     ),
+    "shellcheck is not installed (pip install shellcheck-py)": ("shellcheck is an optional local tool", 1),
     "node is not installed": ("the viewer guards need node; CI has it", 0),
     # UX-257's geometry guards. Declared so that "no browser here" is
     # a fact the census reports rather than a silence.

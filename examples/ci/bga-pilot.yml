@@ -1,0 +1,106 @@
+# bga pilot (UX-1288), report-only: copy to .github/workflows/bga-pilot.yml
+# and bga-pilot.sh to ci/bga-pilot.sh. Every switch is in `env:` below, at its
+# default; docs/guides/pilot.md carries the table. Set the first three.
+name: bga pilot
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "0 2 * * *"
+
+env:
+  PILOT_BGA_COMMIT: ""
+  PILOT_PROJECT: "."
+  PILOT_TARGET: ""
+  PILOT_BGA_REPO: "https://github.com/rmorozov/buildstream-graph-analysis"
+  PILOT_BUILD_TYPE: "review"
+  PILOT_BUILD_VARIANT: ""
+  PILOT_REVIEW_SAMPLE: "25"
+  PILOT_JOBSERVER: "off"
+  PILOT_ADMISSION: "off"
+  PILOT_TRACE_OPENS: "off"
+  PILOT_TRACE_SPINE: "off"
+  PILOT_BAND_WINDOW: "10"
+  PILOT_CROSS_HOST: "off"
+  PILOT_KEEP_DIR: "bga-pilot-kept"
+  PILOT_KEEP_LAST: "30"
+  PILOT_ENFORCE: "off"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+
+      # The nightly is its own class; every push to main is captured, because a
+      # pull request's cache is scoped to that pull request and cannot feed the band.
+      - name: Declare the build's class
+        run: |
+          case "${{ github.event_name }}" in
+            schedule) echo "PILOT_BUILD_TYPE=night" >> "$GITHUB_ENV" ;;
+            push) echo "PILOT_REVIEW_SAMPLE=100" >> "$GITHUB_ENV" ;;
+          esac
+
+      - name: Restore the kept bundles
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ env.PILOT_KEEP_DIR }}
+          key: bga-pilot-${{ github.run_id }}
+          restore-keys: bga-pilot-
+
+      # A failing doctor fails this step only; the build below then runs without bga.
+      - name: Set up bga
+        continue-on-error: true
+        run: ci/bga-pilot.sh setup
+
+      - name: Build
+        run: ci/bga-pilot.sh capture
+
+      - name: Report
+        if: always()
+        run: ci/bga-pilot.sh report > bga-comment.md
+
+      - name: Post or update the comment
+        if: always() && github.event_name == 'pull_request' && hashFiles('bga-comment.md') != ''
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const body = fs.readFileSync('bga-comment.md', 'utf8');
+            const marker = '<!-- bga-ci-comment -->';
+            if (!body.startsWith(marker)) { return; }
+            const { owner, repo } = context.repo;
+            const issue_number = context.issue.number;
+            const existing = (await github.rest.issues.listComments({
+              owner, repo, issue_number,
+            })).data.find(c => c.body.startsWith(marker));
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner, repo, comment_id: existing.id, body });
+            } else {
+              await github.rest.issues.createComment({
+                owner, repo, issue_number, body });
+            }
+
+      # A pull request's cache is scoped to it, so its verdict and wall leave only as an artifact.
+      - name: Keep this run's lines
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bga-pilot-lines
+          path: |
+            ${{ env.PILOT_KEEP_DIR }}/verdicts.tsv
+            ${{ env.PILOT_KEEP_DIR }}/builds.tsv
+          if-no-files-found: ignore
+
+      - name: Keep the bundles
+        if: always() && github.event_name != 'pull_request'
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ env.PILOT_KEEP_DIR }}
+          key: bga-pilot-${{ github.run_id }}

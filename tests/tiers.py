@@ -1234,4 +1234,6 @@ MEDIUM = (
     "tests/unit/test_a_ranked_card_shows_the_map_rows.py",  #    1.0s
     "tests/unit/test_a_saving_is_priced_per_day.py",  #    4.1s
     "tests/unit/test_the_rail_mark_is_drawn_where_it_is_seen.py",  #    2.0s
+    # `UX-1288`, measured single-process on landing.
+    "tests/unit/test_a_pilot_kit_runs_report_only.py",  #    8.4s
 )

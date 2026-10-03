@@ -218,89 +218,9 @@ freedesktop-sdk capture, measured by UX-74:
 
 ## Real extensions beyond the original spec
 
-Everything below is **additive**, not a spec contradiction — each is clearly marked non-spec in its own code/docstrings.
-
-The table covers `UX-01`..`UX-76`: the additions that shaped the architecture this document describes. Everything filed since — the capture chain's diagnosability, the local snapshot store, the interrupt contract, the spine — is indexed with its status in [`docs/backlog/scenarios/README.md`](../backlog/scenarios/README.md), which is the live list; each item still has the full evidence trail in its own file.
-
-| ID | One-line addition | Status |
-|---|---|---|
-| UX-01 | `bga compare` — baseline vs. candidate deltas + verdict | 🟢 Done |
-| UX-02 | `efficiency_score` — composite, banded, confidence-gated | 🟢 Done |
-| UX-03 | `bga compare --fail-on-regression` — CI gate, exit code 4 | 🟢 Done |
-| UX-04 | Per-attribution-category "what to do about it" hints | 🟢 Done |
-| UX-05 | Real 2-iteration optimization walkthrough tutorial | 🟢 Done |
-| UX-06 | Fixed `--format raw` cross-task timestamp corruption | 🟢 Done |
-| UX-07 | Fixed `run_identity` collision across sibling projects | 🟢 Done |
-| UX-09 | Confirmed real: `--builders`×native `max-jobs` CPU contention | 🟢 Done |
-| UX-10 | `total_duration_us` now prefers real wall-clock | 🟢 Done |
-| UX-11 | **Plane 2** — intra-element native-build-system tracer | 🟢 Done |
-| UX-12 | Capture real native `--max-jobs` + host CPU core count | 🟢 Done |
-| UX-13 | `LB`/certified-headroom report caveat: dispatch capacity ≠ CPU cores | 🟢 Done |
-| UX-14 | Sweep/replay fixed-duration caveat (tier 1) + real, calibration-driven contention-aware duration model (tier 2, `--calibration-dir`) | 🟢 Done |
-| UX-15 | `--cpu-budget` overrides raw host core detection (cgroup-aware) | 🟢 Done |
-| UX-16 | Fixed `max-jobs=0` sentinel silently treated as "missing" | 🟢 Done |
-| UX-17 | `UtilizationAnalyzer` oversubscription dead code delegated to `UX-12` | 🟢 Done |
-| UX-18 | Standalone `bst_run_context.py` gained `UX-12`/`UX-15` fields | 🟢 Done |
-| UX-19 | Wait-gap re-saturation + retry-gap contention decomposition | 🟢 Done |
-| UX-20 | `sensitivity.top_opportunities` in text report + batch/map-reduce simulation | 🟢 Done |
-| UX-21 | Memory/swap oversubscription guard (independent of CPU) | 🟢 Done |
-| UX-22 | Per-element `max-jobs` capture + serialization-point risk detection (**capture route and premise both corrected by `UX-31`** - `%{vars}`, not `%{public}`; pinned-below, not raised-above) | 🟢 Done |
-| UX-23 | Element-tag Plane 2 traces + detect redundant cross-element operations (real evidence: `examples/05`'s CMake ABI probe reran 6x independently; real run found 37 redundant-operation findings) | 🟢 Done |
-| UX-24 | Chrome Trace export for Plane 2 + combined two-plane `perfetto.dev` view, real dual-plane single-invocation capture | 🟢 Done |
-| UX-25 | Coverage hard-gate violations gain real diagnostic detail (not just a bare ratio) | 🟢 Done |
-| UX-26 | Batch/map-reduce report stops surfacing zero-savings groups | 🟢 Done |
-| UX-27 | `floors.occupancy_share` - a graph-shape-aware efficiency signal beside `efficiency_score`, which structurally cannot be one (real pair: +35.2pp where every other metric was flat or backwards) | 🟢 Done |
-| UX-28 | Oversubscription bar re-based onto the real governing core count (was BuildStream's own defaults, whose ratio-to-cores collapsed as the host grew), plus a new `dispatch_oversubscription` check on `builders` alone | 🟢 Done |
-| UX-29 | `native_max_jobs` recovered from the wrapped log's own recorded invocation, with a `native_max_jobs_source` provenance field - the whole capacity-guard chain was inert on runs made by the documented pipeline | 🟢 Done |
-| UX-30 | Sweep knee point is the last capacity that bought a real gain, computed over the whole curve | 🟢 Done |
-| UX-31 | `%{vars}` capture of the *resolved* per-element `max-jobs` + `notparallel` (correcting `UX-22`'s route and premise); detector re-pointed at parallelism-pinned elements | 🟢 Done |
-| UX-32 | Plane 2 per-element achieved parallelism, with work-vs-orchestration classification and two real findings (`pinned_to_one_job`, `underachieved_requested_jobs`) | 🟢 Done |
-| UX-33 | Critical path always printed (per-element duration/share when long); choke points named | 🟢 Done |
-| UX-34 | Structural kinds filtered out of the what-to-fix-first ranking, named in `omitted_structural_opportunities` | 🟢 Done |
-| UX-35 | `RESOURCE WAIT`'s hint conditioned on a real `capacity_verdict` (consumed from `UX-28`'s check, never re-derived), with a distinct branch for "the checks could not run" | 🟢 Done |
-| UX-36 | Dispatch-occupancy block titled for what it measures; capacity shown with provenance; buckets labelled as occupancy | 🟢 Done |
-| UX-37 | Redundant-operation findings scored and ranked in recoverable wall-clock, filtered, elided readably, element build drivers excluded | 🟢 Done |
-| UX-38 | Tracer `report` detects and re-renders a saved JSON report; wrong input is an error, not a zero-process result | 🟢 Done |
-| UX-39 | Independent CI efficiency gate (`--fail-on-efficiency-regression`, `--min-efficiency`, exit code 5) on `occupancy_share`, with a default derived from measured run-to-run noise | 🟢 Done |
-| UX-40 | Measured pipeline overhead no longer penalizes confidence (real capture 0.694 -> 0.869, CI gate live), plus `--fail-on-low-confidence` | 🟢 Done |
-| UX-41 | Parallelism levels decomposed by *longest* path from a root, not shortest | 🟢 Done |
-| UX-42 | Resource saturation computed once, not re-derived per wait gap (1200-element analyze: 68s → ~4s) | 🟢 Done |
-| UX-43 | "Choke point" re-defined against the real graph, not `fan-in >= 2 and fan-out >= 2` | 🟢 Done |
-| UX-44 | Real slack replaces the `duration × 0.5` placeholder; the improvement ranking was inverted | 🟢 Done |
-| UX-45 | **Real per-process CPU time** in Plane 2 (`getrusage`), with coverage always stated | 🟢 Done |
-| UX-46 | Declared-vs-used build dependencies, from `--trace-opens` matched against artifact contents | 🟢 Done |
-| UX-47 | Narrow subcommands run only the stages they render (`bga graph` ~1.2s vs `analyze` ~3.7s at 1200 elements) | 🟢 Done |
-| UX-48 | Idle capacity split into real buckets instead of all booking to `IDLE_NO_TASKS` | 🟢 Done |
-| UX-49 | `parallelism_efficiency` no longer scores a perfectly serial build 1.000 | 🟢 Done |
-| UX-50 | Structural analyzer keeps every task per element (an element whose FETCH sorted after its BUILD read as zero-duration) | 🟢 Done |
-| UX-51 | **`bga correlate`** — the two-plane join, on element UID | 🟢 Done |
-| UX-52 | Structural plane gates on `build` edges only; `runtime` edges no longer inflate its critical path | 🟢 Done |
-| UX-53 | One per-element duration definition across every path computation (two coexisted, 22% apart) | 🟢 Done |
-| UX-54 | A build in which elements **failed** says so before any efficiency figure | 🟢 Done |
-| UX-55 | Cached elements recognised as cached, not as coverage gaps — `run_mode` published, incremental scoping stated | 🟢 Done |
-| UX-56 | Plane 2 element attribution correlated against Plane 1 BUILD spans, not a path convention (0.6% → 14.9% on a real project) | 🟢 Done |
-| UX-57 | Hook's open-path buffer flushes instead of dropping (70% of a real build's opens were lost) | 🟢 Done |
-| UX-58 | Plane 2 shim records the bwrap argv and invocation it rewrites | 🟢 Done |
-| UX-59 | Regression gate can compare against a baseline *set* — median ± k·MAD band, minimum three runs | 🟢 Done |
-| UX-60 | `I3` implemented; the FETCH-in-efficiency question **decided** and documented rather than deferred again - but not yet **applied**, because the answer cannot be one number per element and moves a certified floor in both directions | 🟢 Done |
-| UX-61 | `max_concurrency` keyed on `(invocation, pid)` — it reported 5,268 concurrent processes on a 4-core runner | 🟢 Done |
-| UX-62 | Per-span terminal status carried through `trace/v9`; failed task time reported as waste, not silently reclassified | 🟢 Done |
-| UX-63 | **Measured per-element peak RSS** (`ru_maxrss`), replacing operator-declared memory estimates | 🟢 Done |
-| UX-64 | Sandbox correlation matches on the interval's **end** edge (measured: 8 of 9 resolved vs 2 of 9 for whole-interval containment) — real attribution 14.9% → **86.1%** | 🟢 Done |
-| UX-65 | The headline leads with **where the time is**, not with the largest sub-1% wait category | 🟢 Done |
-| UX-66 | Attribution guard judges *validity*, not completeness — an 86.1% join renders with its coverage stated; a name the declared graph never contained is excluded and listed; a cancelled capture can no longer publish over a good one | 🟢 Done |
-| UX-67 | **One entry point**: `bga wrap/extract/capture/…` dispatch to the programs in `tools/`, which stay independently runnable | 🟢 Done |
-| UX-68 | A `stack` stages one marker file, so "nobody opened it" is not evidence — 90% false-positive rate removed from declared-vs-used | 🟢 Done |
-| UX-69 | Plane 2 ranks binaries by **measured CPU**, not invocation count, and names single-process serialization points | 🟢 Done |
-| UX-70 | **Realizable saving** — the longest path recomputed with each candidate zeroed — replaces share-of-path as the what-to-fix ranking | 🟢 Done |
-| UX-71 | The join ranks and gates on that same realizable saving; a saturated metric is declared rather than broken by element name | 🟢 Done |
-| UX-72 | The join reads all of Plane 2 — CPU concentration, serialization points, peak memory, redundancy — ranked by evidence strength | 🟢 Done |
-| UX-73 | Redundancy detection excludes the unresolved attribution bucket and each element's own command block (claimed recoverable time 4129s → 91s on a real capture) | 🟢 Done |
-| UX-74 | **Optimization horizon**, joint saving of the recommended set, and latent heavies — the next several findings from one capture | 🟢 Done |
-| UX-75 | **`bga/findings.py`** — every conclusion the report draws, as data with stable ids and severities, rendered by text and published by JSON | 🟢 Done |
-| UX-76 | One headline table instead of three rankings of the same elements | 🟢 Done |
-
-(`UX-08` was never filed — not a missing/lost file.)
+Everything beyond the spec is **additive**, not a spec contradiction — each is clearly marked non-spec in its own code/docstrings.
+`UX-01`..`UX-76` shaped the architecture this document describes; they and everything filed since are indexed with their status in
+[`docs/backlog/scenarios/README.md`](../backlog/scenarios/README.md), the live list, and each item has its evidence trail in its own file.
 
 ## The viewer axis (rounds 21-26)
 
@@ -392,8 +312,8 @@ renderers are built against, so nothing here is a second copy to drift.
 
 | schema | what it is | printed by |
 |---|---|---|
-| `analyze/v7` | one run's analysis: attribution, floors, the element population, the graph's shape, findings, the headline decision, next steps, who each finding is for (`readers`, `UX-372`), and the provenance behind each claim. **v7** (`UX-1247`) changed `by_binary` from a map of binary to calls to one row per binary — `{binary, cpu_us, wall_us, calls, elements}`, ranked by CPU, summed by `bga.plane2.binary_totals` over `binary_cost`'s pairs; a consumer reading it as a map breaks. `UX-1275` added `blocked_us` and `blocked_share` to those rows, additively: time alive, off CPU and with no child live, and its share of the binary's wall. **v6** (`UX-641`) changed `parallelism.levels` from an array of level *numbers* — always `[0 … n-1]`, the row number under `width_at_level`'s description — to one row per level naming its width and its members, taken from `_compute_level_decomposition` on the **gating** graph; a consumer indexing it as integers breaks. **v5** (`UX-535`) removed `graph_summary.total_elements`, `graph_summary.critical_path_length` and `graph_summary.max_parallelism` — three facts assigned from the same `StructuralMetrics` object `graph_metrics` publishes, so the document carried one number under two spellings in two sections; they are read from `graph_metrics.num_elements`, `graph_metrics.critical_path_length` and `graph_metrics.max_parallelism`. **v4** (`UX-344`) removed the two namespaces — `signals` and `structural` were maps of named tables that held no value of their own, so each table is a top-level key now, `metrics` and `summary` renamed to `graph_metrics` and `graph_summary` and the six element-keyed maps grouped under `elements`; `provenance` is published once per claim at the top level rather than written into every finding, the headline and each top action; and `findings[].evidence.blast_radius` is gone by `UX-288`'s rule, being a slice of a population published in full beside it. Measured on the two fixtures: leaves deeper than three fell from 57% to 40% and from 67% to 53%, and the golden report's deepest path from six levels to five. **v3** (`UX-341`) renamed every key that carried a retired unit — `measured_us`, `peak_rss_bytes`, `useful_share`, `occupancy_share` and the rest — so the payload measures time in µs, memory in bytes and a bounded fraction in 0..1, one spelling each. **v2** (`UX-288`) had removed three fields that republished element membership already published beside them — `signals.critical_path`, `signals.leaf_analysis.leaves`, and `structural.deferrability`'s two uid lists (their names at the time). `UX-345` removed one more on the same rule — `signals.critical_path_length`, which held `floors.t_infinity_observed`'s microseconds under a `count` — and renamed `signals.wall_clock_share` to `wall_clock_share_us` | `bga analyze --schema` |
-| `compare/v2` | two runs, their signed deltas, the verdict and its noise band, the per-element culprits, the candidate's diagnosis chain, `verdict_provenance` (`UX-610`) - the chain behind the *verdict* rather than behind the candidate run, `null` on a refusal - `build_class_comparison` (`UX-898`, `UX-903`): whether the two runs declared the same build type and variant, `{"status": "absent"}` where neither declared one, and `baseline_band_sources` (`UX-899`): which runs the band was computed from, `{"run", "manifest_hash"}` each and empty when no baseline set was supplied | `bga compare --schema` |
+| `analyze/v7` | one run's analysis: attribution, floors, the element population, the graph's shape, findings, the headline decision, next steps, who each finding is for (`readers`, `UX-372`), and the provenance behind each claim. **v7** (`UX-1247`) changed `by_binary` from a map of binary to calls to one row per binary — `{binary, cpu_us, wall_us, calls, elements}`, ranked by CPU, summed by `bga.plane2.binary_totals` over `binary_cost`'s pairs; a consumer reading it as a map breaks. `UX-1275` added `blocked_us` and `blocked_share` to those rows, additively: time alive, off CPU and with no child live, and its share of the binary's wall. **v6** (`UX-641`) changed `parallelism.levels` from an array of level *numbers* — always `[0 … n-1]`, the row number under `width_at_level`'s description — to one row per level naming its width and its members, taken from `_compute_level_decomposition` on the **gating** graph; a consumer indexing it as integers breaks. **v5** (`UX-535`) removed `graph_summary.total_elements`, `graph_summary.critical_path_length` and `graph_summary.max_parallelism` — three facts assigned from the same `StructuralMetrics` object `graph_metrics` publishes, so the document carried one number under two spellings in two sections; they are read from `graph_metrics.num_elements`, `graph_metrics.critical_path_length` and `graph_metrics.max_parallelism`. **v4** (`UX-344`) removed the two namespaces — `signals` and `structural` were maps of named tables that held no value of their own, so each table is a top-level key now, `metrics` and `summary` renamed to `graph_metrics` and `graph_summary` and the six element-keyed maps grouped under `elements`; `provenance` is published once per claim at the top level rather than written into every finding, the headline and each top action; and `findings[].evidence.blast_radius` is gone by `UX-288`'s rule, being a slice of a population published in full beside it. Measured on the two fixtures: leaves deeper than three fell from 57% to 40% and from 67% to 53%, and the golden report's deepest path from six levels to five. **v3** (`UX-341`) renamed every key that carried a retired unit — `measured_us`, `peak_rss_bytes`, `useful_share`, `occupancy_share` and the rest — so the payload measures time in µs, memory in bytes and a bounded fraction in 0..1, one spelling each. **v2** (`UX-288`) had removed three fields that republished element membership already published beside them — `signals.critical_path`, `signals.leaf_analysis.leaves`, and `structural.deferrability`'s two uid lists (their names at the time). `UX-345` removed one more on the same rule — `signals.critical_path_length`, which held `floors.t_infinity_observed`'s microseconds under a `count` — and renamed `signals.wall_clock_share` to `wall_clock_share_us`. Two keys a consumer of the ranking reads: `omitted_structural_opportunities`, the structural kinds the what-to-fix ranking filters out (`UX-34`), and each sequence step's `cumulative_saving_us`, the savings so far in fix order - a sequence, not a sum | `bga analyze --schema` |
+| `compare/v2` | two runs, their signed deltas, the verdict and its noise band, the per-element culprits, the candidate's diagnosis chain, `verdict_provenance` (`UX-610`) - the chain behind the *verdict* rather than behind the candidate run, `null` on a refusal - `build_class_comparison` (`UX-898`, `UX-903`): whether the two runs declared the same build type and variant, `{"status": "absent"}` where neither declared one, and `baseline_band_sources` (`UX-899`): which runs the band was computed from, `{"run", "manifest_hash"}` each and empty when no baseline set was supplied, and `baseline_band_origin` / `baseline_band_skipped_for_host` (`UX-1298`): the store or `--bundles` tree `--band-from-class` read, `{"kind", "path"}`, and the members it skipped for host, `{"count", "fields"}`, both `null` without the flag | `bga compare --schema` |
 | `blast/v2` | what rebuilds if one repository, path or element changes | `bga blast --schema` |
 | `correlate/v2` | the two planes joined on element uid, with the coverage of the join | `bga correlate --schema` |
 | `store/v1` | what the run store holds: one row per snapshot, with the alias, the verdict and why a capture is not a measurement - and, per row, `queue_wait_us`, the gap between the instant a build was requested and the instant it started, with `queue_wait_absent_reason` naming why where that is `null` rather than zero (`UX-594`) | `bga snapshot --list --format json` |
@@ -488,9 +408,8 @@ artifact.
 - **`docs/backlog/tasks/`** + `docs/backlog/progress-tracker.md` — **closed** historical spec-compliance backlog (P0-P4). Read only for archaeology.
 - **`docs/spec/ingestion-pipeline.md`** — real data flow from a `bst` invocation to `bga`-ingestible input.
 - **`docs/guides/real-project.md`** — the end-to-end user-facing walkthrough on a real project: capture → read → go inside → join → act → gate, with real output at every step and an explicit list of what the tool refuses to say.
-- **`docs/guides/optimization-walkthrough.md`** — a full worked example using the tool for real.
 - **`docs/audits/case-study-06-macro-micro.md`** — the harder companion: a real macro-then-micro cycle on `examples/06-macro-micro-optimization`, written up as the case where the tool does *not* guide you, with every command and output pasted.
-- **`docs/design/directions.md`** — where the tool should go next, argued separately for its two real usage scenarios (local optimization helper, and CI analytics/gate). Reading order: `architecture.md` (what it is) → `optimization-walkthrough.md` (what that felt like) → `directions.md` (what to do about it).
+- **`docs/design/directions.md`** — where the tool should go next, argued separately for its two real usage scenarios (local optimization helper, and CI analytics/gate). Reading order: `architecture.md` (what it is) → `real-project.md` (what that felt like) → `directions.md` (what to do about it).
 - **`docs/contributing/fixing-guide.md`** — mandatory session-start discipline (verification rules) for either backlog.
 - **`docs/guides/jobserver.md`** — when `--jobserver auto` pays: the measured extremes, its cost, and the builder count to pair it with.
 - **`docs/guides/cli.md`** — CLI reference/usage examples.
@@ -504,6 +423,20 @@ and is superseded now is what the record says, and sweeping it forward
 with the tables above destroys the one thing the entry is for
 (`UX-653`). The newest entry is the exception: every round that
 re-grounds the document rewrites it.
+
+Updated 2026-10-03 (after `UX-1298`), covering five changes to this
+document in round 167, the fifth this entry itself. The `compare/v2`
+row names `baseline_band_origin` and `baseline_band_skipped_for_host`,
+the store or `--bundles` tree a class band was read from and the
+members it skipped for host — permitted and always written, so the id
+does not move (`UX-1298`). The status table of Done rows becomes a link to
+the backlog index (`UX-1293`); the `analyze/v7` row names
+`omitted_structural_opportunities` and `cumulative_saving_us`, which
+only that table carried; the retired walkthrough's link points at
+`guides/real-project.md` (`UX-1292`). No contract moved. The figures
+are re-grounded in `bga analyze --schema`
+(`analyze/v7`: **65 top-level properties**) and `bga.contracts.ids()`:
+**28 emitted ids**.
 
 Updated 2026-10-02 (after `UX-1278`), covering three changes to this
 document in rounds 163 and 165. The contract registry's headline id moves to

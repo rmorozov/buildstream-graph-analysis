@@ -265,7 +265,7 @@ than the term's arithmetic.
 ## 5. Direction 20: the jobserver is the cheap instrument for this
 
 [Direction 20](directions.md) landed the jobserver as a capture option
-(`UX-841`..`UX-852`, round 118; status line at `directions.md:1822`).
+(`UX-841`..`UX-852`, round 118; status line under `## Direction 20` in `directions.md`).
 Three consequences for this axis, in both directions:
 
 **The mode invalidates "`max-jobs` is a number."** Under

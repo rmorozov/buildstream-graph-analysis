@@ -20,7 +20,7 @@ Fixing guide §7a steps 1-6, in its order, from the brief's rows, notes
 and runs: each row's `dev_close_task.py UX-NNN --move --note-file <path>`
 with the note written to a file first (`UX-768`); a ledger row per run
 through `dev_track_cost.py --append`; the round document and its
-`## Agents` table; `directions.md`'s history row and the `docs/README.md`
+`## Agents` table; `audits/directions-history.md`'s history row and the `docs/audits/README.md`
 link. Print `dev_close_task.py --counts` and `dev_touching.py --spread`,
 never commit them (`UX-996`). Finish with `dev_close_task.py --check`.
 Step 7, the gate, is the session's.

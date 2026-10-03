@@ -165,20 +165,20 @@ class TraceError(RuntimeError):
     pass
 
 
-def compile_hook(build_dir: str) -> str:
-    """Compile the checked-in LD_PRELOAD hook fresh into build_dir - not
-    cached, to avoid the exact stale-compiled-artifact bug this design
-    already hit once for real during its own prototype (a hook.so whose
-    trace-log path went stale after a mid-experiment path change; see
-    UX-11's Deep Experiment Findings)."""
-    hook_so = os.path.join(build_dir, "hook.so")
+def c_compiler(purpose: str) -> str:
+    """The compiler a capture builds its hook and spine with; `bga doctor` asks the same."""
     cc = shutil.which("cc") or shutil.which("gcc")
     if cc is None:
-        raise TraceError("no C compiler (cc/gcc) found on PATH - required to build the LD_PRELOAD hook")
+        raise TraceError(f"no C compiler (cc/gcc) found on PATH - required to build the {purpose}")
+    return cc
+
+
+def compile_hook(build_dir: str) -> str:
+    """Compile the LD_PRELOAD hook fresh into build_dir, never cached: a stale hook.so bit UX-11."""
+    hook_so = os.path.join(build_dir, "hook.so")
+    cc = c_compiler("LD_PRELOAD hook")
     result = subprocess.run(
-        # -ldl for UX-46's dlsym(RTLD_NEXT, ...) interposition. Harmless
-        # on glibc >= 2.34 where libdl is folded into libc, and required
-        # on older ones.
+        # -ldl for UX-46's dlsym(RTLD_NEXT): needed before glibc 2.34, harmless after.
         [cc, "-shared", "-fPIC", "-O2", "-Wall", "-Wextra", "-o", hook_so, _HOOK_C, "-ldl"],
         capture_output=True,
         text=True,
@@ -202,9 +202,7 @@ def compile_spine(build_dir: str) -> str:
     follows and for the same reason it learned it.
     """
     spine_bin = os.path.join(build_dir, "spine")
-    cc = shutil.which("cc") or shutil.which("gcc")
-    if cc is None:
-        raise TraceError("no C compiler (cc/gcc) found on PATH - required to build the ptrace spine")
+    cc = c_compiler("ptrace spine")
     result = subprocess.run(
         [cc, "-static", "-O2", "-Wall", "-Wextra", "-o", spine_bin, _SPINE_C],
         capture_output=True,

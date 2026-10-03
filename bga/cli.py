@@ -51,6 +51,7 @@ from .exceptions import (
     EXIT_BAND_UNAVAILABLE,
     EXIT_EFFICIENCY_REGRESSION,
     EXIT_GENERAL,
+    EXIT_INGESTION,
     EXIT_MISMATCHED_RUNS,
     EXIT_OK,
     EXIT_REGRESSION,
@@ -1008,6 +1009,8 @@ def _produce_compare_output(args: argparse.Namespace):
     # A note, not a gate - there is no noise band for peak RSS, and this
     # codebase does not gate on a threshold it has not measured.
     comparison.memory_envelope_delta = _memory_envelope_delta(args)
+    comparison.baseline_band_origin = getattr(args, 'band_origin', None)
+    comparison.baseline_band_skipped_for_host = getattr(args, 'band_skipped_for_host', None)
 
     if args.format == 'json':
         output = json.dumps(schemas.stamp(comparison.to_dict(), schemas.COMPARE), indent=2, default=str)
@@ -1245,7 +1248,24 @@ def _resolve_band_from_class(args: argparse.Namespace) -> Optional[int]:
     from .buildclass import label as class_label
 
     candidate = str(Path(args.candidate).resolve())
-    project = run_store.project_root(candidate)
+    exclude = [candidate, str(Path(args.baseline).resolve())]
+    band_store = getattr(args, 'band_store', None)
+    project = band_store or run_store.project_root(candidate)
+    holds = f"the bundles under {args.bundles} hold" if band_store else "this store holds"
+    if band_store:
+        from . import bundle
+        from .compare import _band_source
+
+        try:
+            bundle.load_tree(args.bundles, band_store)
+        except bundle.BundleError as error:
+            print(f"Error: {error}", file=sys.stderr)
+            return EXIT_INGESTION
+        # A principal also kept in the tree is excluded by its stamp, as the store excludes it by path.
+        exclude += [
+            os.path.join(run_store.runs_dir(band_store), _band_source(Path(p))['run'], run_store.RUN_SUBDIR)
+            for p in exclude[:2]
+        ]
     if project is None:
         print(
             f"Error: --band-from-class needs a run store to select from, and no "
@@ -1257,18 +1277,33 @@ def _resolve_band_from_class(args: argparse.Namespace) -> Optional[int]:
         return EXIT_CODE_BAND_UNAVAILABLE
 
     declared = run_store.declared_class(candidate)
-    selected = run_store.runs_of_class(
+    # UX-1285: members from another machine are skipped unless the caller accepts a cross-host band.
+    host = None if getattr(args, 'allow_cross_host', False) else run_store.declared_host(candidate)
+    selected, skipped = run_store.runs_of_class(
         project,
         declared,
         window,
-        exclude=(candidate, str(Path(args.baseline).resolve())),
+        exclude=tuple(exclude),
+        host=host,
     )
+    # `UX-1298`: published on `compare/v2`, so the comment and a JSON consumer read one answer.
+    args.band_origin = (
+        {'kind': 'bundles', 'path': str(args.bundles)} if band_store else {'kind': 'store', 'path': str(project)}
+    )
+    args.band_skipped_for_host = {'count': len(skipped), 'fields': _skipped_fields(skipped, host)}
     if len(selected) < MIN_BASELINE_RUNS:
         print(
             f"Band gate REFUSED: the candidate declares "
             f"{class_label(declared) or 'no build class'} "
-            f"and this store holds other {plural(len(selected), 'run')} of that class "
-            f"within the last {window}, below the {MIN_BASELINE_RUNS} a measured "
+            f"and {holds} other {plural(len(selected), 'run')} of that class "
+            f"within the last {window}"
+            + (
+                f" on its host ({len(skipped)} skipped for host: "
+                f"{', '.join(args.band_skipped_for_host['fields'])}; pass --allow-cross-host to pool them)"
+                if skipped
+                else ""
+            )
+            + f", below the {MIN_BASELINE_RUNS} a measured "
             f"band needs. This is a refusal to judge, not a verdict about the "
             f"build: falling back to the fixed 1% rule is exactly the "
             f"cries-wolf comparison --band-from-class exists to replace. "
@@ -1282,6 +1317,13 @@ def _resolve_band_from_class(args: argparse.Namespace) -> Optional[int]:
 
     args.baseline_run = selected
     return None
+
+
+def _skipped_fields(skipped: list, host: Optional[dict]) -> list:
+    """Which fields set the skipped members apart, e.g. `cpu_model`."""
+    from . import hostinfo, run_store
+
+    return sorted({f for run in skipped for f in hostinfo.differing_fields(run_store.declared_host(run), host)})
 
 
 def _compare_exit_code(args: argparse.Namespace, comparison) -> int:
@@ -1643,7 +1685,23 @@ def cmd_compare(args: argparse.Namespace) -> int:
     itself a failure condition. `--fail-on-regression` opts into a
     distinct exit code when the candidate genuinely regressed (UX-03's
     CI gate) - see _compare_exit_code."""
-    return _execute_compare_and_write(args)
+    if getattr(args, 'bundles', None) is None:
+        return _execute_compare_and_write(args)
+    if getattr(args, 'band_from_class', None) is None:
+        print(
+            "Error: --bundles names where the band's members are kept; pass --band-from-class to select them.",
+            file=sys.stderr,
+        )
+        return EXIT_GENERAL
+    import shutil
+    import tempfile
+
+    # UX-1286: the tree is read through a store deleted on exit, as `bga snapshot --bundles` reads it.
+    args.band_store = tempfile.mkdtemp(prefix="bga-bundles-")
+    try:
+        return _execute_compare_and_write(args)
+    finally:
+        shutil.rmtree(args.band_store, ignore_errors=True)
 
 
 def cmd_whatif(args: argparse.Namespace) -> int:
@@ -1948,6 +2006,11 @@ def cmd_bundle(args: argparse.Namespace) -> int:
     """
     from . import bundle as bundle_mod
 
+    if args.anonymize and (not args.export or args.no_plane2):
+        print(
+            "Error: --anonymize goes with --export alone; it ships what each member's treatment says.", file=sys.stderr
+        )
+        return 2
     try:
         if args.resolve:
             return _bundle_resolve(args)
@@ -1971,6 +2034,8 @@ def _bundle_export(args: argparse.Namespace, bundle_mod) -> int:
         snapshot = token
     else:
         snapshot = run_store.resolve_snapshot(token if run_store.is_alias(token) else "@" + token.lstrip("@"))
+    if args.anonymize:
+        return _bundle_export_anonymized(args, bundle_mod, snapshot)
     path, manifest = bundle_mod.export(snapshot, args.output, include_plane2=not args.no_plane2)
     counts = bundle_mod.describe(manifest)
     print(f"Wrote {path}")
@@ -1984,6 +2049,49 @@ def _bundle_export(args: argparse.Namespace, bundle_mod) -> int:
         print(f"  left out (--no-plane2): {', '.join(manifest['excluded'])}")
     print(f"  load it with: bga bundle --load {os.path.basename(path)}")
     return 0
+
+
+def _bundle_export_anonymized(args: argparse.Namespace, bundle_mod, snapshot: str) -> int:
+    """`bga bundle --export STAMP --anonymize` (UX-1295): the key and map
+    `--resolve` reads, the review shown, nothing written unless approved."""
+    from . import anonymize, run_store
+
+    project = run_store.project_root()
+    if project is None:
+        print(
+            "Error: no BuildStream project here to keep the anonymization key in "
+            "(no project.conf in this directory or any parent).",
+            file=sys.stderr,
+        )
+        return 2
+    key = anonymize.load_or_create_key(project)
+    pmap = anonymize.PseudonymMap.for_project(project)
+    path, manifest = bundle_mod.export_anonymized(snapshot, key, pmap, args.output, approve=_review_approver())
+    counts = bundle_mod.describe(manifest)
+    print(f"Wrote {path}")
+    print(f"  {plural(counts['members'], 'member')}, {run_store.human_bytes(counts['bytes'])} before compression")
+    print(f"  read a reply with: bga bundle --resolve --key-fingerprint {manifest['key_fingerprint']}")
+    return 0
+
+
+def _review_approver():
+    """Who approves the review: the person at a terminal, else no one."""
+    # an unattended approval is one more branch here, on its own flag
+    return _ask_on_the_terminal if sys.stdin.isatty() else _refuse_without_a_terminal
+
+
+def _ask_on_the_terminal(screen: str) -> bool:
+    print(screen)
+    try:
+        return input("Write this bundle? [y/N] ").strip().lower() in ("y", "yes")
+    except EOFError:
+        return False
+
+
+def _refuse_without_a_terminal(screen: str) -> bool:
+    print(screen)
+    print("stdin is not a terminal, so no one can approve the review above.", file=sys.stderr)
+    return False
 
 
 def _bundle_load(args: argparse.Namespace, bundle_mod) -> int:
@@ -2725,6 +2833,13 @@ def _add_compare_subcommand(subparsers) -> None:
         f'of the candidate\'s own class; exit {EXIT_CODE_BAND_UNAVAILABLE} '
         f'below {MIN_BASELINE_RUNS}.',
     )
+    compare_parser.add_argument(
+        '--bundles',
+        default=None,
+        metavar='DIR',
+        help='UX-1286: with --band-from-class, select the band from the bundles '
+        'kept under DIR, read through a temporary store deleted on exit.',
+    )
     # UX-104 item 2: a memory *note*, not a gate. Two flags rather than
     # one because the envelope is a fact about a run and the two runs are
     # independent captures - inferring the baseline's Plane 2 report from
@@ -2763,15 +2878,16 @@ def _add_bundle_subcommand(subparsers) -> None:
     # switches that already read and write a project's own store.
     bundle_parser = subparsers.add_parser(
         'bundle',
-        usage='bga bundle --export STAMP [-o FILE] | --load FILE|DIR | --resolve --key-fingerprint FP',
+        usage='bga bundle --export STAMP [--anonymize] [-o FILE] | --load FILE|DIR | --resolve --key-fingerprint FP',
         help='Pack a capture into one file, load one, or resolve pseudonyms.',
         description='Pack one snapshot\'s whole capture - the run directory and the '
         'Plane 2 report, raw trace, host samples and analysis beside it - '
         'into a single archive to carry to another machine, and load one '
         'back into this project\'s store under its own stamp. Each member '
         'carries its contract version, so a bundle from a newer bga is '
-        'refused rather than half-read. --resolve rewrites pseudonyms read '
-        'from stdin back to real names, entirely on this machine.',
+        'refused rather than half-read. --anonymize replaces every name with '
+        'a pseudonym and asks before writing; --resolve rewrites pseudonyms '
+        'read from stdin back to real names, entirely on this machine.',
     )
     bundle_group = bundle_parser.add_mutually_exclusive_group(required=True)
     bundle_group.add_argument('--export', metavar='STAMP', help='Snapshot to pack: a stamp, @last/@prev, or a path.')
@@ -2794,6 +2910,11 @@ def _add_bundle_subcommand(subparsers) -> None:
         '--no-plane2',
         action='store_true',
         help='Leave the Plane 2 capture out. Says what it omitted, and\nthe manifest records it so --load says so too.',
+    )
+    bundle_parser.add_argument(
+        '--anonymize',
+        action='store_true',
+        help='With --export: every name pseudonymized under this project\'s\nkey, the review shown, then y/N; refused with no terminal.',
     )
     bundle_parser.add_argument(
         '--key-fingerprint',

@@ -76,7 +76,6 @@ const BAND = {
   within_observed_range: "outside the noise band, inside the baseline runs' range",
   improved: "outside the noise band: improved",
   regressed: "outside the noise band: regressed",
-  different_work: "different work",
 };
 
 /** `UX-1257`: the wall delta against the run before, published fields only; the decision panel's link. */

@@ -85,4 +85,4 @@ Reverted from copies; 9 passed.
 
 ### Deviation from the Required Fix
 
-Page budget had 33 B headroom, so the viewer label/class entries for `different_work` were dropped. The gates still read the total delta (documented). The verifier held the merge until the guard gap closed (abs-delta fixture, fail-on-regression pin). (`d26d6a1d`)
+Page budget had 33 B headroom, so the viewer label/class entries for `different_work` were dropped; after round 169 merged, the last `BAND` entry went too, so the compare chapter leads with no wall delta on different work. The gates still read the total delta (documented). The verifier held the merge until the guard gap closed (abs-delta fixture, fail-on-regression pin). (`d26d6a1d`)

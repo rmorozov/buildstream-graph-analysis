@@ -3,6 +3,7 @@
 Mirrors `test_the_baseline_only_shrinks.py`'s temporary-package harness.
 """
 
+import json
 import os
 import pathlib
 import shutil
@@ -153,3 +154,23 @@ class TestForcedStaysNamedPastCommit:
         assert check.returncode == 0, check.stdout
         assert "still forced by UX-OLD" in check.stdout
         assert "still forced by UX-NEW" in check.stdout
+
+    def test_a_second_force_does_not_re_sign_an_uncommitted_first(self, tmp_path):
+        """A batch signed in the working tree but not yet in HEAD is not
+        signed again by the next `--force --reason`."""
+        old = tmp_path / "pkg" / "old.py"
+        new = tmp_path / "pkg" / "new.py"
+        baseline = tmp_path / "baseline.json"
+        _write(old, "def f():\n    return 1\n")
+        assert _run(tmp_path, baseline, "--write").returncode == 0
+        _git(tmp_path, "init", "-q")
+        _git(tmp_path, "-c", "user.email=t@example.com", "-c", "user.name=t", "add", "-A")
+        _git(tmp_path, "-c", "user.email=t@example.com", "-c", "user.name=t", "commit", "-q", "-m", "baseline")
+        _write(old, VIOLATION)
+        assert _run(tmp_path, baseline, "--write", "--force", "--reason", "UX-A").returncode == 0
+        _write(new, VIOLATION)
+        done = _run(tmp_path, baseline, "--write", "--force", "--reason", "UX-B")
+        assert done.returncode == 0, done.stdout
+        assert "1 authorised by UX-B" in done.stdout, done.stdout
+        forced = {b["reason"]: b["identities"] for b in json.loads(baseline.read_text(encoding="utf-8"))["forced"]}
+        assert [i[2] for i in forced["UX-B"]] == ["pkg/new.py"], forced

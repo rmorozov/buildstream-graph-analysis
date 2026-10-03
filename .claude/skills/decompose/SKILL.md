@@ -164,7 +164,7 @@ Read the widest of the three when pricing a batch.
 
 ## 4. The gate — what runs once for the batch
 
-Per item, the inner loop: `make test-touching`, then every new guard
+Per item, the inner loop: `python3 tools/dev_touching.py --base <sha> --list`, then pytest on it, then every new guard
 mutated red (falsify skill). Per batch: one PR opened *first* (verify
 §7 — a branch with no PR collects no CI), one merge, `make push-check`
 here. CI on the pull request is the gate before merge (`UX-948`,

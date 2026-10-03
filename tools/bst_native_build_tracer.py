@@ -94,7 +94,18 @@ from bga import progress
 # shape rather than by the writer - which is how `bga.contracts` finds it.
 from bga.plane2 import SCHEMA as PLANE2_SCHEMA
 
-from .bst_run_wrapped import run_wrapped, shutdown_build_group
+from .bst_run_wrapped import (
+    NO_BST_BUILD_EXIT,
+    SHIM_INHIBIT_ENV,
+    WRAPPER_JOBSERVER_REFUSAL,
+    NoBstBuild,
+    _bst_global_options,
+    is_bst_command,
+    recorded_bst_argv,
+    run_wrapped,
+    run_wrapper_command,
+    shutdown_build_group,
+)
 from .bst_show_to_graph import FIELD_SEP, RECORD_SEP, _parse_yaml_mapping
 from .jobserver import (
     JOBSERVER_POOL_INTERVAL_S,
@@ -1605,60 +1616,6 @@ def _cmd_target(cmd: list[str]) -> Optional[str]:
     return None
 
 
-# UX-870: the `cli` click group's own options in
-# `buildstream/_frontend/cli.py` (BuildStream 2.8.0, this box), read off
-# the installed package rather than guessed - `-o`/`--option` is the
-# only one that takes two values (`click.Tuple([str, str])`); the rest
-# below take exactly one; anything else the group defines (`--verbose`,
-# `--strict`, `--pull-buildtrees`, ...) is a bare flag, zero.
-_BST_GLOBAL_OPTIONS_TWO_VALUES = frozenset({"-o", "--option"})
-_BST_GLOBAL_OPTIONS_ONE_VALUE = frozenset(
-    {
-        "--config",
-        "-c",
-        "--directory",
-        "-C",
-        "--on-error",
-        "--fetchers",
-        "--builders",
-        "--pushers",
-        "--max-jobs",
-        "--network-retries",
-        "--error-lines",
-        "--message-lines",
-        "--log-file",
-        "--default-mirror",
-        "--cache-buildtrees",
-    }
-)
-
-
-def _bst_global_options(cmd: list[str]) -> tuple[list[str], bool]:
-    """UX-870: the tokens between `cmd[0]` and the subcommand, each
-    consumed by its own arity so a value (`c.yml`, a second `-o` value)
-    is never mistaken for the subcommand itself. `(opts, True)` once a
-    bare token is reached - the subcommand, discarded here since the
-    caller always inserts its own `show`. `(opts, False)` when the whole
-    of `cmd[1:]` parses as option-shaped and no subcommand ever turns
-    up - the one case this read cannot graft `show` onto at all."""
-    opts: list[str] = []
-    i, n = 1, len(cmd)
-    while i < n:
-        tok = cmd[i]
-        if not tok.startswith("-"):
-            return opts, True
-        if tok in _BST_GLOBAL_OPTIONS_TWO_VALUES and i + 3 <= n:
-            opts.extend(cmd[i : i + 3])
-            i += 3
-        elif tok in _BST_GLOBAL_OPTIONS_ONE_VALUE and i + 2 <= n:
-            opts.extend(cmd[i : i + 2])
-            i += 2
-        else:
-            opts.append(tok)
-            i += 1
-    return opts, False
-
-
 def _parse_max_jobs_from_vars(vars_raw: str) -> Optional[int]:
     """UX-842: `%{vars}`'s own `max-jobs:` line. `None` on any
     unparseable shape - a future bst version changing it must degrade,
@@ -2659,7 +2616,12 @@ def run_traced_build(
         )
         try:
             with sampler, cpu_sampler, progress.timed_build():
-                if wrapped_log_path is not None:
+                if not is_bst_command(cmd):
+                    # UX-1322: a wrapper; its `bst` shim writes the log of the `bst build` it runs.
+                    log = wrapped_log_path or os.path.join(tmp, "wrapped.log")
+                    env[SHIM_INHIBIT_ENV] = "1" if inhibit else ""
+                    returncode = run_wrapper_command(project_dir, cmd, log, env=env, shim_root=tmp)
+                elif wrapped_log_path is not None:
                     with open(wrapped_log_path, "w", encoding="utf-8") as out_f:
                         returncode = run_wrapped(project_dir, cmd, out_f, env=env, inhibit=inhibit)
                 else:
@@ -9151,6 +9113,10 @@ def main(argv: Optional[list[str]] = None) -> int:
                 "options must come before the positional arguments, e.g. "
                 "`run --wrapped-log PATH PROJECT_DIR OUTPUT -- bst build target.bst`"
             )
+        if args.jobserver and not is_bst_command(cmd):
+            # UX-1322: the jobserver reads the target before the build, and a wrapper's is not known yet.
+            print(WRAPPER_JOBSERVER_REFUSAL, file=sys.stderr)
+            return NO_BST_BUILD_EXIT
 
         raw_log_path = args.raw_log or os.path.join(scratch_mkdtemp(args.project_dir, "trace-log-"), "trace.log")
         # UX-146: `--no-inject` without the record would answer "did it
@@ -9284,6 +9250,12 @@ def main(argv: Optional[list[str]] = None) -> int:
         except TraceError as e:
             print(f"Error: {e}", file=sys.stderr)
             return 1
+        except NoBstBuild as refusal:
+            print(refusal, file=sys.stderr)
+            return NO_BST_BUILD_EXIT
+        if not is_bst_command(cmd):
+            # UX-1322: every read below wants the `bst` argv, not the wrapper's.
+            cmd = (recorded_bst_argv(wrapped_log_path) if wrapped_log_path else None) or cmd
 
         # UX-1082: the build's own `Pipeline` block, not a second
         # `bst show` - reflects the options this run actually used.

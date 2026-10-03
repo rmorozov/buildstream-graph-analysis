@@ -2837,6 +2837,22 @@ def run_token(run_dir: str) -> str:
     return token if run_store.is_alias(token) else run_dir
 
 
+def _wrapper_command(run_dir: str) -> Optional[list]:
+    """UX-1322: the wrapper the snapshot ran (`capture-context.txt`'s `command=`), or `None` for `bst`."""
+    try:
+        with open(
+            os.path.join(os.path.dirname(os.path.normpath(run_dir)), 'capture-context.txt'), encoding='utf-8'
+        ) as handle:
+            for line in handle:
+                if line.startswith('command='):
+                    argv = line[len('command=') :].split()
+                    first = argv[0] if argv else 'bst'
+                    return None if first == 'bst' or first.endswith('/bst') else argv
+    except OSError:
+        return None
+    return None
+
+
 def _store_run_modes(project: str) -> list[tuple]:
     """`(stamp, run_mode)` per run in the store, oldest first.
 
@@ -3030,11 +3046,12 @@ def compute_next_steps(result: AnalysisResult, headline: Optional[dict] = None) 
         # function: a command spelled approximately is worse than none.
         targets = [t for t in (instance.get('targets') or []) if t]
         if targets:
+            build = _wrapper_command(run_dir) or ['bst', 'build', *targets]
             steps.append(
                 {
                     'id': 'measure-again',
                     'reason': f"Make the change, then capture it the same way — run it in {project}.",
-                    'argv': ['bga', 'snapshot', '--', 'bst', 'build', *targets],
+                    'argv': ['bga', 'snapshot', '--', *build],
                     'follows_from': 'run_instance.targets',
                 }
             )

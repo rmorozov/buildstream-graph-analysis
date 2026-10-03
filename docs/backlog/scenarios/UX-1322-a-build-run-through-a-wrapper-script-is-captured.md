@@ -2,7 +2,7 @@
 
 **Priority:** High | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the junction-heavy onboarding walk, 2026-10-03 (`/mnt/project-files/onboarding-walk-2026-10-03/onboarding-walk.md`) | **Serves:** R1 | **Topic:** capture | **Area:** tools | **Shape:** judgement | **Reading:** container
 
-**Guard:** none — open, no guard named yet
+**Guard:** `tests/unit/test_a_build_run_through_a_wrapper_script_is_captured.py`
 
 ## Motivation
 
@@ -49,3 +49,43 @@ a guard runs a wrapper command against a fake `bst` and asserts the recorded fir
 asserts no traceback for a command that runs no `bst`. Reading taken in this container.
 
 ## Outcome
+
+**Gap measured.** The Motivation's reading (walk, `19f1fd73`): `ValueError` out of `run_wrapped`
+after the hook compile and census, and a 668 B husk listed as "the build produced no elements".
+
+**Close measured.** `/root/walk/jproj` copied to `/tmp/ux1322-jproj` (`.bga` removed), `build.sh`
+= `echo ...; exec bst --on-error continue build "$@"`, fresh `XDG_CACHE_HOME`, bst 2.8.1:
+
+```text
+$ bga snapshot -- ./build.sh groups/all.bst          # exit 0
+build.sh: running bst --on-error continue build groups/all.bst
+    Build Queue: processed 16, skipped 0, failed 0
+Run directory: /tmp/ux1322-jproj/.bga/runs/20261003T144815Z/run
+Processes traced: 2382 (2382 matched, 0 no observed exit)
+Critical Path Length: 4 elements
+$ head -1 .bga/runs/20261003T144815Z/build.log
+[wrapper][2026-10-03 14:48:15,759] INFO: Executing command: bst --on-error continue build groups/all.bst
+$ bga snapshot -- ./nobst.sh                          # exit 2
+Error: `./nobst.sh` exited 0 without running `bst build`, so there was no build to capture. ...
+Nothing was kept: /tmp/ux1322-jproj/.bga/runs/20261003T144919Z was removed.
+$ bga snapshot --list
+1 snapshot in /tmp/ux1322-jproj:
+```
+
+`bga wrap . out.log -- ./build.sh groups/all.bst`: same first line; `-- ./nobst.sh`: the same
+refusal, exit 2, no log. A wrapper with `--jobserver` is refused before the hook compiles (its
+pre-build `bst show` reads need the inner argv). The guard: 8 passed.
+
+| mutation | reddened | count |
+|---|---|---|
+| shim records the real binary's path, not `bst` | first-line test, second-build test | 2 failed |
+| shim records any subcommand, not only `build` | first-line test, second-build test | 2 failed |
+| `run_wrapper_command` does not raise `NoBstBuild` | no-bst refusal test | 1 failed |
+| snapshot keeps the directory on no `bst build` | no-husk test | 1 failed |
+| `_path_without` keeps the shim's own directory | shim-never-finds-itself test (`-k`) | 1 failed |
+| tracer's wrapper `--jobserver` refusal removed | refused-before-compile test | 1 failed |
+| tracer's post-build swap to the recorded argv removed | readers-get-the-inner-argv test | 1 failed |
+| `measure-again` hint ignores `capture-context.txt`'s wrapper | closing-hint test | 1 failed |
+
+The closing `measure-again` hint repeats the wrapper the snapshot ran (`bga snapshot -- ./build.sh
+groups/all.bst`), read from `capture-context.txt`; a `bst` command keeps `bst build TARGETS`.

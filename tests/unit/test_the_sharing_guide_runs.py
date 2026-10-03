@@ -82,7 +82,9 @@ def walked(tmp_path, monkeypatch):
             continue
         stdin = _Terminal("y\n")
         if words[0] == "cat" and words[2] == "|":
-            pseudonym, real = next(((k, v) for k, v in _map(runner).items() if v.startswith("element\0")), ("e-none", ""))
+            pseudonym, real = next(
+                ((k, v) for k, v in _map(runner).items() if v.startswith("element\0")), ("e-none", "")
+            )
             (runner / words[1]).write_text(f"rebuild {pseudonym} first\n")
             (runner / "expected-reply.txt").write_text(f"rebuild {real.partition(chr(0))[2]} first\n")
             stdin, words = io.StringIO((runner / words[1]).read_text()), words[3:]

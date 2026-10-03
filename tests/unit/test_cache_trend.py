@@ -148,3 +148,14 @@ def test_the_table_renders_the_churn_labels_ux93_settled():
     text = format_trend_text(build_trend(rows))
     assert '0+25r' in text
     assert 'n/a' in text
+
+
+def test_churn_counts_built_elements_not_every_element_with_a_task():
+    from pathlib import Path
+
+    from bga.cache_trend import trend_from_run_dirs
+
+    run = Path(__file__).resolve().parents[1] / "fixtures/a_build_that_pulls/run"
+    rows = trend_from_run_dirs([run] * 4)["runs"]
+    for row in rows[1:]:
+        assert row["churn"]["rebuilt_in_both_count"] <= row["built_elements"]

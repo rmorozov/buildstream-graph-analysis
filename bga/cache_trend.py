@@ -126,6 +126,16 @@ def _subject(run_context) -> Optional[tuple[str, tuple[str, ...]]]:
     return (project or 'unknown', tuple(targets or ()))
 
 
+def _built_elements(tasks) -> set:
+    """Elements with a BUILD task - the population `_rebuild_us` sums over."""
+    built = set()
+    for task in tasks or []:
+        key = task.task_key
+        if key.task_kind.value == 'BUILD':
+            built.add(key.element_uid)
+    return built
+
+
 def _row(name: str, analyzer, result, previous) -> dict:
     """One run's cache reading, plus its churn against its predecessor.
 
@@ -150,6 +160,7 @@ def _row(name: str, analyzer, result, previous) -> dict:
     transfer_us = sum(transfer.values()) if transfer else None
     pulled = accounting.get('cached_elements')
     durations = _element_durations(result)
+    built = _built_elements(tasks)
 
     row = {
         'run': name,
@@ -190,9 +201,9 @@ def _row(name: str, analyzer, result, previous) -> dict:
             previous['elements'],
             graph.elements if graph else [],
             graph.dependencies if graph else [],
-            set(durations),
+            built,
             durations,
-            baseline_built=set(previous['durations']) if previous['durations'] is not None else None,
+            baseline_built=previous['built'],
             candidate_run_mode=row['run_mode'],
             baseline_run_mode=previous['run_mode'],
         )
@@ -365,6 +376,7 @@ def trend_from_run_dirs(run_dirs, **analyzer_kwargs) -> dict:
         label = os.path.join(path.parent.name, path.name) if path.parent.name else path.name
         rows.append(_row(label, analyzer, result, previous))
         previous = {
+            'built': _built_elements(analyzer.normalized_tasks),
             'elements': graph.elements if graph else [],
             'durations': _element_durations(result),
             'run_mode': (result.confidence or {}).get('run_mode'),

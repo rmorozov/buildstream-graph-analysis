@@ -8982,14 +8982,13 @@ def main(argv: Optional[list[str]] = None) -> int:
         type=int,
         default=None,
         metavar="N",
-        help="Bind an N-token jobserver into every sandbox (UX-679).",
+        help="Bind an N-token jobserver into every sandbox (UX-679); `bga` also takes auto|N|off (UX-851).",
     )
     run_parser.add_argument(
         "--jobserver-auth",
         choices=("fd", "fifo", "auto"),
         default="auto",
-        help="UX-841: the --jobserver-auth style; auto picks fifo: from "
-        "GNU Make 4.4, fd below, by the host's own `make --version`.",
+        help="UX-876: make's --jobserver-auth style; auto resolves to fd (GNU Make >= 4.2); fifo is opt-in.",
     )
     run_parser.add_argument(
         "--jobserver-pool",

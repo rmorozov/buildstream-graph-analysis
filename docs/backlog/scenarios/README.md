@@ -34,7 +34,6 @@ task file, which is the only place it ever lived twice.
 | UX-1282 | [the memory gate reads the host's memory, not the cgroup a container agent is capped at](UX-1282-the-memory-gate-reads-the-host-not-the-cgroup.md) | capture | High | R4, R5 | 🔴 Not Started |
 | UX-1283 | [the pool's seed tokens are handed out before the memory gate has a say](UX-1283-the-pool-seed-is-handed-out-before-the-memory-gate.md) | capture | High | R4, R5 | 🔴 Not Started |
 | UX-1284 | [a link step that peaks above every compile before it is reserved at the compile's size](UX-1284-a-late-memory-peak-is-under-reserved.md) | capture | Medium | R4, R5 | 🔴 Not Started |
-| UX-1301 | [four capture flags appear in no `--help`, under a heading that says they do](UX-1301-four-capture-flags-appear-in-no-help-under-a-heading-that-says-they-do.md) | capture | High | R1, R2 | 🔴 Not Started |
 | UX-1302 | [`bga snapshot` refuses the per-element jobserver and capture-log flags `capture run` takes, and no doc says so](UX-1302-bga-snapshot-refuses-the-per-element-jobserver-and-capture-log-flags-capture-run.md) | capture | High | R1, R2 | 🔴 Not Started |
 | UX-1304 | [`bga-jobserver-env` is validated and recorded, and no sandbox ever reads it](UX-1304-bga-jobserver-env-is-validated-and-recorded-and-no-sandbox-ever-reads-it.md) | capture | Medium | R2 | 🔴 Not Started |
 

@@ -3434,6 +3434,31 @@ def _translate_capture_wrapper_dir(argv: list) -> list:
     return argv[:2] + new_rest
 
 
+#: UX-1301: the flags the `_translate_capture_*` functions strip before the tracer's argparse, so its `--help` cannot list them.
+CAPTURE_RUN_BGA_FLAGS = {
+    '--jobserver-auth-override': "'STYLE:GLOB ...'  per-element fd|fifo|off|flto, repeatable",
+    '--lto-cap': 'N  the flto shim\'s static -flto=N (default nproc)',
+    '--wrapper-dir': 'PATH  an operator\'s own wrapper directory',
+    '--wrapper-dir-mode': 'augment|replace  ahead of the shipped shims, or instead',
+}
+
+
+def _asks_capture_run_help(argv: list) -> bool:
+    """`bga capture run ... --help`, the flag before any `--`."""
+    if argv[:2] != ['capture', 'run']:
+        return False
+    rest = argv[2:]
+    tracer_args = rest[: rest.index('--')] if '--' in rest else rest
+    return '--help' in tracer_args or '-h' in tracer_args
+
+
+def capture_run_epilog() -> str:
+    """The lines `bga capture run --help` appends after the tracer's own."""
+    lines = ["\nbga's own flags, resolved before the tracer parses (docs/guides/cli.md):"]
+    lines += [f'  {flag} {text}' for flag, text in CAPTURE_RUN_BGA_FLAGS.items()]
+    return '\n'.join(lines)
+
+
 def _maybe_print_schema(argv: list) -> Optional[int]:
     """`bga <command> --schema` -> the JSON Schema of its output, exit 0.
 
@@ -3610,6 +3635,13 @@ def _run(argv: Optional[list[str]] = None) -> int:
     raw_argv = _translate_capture_wrapper_dir(raw_argv)
 
     from .tools_dispatch import dispatch
+
+    if _asks_capture_run_help(raw_argv):
+        try:
+            return dispatch(raw_argv) or 0
+        finally:
+            # argparse exits on --help; the epilog follows its output either way.
+            print(capture_run_epilog())
 
     tool_exit = dispatch(raw_argv)
     if tool_exit is not None:

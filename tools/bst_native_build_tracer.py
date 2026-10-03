@@ -1730,24 +1730,32 @@ def _parse_element_kinds(show_output: str) -> "_ElementKindsMap":
     that does not split into exactly two tokens is skipped, not raised
     on - the same degrade-not-raise posture as `_parse_max_jobs_from_vars`."""
     kinds = _ElementKindsMap()
-    short_owners = {}
     for line in show_output.splitlines():
         parts = line.split()
-        if len(parts) != 2:
-            continue
-        name, kind = parts
-        kinds[name] = kind
+        if len(parts) == 2:
+            kinds[parts[0]] = parts[1]
+    owners, kinds.junctions, kinds.collisions = _claim_short_names(list(kinds))
+    for short, owner in owners.items():
+        kinds.setdefault(short, kinds[owner])
+    return kinds
+
+
+def _claim_short_names(names) -> tuple[dict, int, int]:
+    """UX-1311: `({short: owning full name}, junctions, collisions)` over
+    every element name. A top-level name owns itself; among junction-
+    qualified names the first claimant of a short spelling wins and a
+    later different one is a collision, counted, not stored."""
+    owners = {name: name for name in names if ":" not in name}
+    junctions = collisions = 0
+    for name in names:
         if ":" not in name:
             continue
-        kinds.junctions += 1
+        junctions += 1
         short = name.rsplit(":", 1)[-1]
-        owner = short_owners.get(short)
-        if owner is None:
-            short_owners[short] = name
-            kinds.setdefault(short, kind)
-        elif owner != name:
-            kinds.collisions += 1
-    return kinds
+        owner = owners.setdefault(short, name)
+        if owner != name and ":" in owner:
+            collisions += 1
+    return {k: v for k, v in owners.items() if k != v}, junctions, collisions
 
 
 def jobserver_kinds_warning(
@@ -1908,6 +1916,15 @@ def _parse_dep_list(raw: str) -> list[str]:
     return [line.strip()[2:].strip() for line in raw.splitlines() if line.strip().startswith("- ")]
 
 
+def _with_short_names(auth_map: dict, names: list) -> dict:
+    """UX-1311: `auth_map` plus each owned short spelling, the name the shim reads from `--dir`."""
+    owners, _, _ = _claim_short_names(names)
+    for short, owner in owners.items():
+        if owner in auth_map:
+            auth_map.setdefault(short, auth_map[owner])
+    return auth_map
+
+
 def _parse_jobserver_show_records(stdout: str) -> tuple[str, str, dict, dict, dict]:
     """UX-1011/UX-1005 track C: `read_jobserver_bst_show`'s stdout
     parse, split out to keep that function's own branching under the
@@ -1954,7 +1971,13 @@ def _parse_jobserver_show_records(stdout: str) -> tuple[str, str, dict, dict, di
                     if isinstance(notparallel, bool)
                     else str(notparallel).strip().lower() not in ("", "false", "no", "0")
                 )
-    return ("\n".join(kinds_lines), "".join(vars_blocks), auth_map, element_deps, element_notparallel)
+    return (
+        "\n".join(kinds_lines),
+        "".join(vars_blocks),
+        _with_short_names(auth_map, list(element_deps)),
+        element_deps,
+        element_notparallel,
+    )
 
 
 def read_jobserver_bst_show(
@@ -2093,6 +2116,18 @@ def structural_ranking(element_kinds: dict, element_deps: dict, element_notparal
         name: -float(level(name, frozenset())) + (0.5 if element_notparallel.get(name) else 0.0)
         for name in element_kinds
     }
+
+
+def _declared_jobserver_env(project_dir: str) -> Optional[str]:
+    """UX-1304: `project.conf`'s `bga-jobserver-env` re-serialized `NAME=PREFIX,...`
+    for the shim; `None` when absent or malformed."""
+    from .bst_extract_run import _read_bga_jobserver_env
+
+    try:
+        entries = _read_bga_jobserver_env(project_dir)
+    except RuntimeError:
+        return None
+    return ",".join(f"{e['name']}={e['prefix']}" for e in entries) or None
 
 
 def _write_kinds_read(
@@ -2469,6 +2504,12 @@ def run_traced_build(
                 env["BST_TRACE_ELEMENT_KINDS"] = captured_kinds
             else:
                 env.pop("BST_TRACE_ELEMENT_KINDS", None)
+            # UX-1304: `bga-jobserver-env`, for a kind outside the table; a malformed one is extraction's error.
+            declared_env = _declared_jobserver_env(project_dir)
+            if declared_env:
+                env["BST_TRACE_JOBSERVER_ENV"] = declared_env
+            else:
+                env.pop("BST_TRACE_JOBSERVER_ENV", None)
             # UX-882: the per-element annotation table's input, same
             # shape as `element_kinds.json` beside it - the shim falls
             # back to it only when the command-line override does not
@@ -2552,6 +2593,7 @@ def run_traced_build(
             env.pop("BST_TRACE_PROJECT_MAX_JOBS", None)
             env.pop("BST_TRACE_ELEMENT_KINDS", None)
             env.pop("BST_TRACE_ELEMENT_AUTH_MAP", None)
+            env.pop("BST_TRACE_JOBSERVER_ENV", None)
             env.pop("BST_TRACE_WRAPPER_DIR", None)
             env.pop("BST_TRACE_WRAPPER_CAP", None)
             env.pop("BST_TRACE_LTO_CAP", None)
@@ -8982,14 +9024,13 @@ def main(argv: Optional[list[str]] = None) -> int:
         type=int,
         default=None,
         metavar="N",
-        help="Bind an N-token jobserver into every sandbox (UX-679).",
+        help="Bind an N-token jobserver into every sandbox (UX-679); `bga` also takes auto|N|off (UX-851).",
     )
     run_parser.add_argument(
         "--jobserver-auth",
         choices=("fd", "fifo", "auto"),
         default="auto",
-        help="UX-841: the --jobserver-auth style; auto picks fifo: from "
-        "GNU Make 4.4, fd below, by the host's own `make --version`.",
+        help="UX-876: make's --jobserver-auth style; auto resolves to fd (GNU Make >= 4.2); fifo is opt-in.",
     )
     run_parser.add_argument(
         "--jobserver-pool",

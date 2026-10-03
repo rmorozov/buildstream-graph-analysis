@@ -148,6 +148,9 @@ def _alias_flags(module_name: str):
             flags |= {text for text in literals if text.startswith("-")}
         elif node.func.attr == "add_parser" and literals:
             subcommands.add(literals[0])
+    # `--build-type`/`--variant` come from a shared helper, not a literal here.
+    if module_name != "tools._run_context_common" and "add_build_class_arguments(" in path.read_text(encoding="utf-8"):
+        flags |= _alias_flags("tools._run_context_common")[0]
     return flags, subcommands
 
 
@@ -162,6 +165,26 @@ def _schema_answerable():
     return frozenset(cli._SCHEMA_BY_COMMAND)
 
 
+# `bga capture run`'s translated flags (`--jobserver-auth-override`,
+# `--lto-cap`, `--wrapper-dir`...) are read out of argv before any parser
+# runs, so the inventory reads them by AST from the `_translate_capture_*`
+# functions that consume them (`UX-1300`).
+def _translated_capture_flags():
+    tree = ast.parse((REPO / "bga" / "cli.py").read_text(encoding="utf-8"))
+    flags = set()
+    for node in tree.body:
+        if isinstance(node, ast.FunctionDef) and node.name.startswith("_translate_capture_"):
+            for sub in ast.walk(node):
+                if (
+                    isinstance(sub, ast.Constant)
+                    and isinstance(sub.value, str)
+                    and sub.value.startswith("--")
+                    and len(sub.value) > 2
+                ):
+                    flags.add(sub.value.rstrip("="))
+    return frozenset(flags)
+
+
 def _known(command):
     """`(flags, subcommands)` for one `bga` command, native or alias.
 
@@ -173,6 +196,8 @@ def _known(command):
     extra = {"-h", "--help"}
     if command in _schema_answerable():
         extra.add("--schema")
+    if command == "capture":
+        extra |= _translated_capture_flags()
     if command in native:
         return native[command] | extra, set()
     if command not in TOOL_ALIASES:

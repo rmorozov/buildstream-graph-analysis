@@ -10,6 +10,7 @@ Start here: find the job, open the one page beside it.
 | **gate pull requests** — baselines, the noise band, the PR comment | [`guides/ci-comment.md`](guides/ci-comment.md) |
 | **share a capture** with another machine, or a pseudonymised one with an outside reader | [`guides/sharing-a-capture.md`](guides/sharing-a-capture.md) |
 | **read the report**, and know when to drop into Perfetto | [`guides/what-the-viewer-answers.md`](guides/what-the-viewer-answers.md) |
+| **own the graph** — from a capture to a structural decision: width, floors, blast, what-if, `junction-cost`, `cache-trend` | [`guides/graph-owner.md`](guides/graph-owner.md) |
 | **pair `--jobserver auto`** with a builder count | [`guides/jobserver.md`](guides/jobserver.md) |
 | **see it change a real build** | [`cases/serial-giant-jobserver.md`](cases/serial-giant-jobserver.md) |
 | **look up a command** — `analyze`, `snapshot`, `bundle`, `junction-cost`, `cache-trend`, the section-only `graph`, `floors`, `replay`, `sweep`, `utilisation` and `diagnostics` — its flags and exit codes | [`guides/cli.md`](guides/cli.md) |

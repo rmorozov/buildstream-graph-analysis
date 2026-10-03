@@ -126,6 +126,9 @@ and `--trace-spine`. Decide them once (`bga snapshot --trace-spine=off
 Every report still records what actually ran, so a sticky flag cannot
 make a capture *claim* something it did not do.
 
+Every key `.bga/config` holds, including the two you edit by hand,
+is in [the `.bga/config` section of the CLI reference](cli.md#bga-config--the-projects-remembered-settings-ux-1303).
+
 `.bga/` gitignores itself the first time it is written. Snapshots are
 build artifacts: delete any of them whenever you like, nothing else
 refers to them.
@@ -157,6 +160,47 @@ Step 0a is different from all of them: it reads logs BuildStream already
 wrote, for builds that already happened. If you have ever built this
 project on this machine, you can run it right now, before reading any
 further.
+
+### Disk
+
+Every `bga snapshot` adds one directory to `.bga/runs/` and nothing removes
+it. The one real snapshot size on file is 311 KB for a 9-element,
+813-process capture (`.claude/skills/measure/SKILL.md`; not re-measured, and
+it grows with the process count through `plane2.log.gz`). Two smaller
+numbers bound the Plane 1 side, and neither is a snapshot
+(`du -sb`, bytes, 2026-10-03):
+
+```text
+$ du -sb tests/fixtures/macro_micro          # a committed fixture: 11-element run, plane2.json, README, xdg config; no plane2.log.gz
+60838 tests/fixtures/macro_micro
+$ bga gen-synthetic /tmp/scale --seed 1 && du -sb /tmp/scale   # 1,202 elements, Plane 1 only
+760213 /tmp/scale
+```
+
+`bga` prints what a capture weighed and what the store holds, and warns
+once the store passes 2 GB (`_SIZE_WARN_BYTES`, `tools/bga_snapshot.py`).
+
+Prune with the `bga snapshot` flags (`bga snapshot --help`); `--dry-run`
+deletes nothing and says what would go:
+
+```bash
+bga snapshot --prune --keep 20 --dry-run        # the newest 20 stay
+bga snapshot --prune --older-than 30            # delete snapshots older than 30 days
+bga snapshot --prune --max-store 20G --dry-run  # oldest first, until the store fits
+```
+
+`--prune` needs at least one of `--keep`, `--older-than` and `--max-store`;
+alone it refuses with `Error: prune needs --keep N, --older-than DAYS and/or
+--max-store SIZE. Nothing was deleted.` `@last`, `@prev` and the newest
+healthy run are never deleted ([`cli.md`](cli.md#bga-snapshot--the-local-loop-ux-126)).
+`--prune` always deletes a snapshot that has no `run/` directory, whatever
+`--keep` says (`UX-167`, the `husks` list in `tools/bga_snapshot.py`): an
+interrupted capture or a `--no-inject` one leaves exactly that. `run/` is
+extracted after the build (`bst_native_build_tracer.py`, `args.run_dir`), so
+by the code a capture still running has none yet: do not prune while one
+runs. (Read from the code, not reproduced.)
+The [pilot](pilot.md) keeps its own 30 bundles per class and does not touch
+`.bga/runs`.
 
 ---
 
@@ -362,6 +406,81 @@ can conclude:
   arms (under 50 MB) sit inside the `none` arm's own 840-891M spread —
   the memory overhead is below this sampling method's resolution, not a
   number this reading can state.
+
+---
+
+## Troubleshooting: Plane 2 recorded zero processes
+
+Read the first line that matches, in this order. Every message below is
+quoted from the code that prints it.
+
+**The capture says `PLANE 2 CAPTURED NOTHING`** (`format_untraced_build_warning`,
+`tools/bst_native_build_tracer.py`). The build ran sandbox tasks and the
+hook recorded 0 processes, so `bwrap` never resolved to bga's shim inside
+the build. The message tells you to re-run with `--diagnose`; the next
+section reads what that prints.
+
+**The capture stops before the build with `the bwrap shim at <path> ...`**
+(`probe_bwrap_shim`). The tracer executes the installed shim once with
+`--bga-shim-self-test`, which must print `bga-shim-ok`. Three failures:
+
+- `cannot be executed (<strerror>)` is the filesystem the shim sits on,
+  typically a `noexec` mount or an AppArmor rule. The shim lives under the
+  project's `.bga/tmp`, so mount the project (or `--run-dir`) with exec
+  permitted. Setting `TMPDIR` does not help.
+- `could not be run: <strerror>` is a missing shim or interpreter, a bga
+  bug: report it.
+- `ran but did not answer its own probe (exit N)` carries the shim's
+  stderr, first 400 characters.
+
+**`bga doctor`** checks the parts: `bst`, `bwrap`, a C compiler, an
+executable scratch directory, a fresh `buildbox-casd`, and (with a
+`project_dir`) that the project loads. **`bga doctor --capture`** runs
+the chain on a canned one-element build and prints one
+`[ok  ]`/`[warn]`/`FAIL` line per link (`chain-shim-exec`, `chain-build`,
+`chain-shim-reached`, `chain-records`); the first `FAIL` is the link to
+fix. Both are described under
+[When a capture fails on a build that `bst` completes](#when-a-capture-fails-on-a-build-that-bst-completes).
+
+**`--diagnose`** (`bga snapshot --diagnose`, `bga capture run --diagnose`)
+records one JSON line per sandbox the shim received, in
+`<plane2 output>.diagnostics.jsonl`, and prints a block headed
+`Capture diagnostics (UX-146)`. Its first line is the invocation count:
+
+| first line | reading |
+|---|---|
+| `The bwrap shim ran 0 times.` and `This build launched no sandbox at all - every element was a cache hit` | benign: nothing was going to call the shim |
+| `The bwrap shim ran 0 times.` and `This build ran N element task(s), so sandboxes were launched and the shim was not called by any of them` | the shim was never resolved: `buildbox-run` used an absolute `bwrap` path, a `buildbox-casd` started before the capture kept an old `$PATH` (stop it with `bst shutdown`), or something sanitises `$PATH` |
+| `The bwrap shim ran N time(s); M rewritten, K passed through.` | the shim was reached; read the lines after it (`Real bwrap:`, `Elements seen:`, and any `invocation(s) found no executable bwrap` or `bwrap option(s) ... not in the shim's arity table`) |
+
+**`--no-inject`** (`bga snapshot --no-inject`, `bga capture run
+--no-inject`) installs the shim and rewrites nothing, and also writes the
+diagnostics file. The build then prints `--no-inject was set, so nothing
+was captured and no process record exists.` Succeeding with `--no-inject`
+and failing without it blames the argv rewrite; failing both ways blames
+the `$PATH` shadow or the exec.
+
+**`BST_TRACE_REAL_BWRAP`** names the `bwrap` the shim finally executes;
+unset in the shim's own environment it is `/usr/bin/bwrap` (`main` in
+`tools/native_trace/bwrap_shim.py`). When that exec fails the shim prints
+two lines, and BuildStream reports only `buildbox-run failed with
+returncode 1`:
+
+```text
+bga: could not exec the real bwrap at /usr/bin/bwrap: [Errno 2] No such file or directory: '/usr/bin/bwrap'
+bga: set BST_TRACE_REAL_BWRAP if it lives somewhere else.
+```
+
+Under `bga snapshot` and `bga capture run` the tracer sets this variable
+itself, to `shutil.which("bwrap")` at capture start (`install_bwrap_shim`,
+`tools/bst_native_build_tracer.py`), and refuses to start with `no real
+bwrap found on PATH` when there is none. So there the lever is `PATH`, not
+the variable: put the directory of the `bwrap` you want ahead of the others
+before you run the capture. Setting `BST_TRACE_REAL_BWRAP` is for driving
+the shim by hand. `BST_TRACE_ARGV_MAX` is the other shim-side knob: with
+`BST_TRACE_ARGV_LOG` set it caps how many `bwrap` invocations are written
+to that log (default 32, `DEFAULT_ARGV_RECORD_LIMIT`). Both have rows in
+[the capture path's inventory](../design/areas/tools-native_trace.md#bst_trace--plane-2-and-plane-3-ux-635).
 
 ---
 

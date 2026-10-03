@@ -142,6 +142,7 @@ The rounds themselves:
 [163](round-163.md) ·
 [165](round-165.md) ·
 [166](round-166.md) ·
+[168](round-168.md) ·
 [the guard census of round 64](guard-census-round-64.md)
 
 ## Case studies

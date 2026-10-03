@@ -54,6 +54,84 @@ builders recovers part of it (about 182s) and sandbox admission
 (`BGA_ADMISSION=1`) made it worse (202/217/203s), which is why admission
 is opt-in.
 
+## One element, not the whole build
+
+Four switches decide what one element gets; read top down, the first
+that applies wins (`tools/native_trace/bwrap_shim.py`'s
+`_jobserver_injection`):
+
+| switch | where it lives | reaches |
+|---|---|---|
+| `--jobserver off` | the command line | every element: no pool at all |
+| `notparallel: True` (its `make` composed `-j1`) | the element's `variables` | pinned: nothing is injected, the element builds serially, whatever the two rows below say |
+| `--jobserver-auth-override 'style:glob ...'` | the `bga capture run` or `bga snapshot` command line | one capture |
+| `public: bga: jobserver-auth: style` | the element's `.bst`, committed | every capture of the project |
+
+An element none of them names gets `auto`, and what `auto` gives it
+depends on its kind: a kind outside the shipped table (`make`,
+`autotools`, `cmake`, `meson`, `cargo`) joins when BuildStream
+composes `MAKEFLAGS`, `JOBS` or `MAXJOBS` into its sandbox
+(`kind_job_env`). Without one, it joins only if `project.conf`
+declares the variable its plugin reads the width from:
+
+```yaml
+variables:
+  bga-jobserver-env: "MYJOBS=-j"
+```
+
+Each `NAME=PREFIX` entry is then set to `PREFIX` followed by the
+project's `max-jobs` (`MYJOBS=-j4`), beside the `MAKEFLAGS` auth, and
+`jobserver_decisions` reads policy `declared_env`. An element that
+already composes any declared `NAME` owns its width: nothing is
+injected, no other `NAME` and no auth (`unknown_kind`), and `MYJOBS=-j1`
+reads `pinned`; a value off the declared prefix (`--jobs=1` against
+`-j`) blocks injection the same way. A composed `MAKEFLAGS` keeps its
+contents, with the auth appended. With
+no declaration, or the project's `max-jobs` unread or `1`, the element
+gets nothing (`unknown_kind`).
+
+The four styles, for the last two rows:
+
+| style | what the element's `make` gets | use it for |
+|---|---|---|
+| `off` | no `--jobserver-auth`, no wrappers; the recipe's own `-jN` stands | an element that must keep its own width, or misbehaves in the pool |
+| `fd` | the raw `--jobserver-auth=R,W`, never rewritten to `fifo:` or scrubbed | an element on a sandbox make below 4.4 that does **not** do LTO |
+| `fifo` | the `fifo:` path form | an element whose sandbox make is 4.4 or newer |
+| `flto` | `fd`, plus a GCC-driver shim that strips the auth and rewrites `-flto` to a static cap | an LTO element on a make below 4.4 - `fd` there crashes GCC 13 |
+
+```text
+bga capture run --jobserver auto \
+    --jobserver-auth-override 'off:giant.bst fd:libfoo-*.bst,libbar.bst flto:llvm.bst' \
+    . run.json -- bst build all.bst
+```
+
+```yaml
+# elements/giant.bst
+public:
+  bga:
+    jobserver-auth: off
+```
+
+A long list reads from a file, `@PATH` (relative to the cwd, mixable
+with inline groups): one group per line, globs comma- or
+whitespace-separated, `#` comments and blank lines skipped. A missing file
+or a style outside the four exits 2, naming `PATH:LINE`.
+
+```conf
+# overrides.conf  ->  --jobserver-auth-override @overrides.conf
+off:giant.bst
+fd:libfoo-*.bst libbar.bst
+flto:llvm/*.bst   # inside a junction: no junction prefix
+```
+
+Globs match the element name, the first matching group wins, and the
+flag repeats. A style outside the four is ignored, as is a malformed
+`public:` block: the element falls through to `auto`.
+The annotation works on a junctioned element too, and a glob matches the
+element's name inside its own project, without the junction prefix
+(`my_recipe.bst`, not `toolchain.bst:my_recipe.bst`). The flag's full
+entry is in [`cli.md`](cli.md#what-each-flag-does-in-full).
+
 ## What is not measured yet
 
 One arm64 host with slow cores carries every row. Two critical chains, a

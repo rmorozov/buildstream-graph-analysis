@@ -38,6 +38,11 @@ import pytest
 # two-line help (`UX-858`).
 CAP = 66
 
+# `capture run` alone carries `bga`'s own epilog under the tracer's help:
+# its header, one line per translated flag, and `--jobserver`'s
+# `auto|N|off` wrap (`UX-1301`).
+CAPTURE_RUN_CAP = CAP + 6
+
 # The top level is a *list*: one line per command, and there are 23 of
 # them. Its length is the command count, not prose, so it gets its own
 # bound - the thing to guard here is that no entry grows to two lines.
@@ -140,7 +145,7 @@ def test_the_nested_capture_run_help_fits_too():
     """The worst offender after `compare`, and a subparser of a subparser -
     easy to miss when only top-level commands are checked."""
     rendered = _help(["capture", "run", "--help"]).splitlines()
-    assert len(rendered) <= CAP, f"{len(rendered)} lines"
+    assert len(rendered) <= CAPTURE_RUN_CAP, f"{len(rendered)} lines"
 
 
 def test_the_top_level_lists_commands_rather_than_explaining_them():
@@ -320,7 +325,11 @@ def test_no_help_string_in_source_ends_on_a_dangling_space():
 
     offenders = []
     for path in ["bga/cli.py"] + glob.glob("tools/*.py") + glob.glob("tools/native_trace/*.py"):
-        lines = open(path, encoding="utf-8").read().split("\n")
+        try:
+            text = open(path, encoding="utf-8").read()
+        except FileNotFoundError:  # another guard's scratch module, gone mid-run (UX-1313)
+            continue
+        lines = text.split("\n")
         for n, line in enumerate(lines):
             match = re.match(r"\s*help=f?(['\"])(.*)\1,?\s*$", line.rstrip())
             if not match or not match.group(2).endswith(" "):

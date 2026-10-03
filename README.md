@@ -121,7 +121,7 @@ The second `snapshot` prints the analysis **and** the verdict against the first.
 in `.bga/runs/<UTC-stamp>/` under the project (gitignored), and every command taking a run
 directory also takes `@last`, `@prev` or a stamp prefix — `bga analyze @last`,
 `bga compare @prev @last`. `bga snapshot` is those commands composed, so it changes no number
-and keeps every refusal: a caches-off run compared against a caches-on one still refuses.
+and keeps every refusal: a caches-off run compared against a caches-on one still refuses. Each snapshot stays until pruned: [`Disk`](docs/guides/real-project.md#disk) has a measured size per run and `bga snapshot --prune`.
 
 The pieces underneath, for a log captured elsewhere or a capture that cannot live in the project directory:
 

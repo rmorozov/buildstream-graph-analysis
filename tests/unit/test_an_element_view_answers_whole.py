@@ -3,6 +3,8 @@
 Measured before, on the 1,202-element run (`--layers 20 --width 60`):
 "All elements" had duration and no depth, "What does my element wait on"
 depth and no duration.
+
+Styleguide §3d.
 """
 
 import re

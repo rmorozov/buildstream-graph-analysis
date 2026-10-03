@@ -10,6 +10,8 @@ two-plane review page before the fix: 77 `a.inspect` in one name, 17
 `copy-markdown` in one, 17 `copy-rows` in 8, 14 `copy-sql` in one, 6
 `twin-toggle` in one, 4 `top-n` in one, 3 `table-filter` in one; 10 of 16
 drawings routed to a bare range.
+
+Styleguide §6e rule 9.
 """
 
 import collections

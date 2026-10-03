@@ -2,6 +2,8 @@
 
 No two `.draw-tick` boxes of a decomposition intersect, at 390 and 1440, for
 a 2%, a 9.8% and an 88% part, and on the golden and macro_micro pages.
+
+Styleguide §2a.
 """
 
 import pathlib

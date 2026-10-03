@@ -6,6 +6,8 @@ first Rows-shown option where it has one, sorted by one head - the task
 table by Duration ascending and the elements table by Unweighted depth on
 the big page. Copy's JSON rows, read as published values, equal the shown
 rows' in order; on the big page a filter as well.
+
+Styleguide §4c.
 """
 
 import json

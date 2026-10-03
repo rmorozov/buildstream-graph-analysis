@@ -4,6 +4,8 @@ Before: `by_binary` was `{binary: calls}` and the `binary_cost` answer sentence
 summed 21,064 (element, binary) pairs in the browser to name its leader. Now
 `bga.plane2.binary_totals` sums them once; the sentence and the table's first
 row read `by_binary[0]`.
+
+Styleguide §1c.
 """
 
 import json

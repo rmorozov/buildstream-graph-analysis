@@ -2,6 +2,8 @@
 
 On macro_micro's by_binary and elements tables, each label names the order its press gives, which is the
 th's aria-sort after one press; a second press flips both.
+
+Styleguide §4c.
 """
 
 import pathlib

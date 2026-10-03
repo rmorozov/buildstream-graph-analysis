@@ -3,6 +3,8 @@
 `test_the_ceilings_reach_a_reader.py` finds a row per bound, but not its
 number: `PAGE_BUDGET_B` moved 150,000 -> 160,000 and a row still saying
 150,000 B passed every guard.
+
+Styleguide §3g.
 """
 
 import pathlib

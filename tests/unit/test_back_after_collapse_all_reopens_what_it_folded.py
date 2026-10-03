@@ -2,6 +2,8 @@
 
 Measured before, on the 1,202-element page from y 3000: Collapse all, Back,
 all 79 sections still collapsed; scrollY 333 at 1440 and 1110 at 390.
+
+Styleguide §4c.
 """
 
 import pytest

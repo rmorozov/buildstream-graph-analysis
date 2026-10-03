@@ -7,6 +7,8 @@ mounted node that carries their no-match line. The drawing-values clip
 rule (`UX-1169`) is read as computed style. UX-1202: no aria-label past
 600 chars; a value note past it states p50/p95 and details its table;
 `#handoff-refusal` is no empty live region at rest.
+
+Styleguide §6e rule 9.
 """
 
 import sys

@@ -6,6 +6,8 @@ one; two claims at one severity, or about one element, are two), no
 element name is drawn twice in one card outside its step, and a card a
 reader lands on carries a step or a priority above Info - an Info card
 with no step is folded under "Also noted · N", a note riding its card.
+
+Styleguide §5a.
 """
 
 import base64

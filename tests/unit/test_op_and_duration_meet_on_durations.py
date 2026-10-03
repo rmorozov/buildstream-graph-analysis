@@ -3,6 +3,8 @@
 The task table carries `task_durations_us` as its Duration column, ahead of
 the share, so a bare threshold reads the duration and the share's head is
 marked. Held on the 1,202-element two-plane page, `golden` and `macro_micro`.
+
+Styleguide §3d.
 """
 
 import base64

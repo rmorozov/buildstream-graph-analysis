@@ -2,6 +2,8 @@
 
 Measured before, on the 1,202 two-plane page: Top 10 then All rows left the 22 rows ranked by duration
 (`aria-sort` descending, layer16/mod006.bst first) with an empty badge - the chain order lost.
+
+Styleguide §4c.
 """
 
 import pytest

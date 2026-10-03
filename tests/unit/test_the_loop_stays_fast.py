@@ -187,7 +187,8 @@ class TestTheSelectorStillSelects:
     # `UX-1301`'s help guard reads `bga.cli`'s translators: median 41, p90 68, max 200 over 819.
     # `UX-1302`'s snapshot guard runs `bga.cli.main`: median 41, p90 68, max 201 over 820.
     # Round 168's merged tree (UX-1304/1311/1312's guards over the shim, the tracer and `bga.cli`): median 41, p90 68, max 204 over 827.
-    CEILING = {"median": 41, "p90": 68, "max": 204}
+    # Round 170's merged tree (UX-1320..1331's guards over `bga.cli`, `bga.blast` and the shim): median 41, p90 69, max 209 over 837.
+    CEILING = {"median": 41, "p90": 69, "max": 209}
     POPULATION_FLOOR = 60
     #: `UX-645`: **13 census + 14 of your own**. The census floor is
     #: inside this bound because those files run - the figure is what
@@ -265,6 +266,8 @@ class TestTheSelectorStillSelects:
         "bga/report/_shared.py",
         # Round 168: wide by **name**: the documented-invocations guard reads it for the build-class flags.
         "tools/_run_context_common.py",
+        # Round 170: 51, two over `HANDFUL`. Wide by **name**: UX-1321/1326/1330's guards run `bga.blast` to price a junction.
+        "bga/blast.py",
         # `UX-740`, round 102: 46 = 31 census + 16 named, one over the
         # bound. Wide by **name**: loading a fixture run is what a guard
         # does to get one, so `from bga.ingest.loader import load_all`

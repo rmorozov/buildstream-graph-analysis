@@ -1236,4 +1236,8 @@ MEDIUM = (
     "tests/unit/test_the_rail_mark_is_drawn_where_it_is_seen.py",  #    2.0s
     # `UX-1288`, measured single-process on landing.
     "tests/unit/test_a_pilot_kit_runs_report_only.py",  #    8.4s
+    # Round 170, measured single-process on landing.
+    "tests/unit/test_a_build_run_through_a_wrapper_script_is_captured.py",  #    1.0s
+    "tests/unit/test_a_comparison_of_different_work_is_not_a_verdict.py",  #    2.2s
+    "tests/unit/test_blast_answers_before_the_first_capture.py",  #    2.5s
 )

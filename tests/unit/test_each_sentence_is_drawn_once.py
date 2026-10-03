@@ -9,6 +9,8 @@ A link's text names a place and a stock line an absence; neither is a sentence.
 UX-1163: an evidence label its card's advice says, a strip under the sample
 floor, a table's row count twice in its tools, a tick its sentence restates,
 a one-column header and `#confidence`'s gate pair each read 0.
+
+Styleguide §5a.
 """
 
 import pathlib

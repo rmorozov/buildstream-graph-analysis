@@ -12,6 +12,8 @@ table (`UX-532`'s own defect: it stayed green through the row-
 migration bug because no fixture had one), so the nested-table clause
 runs `pages.shared_resource_run` too - the fixture that shape needs,
 not a fixture that merely could have one.
+
+Styleguide §1a.
 """
 
 import pathlib

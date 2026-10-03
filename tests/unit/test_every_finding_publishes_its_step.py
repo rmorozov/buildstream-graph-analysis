@@ -1,4 +1,6 @@
-"""UX-1256: every finding publishes its step - a sentence and a command, or why it has none."""
+"""UX-1256: every finding publishes its step - a sentence and a command, or why it has none.
+
+Styleguide §1d."""
 
 import contextlib
 import io

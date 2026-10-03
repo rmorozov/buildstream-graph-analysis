@@ -8,6 +8,8 @@ filter its entry lacked; Expand all pushed nothing; an opened Binaries
 fold sat beside the closed one; the elided-elements line sat atop the report.
 Next after a pressed `latent_heavies` entry also skipped `joint_saving`.
 `UX-1209`: the Markdown checkbox was 24x24 beside a 20 px line; now 13x13 inside a 24 px label.
+
+Styleguide §3l.
 """
 
 import pathlib

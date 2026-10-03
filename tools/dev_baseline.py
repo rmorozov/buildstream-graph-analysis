@@ -452,6 +452,7 @@ def do_write(args, current, existing):
     if args.force:
         head = head_document(args.baseline)
         carried = {identity(f) for f in head["findings"]} if head is not None else set()
+        carried |= {i for _, ids in batches for i in ids}
         signed = {identity(f) for f in current if identity(f) not in carried}
         if signed:
             batches = [*batches, (args.reason, signed)]

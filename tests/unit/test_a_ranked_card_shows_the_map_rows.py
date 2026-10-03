@@ -3,6 +3,8 @@
 Read on `macro_micro`, exported: the first ranked card (not on demand) holds
 `details[data-fold="element-maps"]`, closed, whose `dt` "On the path" sits
 beside a `dd` walking back to `elements.criticality_probability[<uid>].probability`.
+
+Styleguide §2e.
 """
 
 import pytest

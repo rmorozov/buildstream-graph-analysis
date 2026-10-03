@@ -2,6 +2,8 @@
 
 Measured before, on the 1,202-element page: a card at -320, a dependency
 link, Back: the card at 0 (1440 and 390); the pressed link 656 -> 976 at 390.
+
+Styleguide §3c.
 """
 
 import pytest

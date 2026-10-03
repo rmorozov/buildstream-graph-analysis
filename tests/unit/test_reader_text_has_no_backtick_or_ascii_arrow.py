@@ -4,6 +4,8 @@ Inline code is `<code>`, an arrow is `→`, and a finding's detail line
 leads with its sentence. Every finding is hydrated first, so text
 inserted after boot is held to the same rule. A table cell is data,
 except a long-text fold's preview, which is prose.
+
+Styleguide §4g.
 """
 
 import pathlib

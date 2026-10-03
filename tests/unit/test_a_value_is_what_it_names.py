@@ -8,6 +8,8 @@ Four readings that were not: a "Cores busy 983564.29x" over a 0 ms span
 printed as "496481.0 h", and a gate message with a spaced hyphen and a
 glued "1.5s". Read on the two-plane page (`gen-synthetic --seed 1
 --store --layers 8 --width 14`, 114 elements) and `macro_micro`.
+
+Styleguide §4g.
 """
 
 import json

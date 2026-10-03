@@ -15,6 +15,8 @@ UX-1203: in print every `th` on golden and `macro_micro` has its label.
 A row "Also in" or Jump to a binary lands is what sits at its centre, at 1440 and 390.
 UX-1210: Top 10 then a sort on Element shows 10 element rows and no stub, All rows 22; the chain
 drawing draws 9 boxes and More, then 22 and none; no `hidden` node is drawn on any of the five pages.
+
+Styleguide §6e rule 11.
 """
 
 import json

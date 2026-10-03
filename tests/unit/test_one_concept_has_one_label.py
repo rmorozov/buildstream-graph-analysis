@@ -118,6 +118,29 @@ def test_the_table_names_every_concept():
     assert all(keys and word for keys, word in CONCEPTS.values())
 
 
+def _terms():
+    """The values of `TERMS` in format.js."""
+    js = (REPO / "bga" / "viewer" / "format.js").read_text(encoding="utf-8")
+    block = js.split("export const TERMS = {", 1)[1].split("\n};", 1)[0]
+    return set(re.findall(r':\s*"([^"]+)"', block))
+
+
+def _schema_titles():
+    return set(re.findall(r'"title":\s*"([^"]+)"', (REPO / "bga" / "schemas.py").read_text(encoding="utf-8")))
+
+
+def test_each_word_is_read_off_the_file_the_section_names():
+    """§6e.2.1 names `TERMS` and, where it has no key, the schema `title`."""
+    terms, titles = _terms(), _schema_titles()
+    assert len(terms) > 10, sorted(terms)
+    nowhere = sorted(word for _keys, word in CONCEPTS.values() if word not in terms | titles)
+    assert not nowhere, f"in neither TERMS nor a schema title: {nowhere}"
+    title_only = sorted(word for _keys, word in CONCEPTS.values() if word not in terms)
+    section = _STYLEGUIDE.split("#### 6e.2.1. Keyed concepts", 1)[1].split("\n| concept", 1)[0]
+    if title_only:
+        assert "`bga/schemas.py`" in section, f"{title_only} are schema titles, and §6e.2.1 names only TERMS"
+
+
 @needs_browser
 def test_each_concept_carries_its_one_word(collected):
     label, found, _texts = collected

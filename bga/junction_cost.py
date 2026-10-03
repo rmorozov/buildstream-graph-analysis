@@ -95,6 +95,16 @@ def _refusals(runs: list[dict]) -> list[dict]:
                 "against one, and it needs at least two.",
             }
         ]
+    ids = [run.get("run_id") for run in runs if run.get("run_id")]
+    if len(set(ids)) < len(ids):
+        return [
+            {
+                "check": "same_run",
+                "runs": ids,
+                "sentence": "The same run is named twice: two copies of one run are one invocation, "
+                "so N=2 would be false. Name each variant's own run.",
+            }
+        ]
     blocks = [run.get("build_class") for run in runs]
     if not buildclass.homogeneous([_type_only(block) for block in blocks]):
         seen = sorted({(block or {}).get("type") or buildclass.NOT_DECLARED for block in blocks})
@@ -214,7 +224,7 @@ def render(document: dict) -> list[str]:
     lines = [f"N separate invocations against one junctioned build: {plural(len(runs), 'run')}"]
     for run in runs:
         lines.append(
-            f"  {run['run_id']}: {run['build_class'] or buildclass.NOT_DECLARED}, {run['keyed_elements']}/{run['elements']} keyed"
+            f"  {run['run_id'] or '(no run id)'}: {run['build_class'] or buildclass.NOT_DECLARED}, {run['keyed_elements']}/{run['elements']} keyed"
         )
     for refusal in document.get("refusals") or []:
         lines.append(f"  Refused: {refusal['sentence']}")

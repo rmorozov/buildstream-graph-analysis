@@ -1,6 +1,8 @@
 """UX-1227: from no active row, the palette's ArrowDown lands on row 0 and ArrowUp on the last row.
 
 Measured before, golden's jump box typed "bst": one ArrowDown made row 1 active - row 0 was skipped.
+
+Styleguide §6e rule 8.
 """
 
 import pytest

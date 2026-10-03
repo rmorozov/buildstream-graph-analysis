@@ -4,6 +4,8 @@ The decision panel's Why pairs and every provenance value go through
 the element card's formatter; a number in reader prose is not glued to
 `s`/`ms`. Every finding and fold is opened first, so text inserted
 after boot is held too. `data-raw` keeps the published number.
+
+Styleguide §4g.
 """
 
 import pathlib

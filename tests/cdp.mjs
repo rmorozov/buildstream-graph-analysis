@@ -7,7 +7,7 @@
 // Every drive starts on a fresh history and empty localStorage (`UX-1203`,
 // `UX-1215`, `UX-1217`): `Page.resetNavigationHistory` before the load, and
 // a one-shot `localStorage.clear()` on the new document, removed after the
-// settle so a journey's own reloads keep their storage. At the shared tab's
+// settle so a journey's own reloads keep their storage. At a tab's
 // 50-entry cap, gesture-less pushes prune the document's own older
 // entries: a second Back leaves the page.
 //

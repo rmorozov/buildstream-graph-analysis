@@ -4,6 +4,8 @@ A scroll that carries a section's top past `scrollspy`'s reading line
 while no section enters or leaves the screen still moves the mark to
 that section. Chromium (`tests/browser.py`) on `macro_micro`, every
 chapter open, at 1440x900 and 390x844.
+
+Styleguide §3h.
 """
 
 import sys

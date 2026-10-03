@@ -721,7 +721,8 @@ cache key is identical; a name is not an identity, because an asan and
 a release compile of one source share a name and not a key. The runs
 must declare one build type (`UX-898`); variants differ by design.
 A single run, mixed build types, or a run with no cache keys is
-**refused by name**, and a refusal still exits 0.
+**refused by name**, and a refusal still exits 0, bar `same_run` (the same
+run named twice), which exits 2.
 
 **The payload: `junction-cost/v1`.** `runs` lists each run's
 `run_id`, `build_class`, `elements`, `keyed_elements` and

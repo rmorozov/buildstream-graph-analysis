@@ -38,7 +38,7 @@ import os
 from pathlib import Path
 from typing import Optional
 
-from .cache_effectiveness import compute_cache_accounting, compute_cache_churn
+from .cache_effectiveness import built_elements, compute_cache_accounting, compute_cache_churn
 from .compare import _SIGNIFICANCE_PCT, MIN_BASELINE_RUNS, compute_band
 from .plural import plural
 from .units import human_bytes
@@ -103,9 +103,7 @@ def _rebuild_us(tasks) -> Optional[int]:
     """
     total = None
     for task in tasks or []:
-        kind = getattr(getattr(task, 'task_key', None), 'kind', None)
-        name = getattr(kind, 'value', kind)
-        if name == 'BUILD':
+        if task.task_key.task_kind.value == 'BUILD':
             total = (total or 0) + (task.finish_us - task.start_us)
     return total
 
@@ -124,16 +122,6 @@ def _subject(run_context) -> Optional[tuple[str, tuple[str, ...]]]:
     if project is None and not targets:
         return None
     return (project or 'unknown', tuple(targets or ()))
-
-
-def _built_elements(tasks) -> set:
-    """Elements with a BUILD task - the population `_rebuild_us` sums over."""
-    built = set()
-    for task in tasks or []:
-        key = task.task_key
-        if key.task_kind.value == 'BUILD':
-            built.add(key.element_uid)
-    return built
 
 
 def _row(name: str, analyzer, result, previous) -> dict:
@@ -160,7 +148,7 @@ def _row(name: str, analyzer, result, previous) -> dict:
     transfer_us = sum(transfer.values()) if transfer else None
     pulled = accounting.get('cached_elements')
     durations = _element_durations(result)
-    built = _built_elements(tasks)
+    built = built_elements(tasks)
 
     row = {
         'run': name,
@@ -376,7 +364,7 @@ def trend_from_run_dirs(run_dirs, **analyzer_kwargs) -> dict:
         label = os.path.join(path.parent.name, path.name) if path.parent.name else path.name
         rows.append(_row(label, analyzer, result, previous))
         previous = {
-            'built': _built_elements(analyzer.normalized_tasks),
+            'built': built_elements(analyzer.normalized_tasks),
             'elements': graph.elements if graph else [],
             'durations': _element_durations(result),
             'run_mode': (result.confidence or {}).get('run_mode'),

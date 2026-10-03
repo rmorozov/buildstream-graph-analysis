@@ -20,7 +20,7 @@ from typing import Any, Optional
 
 from . import buildclass, hostinfo, producer, schemas
 from .analyzer import BuildEfficiencyAnalyzer
-from .cache_effectiveness import compute_cache_churn
+from .cache_effectiveness import built_elements, compute_cache_churn
 from .ingest.models import AnalysisResult, Element
 from .plural import plural
 from .report.text import _CONFIDENCE_HIGH
@@ -1039,14 +1039,20 @@ def _compare_results(
     # them, which is how a deliberate cut came to be reported as 4604
     # seconds that "bought nothing".
     baseline_durations = (getattr(baseline_result, 'signals', None) or {}).get('element_durations')
+    candidate_built = getattr(candidate_result, 'built_elements', None)
+    baseline_built = getattr(baseline_result, 'built_elements', None)
     cache_churn = (
         compute_cache_churn(
             baseline_elements,
             candidate_elements,
             candidate_dependencies,
-            set(built_durations),
+            set(built_durations) if candidate_built is None else candidate_built,
             built_durations,
-            baseline_built=(set(baseline_durations) if isinstance(baseline_durations, dict) else None),
+            baseline_built=(
+                baseline_built
+                if baseline_built is not None
+                else (set(baseline_durations) if isinstance(baseline_durations, dict) else None)
+            ),
             candidate_run_mode=(candidate_result.confidence or {}).get('run_mode'),
             baseline_run_mode=(baseline_result.confidence or {}).get('run_mode'),
         )
@@ -1377,6 +1383,14 @@ def _from_document(document: dict):
     )
 
 
+def _built_of(run_dir: Path) -> set[str]:
+    """BUILD-task elements of a run whose analysis was read, not re-run: load and normalize only."""
+    analyzer = BuildEfficiencyAnalyzer()
+    analyzer.load(Path(run_dir))
+    analyzer.normalize()
+    return built_elements(analyzer.normalized_tasks)
+
+
 def _analyze_side(
     run_dir: Path, plane2: Optional[str], reanalyse: bool, capacity=None, verbose=False
 ) -> tuple[Any, list, Any]:
@@ -1393,8 +1407,11 @@ def _analyze_side(
         wanted = fingerprint.of(args) if document is not None else None
         if document is not None and wanted is not None and document.get(fingerprint.KEY) == wanted:
             graph = load_graph(Path(run_dir) / 'graph.json')
-            return _from_document(document), graph.elements, graph.dependencies
+            published = _from_document(document)
+            published.built_elements = _built_of(run_dir)
+            return published, graph.elements, graph.dependencies
     analyzer, result = analyzed_with_analyzer(args)
+    vars(result)['built_elements'] = built_elements(getattr(analyzer, 'normalized_tasks', None))
     graph = analyzer.graph
     if graph is None:
         raise ValueError(f"{run_dir}: the analysis loaded no graph")

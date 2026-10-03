@@ -428,3 +428,34 @@ def test_an_element_the_baseline_had_cached_is_still_churn(tmp_path):
     churn = comparison.cache_churn
     assert churn["churned_elements"] == ["a.bst"]
     assert churn["rebuilt_in_both_elements"] == []
+
+
+def test_compare_churn_counts_built_elements_not_pulled_ones(tmp_path):
+    source = Path(__file__).resolve().parents[1] / "fixtures/a_build_that_pulls/run"
+    shutil.copytree(source, tmp_path / "a")
+    shutil.copytree(source, tmp_path / "b")
+    churn = compare_runs(tmp_path / "a", tmp_path / "b").cache_churn
+    assert churn["rebuilt_in_both_elements"] == ["lib3.bst"]
+
+
+def test_compare_churn_reads_each_sides_own_built_set():
+    from types import SimpleNamespace
+
+    from bga.compare import _compare_results
+    from bga.ingest.models import Element
+
+    def side(built):
+        return SimpleNamespace(
+            run_id="r",
+            total_duration_us=1,
+            floors={},
+            confidence={"primary": 1.0, "run_mode": "incremental"},
+            attribution={},
+            violations=[],
+            signals={"element_durations": {"a": 1, "p": 1}},
+            built_elements=built,
+        )
+
+    elements = [Element(uid="a", cache_key="k"), Element(uid="p", cache_key="k")]
+    churn = _compare_results(side({"a"}), side({"p"}), elements, elements, candidate_dependencies=[]).cache_churn
+    assert churn["rebuilt_in_both_elements"] == []

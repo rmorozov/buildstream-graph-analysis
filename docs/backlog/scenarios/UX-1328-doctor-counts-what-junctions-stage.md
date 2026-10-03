@@ -2,7 +2,7 @@
 
 **Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the junction-heavy onboarding walk, 2026-10-03 (`/mnt/project-files/onboarding-walk-2026-10-03/onboarding-walk.md`) | **Serves:** R1 | **Topic:** capture | **Area:** tools | **Shape:** judgement | **Reading:** container
 
-**Guard:** none — open, no guard named yet
+**Guard:** `tests/unit/test_doctor.py::TestTheCensusChecksAreTwoDifferentThings`
 
 ## Motivation
 
@@ -38,3 +38,22 @@ Asking `bst` what the junctions stage.
 staged toolchain it still does; a guard holds both. Reading taken in this container.
 
 ## Outcome
+
+**The gap measured.** `bga doctor /root/walk/carbon` before (walk): `[warn] staged-sources: ... stage no
+executable at all` with a remedy naming `examples/stage_runtimes.sh`.
+
+**The close measured.** After, same command from this worktree:
+`[ok] staged-sources: this project's own sources stage no executable, and a toolchain may arrive via
+junctions/bootstrap.bst, junctions/bst-plugins-experimental.bst, junctions/bst-plugins.bst; some sources are
+not local - not checked here`. `pytest -n 1 -q tests/unit/test_doctor.py` -> 43 passed, 8 skipped.
+Bare project outside `examples/` still warns, with a remedy that names no bga script.
+
+**Mutation table.**
+
+| Mutation | Reddened | Count |
+|---|---|---|
+| `_is_a_bga_example` always true | bare-project remedy test | 1 failed |
+| `_is_a_bga_example` always false | in-example remedy test | 1 failed |
+| junction kind never matched | junction test | 1 failed |
+| non-local source never matched | remote-source test | 1 failed |
+| `if unseen:` never taken | junction + remote tests | 2 failed |

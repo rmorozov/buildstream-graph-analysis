@@ -604,6 +604,47 @@ def _plugins_package_installed() -> bool:
     return importlib.util.find_spec("buildstream_plugins") is not None
 
 
+def _unseen_toolchain(project_dir: str, elements: list[str]) -> str:
+    """What the local-source census cannot see, named; "" when it can see everything."""
+    from .bst_native_build_tracer import elements_dir_for, read_element_yaml
+
+    junctions, remote = [], False
+    for element in elements:
+        data = read_element_yaml(os.path.join(elements_dir_for(project_dir), element))
+        if not isinstance(data, dict):
+            continue
+        if data.get("kind") == "junction":
+            junctions.append(element)
+        remote = remote or any(
+            isinstance(source, dict) and source.get("kind") != "local" for source in data.get("sources") or []
+        )
+    parts = []
+    if junctions:
+        parts.append("a toolchain may arrive via " + ", ".join(junctions[:3]) + (" ..." if len(junctions) > 3 else ""))
+    if remote:
+        parts.append("some sources are not local")
+    return "; ".join(parts)
+
+
+def _is_a_bga_example(project_dir: str) -> bool:
+    """Whether `project_dir` sits in a bga checkout's `examples/`, where the stage scripts live."""
+    return os.path.isfile(os.path.join(os.path.dirname(os.path.realpath(project_dir)), "stage_runtimes.sh"))
+
+
+def _no_executable_remedy(project_dir: str) -> str:
+    if _is_a_bga_example(project_dir):
+        return (
+            "examples/stage_runtimes.sh (busybox) or "
+            "examples/stage_cpp_toolchain.sh (a real gcc/cmake sysroot), "
+            "depending on the project. Both are gitignored by design and "
+            "must be run once per checkout."
+        )
+    return (
+        "stage a shell and the tools the install-commands call from a `local` "
+        "source, or bring them in through a junction or a remote source"
+    )
+
+
 def check_staged_sources(project_dir: str) -> list[dict]:
     """What the census can say without building anything (`UX-105`).
 
@@ -640,18 +681,25 @@ def check_staged_sources(project_dir: str) -> list[dict]:
         (entry.get("dynamic_executables") or 0) + (entry.get("static_count") or 0) for entry in per_element.values()
     )
     if executables == 0:
-        findings.append(
-            _check(
-                "staged-sources",
-                WARN,
-                "this project's own sources stage no executable at all - a sandbox "
-                "with no shell cannot run install-commands",
-                remedy="examples/stage_runtimes.sh (busybox) or "
-                "examples/stage_cpp_toolchain.sh (a real gcc/cmake sysroot), "
-                "depending on the project. Both are gitignored by design and "
-                "must be run once per checkout.",
+        unseen = _unseen_toolchain(project_dir, elements)
+        if unseen:
+            findings.append(
+                _check(
+                    "staged-sources",
+                    OK,
+                    f"this project's own sources stage no executable, and {unseen} - not checked here",
+                )
             )
-        )
+        else:
+            findings.append(
+                _check(
+                    "staged-sources",
+                    WARN,
+                    "this project's own sources stage no executable at all - a sandbox "
+                    "with no shell cannot run install-commands",
+                    remedy=_no_executable_remedy(project_dir),
+                )
+            )
     else:
         findings.append(
             _check("staged-sources", OK, f"{plural(executables, 'executable')} staged by this project's own sources")

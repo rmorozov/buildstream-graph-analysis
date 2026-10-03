@@ -19,8 +19,7 @@ read from junit.xml: 12540 test(s) recorded, 1 failure(s)
 
 ## Required Fix
 
-The scan reads tracked files only (`git ls-files`), so no scratch file
-another guard writes is in its population.
+The scan skips a path that vanishes between the glob and the open.
 
 ## Out of Scope
 
@@ -46,13 +45,16 @@ $ python3 -m pytest -q tests/unit/test_help_is_short.py
 106 passed
 ```
 
-The scan's population is `git ls-files bga/cli.py ':(glob)tools/*.py'
-':(glob)tools/native_trace/*.py'`, asserted non-trivial (> 50 files) so an
-empty listing cannot pass it.
+### Deviation from the Required Fix
+
+The first push read `git ls-files`; CI then called the guard a census
+member (`test_every_derived_census_guard_is_declared`), since a subprocess
+population runs in every selection. Skipping a vanished path keeps the
+glob, and the guard's selection, as it was.
 
 ### Mutations verified red and reverted (2)
 
 | # | mutation | reddened |
 |---|---|---|
-| M1 | the scan back on `glob.glob`, with a dangling symlink in `tools/` | 1 of 1 (`FileNotFoundError`) |
+| M1 | the `FileNotFoundError` skip dropped, with a dangling symlink in `tools/` | 1 of 1 (`FileNotFoundError`) |
 | M2 | a dangling `help="... ",` appended to tracked `tools/bga_doctor.py` | 1 of 1 |

@@ -274,7 +274,8 @@ class TestTheGuidesNameKeysTheReportPublishes:
     def _cells(self, document, anchor, column):
         text = (REPO / document).read_text(encoding="utf-8")
         start = text.index(anchor)
-        end = text.index("\n## ", start + 4)
+        end = text.find("\n## ", start + 4)
+        end = len(text) if end < 0 else end  # the page's last section runs to its end
         rows = [line for line in text[start:end].splitlines() if line.startswith("|") and "---" not in line]
         assert rows, (document, anchor)
         return [row.split("|")[column].strip() for row in rows]
@@ -310,7 +311,7 @@ class TestTheGuidesNameKeysTheReportPublishes:
         """The same rename, on `cli.md`'s side of it."""
         row = joined["elements"][0]
         named = set()
-        for cell in self._cells("docs/guides/cli.md", self.CORRELATE_ROW, 2):
+        for cell in self._cells("docs/guides/json-contracts.md", self.CORRELATE_ROW, 2):
             named |= set(re.findall(r"`([a-z_0-9]+)`", cell))
         assert len(named) >= 4, ("the correlate row table named almost nothing; the anchor has moved", named)
         assert sorted(k for k in named if k not in row) == [], (

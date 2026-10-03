@@ -178,7 +178,7 @@ moves the same single-run report from one snapshot to another.
   Perfetto draws a row per track, and a big capture reaches the track
   bound while its byte figure still looks comfortable — 491 KB against
   4 MiB at 16,832 tracks (round 83's re-measurement of the seeded scale
-  run, the one [`cli.md`](cli.md) tabulates). The ladder is
+  run, the one [`viewer.md`](viewer.md) tabulates). The ladder is
   `tools/bga_view.py::_degradation_steps`, coarsest last, and it has
   two steps: **both planes**, then **`--planes 1`, which leaves Plane
   2's process lanes out**. An export renders the first, and if that is
@@ -187,7 +187,7 @@ moves the same single-run report from one snapshot to another.
   step is still over does the file carry no trace, and then it names
   each step's own number. `bga timeline --planes 1` and
   `--only-element` are the same narrowing by hand;
-  [`cli.md`](cli.md)'s ceilings table is where all three bounds are
+  [`viewer.md`](viewer.md)'s ceilings table is where all three bounds are
   listed. This is the one case where the rule above *does* change: the
   answer is still in the trace, and the trip has to be made with fewer
   lanes.

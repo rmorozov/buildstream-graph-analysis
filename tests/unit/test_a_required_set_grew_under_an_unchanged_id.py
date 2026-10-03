@@ -206,7 +206,7 @@ class TestTheRuleSaysWhichChoiceWasMade:
     DOCUMENTS = {
         "docs/spec/specification.md": "## 32.5 The published output schemas",
         "docs/design/architecture.md": "## The published contracts",
-        "docs/guides/cli.md": "## The JSON outputs, and their schemas",
+        "docs/guides/json-contracts.md": "## The JSON outputs, and their schemas",
     }
 
     @pytest.mark.parametrize("relative,heading", sorted(DOCUMENTS.items()))

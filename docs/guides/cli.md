@@ -6,6 +6,26 @@ This is the reference. If you are pointing `bga` at a real project for the first
 
 This covers the `bga` command itself — the whole-project analysis plane. For real per-process tracing *inside* one element's own sandbox (a separate tool, `tools/bst_native_build_tracer.py`, with its own Chrome Trace export), see [`docs/design/architecture.md`](../design/architecture.md#plane-2-intra-element-native-build-system-tracing-ux-11).
 
+The JSON outputs and their schemas are [`json-contracts.md`](json-contracts.md);
+the browser report `bga view` draws is [`viewer.md`](viewer.md).
+
+## Installation
+
+```bash
+pip install ./buildstream-graph-analysis   # or the git URL directly
+```
+
+That is **user mode**, and it is what the README teaches. `pip install
+-e .` from inside a checkout is **contributor** mode — the two differ in
+ways that have shipped bugs (`UX-77`, `UX-203`, `UX-325`: an editable
+install has the repository root on `sys.path`, a wheel does not), so
+this guide names which one it means rather than showing one and
+describing the other (`UX-327`).
+
+Add `bga[bst]` for a real BuildStream in the same environment,
+`bga[completion]` for tab completion, `bga[all]` for both; `pip install
+-e '.[dev]'` is the contributor set that `make test` needs.
+
 ## One entry point (`UX-67`)
 
 `bga` dispatches to the producer programs in `tools/` as well as running
@@ -71,6 +91,91 @@ rather than a row somebody notices (`UX-552`).
 | `bga doctor` | `tools.bga_doctor` |
 | `bga cache-logs` | `tools.bst_cache_logs` |
 | `bga baseline` | `tools.bst_baseline_set` |
+
+## Tab completion (`UX-191`)
+
+```bash
+pip install "bga[completion]"
+eval "$(register-python-argcomplete bga)"          # bash/zsh, in your rc
+register-python-argcomplete --shell fish bga | source
+```
+
+What it completes:
+
+| where | what |
+|---|---|
+| `bga <TAB>` | every subcommand **and** every `UX-67` alias |
+| any run argument — `bga compare @<TAB>` | `@last`, `@prev`, and this project's own snapshot stamps |
+| `bga blast <TAB>` | element names, read from the project's `.bst` files |
+| any `--flag` with choices | its choices |
+
+Without the shell hook it is completely inert, and without `argcomplete`
+installed the import is skipped — the CLI behaves exactly as it did.
+
+**Why not `click`.** The feedback suggested migrating; `argcomplete`
+completes an argparse program as it stands, while a rewrite would touch
+every subcommand, re-litigate the help formatting `UX-158` measured, and
+buy nothing beyond what completion already gives. Recorded as considered
+and declined, revisitable if argcomplete cannot complete something users
+need.
+
+## The environment `bga` reads (`UX-630`)
+
+`bga --help` cannot list an environment variable — which is the reason
+`bga/report/rate.py` gives for choosing one — so this table is the
+inventory instead. Its population is derived from `bga/` and `tools/`
+rather than from the parser, by
+`tests/unit/test_the_environment_surface_is_an_inventory.py`: a name
+added tomorrow with no flag beside it appears here, or that guard is
+red.
+
+### Switches you set
+
+A pilot sets these through its own switches, one table in
+[`pilot.md`](pilot.md#every-switch); the capture's own switches are
+flags, not variables (`--trace-opens`, `--trace-spine`, `--jobserver`).
+
+| name | default | how to turn it off | cost | what it changes | where |
+|---|---|---|---|---|---|
+| `BGA_BUILD_TYPE` | unset: nothing recorded | unset it | none | what kind of build this was — `night`, `review`, `guard`, or whatever else the pipeline declares (`UX-898`). Free text: two runs declaring different types are two populations, and `bga compare`'s gates refuse the pair with exit 6 unless `--blend` is passed. Unset, nothing is recorded and every comparison behaves as it did | `tools/_run_context_common.py` |
+| `BGA_BUILD_VARIANT` | unset: nothing recorded | unset it | none | the named dimensions of what the build did, comma-separated — `arch=aarch64,sanitizer=address,coverage=on` (`UX-903`). Several are true at once, which is why it is a map and not a string; the comparison class is the pair with `BGA_BUILD_TYPE`. An entry without `=` is refused naming it | `tools/_run_context_common.py` |
+| `BGA_CALIBRATED_CORES` | unset: `host_cpu_count`, labelled uncalibrated | unset it | none | `UX-1004`'s recorded knee (effective cores) for this host, from `calibrate_width.py`'s printed `knee: width N` — sizes `bga analyze`'s pool recommendation (`UX-1005`). Unset, the pool falls back to `host_cpu_count`, labelled uncalibrated | `bga/cli.py` |
+| `BGA_ADMISSION` | off | unset it, or anything but `1` | measured slower than none on its first Graviton reading (`UX-1005`) | `1` turns on sandbox admission under `--jobserver` (`UX-1005`): each sandbox takes a token from the recipe pool before `bwrap` starts, ranked by slack. Off by default — its first Graviton reading was slower than none | `tools/bst_native_build_tracer.py` |
+| `BGA_INTERRUPT_GRACE_SECONDS` | 300 | cannot: a value of 0 or less is read as 300 | a stopped build waits up to that long | seconds a wrapped `bst` gets to stop by itself after `SIGINT` before `bga` escalates; 300 by default, and raising it is how a big build keeps the `queue_summary` written during that shutdown | `tools/bst_run_wrapped.py` |
+| `BGA_NO_PROGRESS` | unset: the line is drawn on a terminal | unset it | none | suppresses the in-phase progress line even on a terminal — the same off-switch as `bga snapshot --no-progress` | `bga/progress.py` |
+| `BGA_WRAPPER_ACQUIRE_MS` | 50 | cannot; a wrapper runs only with `--jobserver` on | up to that long per wrapped tool, waiting for tokens | how long a jobserver wrapper (`ld.lld`, `lld`, `ld.gold`, `mold`, `ninja`) may spend acquiring tokens before running its tool; 50 by default, passed to `timeout` as seconds with three decimals. Raised by the test suite so an exact-token-count assertion is never also a bet against `make test`'s own xdist contention (`UX-846`) | `tools/native_trace/wrappers/_common.sh` |
+| `BGA_RATE` | unset: no block | unset it | none | adds the *In Your Units* block to `bga analyze` and `bga whatif`, converting build seconds at `<amount> <unit>/machine-hour` (or `/build-hour`). Unset, nothing is converted and no block is printed; malformed, the block says why rather than staying silent | `bga/report/rate.py` |
+| `BGA_REQUESTED_AT` | unset: `CI_PIPELINE_CREATED_AT`, else none | unset it | none | the ISO-8601 instant a capture publishes as `requested_at_us`, and the `queue_wait_us` it derives from that. `CI_PIPELINE_CREATED_AT` is the fallback, and the published `requested_at_source` says which was used | `tools/_run_context_common.py` |
+| `BGA_TRACE_PROCESSOR` | unset: `PATH`, then the pinned download | unset it | none | the Perfetto `trace_processor_shell` the canned-question runner uses, ahead of `PATH` and ahead of the pinned download | `tests/trace_processor.py` |
+
+### Set by `bga` itself, listed for debugging
+
+`BGA_BASELINE_RUN_DIR` and `BGA_JOBSERVER_MODE` are written by
+`bga snapshot` and `bga capture` into the child they start.
+
+Four more names sit in the same namespace and are **not** switches to
+use. They are listed because a reader who greps the tree finds them and
+deserves an answer:
+
+| name | what it is | where |
+|---|---|---|
+| `BGA_BASELINE_RUN_DIR` | a previous run directory whose `graph.json` `tools/bst_extract_run.py`'s `extract_run` compares this build's own fingerprint against, reusing it on an exact match instead of a fresh `bst show --deps all` (`UX-1083`) — the same `BGA_JOBSERVER_MODE` shape, set by `bga snapshot` beside the previous healthy snapshot it already picks for the compare. Unset when there isn't one (a first capture) or the tracer's `run` command is invoked directly | `tools/bga_snapshot.py`, `tools/bst_native_build_tracer.py` |
+| `BGA_JOBSERVER_MODE` | `off`/`auto`/`n` — `bga capture` sets it beside the `--jobserver N` it already resolves from `--jobserver auto\|N\|off` (`UX-851`), so `tools/bst_native_build_tracer.py run` can record which mode ran without parsing its own argv for the distinction. Unset (read as `off`) when the tracer's `run` command is invoked directly, outside `bga capture` | `tools/bst_native_build_tracer.py` |
+| `BGA_FORCE_PROGRESS` | draws the progress line onto a pipe, so a test can compare a run with progress genuinely on against one with it off. Deliberately not a user-facing switch: it writes control characters into a redirected stderr, which is the one thing `UX-183` exists to prevent | `bga/progress.py` |
+| `BGA_STRICT_HINTS` | not an environment variable at all — a page global, set from the browser console, that makes the report complain about a number carrying no declared `bga:quantity` | `bga/viewer/format.js` |
+| `BGA_TIER_ANY` | set into the child environment by `make test-touching` and by the pre-commit selector, and read by nothing in this tree (`UX-630`) | `tools/dev_touching.py` |
+| `BGA_WRAPPER_TOOL` | set by a jobserver wrapper on itself before running the real tool or its `--help`, so a re-entry (a symlink or a relocated copy that fooled `bga_find_real`) refuses outright rather than recursing (`UX-846`, a post-merge incident) | `tools/native_trace/wrappers/_common.sh` |
+
+The capture path's own namespace, `BST_TRACE_*` — how `bga snapshot`
+drives the `bwrap` shim, the `LD_PRELOAD` hook and the ptrace spine,
+and the failure paths a test forces — is listed in
+[`tools-native_trace.md`](../design/areas/tools-native_trace.md#bst_trace--plane-2-and-plane-3-ux-635).
+
+The system variables `bga` merely *consumes* — `TMPDIR`,
+`XDG_CACHE_HOME`, `XDG_CONFIG_HOME`, `LD_PRELOAD`, `PATH`,
+`PYTHONPATH` — are deliberately not in this table. They are not this
+project's names, and a table that listed them would be describing the
+platform rather than the tool.
 
 ## `bga snapshot` — the local loop (`UX-126`)
 
@@ -177,7 +282,13 @@ retyped per capture:
 bga snapshot --trace-spine=off -- bst build target.bst   # and stays off
 ```
 
-A new project starts at `--trace-opens --trace-spine=auto`. Stickiness
+Both are **on by default**: a new project starts at `--trace-opens
+--trace-spine=auto`. `--no-trace-opens` and `--trace-spine=off` turn
+them off. Measured cost (`UX-895`; CodSpeed Graviton, 16 cores,
+`examples/11-serial-giant`, n=3 per arm), wall over the uncaptured
+build: the capture alone +7.1%, with opens +8.9%, with the spine `on`
++7.1%, both +9.3% — the table is in
+[`pilot.md`](pilot.md#the-three-steps-and-what-each-costs). Stickiness
 is safe because every report records what actually ran (`UX-95`,
 `UX-113`), so a remembered flag cannot make a capture *claim* something
 it did not do.
@@ -444,24 +555,35 @@ Use published capture refs (`bga baseline`, `UX-96`) rather than the
 store. The store is the laptop's analogue of them, and a CI runner has
 no persistent project directory to keep one in.
 
-## Installation
+## `bga doctor` — before anything else (`UX-125`)
 
 ```bash
-pip install ./buildstream-graph-analysis   # or the git URL directly
+bga doctor                 # the environment
+bga doctor PROJECT_DIR     # and whether this project can be captured
+bga doctor --format json   # findings-style ids per check, for scripting
 ```
 
-That is **user mode**, and it is what the README teaches. `pip install
--e .` from inside a checkout is **contributor** mode — the two differ in
-ways that have shipped bugs (`UX-77`, `UX-203`, `UX-325`: an editable
-install has the repository root on `sys.path`, a wheel does not), so
-this guide names which one it means rather than showing one and
-describing the other (`UX-327`).
+`bga doctor --capture` goes further (`UX-149`): it runs the whole capture
+chain — `bst` → `buildbox-run` → the `$PATH` shim → the rewritten argv →
+the recorders inside the sandbox — on a canned one-element build, and
+reports per link in chain order. Seconds, and it needs a staged runtime
+(`examples/stage_runtimes.sh`); it skips rather than building one. This
+is the check to run when a capture fails on a build plain `bst`
+completes — the first `FAIL` names the broken link, where `--diagnose`
+would need the real failing build to say the same thing.
 
-Add `bga[bst]` for a real BuildStream in the same environment,
-`bga[completion]` for tab completion, `bga[all]` for both; `pip install
--e '.[dev]'` is the contributor set that `make test` needs.
+Read-only, one line per check, and a concrete remedy on every failure. It invents no check — each one fronts a failure that really happened while standing this project up, and the remedy quoted is the one that actually fixed it: a virtualenv for `pluginbase` under a distro-patched setuptools, `buildstream-plugins` for the `cmake` kind, the `apparmor_restrict_unprivileged_userns` sysctl for bwrap's loopback, `build-essential` for the hook and spine compile, `stage_runtimes.sh`/`stage_cpp_toolchain.sh` for a sandbox with no shell.
 
-## Basic Usage
+Details worth knowing:
+
+- **bwrap is probed, not just found.** Presence is not the check that matters — bwrap's namespace setup succeeds and then the sandbox fails to bring up loopback, deep inside a build. `doctor` runs the same trivial sandboxed command CI's `bst-smoke` job does.
+- **The compiler is the capture's own, and it compiles the real hook** (`UX-1287`). `c-compiler` resolves `cc` then `gcc` exactly as `compile_hook` does and compiles `tools/native_trace/hook.c` once into a scratch directory it removes, so a missing compiler and one that cannot build the hook (no libc headers) are both a `FAIL` worded as the capture would raise it, naming `build-essential`. A compiler that cannot link `-static` stays a warning: only `--trace-spine` needs it.
+- **"No element plugin registered for kind" gets two different remedies**, because it has two different causes: the package is missing, or the project has not declared it. Telling a user to install what they already have is how a diagnostic loses its reader.
+- **A stale `buildbox-casd` is checked before the build, not guessed at afterwards** (`UX-161`). Any plain `bst` command leaves a daemon holding the cache directory, and a capture that starts under one fails in a way the summary could previously only speculate about. `doctor` reads `/proc` for a casd already holding this project's cache — the directory `bst` itself would use, `buildstream2.conf` before `buildstream.conf` (`UX-166`) — and prints the remedy.
+
+Exit `1` only on a failure. A static-binary blind spot (`--trace-spine=auto` is the answer) and an empty Plane 3 log tree are **warnings**: facts to read, not broken environments. `bst-tests` runs it as a step, so its checks cannot drift from what CI actually installs.
+
+## `bga analyze` — basic usage
 
 ### Analyze a Build Run
 
@@ -647,34 +769,6 @@ bga analyze RUN/ --format json \
   | jq -e '[.findings[] | select(.severity == "critical")] | length == 0'
 ```
 
-#### Before anything else: `bga doctor` — `UX-125`
-
-```bash
-bga doctor                 # the environment
-bga doctor PROJECT_DIR     # and whether this project can be captured
-bga doctor --format json   # findings-style ids per check, for scripting
-```
-
-`bga doctor --capture` goes further (`UX-149`): it runs the whole capture
-chain — `bst` → `buildbox-run` → the `$PATH` shim → the rewritten argv →
-the recorders inside the sandbox — on a canned one-element build, and
-reports per link in chain order. Seconds, and it needs a staged runtime
-(`examples/stage_runtimes.sh`); it skips rather than building one. This
-is the check to run when a capture fails on a build plain `bst`
-completes — the first `FAIL` names the broken link, where `--diagnose`
-would need the real failing build to say the same thing.
-
-Read-only, one line per check, and a concrete remedy on every failure. It invents no check — each one fronts a failure that really happened while standing this project up, and the remedy quoted is the one that actually fixed it: a virtualenv for `pluginbase` under a distro-patched setuptools, `buildstream-plugins` for the `cmake` kind, the `apparmor_restrict_unprivileged_userns` sysctl for bwrap's loopback, `build-essential` for the hook and spine compile, `stage_runtimes.sh`/`stage_cpp_toolchain.sh` for a sandbox with no shell.
-
-Details worth knowing:
-
-- **bwrap is probed, not just found.** Presence is not the check that matters — bwrap's namespace setup succeeds and then the sandbox fails to bring up loopback, deep inside a build. `doctor` runs the same trivial sandboxed command CI's `bst-smoke` job does.
-- **The compiler is the capture's own, and it compiles the real hook** (`UX-1287`). `c-compiler` resolves `cc` then `gcc` exactly as `compile_hook` does and compiles `tools/native_trace/hook.c` once into a scratch directory it removes, so a missing compiler and one that cannot build the hook (no libc headers) are both a `FAIL` worded as the capture would raise it, naming `build-essential`. A compiler that cannot link `-static` stays a warning: only `--trace-spine` needs it.
-- **"No element plugin registered for kind" gets two different remedies**, because it has two different causes: the package is missing, or the project has not declared it. Telling a user to install what they already have is how a diagnostic loses its reader.
-- **A stale `buildbox-casd` is checked before the build, not guessed at afterwards** (`UX-161`). Any plain `bst` command leaves a daemon holding the cache directory, and a capture that starts under one fails in a way the summary could previously only speculate about. `doctor` reads `/proc` for a casd already holding this project's cache — the directory `bst` itself would use, `buildstream2.conf` before `buildstream.conf` (`UX-166`) — and prints the remedy.
-
-Exit `1` only on a failure. A static-binary blind spot (`--trace-spine=auto` is the answer) and an empty Plane 3 log tree are **warnings**: facts to read, not broken environments. `bst-tests` runs it as a step, so its checks cannot drift from what CI actually installs.
-
 #### Conditioning capacity advice on Plane 2 (`--plane2`) — `UX-83`
 
 ```bash
@@ -834,147 +928,37 @@ bga utilisation RUN/    # CPU utilisation accounting
 bga diagnostics RUN/    # blast radius, criticality probability, wall-clock shares
 ```
 
-`floors` accepts the same `--cold`/`--allow-partial-cold`/`--history-dir` flags as `analyze` (matching the spec's own `bga floors RUN --cold` example). `replay` accepts `--heuristic`; `sweep` has its own `--resource`/`--min-capacity`/`--max-capacity`/`--step` flags and isn't a slice of `analyze`'s output at all - it runs a series of replay simulations across a capacity range and reports predicted `T_C`, normalized improvement, and the diminishing-returns "knee" point per capacity value. Every replay/task duration in that sweep is fixed to what was actually observed - the model does not account for real CPU contention as concurrent `PROCESS` usage rises (`docs/backlog/scenarios/UX-0009-builders-max-jobs-joint-optimization.md`'s own real evidence: raising `--builders` can make a real build *slower*, not just plateau, once cores are oversubscribed), so `bga sweep`'s own text/JSON output always carries an explicit caveat to this effect (`docs/backlog/scenarios/UX-0014-sweep-replay-blind-to-contention-slowdown.md`) - treat the predicted curve as a shape, not an exact runtime prediction (Part 19). `graph` has its own `--by-kind` flag (P4-12, non-spec additive signal): `bga graph RUN/ --by-kind` also shows aggregate stats (count, total/avg observed duration) grouped by each element's real BuildStream plugin kind (`import`/`manual`/`junction`/`stack`/...) - off by default, since it's extra detail beyond the base graph section.
+## `bga graph`
 
-## Tab completion (`UX-191`)
+Dependency graph, critical path, structural metrics. One of the section subcommands above.
 
-```bash
-pip install "bga[completion]"
-eval "$(register-python-argcomplete bga)"          # bash/zsh, in your rc
-register-python-argcomplete --shell fish bga | source
-```
+`graph` has its own `--by-kind` flag (P4-12, non-spec additive signal): `bga graph RUN/ --by-kind` also shows aggregate stats (count, total/avg observed duration) grouped by each element's real BuildStream plugin kind (`import`/`manual`/`junction`/`stack`/...) - off by default, since it's extra detail beyond the base graph section.
 
-What it completes:
+## `bga floors`
 
-| where | what |
-|---|---|
-| `bga <TAB>` | every subcommand **and** every `UX-67` alias |
-| any run argument — `bga compare @<TAB>` | `@last`, `@prev`, and this project's own snapshot stamps |
-| `bga blast <TAB>` | element names, read from the project's `.bst` files |
-| any `--flag` with choices | its choices |
+Certified and advisory floors only. One of the section subcommands above.
 
-Without the shell hook it is completely inert, and without `argcomplete`
-installed the import is skipped — the CLI behaves exactly as it did.
+`floors` accepts the same `--cold`/`--allow-partial-cold`/`--history-dir` flags as `analyze` (matching the spec's own `bga floors RUN --cold` example).
 
-**Why not `click`.** The feedback suggested migrating; `argcomplete`
-completes an argparse program as it stands, while a rewrite would touch
-every subcommand, re-litigate the help formatting `UX-158` measured, and
-buy nothing beyond what completion already gives. Recorded as considered
-and declined, revisitable if argcomplete cannot complete something users
-need.
+## `bga replay`
 
-## The environment `bga` reads (`UX-630`)
+Replay makespan (T_C) only. One of the section subcommands above.
 
-`bga --help` cannot list an environment variable — which is the reason
-`bga/report/rate.py` gives for choosing one — so this table is the
-inventory instead. Its population is derived from `bga/` and `tools/`
-rather than from the parser, by
-`tests/unit/test_the_environment_surface_is_an_inventory.py`: a name
-added tomorrow with no flag beside it appears here, or that guard is
-red.
+`replay` accepts `--heuristic`.
 
-What you can set:
+## `bga sweep`
 
-| name | what it changes | where |
-|---|---|---|
-| `BGA_BUILD_TYPE` | what kind of build this was — `night`, `review`, `guard`, or whatever else the pipeline declares (`UX-898`). Free text: two runs declaring different types are two populations, and `bga compare`'s gates refuse the pair with exit 6 unless `--blend` is passed. Unset, nothing is recorded and every comparison behaves as it did | `tools/_run_context_common.py` |
-| `BGA_BUILD_VARIANT` | the named dimensions of what the build did, comma-separated — `arch=aarch64,sanitizer=address,coverage=on` (`UX-903`). Several are true at once, which is why it is a map and not a string; the comparison class is the pair with `BGA_BUILD_TYPE`. An entry without `=` is refused naming it | `tools/_run_context_common.py` |
-| `BGA_CALIBRATED_CORES` | `UX-1004`'s recorded knee (effective cores) for this host, from `calibrate_width.py`'s printed `knee: width N` — sizes `bga analyze`'s pool recommendation (`UX-1005`). Unset, the pool falls back to `host_cpu_count`, labelled uncalibrated | `bga/cli.py` |
-| `BGA_ADMISSION` | `1` turns on sandbox admission under `--jobserver` (`UX-1005`): each sandbox takes a token from the recipe pool before `bwrap` starts, ranked by slack. Off by default — its first Graviton reading was slower than none | `tools/bst_native_build_tracer.py` |
-| `BGA_BASELINE_RUN_DIR` | a previous run directory whose `graph.json` `tools/bst_extract_run.py`'s `extract_run` compares this build's own fingerprint against, reusing it on an exact match instead of a fresh `bst show --deps all` (`UX-1083`) — the same `BGA_JOBSERVER_MODE` shape, set by `bga snapshot` beside the previous healthy snapshot it already picks for the compare. Unset when there isn't one (a first capture) or the tracer's `run` command is invoked directly | `tools/bga_snapshot.py`, `tools/bst_native_build_tracer.py` |
-| `BGA_INTERRUPT_GRACE_SECONDS` | seconds a wrapped `bst` gets to stop by itself after `SIGINT` before `bga` escalates; 300 by default, and raising it is how a big build keeps the `queue_summary` written during that shutdown | `tools/bst_run_wrapped.py` |
-| `BGA_JOBSERVER_MODE` | `off`/`auto`/`n` — `bga capture` sets it beside the `--jobserver N` it already resolves from `--jobserver auto\|N\|off` (`UX-851`), so `tools/bst_native_build_tracer.py run` can record which mode ran without parsing its own argv for the distinction. Unset (read as `off`) when the tracer's `run` command is invoked directly, outside `bga capture` | `tools/bst_native_build_tracer.py` |
-| `BGA_NO_PROGRESS` | suppresses the in-phase progress line even on a terminal — the same off-switch as `bga snapshot --no-progress` | `bga/progress.py` |
-| `BGA_WRAPPER_ACQUIRE_MS` | how long a jobserver wrapper (`ld.lld`, `lld`, `ld.gold`, `mold`, `ninja`) may spend acquiring tokens before running its tool; 50 by default, passed to `timeout` as seconds with three decimals. Raised by the test suite so an exact-token-count assertion is never also a bet against `make test`'s own xdist contention (`UX-846`) | `tools/native_trace/wrappers/_common.sh` |
-| `BGA_RATE` | adds the *In Your Units* block to `bga analyze` and `bga whatif`, converting build seconds at `<amount> <unit>/machine-hour` (or `/build-hour`). Unset, nothing is converted and no block is printed; malformed, the block says why rather than staying silent | `bga/report/rate.py` |
-| `BGA_REQUESTED_AT` | the ISO-8601 instant a capture publishes as `requested_at_us`, and the `queue_wait_us` it derives from that. `CI_PIPELINE_CREATED_AT` is the fallback, and the published `requested_at_source` says which was used | `tools/_run_context_common.py` |
-| `BGA_TRACE_PROCESSOR` | the Perfetto `trace_processor_shell` the canned-question runner uses, ahead of `PATH` and ahead of the pinned download | `tests/trace_processor.py` |
+Capacity sweep for one resource. One of the section subcommands above.
 
-Four more names sit in the same namespace and are **not** switches to
-use. They are listed because a reader who greps the tree finds them and
-deserves an answer:
+`sweep` has its own `--resource`/`--min-capacity`/`--max-capacity`/`--step` flags and isn't a slice of `analyze`'s output at all - it runs a series of replay simulations across a capacity range and reports predicted `T_C`, normalized improvement, and the diminishing-returns "knee" point per capacity value. Every replay/task duration in that sweep is fixed to what was actually observed - the model does not account for real CPU contention as concurrent `PROCESS` usage rises (`docs/backlog/scenarios/UX-0009-builders-max-jobs-joint-optimization.md`'s own real evidence: raising `--builders` can make a real build *slower*, not just plateau, once cores are oversubscribed), so `bga sweep`'s own text/JSON output always carries an explicit caveat to this effect (`docs/backlog/scenarios/UX-0014-sweep-replay-blind-to-contention-slowdown.md`) - treat the predicted curve as a shape, not an exact runtime prediction (Part 19).
 
-| name | what it is | where |
-|---|---|---|
-| `BGA_FORCE_PROGRESS` | draws the progress line onto a pipe, so a test can compare a run with progress genuinely on against one with it off. Deliberately not a user-facing switch: it writes control characters into a redirected stderr, which is the one thing `UX-183` exists to prevent | `bga/progress.py` |
-| `BGA_STRICT_HINTS` | not an environment variable at all — a page global, set from the browser console, that makes the report complain about a number carrying no declared `bga:quantity` | `bga/viewer/format.js` |
-| `BGA_TIER_ANY` | set into the child environment by `make test-touching` and by the pre-commit selector, and read by nothing in this tree (`UX-630`) | `tools/dev_touching.py` |
-| `BGA_WRAPPER_TOOL` | set by a jobserver wrapper on itself before running the real tool or its `--help`, so a re-entry (a symlink or a relocated copy that fooled `bga_find_real`) refuses outright rather than recursing (`UX-846`, a post-merge incident) | `tools/native_trace/wrappers/_common.sh` |
+## `bga utilisation`
 
-### `BST_TRACE_*` — Plane 2 and Plane 3 (`UX-635`)
+CPU utilisation accounting only. One of the section subcommands above.
 
-The capture path has a second namespace the same size, and until
-`UX-635` this table's population was as wide as the one prefix somebody
-typed into the guard. These are not `bga`'s own switches in the sense
-above: they are how `bga snapshot` drives the `bwrap` shim, the
-`LD_PRELOAD` hook and the ptrace spine, and most of them are set *for*
-you. The three kinds are separated because a reader needs to know which
-is which before touching any of them.
+## `bga diagnostics`
 
-**What you may set, driving a capture by hand:**
-
-| name | what it changes | where |
-|---|---|---|
-| `BST_TRACE_OPENS` | records `open()` as well as `exec`, forwarded into the sandbox by the shim. The `opens` half of Plane 2, and the more expensive half | `tools/native_trace/bwrap_shim.py` |
-| `BST_TRACE_OPENS_SEEN` | the sandbox's table of path hashes already written, so a path its processes repeat is written once (`UX-1241`); set by the shim per invocation, a file in the bind directory | `tools/native_trace/bwrap_shim.py`, `tools/native_trace/hook.c` |
-| `BST_TRACE_SPINE` | turns the ptrace spine on for this element — Plane 3, which sees the processes `LD_PRELOAD` cannot | `tools/native_trace/bwrap_shim.py` |
-| `BST_TRACE_SPINE_POLICY` | `auto`, `on` or `off`; `auto` resolves per element against the census below rather than for the whole build | `tools/native_trace/bwrap_shim.py` |
-| `BST_TRACE_SPINE_CENSUS` | the census `auto` consults to decide whether this element is worth the spine's price | `tools/native_trace/bwrap_shim.py` |
-| `BST_TRACE_NO_INJECT` | `=1` runs the shim through to the real `bwrap` injecting nothing, so a refusal can be told from a capture defect. `bga snapshot --no-inject` sets it | `tools/native_trace/bwrap_shim.py` |
-| `BST_TRACE_DIAGNOSTICS` | a path the shim writes `bwrap`'s own stderr to, so a sandbox that refused says what it objected to | `tools/native_trace/bwrap_shim.py` |
-| `BST_TRACE_ARGV_MAX` | how much of a recorded `argv` is kept before truncation; the default is the shim's `DEFAULT_ARGV_RECORD_LIMIT` | `tools/native_trace/bwrap_shim.py` |
-| `BST_TRACE_WRAPPER_CAP` | the most tokens one jobserver wrapper (`ld.lld`, `lld`, `ld.gold`, `mold`, `ninja`) may acquire before running its tool — the pool's own ceiling, set only when `--jobserver` is on (`UX-846`) | `tools/native_trace/wrappers/_common.sh` |
-| `BST_TRACE_LTO_CAP` | the static `-flto=N` cap the GCC-driver shim (`gcc`/`g++`/`cc`/`c++`) rewrites an already-present `-flto`/`-flto=jobserver`/`-flto=auto` to — default `nproc`, the same ceiling `resolve_jobserver_ceiling`'s own `auto` uses; `bga capture run --lto-cap N` sets it (`UX-880`) | `tools/native_trace/wrappers/_common.sh` |
-| `BST_TRACE_WRAPPER_DIR_OVERRIDE` | an operator's own wrapper directory (`docs/guides/wrapper-contract.md`), mounted alongside or instead of the shipped one; `bga capture run --wrapper-dir PATH` sets it (`UX-881`) | `tools/native_trace/bwrap_shim.py` |
-| `BST_TRACE_WRAPPER_MODE` | `augment` (default) or `replace` — whether the operator's directory above adds to the shipped mount or takes its place entirely; `bga capture run --wrapper-dir-mode` sets it (`UX-881`) | `tools/native_trace/bwrap_shim.py` |
-
-**What the capture path sets for you.** Setting these by hand does not
-configure a capture, it desynchronises one — the tracer writes them
-into the child environment and the shim requires them:
-
-| name | what it is | where |
-|---|---|---|
-| `BST_TRACE_REAL_BWRAP` | the real `bwrap` the shim shadows and finally executes | `tools/bst_native_build_tracer.py` |
-| `BST_TRACE_BIND_SRC` | the host directory holding the hook and the spine | `tools/bst_native_build_tracer.py` |
-| `BST_TRACE_BIND_DST` | where that directory is bound inside the sandbox | `tools/bst_native_build_tracer.py` |
-| `BST_TRACE_PRELOAD_SO` | the hook's path *inside* the sandbox, for `LD_PRELOAD` | `tools/bst_native_build_tracer.py` |
-| `BST_TRACE_LOG_DST` | where the trace log lands inside the sandbox | `tools/bst_native_build_tracer.py` |
-| `BST_TRACE_LOG` | the same path as the hook and the spine read it | `tools/native_trace/bwrap_shim.py` |
-| `BST_TRACE_ELEMENT` | the element a record belongs to — the key Plane 1 joins on | `tools/native_trace/bwrap_shim.py` |
-| `BST_TRACE_INVOCATION` | which invocation of that element, so a retry is not merged into its first attempt | `tools/native_trace/bwrap_shim.py` |
-| `BST_TRACE_INVOCATION_LOG` | the host-side file the shim appends one line to per invocation | `tools/bst_native_build_tracer.py` |
-| `BST_TRACE_ARGV_LOG` | the host-side `argv` log, written only when argv recording is on | `tools/bst_native_build_tracer.py` |
-| `BST_TRACE_JOBSERVER` | the jobserver FIFO's path; `run --jobserver N` sets it, the shim opens it read-write and injects `MAKEFLAGS=--jobserver-auth` (`UX-679`, a spike) | `tools/native_trace/bwrap_shim.py` |
-| `BST_TRACE_JOBSERVER_AUTH` | `fd` or `fifo`, resolved from `--jobserver-auth` before the build starts; the shim reads it to choose which `--jobserver-auth` style to inject (`UX-841`) | `tools/native_trace/bwrap_shim.py` |
-| `BST_TRACE_JOBSERVER_AUTH_MAP` | `bga capture run --jobserver-auth-override`'s own map (`style:glob[,glob];...`, styles `fd`/`fifo`/`off`/`flto`), resolved in `bga/cli.py` and carried unchanged through `tools/bst_native_build_tracer.py`; the shim's `resolve_auth_override` matches it against the element name and forces the style, ahead of the auto/`compiler_safe` path (`UX-879`, `flto` `UX-880`) | `tools/native_trace/bwrap_shim.py` |
-| `BST_TRACE_PROJECT_MAX_JOBS` | the project's own `max-jobs`, read once from `bst show` before the build; the shim compares it against each sandbox's own `-j` to tell a `notparallel` pin from an element-level cap (`UX-842`) | `tools/native_trace/bwrap_shim.py` |
-| `BST_TRACE_JOBSERVER_DECISIONS` | the host-side path the shim appends one `{element, max_jobs, decision, kind, policy}` line to per sandbox, folded into the report as `jobserver_decisions` (`UX-842`/`UX-843`). An element the shim probed a sandbox `make` for also carries `sandbox_make` (that `make --version`'s first line) and `auth_style` (`fifo` for 4.4 and up, `fd` below it) - added as the file is copied out of the capture, since the probe cache dies with the FIFO (`UX-916`) | `tools/native_trace/bwrap_shim.py` |
-| `BST_TRACE_ELEMENT_KINDS` | a JSON `{name: kind}` map, read once from `bst show` before the build; the shim looks its own element up in it to pick a row from the per-kind environment table (`UX-843`) | `tools/native_trace/bwrap_shim.py` |
-| `BST_TRACE_ELEMENT_AUTH_MAP` | a JSON `{name: style}` map, read once from a *separate* `bst show --format '%{name}<US>%{public}<RS>'` before the build - each element's own `public: bga: jobserver-auth: fd\|fifo\|off\|flto` annotation, version-controlled in the project; the shim falls back to it in `resolve_auth_override or _annotation_style` only when `BST_TRACE_JOBSERVER_AUTH_MAP` (the command-line override) does not match the element (`UX-882`) | `tools/native_trace/bwrap_shim.py` |
-| `BST_TRACE_WRAPPER_DIR` | the host path of `tools/native_trace/wrappers/`, bound read-only at `wrappers/` under the trace bind (`/tmp/.bst-native-trace/wrappers`; the sandbox root is read-only, measured on examples/06) and prepended to `PATH` ahead of BuildStream's own (`UX-846`; also holds the `flto` shim's `gcc`/`g++`/`cc`/`c++` scripts, `UX-880`) | `tools/native_trace/bwrap_shim.py` |
-| `BST_TRACE_JOBSERVER_LEDGER` | the in-sandbox path a wrapper appends an acquire or release row to — the same file `PoolController`'s own ticks land in, under the existing trace bind (`UX-846`) | `tools/native_trace/wrappers/_common.sh` |
-| `BST_TRACE_FLTO_ACTIVE` | `1` when *this* element's own `--jobserver-auth-override` resolved to `flto` — and only then: `UX-913` keeps a cmake/meson element's auth without the shims, because `flto/` shadows the staged `cc`/`gcc` with a script that opens on `dirname`, which a staged-toolchain sandbox has not got (`examples/06` exit 255) — set only by `_jobserver_injection`, never by hand; the GCC-driver shim gates its entire strip-auth/rewrite-`-flto` transform on it, since the shim scripts sit in the one wrapper directory every jobserver-active sandbox mounts and would otherwise touch every element's compiler, matched or not (`UX-880`, verifier fix) | `tools/native_trace/bwrap_shim.py` |
-| `BST_TRACE_PROXY_DIR` | the host directory holding one jobserver proxy FIFO per element, set only when `run --plan` named an `analyze.json`; the shim looks its own element up in it and injects that proxy's auth instead of the global FIFO's when one exists — its path already lands under `BST_TRACE_BIND_DST`, no bind of its own (`UX-849`, `UX-869`) | `tools/native_trace/bwrap_shim.py` |
-| `BST_TRACE_ADMISSION_POOL` | a host-side admission FIFO's path, never bound into the sandbox; when set and the jobserver is active (`--jobserver off` leaves it unread, same as today) the shim reads one real token before starting `bwrap` and releases it only after `waitpid` returns, logging the wait as its own ledger row (`UX-1005` track B) | `tools/native_trace/bwrap_shim.py` |
-| `BST_TRACE_ADMISSION_BROKER_DIR` | the host directory an `AdmissionBroker` writes this element's own admission grant FIFO into and reads `requests.jsonl` from, set only when `run --plan` named an `analyze.json`; a waiting shim asks it for a ranked grant before falling back to the raw `BST_TRACE_ADMISSION_POOL` FIFO on any timeout or absence (`UX-1005` track C) | `tools/native_trace/bwrap_shim.py` |
-
-**What a test sets to reach a failure path.** The spine's degrade and
-refusal branches are unreachable on a machine that *has* `ptrace`, so
-these exist to reach them; `bwrap_shim.py` passes a fixed list of
-`BST_TRACE_*` through and none of these is on it:
-
-| name | what it forces | where |
-|---|---|---|
-| `BST_TRACE_SPINE_FAIL_SEIZE` | `PTRACE_SEIZE` fails, taking the branch every machine without `ptrace` takes | `tools/native_trace/spine.c` |
-| `BST_TRACE_SPINE_FAIL_CONT_AT` | a named restart site fails; the spine lists the known sites when the name is not one | `tools/native_trace/spine.c` |
-| `BST_TRACE_SPINE_DEGRADE_AFTER` | degrades after N events, which is `UX-117`'s hang reproduced on purpose | `tools/native_trace/spine.c` |
-| `BST_TRACE_SPINE_SELFTEST` | runs one self-test instead of a capture (`detach-signal`) | `tools/native_trace/spine.c` |
-
-The system variables `bga` merely *consumes* — `TMPDIR`,
-`XDG_CACHE_HOME`, `XDG_CONFIG_HOME`, `LD_PRELOAD`, `PATH`,
-`PYTHONPATH` — are deliberately not in this table. They are not this
-project's names, and a table that listed them would be describing the
-platform rather than the tool.
+Advanced diagnostics only. One of the section subcommands above.
 
 ## `bga timeline` — one trace, both planes (`UX-188`, `UX-298`)
 
@@ -1106,785 +1090,6 @@ flag that undoes it. **JSON never truncates** — the caps are a
 text-rendering concern, `--format json` carries the whole thing, and
 the `--full-*` flags do not change one byte of it.
 
-## The JSON outputs, and their schemas (`UX-190`)
-
-Every machine-readable output declares its own shape as its **first
-key**:
-
-```bash
-bga analyze RUN/ --format json | head -2      # "schema": "analyze/v7"
-bga compare A B --format json                 # "schema": "compare/v2"
-bga blast TARGET --format json                # "schema": "blast/v2"
-bga correlate RUN/ --format json              # "schema": "correlate/v2"
-bga whatif RUN/ --element E --format json     # "schema": "whatif/v1"
-```
-
-`--schema` prints the JSON Schema of an output and exits 0. It needs no
-run directory — it answers about a shape, not about a run:
-
-```bash
-bga analyze --schema
-bga compare --schema | jq '.required'
-```
-
-**The versioning rule**: a field rename or removal bumps the version —
-and so does a key entering `required` under a live id (`UX-629`),
-because the document you wrote last week stops validating against the
-id you pinned. A *permitted* addition does not, so pin `analyze/v7` and
-your consumer keeps working while the tool grows.
-
-A key the tool writes on **every** document is therefore declared
-permitted rather than required, and named in the schema's own
-`bga:always_written` — so `--schema` tells you the difference between
-*may be here* and *is always here*, and the guarantee is held against
-the real payload instead of by validation:
-
-```bash
-bga compare --schema | jq '."bga:always_written"'
-# ["verdict_provenance", "build_class_comparison", "baseline_band_sources", "baseline_band_origin",
-#  "baseline_band_skipped_for_host", "total_duration_delta_share", "findings_diff"]
-```
-
-`compare/v2`'s `verdict_provenance` is the worked example. `UX-610`
-made it required under an unmoved id, taking the required set from 14
-to 15, and every `compare/v2` document written before it stopped
-validating; it is permitted-and-always-written now, so those documents
-validate again and the id did not have to move. The newest,
-`total_duration_delta_share` (`UX-1257`), is the wall-clock delta as a
-share of the baseline's — negative is faster, `null` with no baseline
-total — and is what `bga view`'s compare chapter leads with.
-`findings_diff` (`UX-1277`) splits the candidate's findings by id into
-`new`, `persisting` — each with its `age`, the consecutive snapshots that
-hold it, read off the earlier runs' published analyses, and `age_exact`,
-false when that walk stopped on a run it could not read — and `resolved`;
-`null` on a refusal. When only one run recorded Plane 2, a finding on one
-side only is listed in `not_compared` with its `not_compared_reason`
-instead. `bga view` marks each finding card from it.
-
-### Which keys the prose names, and which it does not (`UX-628`)
-
-`--schema` is the complete key list. The *documents* are not, and this
-says how far they go, because five keys once shipped in one window with
-nothing outside the backlog naming any of them — `verdict_provenance`
-on `compare/v2`, `queue_wait_us` and `queue_wait_absent_reason` on
-`store/v1`, `requested_at_us` and `requested_at_source` on
-`run-context/v9`.
-
-The guard that was supposed to stop that had contract **ids** for a
-population, so it could not see a key. It has keys now: the printable
-contracts' *consumer surface* — each schema's top-level properties, the
-keys **one level below** one of them, and every **row** the document
-hands you, since a row of `store/v1`'s `snapshots` is what you actually
-read. That surface was 199 keys when this was written, 84 of them named
-in no document outside `docs/backlog/` and `docs/audits/`; naming the
-five above left 80, and `UX-636` paid those 80 off in the section below.
-The register in the guard is empty, so the figure it holds and this
-sentence is checked against is **0 undocumented keys**.
-
-A row is found **at any depth**, and by any of the three things that
-declare one: an array's `items`, the `bga:columns` an array node
-carries, and a dict's `additionalProperties.properties`. The first two
-are needed, and `UX-655` measured why — `analyze/v7`'s
-`parallelism.levels` has no `type` and no `items` at all, so its
-columns are the whole statement of what one of its rows holds, and
-`level` and `width` are in no `items` anywhere. Depth is the same
-finding one level up: `parallelism` is a top-level *object*, its
-`levels` rows are below that, and a population reaching only under a
-top-level array published the whole of a major bump outside itself.
-The third is `UX-838`: `elements.fan_in` and five other rows are keyed
-by something that is not an array index at all, so neither `items` nor
-`bga:columns` sees them. The fourth is `UX-866`: `run_instance` is
-typed as a bare `object`, not a row at all - its keys (`seed` among
-them, `UX-858`) are declared only by its own view-hint's `properties`,
-read at any depth the same way.
-
-Each of those four is a **shape** bought back after it escaped, and
-buying shapes back one at a time is what produced the next one. `UX-909`
-stopped that with a **depth** instead: every key declared one level
-below a top-level property is in the population, whatever shape it is.
-That is where the report's own blocks declare their scalars — `floors`,
-`attribution` and `cache` are not internal shapes of a block, they *are*
-the blocks a reader meets first, and `certified_headroom`, the number
-Key Findings leads with, had never been in the population at all. It was
-302 such keys when that was filed and 305 when it landed. One level and
-no further: `blast_radius_distribution.deciles` is in the population and
-its own nine buckets are not. The surface is **626 keys** today, and
-that figure is derived from the walk rather than typed here.
-
-So the statement of coverage, which is now a statement and not a
-promise:
-
-- **every key of every printable contract you are handed is named in a
-  document** — its top-level keys, the keys one level below one of
-  them, and the columns and `items` of every row inside it at any
-  depth — and a key added to one of those schemas has prose or the
-  guard reddens naming it;
-- what is *not* in it is anything more than one level below a
-  top-level key that is not also a row: the reader has `--schema`,
-  the complete list, for the shape beneath that, and a document
-  reproducing it would be the second copy of the schemas `UX-384`
-  banned (`UX-628` declined it, `UX-655`
-  re-measured it, and `UX-909` moved the line down one level rather
-  than removing it);
-- a document that **argues for** a key is not a document that
-  describes it: `docs/backlog/` and `docs/audits/` never counted, and
-  since `UX-909` neither does a `docs/design/*.md` whose header says
-  `**Status:** proposed`. Four keys rested on one of those alone the
-  moment the walk widened — `mean`, `skipped_inputs`,
-  `t_infinity_cold` and `unmeasured_processes`;
-- the register the debt was held in may only shrink and is at zero, so
-  a key going undocumented is a decision somebody argues, not a number
-  that drifts;
-- `run-context/v9`, `graph/v9` and `trace/v9` are **not covered at
-  all**. They are stamped by whatever produced the capture, `bga` only
-  reads them, and there is no JSON Schema here to enumerate — so
-  `requested_at_us` and `requested_at_source` are held by prose alone.
-
-A section subcommand (`bga floors`, `bga graph`, …) emits the same
-`analyze/v7` document restricted to its own keys, with a `section` key
-naming the restriction — so a missing key can be told from a removed
-one.
-
-### Every published key, by contract (`UX-636`)
-
-The rest of the consumer surface, one line each — what the key is, not
-what its schema says it is. `--schema` stays the complete list and the
-source of truth for types; these rows are so a reader holding a payload
-can look one up.
-
-`analyze/v7` — the run-level blocks:
-
-| key | what it is |
-|---|---|
-| `bottleneck` | Where work funnels through one element, and how much waits behind it. `choke_points` ranks by `downstream_count`. |
-| `cpu_time` | The run-level CPU totals beside `element_cpu_time`, with the sentence saying what a CPU figure here is and is not. |
-| `resource_pressure` | The run-level coverage beside `element_resource_pressure`, and what each counter counts. |
-| `configure_phase` | The share of CPU spent configuring rather than building. A floor, for the reason its own `note` gives. |
-| `element_duration_distribution` | How this run's element durations are spread — the answer to "is 40s slow *here*?". Nearest-rank percentiles. |
-| `blast_radius_distribution` | How many elements sit downstream of each, across this graph. "753 downstream" is p99.9 in 1,202 elements and unremarkable in 40,000. |
-| `fan_in_distribution` | Its mirror: how many elements each *pulls in*, across this graph. "8 upstream" is unremarkable in a 40,000-element run and p99 in a graph of forty. |
-| `element_join_coverage` | How far the two-plane join reaches: `joined_elements`, each plane's count, and the elements only one plane saw. |
-| `attribution_hints` | One sentence per wait category saying what reduces it — the advice that belongs with `attribution`, not a second copy of it. |
-| `latent_heavies` | Heavy elements not on the path today. They cost nothing now and become the constraint once what is above them is fixed. |
-| `task_durations_us` | `UX-1194`: each task's own duration, start to finish, keyed by task uid like `wall_clock_share_us` beside it - a duration, where the share is the window that task alone held. |
-| `consolidation_candidates` | Elements always consumed together that could be one element. Structural: from the graph's edges, never a timing estimate. |
-| `batch_opportunities` | What could be built together, with `serialized_pairs` naming the pairs that share a chain and therefore cannot. |
-| `joint_saving` | What fixing the top candidates *together* is worth, simulated, beside `sum_of_individual_us` — they differ when savings overlap or compound. `relation` says which (`add`, `overlap`, `compound`); `worth_more_after` names the candidates worth more once the ones above them are fixed. |
-| `serialization_point_risks` | Where the run is forced to serialize. Each entry carries `pinned_elements` (what was pinned, and to what), `governing_cores` (the cores they competed for) and `typical_max_jobs` (the `-j` their own builds used). |
-| `resource_blast` | What one shared resource rebuilds. `null` where no source inventory was captured. |
-| `fingerprint` | `UX-1073`: what this analysis was computed from - the producer stamp, a sha256 of each run-directory input and of the Plane 2 report attached, and every result-affecting option. `bga compare` reads a published `analyze.json` instead of analyzing again only when this equals its own; `--reanalyse` never reads it. |
-| `run_instance.jobserver` | `UX-851`: the jobserver `bga capture` ran with, inside `run_instance` (`UX-404`'s capture identity, which also carries `started_at_us` - when the capture began - and `host_manifest.cpu_count`/`.memory_bytes` - what the host reported, the ceilings are computed against). `mode` (`off`/`auto`/`n`), `ceiling` (the token count given or derived, `null` when off), `seed` (tokens the FIFO opened holding, `UX-858`: `max(0, ceiling - builders)` under `auto`, `ceiling - 1` otherwise, `null` when off), `auth` (`fd`/`fifo`, `null` when off), `project_max_jobs` (the target element's own declared `max-jobs`, `null` when `bst` was unavailable). Absent, not defaulted, on a capture older than the field - `bga compare`'s header reads that absence as `jobserver off`. |
-| `jobserver` | `UX-847`: the pool's own record - `mode` (`fixed`/`dynamic`), `pool_ceiling`, `tokens_idle_share` (controller ticks with cores idle and tokens still in the pool) and `tokens_starved_share` (cores idle with the pool empty) - and `per_element`, keyed by uid: `joined` (`yes`/`pinned`/`held`/`unknown_kind`), `UX-1012`'s `peak_work_concurrency` against the element's own `max_jobs` and the `verdict` read from the two (`drew` when joined and the peak exceeded `max_jobs`; `offered, not drawn` when joined at a peak no wider; `outside the pool` when `pinned`/`unknown_kind` and the peak exceeded `max_jobs` + 1, `UX-1008`; else `pinned`/`held`/`unknown_kind` repeat `joined`), `admission_wait_us` (time the shim blocked the element on its admission token, `UX-1005` - its slot, not a draw), `tokens_held_p50`/`tokens_held_max` (UX-846's own acquire rows joined to this element by the pid that acquired them, `null` when the element ran no wrapped tool), and `UX-892`'s width over time: `tokens_held_series` (`[t_us, tokens]` steps, an acquire opening an interval and a release closing one - absent, not empty, when the element ran no wrapped tool), `tokens_series_coverage` (the share of the element's token-holding tools that wrote those rows - a real `make` reads the pipe itself and logs nothing), `tokens_series_open` (intervals no release closed, UX-852's leak) and `tokens_series_truncated` (whether the series hit its per-element cap). Present only when `--plane2`'s report carries a mode. |
-| `trace_queries` | Every timeline query that shows a finding or deepens a claim, best first; `trace_query` is its first entry. Absent where there is a single grain. |
-| `unused_dependencies`, `redundancy_count`, `worst_redundancy`, `native_findings` | The Plane 2 half of an `element_join` row: declared-and-never-read dependencies, how often this element repeated work it had already done, the repetition it paid most for, and the producer's own per-element tags. |
-| `edges`, `projection` | Inside a `restructuring` finding: the declared build edges Plane 2 measured never-read, and the replay with those edges removed (`replayed_baseline_us`, `projected_us`, `saving_us`). Evidence, not a verdict. |
-
-`analyze/v7` — inside a `findings`, `next_steps`, `readers`,
-`provenance` or `binary_cost` row:
-
-| key | what it is |
-|---|---|
-| `title` | The finding as one sentence, with its figure. |
-| `detail` | The lines beneath it, or `null` where the title is the whole finding. |
-| `copy_text` | The finding as plain text — title, evidence in declared units, elements, published next step, run identity. What the page's copy button yields. |
-| `reason` | Why this next step, in terms of the values that chose it. |
-| `follows_from` | The finding or published field the step was chosen by, so the advice can be checked against the number behind it. |
-| `label` | What a reader would say about themselves, in the first person; the selector's option text. |
-| `leads_with` | The id of the finding that is that reader's biggest lever here: highest severity, then published order. |
-| `claim` | Which claim a `provenance` entry explains — a finding id, or `diagnosis` for the headline. |
-| `calls`, `cpu_time`, `cpu_share`, `wall_us` | Per binary, in `binary_cost`: how many times this element ran it, the CPU it took, that CPU as a share of the element's measured CPU, and the wall-clock those calls spanned. |
-
-`analyze/v7` — inside a row of a block below the top level (`UX-655`):
-
-| key | what it is |
-|---|---|
-| `level`, `width`, `elements` | A row of `parallelism.levels`, one per level of the graph from the roots down: its longest path in edges from a source (roots are `level` 0), how many elements sit there, and which ones — what could run at once, once everything above it is built. |
-| `fan_in`, `fan_out` | A row of `bottleneck.high_fanin_elements` and `high_fanout_elements`: dependencies this element names, and elements naming this one as a dependency. Degrees of the graph, never a transitive count — `blast_radius` is that. |
-| `rank`, `best_split`, `weighted_duration_us`, `wall_share`, `members` | A row of `bottleneck.serial_chains` (`UX-830`): every maximal non-branching run, ranked by summed duration, not the single `longest_serial_chain` exhibit above it. `best_split` is the member whose own duration is largest — splitting it shortens the chain most; `wall_share` is `weighted_duration_us` over the run's longest weighted path; `length` (shared with the fan-degree rows above) is the member count. |
-| `direct`, `direct_count`, `dependents`, `dependent_count`, `transitive_count`, `immediate_dominator` | A row of `elements.fan_in` (`UX-681`): the dependencies this element names, everything those pull in behind them, and the nearest element every path from a root passes through — the rebuild it waits on, which is not the same as a dependency. `direct` is every one of those dependencies by name, the 40 earliest in graph order first (`UX-829`, uncapped since `UX-1214`); excluded from the elements table by construction (arrays don't flatten into a row) and drawn on the element card instead, its first 40. `direct_count` is that list's length, and the degree `bottleneck.high_fanin_elements` ranks the top five of; whether those edges were read is `element_join.dependency_read_share`. `dependents` and `dependent_count` are the mirror (`UX-1187`): the elements that name this one, capped at 40 the same way, and their count — the card's Blocks list. |
-| `risk_score`, `is_foundation` | A row of `elements.blast_radius`, beside `downstream_count` and `weighted_duration_us` above: `risk_score` is downstream work weighted by duration, a ranking comparable within a run and not across; `is_foundation` (shared with the `fan_in` row above) is whether the project declared this element foundation — excluded from the ranking on that declaration, not a kind guess. |
-| `probability`, `slack_us` | A row of `elements.criticality_probability`: how often this element lands on the critical path under the run's own perturbation — 1.0 is always — and how long it could have been delayed before it would, zero meaning it is already on the chain. |
-| `median_us`, `p75_us`, `p95_us`, `coefficient_of_variation`, `high_variability` | A row of `elements.duration_variability`, beside `mean_us`, `samples` and `host_class`: how steady this element's duration is across the store's earlier runs on the same host class — the middle of the series, the slow side at three runs in four and at the slow end, the spread over the mean (Part 29), and whether that spread crosses the threshold the ranking warning applies at. |
-| `assessed_dependencies`, `dependency_read_share` | A row of `element_join`: how many of this element's dependencies Plane 2 could judge — the ones it saw opened plus the ones it saw nothing from — and how many of those were read. What `unused_dependencies` is a list *of*. A dependency with no observed opens at all is uncovered and in neither, so the share is absent rather than 1.0. |
-| `phase`, `elapsed_us` | A row of `pipeline_overhead`: the named stage of the run, and the wall-clock it spanned. |
-| `finding_id` | In a `headline.top_actions` row, the finding the action's reasoning is in — so the headline's advice can be read back to the evidence that chose it. |
-| `replayed_delta_us` | `UX-1276`: in the builders row of `headline.top_actions`, the replayed wall at this run's builders minus at the count the step quotes (`capacity_recommendation.sweep`) — a replay with no contention, not a measured saving. |
-| `first` | In a `batch_opportunities.serialized_pairs` row, the element that ran first of a pair that shares a dependency chain; `then` is the other. The pair is why they cannot be batched. |
-| `shared_consumers` | In a `consolidation_candidates` row, the elements that always consume the candidate group together — the reason it is a group. |
-| `utilization_envelope`, `capacity_cores`, `busy_cores`, `busy_share` | Cores busy over the build against the smaller of `builders x max-jobs` and the host's cores (`UX-676`). The capacity is the smaller because a four-core host can never deliver sixteen, and a share against a number nothing can reach is not a verdict. `busy_cores` is the interval's own reading; `busy_share` is it over `capacity_cores`. |
-| `underutilized_intervals`, `overcommitted_intervals`, `lost_core_seconds` | The windows that violate the envelope, ranked and capped at forty. Under-utilized is one whole core idle while Plane 1 says there was work; overcommitted is load above the core count or a page written to swap. `lost_core_seconds` is the idle capacity times the window, which is what the ranking is by. |
-| `duration_resolution` | The elements this capture's epsilon grid published as zero (`UX-740`). Quantization rounds a span lying wholly inside one rounding bucket to a single grid point, so its duration and every share computed from it are zero - unmeasurable at this resolution, not instantaneous. Carries `epsilon_us`, the element names and the task keys. Absent when the run had none, so "nothing was erased" and "the tool does not check" stay distinguishable. |
-| `building`, `ready_not_dispatched`, `just_finished`, `successors_waiting` | In an interval row, what Plane 1 says was going on: the elements overlapping the window each with its own `max_jobs`, those dependency-ready and not dispatched for the whole of it, those that finished inside it, and the successors those unblocked that had not started. Which of the first two explains the idle core is `UX-677`'s question, not this table's. |
-| `start_offset_us` | In an interval row, how long after the run started the window opens (`UX-823`) - the figure the From column draws; `start_us` stays the wall-clock base the Perfetto link needs. |
-| `start_us`, `load1` | In an interval row, where the window starts on the build's own wall clock, and the host's one-minute load average through it — runnable *and* uninterruptible tasks, which is what separates a busy machine from a blocked one. |
-| `allows` | In a `capacity_recommendation.constraints` row, how many builders that one ceiling permits, beside the `name` of the ceiling and the `reason` it was measured. A ceiling with no measurement behind it is absent rather than infinite. |
-| `clamped_from` | In the CPU row of `capacity_recommendation.constraints`, the raw builder count before it was capped to `host_cpu_count` (`UX-861`) - present only when `allows` was clamped down to the host's own cores. |
-| `realizable_saving_us` | What removing this element entirely takes off the **makespan** — not off the path. In a `critical_path_detail` row and in a finding's `evidence.rows`, where the two differ whenever something else is ready to take the freed time. |
-| `elided`, `resolved` | In a `provenance` (or `compare/v2` `verdict_provenance`) evidence row: the shape a path held where the value was a container — `object[1202]`, `array[15]` — published instead of copying that population in twice, and `false` where the path did not resolve at all, so a broken reference is visible rather than missing. |
-| `groups`, `omitted_zero_savings_groups` | In `batch_opportunities`, beside `serialized_pairs`: candidate groups the same capped pool simulated a real combined saving for, and those it simulated at zero, kept visible rather than dropped (`UX-1031`). |
-| `phases` | In `pipeline_overhead`, BuildStream's own named stages (query cache, resolving elements, …) — a closed vocabulary BuildStream declares, not run-scaled. |
-| `cpu_disagreements` | In `plane2_coverage`, elements where the two planes' own CPU readings disagreed past the tolerance — capped at eight. |
-| `critical_path_cached` | In `confidence`, the critical-path elements BuildStream itself reported cached — a subset of the path, no run-scaled cap. |
-| `shorter_than_bst` | In `timestamp_agreement`, tasks Plane 2 measured shorter than BuildStream's own span for the same task — a subset, no cap. |
-| `plane1_only_with_impact`, `undeclared_plane2_elements` | In `element_join_coverage`, elements only one plane saw that still carry a published finding, and elements Plane 2 measured that BuildStream's own manifest never declared. |
-| `aggregating_dependencies` | The Plane 2 half of an `element_join` row (`correlate/v2`'s `ElementJoin`): dependencies this element's own redundancy folded together. |
-| `recommended_deferrals` | In `deferrability`, elements a later build could safely postpone — a subset of elements, no cap. |
-| `staged_at` | In a `resource_blast.rows` entry, the elements the shared resource was staged at, beside `direct_elements` and `blast_elements` — no run-scaled cap. |
-
-`compare/v2`:
-
-| key | what it is |
-|---|---|
-| `baseline_run_id`, `candidate_run_id` | The run id of each side, so a verdict can be traced to the two captures behind it. |
-| `deltas` | The run-level signed changes — makespan, contention, serialization and the rest, each `candidate - baseline`. |
-| `attribution_deltas` | The same, per wait category: `baseline_us`, `candidate_us`, `delta_us`, and each as a share of its own run's total — `baseline_share`, `candidate_share`, `delta_share` — since a category can grow in absolute time and shrink there, which is why both are published. |
-| `element_deltas` | Every element in either run with its duration on each side and the signed change, ranked by what moved most. Deliberately **not** banded. |
-| `cache_churn` | How many cache keys moved: `comparable_elements` as the population, then `unchanged_keys` and `changed_keys` out of it. |
-| `baseline_confidence`, `candidate_confidence` | How much of each run the comparison could see — the share of its elements carrying what the verdict is computed from. |
-| `low_confidence` | True when either share is below the floor: the verdict stands, over a partly-read run. |
-| `presence` | In an `element_deltas` row, whether both runs had this element. One that is in a single run has no delta at all — reading it as a change from zero would make a removed element the run's biggest improvement. |
-| `mismatches` | Fields where the two captures' conditions differ, one row of `field`, `baseline`, `candidate` — a comparison across machines says so rather than hiding it. |
-| `failed_runs` | Runs in the pair that did not finish, named rather than silently compared. |
-
-`blast/v2`:
-
-| key | what it is |
-|---|---|
-| `resolved_as` | Which reading of the target the command used — `url`, `path` or `element`. Published because the order is a heuristic. |
-| `also_matched` | The other readings that would also have matched, so a deterministic pick is not a silent one. |
-| `keying` | How the matched resource is keyed (`url`, `ref`, …) when the target resolved as a repository. |
-| `direct_elements`, `direct_count` | The elements that depend on the target directly. The first hop only. |
-| `blast_elements`, `blast_count` | Everything a change here rebuilds, transitively — the number that makes a small element expensive to touch. |
-| `building_count`, `assembling_count` | That closure split: the ones doing real build work, and the ones that only gather what is below them. |
-| `by_element_kind` | The same closure counted by BuildStream element kind. |
-| `measured_elements` | How many of the affected elements have a recorded duration. The rest are counted, never estimated. |
-| `element_count` | Elements in the project, as the denominator for the reach above. |
-| `has_inventory` | Whether the run carried a source inventory; without one, a url or path target cannot be resolved. |
-| `element_exists` | Whether an element-named target is in the graph at all — so "rebuilds nothing" can be told from "is not there". |
-
-`correlate/v2`:
-
-| key | what it is |
-|---|---|
-| `note` | What the join is and what it refuses: the key it joined on, why an element may appear in one plane only, and that the two timelines are not merged. |
-| `attribution_unreliable` | The producer's own note, when it says its element names are fiction. Set, the join is refused rather than rendered (`UX-56`). |
-| `attribution_partial` | The same note when the names are real but do not cover every process. The join is rendered with its coverage stated (`UX-66`). |
-| `granularity` | Elements paying more sandbox tax than they spend building. |
-| `cached_shape` | The cached-build verdict (`UX-684`): the share of `--cache-logs`'s recorded changes whose element's weighted blast is at or under the graph's own median, and which elements dominate the expected cost. Each dominant element carries `height`/`weight_us` and an `advice` naming which one leads its own dominant peers - "split the tall chain" when height leads, "isolate the heavy element" when weight leads or the two tie (`advice` is never absent). The `sentence` states height and weight as two figures every time, and adds that the named element is "also the tallest" when it leads both. Absent, not a hedged verdict, without a change history or below `MIN_CO_REBUILDS` recorded changes. |
-| `process_count_distribution` | How many processes each element ran, across this capture. Heavy-tailed: one element with 40,000 processes is the finding. |
-| `envelope_bytes` | In a `memory_envelope.projections` row, the memory that many concurrent builders would need — bounded by the elements whose peak was actually measured, so it is a floor over what was seen and not a model. |
-| `sandbox_tax_distribution` | How this capture's sandbox tax is spread, over every payer — "is this element's tax unusual" has no answer without the population. |
-
-`store/v1` and `store-aggregate/v1`:
-
-| key | what it is |
-|---|---|
-| `shown` | Rows in `snapshots` here. Below `count` when the reader asked for a window — `bga view` does, a listing does not. |
-| `total_bytes` | What the snapshots weigh on disk, together; per class inside `host_classes`. |
-| `store_bytes` | What `.bga/runs` weighs, published at the document level rather than inside `blended` (`UX-300`). |
-| `snapshot_bytes` | The per-run size as a distribution over finished runs, not a single number. |
-| `cache_hit_rate` | Cache hits as a share of lookups — per run in `snapshots`, as a distribution in `host_classes`. |
-| `host_class` | CPU model, core count and memory joined into the one label two runs must share to be aggregated (`UX-186`). |
-| `host_classes` | One entry per class. Durations are never scaled across classes. |
-| `blended` | One distribution across every class. `null` unless the store holds a single class, or `--blend` was passed and the mixed claim taken deliberately. |
-| `stamps`, `stamps_total` | Which snapshots a figure came from — the most recent `STAMPS_MAX` of them — and how many there are in all (`UX-528`). |
-| `excluded` | What was left out and why, counted by reason: "we had nine runs" and "we had nine and threw two away" are different claims. |
-| `resource_shortfall` | Present instead of `cores_busy` and `peak_rss_bytes` where no run in the class carries them (`UX-296`). |
-| `bga_tail_us` | What the tool itself spent after the build, summed from that snapshot's `tail.json` — per run in `snapshots`, as a distribution in `host_classes` and `blended` (`UX-1078`). Absent before the file existed. |
-| `build_wall_us` | The build subprocess's own wall, from the same `tail.json`: the figure `bga_tail_us` sits beside (`UX-1078`). |
-| `build_rate`, `per_day` | `UX-1276`: builds of this project a day, as `.bga/config`'s hand-edited `builds_per_day` declares it, with `source` saying so — never counted from snapshot stamps, which count captures. Absent when undeclared; the decision panel prices a saving in agent-hours a day only beside it. |
-
-`capacity-model/v1`:
-
-| key | what it is |
-|---|---|
-| `service` | The service-time moments this class's queue is modelled from: `samples`, `mean_us` and `stdev_us`. The mean, not the median — waiting is a function of the mean and the spread around it. |
-| `excluded_runs` | Captures left out of every service time — failed, interrupted, suspended or unfinished. Counted, so a thin model says why it is thin. |
-
-`tail/v1` — `tail.json` beside each snapshot, written by `bga snapshot` after every phase of its tail (`UX-1078`):
-
-| key | what it is |
-|---|---|
-| `phases` | One row per phase the tool ran after the build, in order: `name`, `wall_us`, `peak_rss_bytes` (the process's high-water mark reset at the phase's start, `null` off Linux) and the `calls` it made. A phase that did not run has no row. |
-| `complete` | Whether the tail ran to its end; `false` is one interrupted after the rows it holds. |
-
-`sweep/v1`:
-
-| key | what it is |
-|---|---|
-| `makespan_us` | In a `sweeps` row, the makespan the replay produced at that capacity, beside the `capacity` vector tried and the `normalized_improvement` that capacity bought over the point before it. |
-
-### Inside a published block (`UX-909`)
-
-The blocks above are objects, and a reader meets their scalars
-directly — `floors.certified_headroom` is the number Key Findings
-leads with. Those scalars were outside the guard's population until
-`UX-909`: 305 of them, including every `floors` key `UX-891` added.
-They are one line each here, on the same terms as the rows above.
-
-`analyze/v7` — `floors`, the lower bounds this run certifies:
-
-| key | what it is |
-|---|---|
-| `t_c` | The makespan a replay of this run's recorded work produces. A check on the model behind the floors, not a prediction. |
-| `model_slack` | How far that replay sits above the lower bound — the model's own slack, published so it cannot be read as headroom. |
-| `t_infinity_cold` | The critical path with cached elements costed at what building them would take. Advisory: it rests on other runs' durations, so it certifies nothing here. |
-| `cold_partial` | Whether some elements had no duration to draw on, making the cold path partial rather than complete. |
-| `cold_confidence` | How far the cold path can be trusted — it is only as good as the history its durations came from. |
-| `cold_duration_sources`, `cold_critical_path_duration_sources` | Where each cold duration came from, by tier; the second narrowed to the elements on the cold path. |
-| `capacity_model_note` | What these floors certify against, in words — and what they do not. |
-
-`analyze/v7` — the run-level blocks' own scalars:
-
-| key | what it is |
-|---|---|
-| `untracked_head_us`, `untracked_tail_us` | In `attribution`: wall-clock before the first tracked task started and after the last one finished — BuildStream's own startup and teardown, outside per-task tracking. |
-| `horizon_start_us`, `horizon_end_us` | In `occupancy`: where the slot-time accounting starts and ends, offset from the run's own zero. Beyond the end nothing was scheduled, so nothing is counted. |
-| `resource_occupancy`, `peak_resource_occupancy` | Occupancy per resource kind, and the most in flight at once per kind — so a saturated fetcher is not averaged away by idle builders. |
-| `top_blast_radius`, `blast_radius_ranked_by` | In `elements`: the elements whose change rebuilds the most, in that order, and what the order was computed from (`measured-rebuild-time` weights each dependent by its duration here, `downstream-count` counts them). Not the order to fix things in — that is `optimization_horizon`, and the two legitimately disagree. |
-| `average_depth`, `peak_depth`, `nonzero_fraction` | In `ready_queue`: elements ready with nowhere to run, averaged and at peak, and the share of the build spent with anything waiting. High means capacity bound, not graph bound. |
-| `overlap_us`, `fetch_prefix_us`, `build_suffix_us`, `fraction` | In `fetch_build_overlap`: wall-clock where fetching and building ran together, the fetching prefix with nothing building, the building suffix with nothing left to fetch, and the overlap over the span the two phases covered. |
-| `deferrable_count` | In `leaf_analysis`: leaf elements nothing else waits on, which could be built later or not at all. |
-| `total_deferrable_work_us` | In `deferrability`: work that could be moved out of this build without anything waiting for it. |
-| `serial_chain_length` | In `bottleneck`: the longest run of elements that must go one after another. |
-| `total_us`, `fraction_of_horizon` | In `pipeline_overhead`: time BuildStream spent outside any element — loading, resolving, cache queries — and that time as a share of the run. No builder count reduces it. |
-| `chain_bound_share`, `chain_share_of`, `certified_headroom_us`, `scheduling_gap_us` | In `headline`: the threshold `chain_share` is compared against, which span it is a share of (`task_horizon`, published rather than left to guess), the headroom repeated from `floors` so the decision needs no second lookup, and wall-clock beyond the critical path. |
-
-`analyze/v7` — the graph's shape, in `graph_metrics`, `graph_summary`
-and `parallelism`:
-
-| key | what it is |
-|---|---|
-| `max_depth` | The longest chain of dependencies, counted in edges. |
-| `avg_fanin`, `avg_fanout` | Direct dependencies and direct dependents per element, averaged — equal by construction, since every edge is one of each. |
-| `avg_parallelism` | Elements that could run at once, averaged over the graph's levels. |
-| `serialization_share` | How much of the graph has to run one thing after another. |
-| `cyclomatic_complexity` | Edges minus elements plus one — how tangled the graph is. |
-| `bottleneck_count`, `deferrable_leaves` | In `graph_summary`: elements everything funnels through, and leaf elements nothing downstream waits on. |
-| `best_case_speedup` | How much faster an unlimited-capacity replay of this graph would be. A multiplier, and a ceiling rather than a plan. Published in `graph_summary` and in `sensitivity`. |
-| `min_width`, `max_width`, `mean_width`, `width_uniformity` | In `parallelism`: the narrowest and widest levels, elements per level averaged, and how evenly that width is spread. Low uniformity means the graph pinches somewhere. |
-| `critical_path_us`, `total_improvable_time_us` | In `sensitivity`: the chain's duration, which the savings are measured against, and how much of it sits in elements that could move. |
-| `deepest_depth`, `deepest_path`, `deeper_than_three`, `deeper_than_three_share` | In `document_shape`, measured on the document as published: how far down its deepest leaf sits, one path that reaches it (`[]` for a list step), and the leaves more than three levels down as a count and a share. |
-
-`analyze/v7` — `cache`, what this run built and what it restored:
-
-| key | what it is |
-|---|---|
-| `built_elements`, `cached_elements`, `hit_share` | Elements built, elements restored, and restored over considered. |
-| `transfer_us`, `transfer_share` | Wall-clock moving artifacts rather than making them, keyed by direction, and that sum over the run's wall-clock. Summed over task duration, so two concurrent pulls count twice — the question is how much pulling the build did, not how long the pull window was. |
-| `transfer_window_us` | The wall-clock those transfers occupied, as a union of their spans rather than a sum — the denominator a throughput needs. |
-| `transfer_bytes`, `transfer_rate_bytes_per_s` | What the host moved while the build ran, and `transfer_bytes.total` over `transfer_window_us`. BuildStream reports no byte count, so these are the host's own interface counters over the build's span: on a shared machine an upper bound, loopback excluded. The rate says whether more bandwidth would help or the object count would be slow on any link. |
-| `target_closure` | The same question restricted to what the target actually needs. |
-
-`analyze/v7` — `utilisation`, where the run's slot-time went:
-
-| key | what it is |
-|---|---|
-| `cpu_accounting_available` | Whether the run recorded enough to account for its slot-time at all. When false every figure below is absent, not zero. |
-| `effective_cpus`, `effective_cpus_source` | The capacity this accounting divides by — builder slots as recorded, not host cores — and how it was established. An assumed capacity makes every share below assumed. |
-| `wall_clock_us`, `capacity_cpu_us` | The span this accounting covers, and the slot-time available across it: wall-clock times the capacity, the denominator of the shares. |
-| `total_accounted_us`, `unaccounted_us`, `reconciliation_error_share` | The buckets summed, the slot-time no bucket claimed, and that gap as a share of capacity. The honesty check on the whole block: near zero means the buckets really do cover it. |
-| `potential_oversubscription`, `oversubscription_evidence` | Whether this accounting hints the run asked for more than it could get, and what the hint rests on — including the case where there was not enough to say. A hint, not the capacity verdict. |
-| `max_observed_concurrency` | The most tasks seen running together in this accounting's own view of the run. |
-| `idle_share`, `wasted_share` | Slot-time with nothing to run — bounded below by the graph's shape, so never entirely recoverable — and slot-time spent on work then thrown away. The second is the recoverable share. |
-
-`analyze/v7` — `utilization_envelope`, cores busy from the host's own
-`/proc/stat` series:
-
-| key | what it is |
-|---|---|
-| `absence` | Why there is no envelope, in the sentence the terminal and the page both print. `null` when there is one. |
-| `configured_capacity_cores` | `builders` times `max-jobs` — what the scheduler was allowed to start. `null` when the capture recorded neither. |
-| `busy_cores_p50`, `busy_cores_p95` | Median cores busy and the peak worth acting on, nearest-rank over the intervals rather than the single highest sample. |
-| `busy_share_p50`, `busy_share_p95` | Both against the capacity that could actually be reached. |
-| `underutilized_share`, `overcommitted_share` | Share of the sampled build holding at least one idle core while Plane 1 says there was work, and share with load above the core count or a page written to swap. |
-
-`analyze/v7` — `confidence`, `capacity_verdict` and
-`capacity_recommendation`:
-
-| key | what it is |
-|---|---|
-| `primary` | How much of this run's own record supports the conclusions above — coverage, provenance and model fit combined. |
-| `coverage_score`, `task_coverage` | How much of the run the record accounts for, and the share of tasks carrying the timings this analysis needs. A high score on a thin record still means the record was thin; tasks without timings are excluded, never assumed. |
-| `model_score`, `provenance_score` | How closely the replay reproduced the run it models, and how much of what this report claims resolves back to a published field. |
-| `task_count`, `failed_task_count`, `failed_task_us` | Tasks recorded at all, tasks that failed, and the wall-clock they took. A failed run is not a slow run, and the two must not be read together. |
-| `explained_untracked_us` | How much of the untracked time this report can account for. |
-| `undersubscribed`, `skipped_inputs` | In `capacity_verdict`: whether the host could have served more parallelism than the run asked for, and the missing inputs named — so a reader can supply them rather than guess why the check said nothing. A check that did not run is inert, not passing. |
-| `binding_constraint`, `builders_change` | In `capacity_recommendation`: the name of the smallest of the four constraints, which is the one that changes what to do, and `recommended_builders` minus `builders`, signed. Negative means the run asked for more than something can serve. |
-| `agent_sizing` | Builders, cores and memory for this host in one block, each value with the `source` section it was read off (`UX-1254`). Cores and memory are `null` without Plane 2, and `absence` says so. Memory is an upper bound: every builder peaking at once. |
-
-`analyze/v7` — the two-plane blocks:
-
-| key | what it is |
-|---|---|
-| `resolution_us`, `shortest_task_us` | In `timestamp_agreement`: the finest interval the two planes' clocks can tell apart, and the shortest task measured — the case that resolution matters most for. |
-| `worst_excess_us`, `worst_shortfall_us` | The largest amounts by which one plane's duration exceeded and fell short of the other's. |
-| `material_share`, `tasks_where_material` | The share of tasks, and the count, where the disagreement is large enough to change a reading. |
-| `tasks_compared`, `tasks_measured`, `tasks_shorter_than_bst` | Tasks both planes recorded, tasks with a duration in both, and tasks the sandbox measured as shorter than BuildStream did. |
-| `plane1_elements`, `plane2_elements`, `aggregating_dependency_pairs` | In `element_join_coverage` (and `correlate/v2`'s `coverage`): elements the scheduling record knows, elements the process capture saw inside — fewer whenever a capture was partial — and dependency pairs where one element's measurement includes another's. |
-| `cpu_reconciled_processes`, `cpu_from_spine_only`, `cpu_disagreement_count` | In `plane2_coverage`: processes both planes agree the CPU of, processes only the ptrace spine saw, and processes the hook and the spine costed differently. Each disagreement is a place the two record streams differ, not an error. |
-| `opens_covered_processes`, `opens_coverage` | Processes the open-file hook covered, and the share whose opened paths were recorded. Only the hook can see them. |
-| `fork_only_exits`, `unmatched_ends` | Exits for a process that only ever forked, so there is no command to name, and process ends with no matching start. Non-zero in the second weakens every per-process figure. |
-| `exec_chains_collapsed` | Exec chains billed to one process rather than counted repeatedly — a shell that execs a compiler is one process, not two. |
-| `by_coverage` | How many processes each coverage class accounts for, keyed by the class. |
-| `wall_span_us` | The window the hook was actually watching. Shorter than the build means part of it ran uninstrumented. |
-| `spine_policy`, `static_census` | Whether the ptrace spine ran and over how many sandboxes — with `policy: off` every CPU figure is the hook's alone, which is a floor — and which elements could be hiding a statically-linked binary the hook can never see, read from the project's own sources before anything runs. |
-| `open_records_note`, `static_binary_disclaimer` | Why a process may be missing from `max_concurrency`, and what `LD_PRELOAD` cannot see in the capture's own words. The census above bounds it; this says what is being bounded. |
-| `configure_cpu_us`, `configure_share` | In `configure_phase`: CPU spent in configure work across the run, summed over processes so it exceeds wall-clock where they ran in parallel, and that as a share of all CPU Plane 2 saw. A floor, for the reason its `note` gives. |
-| `unmeasured_processes`, `spine_sourced_processes` | In `cpu_time`: processes no CPU could be read from — a signal death or an exec replacement leaves no rusage behind — and how many of the measured came from the spine rather than the hook. |
-| `per_element_series` | Each element's CPU rate over time, as `[t_us, cores]` points on the host sampler's tick. The totals beside it are unchanged: this says what shape a total had. A process shorter than one tick is in the total and absent from the curve, and a failed `/proc` read ends a series rather than reading zero. |
-
-The distributions — `element_duration_distribution`,
-`blast_radius_distribution`, `fan_in_distribution`, and `correlate/v2`'s
-`sandbox_tax_distribution` and `process_count_distribution` — share
-three:
-
-| key | what it is |
-|---|---|
-| `p99` | The 99th percentile of that block's own population, nearest-rank. |
-| `mean` | Its mean; on a heavy tail the mark that most needs the median beside it, which is why each block's sentence stays on the median. |
-| `deciles` | The nine deciles, nearest-rank. Their own nine buckets are the internal shape of a block, and outside this coverage. |
-
-`compare/v2` — inside a published block:
-
-| key | what it is |
-|---|---|
-| `t_c` | In `baseline`, `candidate` and `deltas` (and `analyze/v7`'s `floors`): the makespan a replay of that run's recorded work produces, and its signed change. |
-| `contention_us`, `serialization_us` | In `deltas`: change in time lost waiting for a busy resource, and change in time independent work spent running one after another. |
-| `efficiency_share` | Change in makespan against the certified floor. Each run is measured against its own floor, so this compares two ratios and not two durations. |
-| `inefficiency_ratio` | Change in the gate's ratio — the figure `--fail-on` thresholds are read against. |
-| `ranked_by`, `banded`, `counts` | In `element_deltas`: what the ordering means, so a consumer does not re-sort by something else and call it the same ranking; `banded` is always `false` and published rather than left implicit, because no per-element noise band exists; and how many elements grew, shrank, stayed put, appeared and disappeared. |
-| `baseline_element_count`, `candidate_element_count` | In `element_diff`: elements each run had, against which the appeared and removed lists balance. |
-| `baseline_path_us`, `candidate_path_us` | Each run's critical path, so a path that moved reads beside the elements that moved it. |
-| `rebuilt_in_both_count`, `rebuilt_in_both_us` | In `cache_churn`: elements that rebuilt in both runs, and what those rebuilds cost, summed over the candidate. |
-| `churned_count`, `wasted_rebuild_us` | Of those, the ones whose key was unchanged — work the cache should have served — and what that churn cost. The number the block exists to put a figure on. |
-
-`correlate/v2` and the store contracts — inside a published block:
-
-| key | what it is |
-|---|---|
-| `tied_saving_us` | In `ranking`: the saving every tied element shares. When the ranking degenerates into a tie this is the one number it has left. |
-| `largest_element_peak_bytes`, `at_observed_builders` | In `memory_envelope`: the heaviest single element measured, which one builder must fit no matter how few run, and the envelope's own `builders`, `envelope_bytes` and `share_of_host` at the builder count this run really used. |
-| `classes` | In `capacity-model/v1`'s and `store-aggregate/v1`'s `refusal`: how many host classes the store holds. More than one is why no fleet-wide or blended figure is published. |
-| `by_reason` | In `excluded`: how many runs were left out for each distinct reason. "We had nine runs" and "we had nine and threw two away" are different claims. |
-| `sets`, `unstamped_runs`, `mixed` | In `contract_composition`: each distinct contract set found with how many runs carry it, runs whose producer recorded no contracts — an explicit unknown, never read as agreement — and whether more than one set is present. |
-| `measured_total` | In `store_bytes`: the subset of runs that did finish, which the distributions are computed over. |
-| `mixes` | In `blended`: how many host classes were mixed. 1 means nothing was. |
-
-### What a build here costs (`UX-234`)
-
-A store of captures is a measured distribution, and `--aggregate`
-reads it as one:
-
-```bash
-bga snapshot --aggregate                 # text
-bga snapshot --aggregate --format json   # a `store-aggregate/v1` document
-bga snapshot --aggregate --bundles ci    # the same, over a tree of bundles (UX-900)
-```
-
-```text
-Store: /home/you/project
-  5 measured run(s) of 6 snapshot(s)
-  1 excluded:
-    1 x interrupted
-
-  Ryzen 9 7950X · 32 cores · 64000 MB - 5 run(s)
-    Duration: min 10.0s, median 12.0s, p95 30.0s, max 30.0s (MAD 2.0s, n=5)
-```
-
-Three rules decide what it will and will not say:
-
-- **An unfinished capture is not a sample.** A failed, interrupted or
-  suspended run is excluded from every distribution and *counted* where
-  it was excluded — "we had nine runs" and "we had nine and threw two
-  away" are different claims.
-- **A mix of machines is not a distribution.** Runs are grouped by the
-  host class `UX-186`'s compared fields distinguish (CPU model, core
-  count, memory), and a blended figure across classes is refused: exit
-  6, the same code a cross-host `bga compare` refuses with. `--blend`
-  prints it anyway, which is you taking the claim rather than the tool
-  making it. A capture with no host manifest is its own class.
-- **Fewer than three finished runs define no distribution.** The class
-  publishes a shortfall naming what is missing instead of a p95 of two
-  samples.
-- **A mix of contract sets is named, not refused** (`UX-253`).
-  `contract_composition` lists each set of contracts the aggregated
-  runs were written under, commonest first, with runs carrying no
-  producer stamp counted separately as an explicit unknown. Unlike a
-  host class, two contract sets are not two populations: what decides
-  whether runs can be pooled is movement in the contracts this document
-  *reads* (`analyze/v7`, `store/v1`), never the package version — the
-  rule `bga compare` already applies to a pair.
-
-Percentiles are **nearest-rank**: for `n` sorted samples, `p` is the
-value at index `ceil(p × n) − 1`. No interpolation, so every figure is
-a duration some build actually took.
-
-`bga view`'s store trend draws the median–p95 band behind its points
-from this document, and nothing at all when the store mixes host
-classes — it prints the refusal instead.
-
-### What that store would do as a queue (`UX-595`, `UX-613`)
-
-`--capacity N,RATE` reads the same store as an M/G/c queue: `N`
-builders, `RATE` builds arriving per day.
-
-```bash
-bga snapshot --capacity 4,400                 # text
-bga snapshot --capacity 4,400 --format json   # a `capacity-model/v1` document
-```
-
-`bga snapshot --capacity --schema` prints the contract it stamps.
-
-```text
-  4 builder(s), 400 build(s)/day
-
-  unknown host - 6 run(s)
-    Service time: mean 703.3s, sd 105.4s, CV^2 0.02, n=6
-    Utilization: 81.4% of 4 builder(s)
-      assumes per_host_class, finished_runs_only, service_is_the_store,
-              arrival_rate_declared, servers_interchangeable,
-              steady_state
-    Wait before a build starts: 300.6s
-```
-
-It is a **model, not a measurement**, and the document says so in three
-ways a consumer can key on:
-
-- **The arrival rate is yours.** A store records when builds ran, never
-  when they were asked for, so `arrivals_per_day` is the number you
-  passed and `arrival_rate_declared` sits on every figure resting on it.
-- **Every figure names what it assumed.** `answers[].assumes` is
-  recorded where each assumption entered the arithmetic, so a number
-  cannot acquire one the list does not carry.
-- **A refusal is a value, not a gap.** `refusal` and `shortfall` are
-  written as `null` where nothing was refused, so an absent key still
-  means "the producer had never heard of this". An unstable queue
-  (utilization at or above 1) publishes no wait at all, because a finite
-  one would be a number about a system that never reaches equilibrium.
-
-Host classes are never blended - a queue over two service times is two
-queues - so each class is modelled as if it served the whole arrival
-stream, and a cross-host store exits **6** exactly as `--aggregate`
-does.
-
-### Choosing the fixes (`UX-230`)
-
-`bga whatif` projects the build for a set of fixes you choose:
-
-```bash
-bga whatif RUN/ --element core.bst --element lib.bst
-```
-
-```text
-What if these were fixed: core.bst, lib.bst
-  Makespan 0.014s -> 0.004s (saves 0.010s)
-  Their individual savings add up to 0.011s, which is not what they are
-  worth together (0.010s) - what one fix is worth depends on the others.
-```
-
-That last line is the whole point. **Savings do not add.** One
-longest-path recompute with every chosen element zeroed is the answer;
-summing what each is worth alone is wrong the moment two share a chain,
-and on the golden fixture the two figures already differ.
-
-"Fixed" means the element becomes instant, over this run's measured
-durations, with nothing else assumed to change — an upper bound, not a
-forecast. The convention travels in every answer. A selection with an
-element the run does not know, one with no measured duration, or an
-empty one is **refused by name** rather than projected, and a refusal
-still exits 0: it is the answer, not a failure.
-
-The page has the same thing with checkboxes. A prefix of the published
-plan is read straight from `optimization_horizon`; any other
-subset is asked of the server, which runs this same projection. In an
-export there is no server, so the section shows the command instead of
-a control that cannot answer.
-
-**The payload: `whatif/v1`** (`UX-295`). `--format json` stamps this
-shape as its first key, and a consumer holding one reads:
-
-| key | what it is |
-|---|---|
-| `run_id` | the run this projection is over |
-| `selected` | the element uids you asked about, as given |
-| `total_duration_us` | the run's own wall-clock, for scale |
-| `convention` | the sentence every figure here depends on, carried in the payload rather than left to the reader (`UX-244`) |
-| `refusals` | why no projection was made, when one was not — a list of `{check, elements, sentence}` |
-| `projected` | the projection, or `null` when `refusals` is non-empty |
-
-and inside `projected`:
-
-| key | what it is |
-|---|---|
-| `baseline_makespan_us` | this run's longest path, unchanged |
-| `makespan_after_us` | that path recomputed with every selected element zeroed |
-| `joint_saving_us` | the difference — what the set is worth **together**, and the answer |
-| `sum_of_individual_us` | what each element is worth alone, summed; published *because* it can differ, never as the answer |
-
-Measured on the golden fixture for `base.bst`: baseline 14,000 µs,
-after 8,000 µs, joint saving 6,000 µs, sum of individuals 6,000 µs —
-equal here because one element cannot disagree with itself; the two
-figures separate as soon as two selected elements share a chain.
-
-A refusal is a populated answer rather than an error, and the command
-still exits 0 — which is why a consumer reads `refusals` before
-`projected` rather than after, and why `projected` being `null` is a
-statement rather than a missing field.
-
-`bga whatif --schema` prints the whole shape without needing a run.
-
-### N variant builds, or one junctioned invocation (`UX-904`)
-
-`bga junction-cost` prices N separate builds of one type under
-different variants against one BuildStream invocation that junctions
-them together:
-
-```bash
-bga junction-cost RUN-x86/ RUN-arm/ --format json
-```
-
-Two elements in different variants are one element only when their
-cache key is identical; a name is not an identity, because an asan and
-a release compile of one source share a name and not a key. The runs
-must declare one build type (`UX-898`); variants differ by design.
-A single run, mixed build types, or a run with no cache keys is
-**refused by name**, and a refusal still exits 0.
-
-**The payload: `junction-cost/v1`.** `runs` lists each run's
-`run_id`, `build_class`, `elements`, `keyed_elements` and
-`pipeline_overhead_us`; `assumptions` is a list of `{id, text}` every
-figure cites; `refusals` is a list of `{check, runs, sentence}`; and
-`projected`, `null` on a refusal, carries:
-
-| key | what it is |
-|---|---|
-| `shared` | `{cache_key, elements, duration_us}` per key two or more runs share; built once, at its longest measured duration |
-| `shared_closed_downward` | whether every dependency of a shared key is shared too |
-| `shared_work_saving_us` | build work the N runs repeated on shared keys |
-| `pipeline` | per phase: `phase`, `sum_us` paid N times, `max_us` paid once, `saving_us` |
-| `pipeline_saving_us` | the phases' savings summed — an upper bound |
-| `saving_us` | the two savings together — an upper bound |
-| `separate_floors_us` | each run's own T∞, in run order |
-| `union_floor_us` | T∞ over the N graphs merged at shared keys |
-| `one_invocation_lower_bound_us` | the pipeline paid once plus `union_floor_us` |
-| `junction_staging_us` | `null`: staging the subprojects is not measured, and the bound excludes it |
-| `overlap` | the shared set in one sentence, including when it is empty |
-
-With no shared key the build-work saving is zero and `overlap` says so;
-the pipeline term is then all that remains, and it is an assumption.
-A re-capture of the junctioned invocation is still the ground truth.
-
-### Why this one is ranked first (`UX-227`)
-
-Each top action in the decision panel carries a **Why #n** fold: the
-rule that ranked it (read from that finding's `provenance` record), what
-this run measured about the element, the findings that name it, and how
-it has moved across the store.
-
-Every value in the fold carries the path it was read from in
-`data-field` — for example
-`critical_path_detail[element_uid=core.bst].share_of_path` — in
-the same grammar `provenance.evidence[].path` uses. Nothing in the fold
-is derived; it is the document, gathered under one question.
-
-### The chain behind every claim (`UX-229`)
-
-Every claim the report makes — the diagnosis, each finding, each top
-action — carries a **provenance record**: the published fields it was
-read from, the rule that fired, and the trace query that deepens it.
-
-```text
-claim -> evidence (field refs) -> rule -> trace query
-```
-
-`--explain` prints the chain under each claim in the terminal:
-
-```bash
-bga analyze RUN/ --explain
-```
-
-```text
-  This build is scheduler-bound, not chain-bound: the critical path is
-  88% of wall-clock, so the time is going somewhere other than the chain.
-    why: The critical path is 87.5% of the task horizon (the span from
-         the first task's start to the last one's finish, excluding
-         BuildStream's own startup), below the 90% line at which the
-         chain rather than the scheduler is called the constraint, so
-         this build is scheduler-bound.
-    rule: CHAIN_BOUND_RATIO = 0.9 (<, bga/findings.py)
-      floors.t_infinity_observed = 14000
-      total_duration_us = 16000
-      headline.chain_share = 0.875
-    deeper: trace query `element-time`
-```
-
-The same object is in the JSON at `headline.provenance` and
-`findings[].provenance`, and the page renders it folded under each
-claim:
-
-- `evidence[]` — each entry is a `path` **into this same document** plus
-  the `value` found there, so a reader follows the reference rather than
-  trusting the quote. Paths are dotted keys, `[i]` for a list index and
-  `[key=value]` for the one list entry matching it.
-- `rule` — the constant that decided the claim, read live: change
-  `CHAIN_BOUND_RATIO` and `rule.threshold` changes with it. `name` is
-  `null` where a claim has no threshold, which is a different statement
-  from a threshold of zero.
-- `trace_query` — the `bga timeline` question that deepens it, or
-  `null`. This mapping used to live only in the viewer.
-- `unpublished_inputs` — fields a claim was genuinely drawn from that
-  this document does not carry. Named rather than omitted: silence
-  would read as no gap.
-- `document` — which schema the paths walk. Load-bearing when a record
-  travels: `bga compare --format json` carries the candidate run's
-  chain at `candidate_diagnosis`, and its paths resolve against that
-  run's `analyze/v7`, not against the comparison.
-
-A top action's provenance is a **pointer** (`see`) at the finding's
-record, because the action is already a reference to that finding.
-
-`bga compare --format ci-comment` cites the same record in a folded
-*Why the candidate looks like this* block, so a reviewer asking "why do
-you say that" gets the answer in the comment rather than in another
-command's output.
-
-### The two-plane join, published (`UX-215`)
-
-`bga correlate --format json` has emitted the join since `UX-51`. It
-was unversioned until round 25 — no `schema` stamp, no view-hints,
-served by nothing — so the one place where *"this element is on the
-path, is worth 12.05s, and was pinned to one job on four cores"* is a
-single row was invisible to `bga view`, to CI and to every external
-consumer. It is `correlate/v2` now, with no change to what it computes.
-
-```bash
-bga correlate @last --schema | jq '.properties.elements["bga:columns"]'
-bga correlate @last --format json | jq '.elements[] | select(.on_critical_path)'
-```
-
-One row per element, from both planes:
-
-| | |
-| --- | --- |
-| Plane 1 | `on_critical_path`, `critical_path_share`, `potential_saving_us`, `saving_share`, `blast_radius` |
-| Plane 2 | `cores_busy`, `cpu_coverage`, `requested_jobs`, `resolved_jobs` (`UX-894`: the width BuildStream resolved for the element, read from the run's graph document, where a non-parallel element is a width of one and not a missing value), `jobs_denominator` (which of the two widths the achieved ratio divided by, or absent when no ratio was computed), `peak_rss_bytes`, `dominant_binary`, `serial_binary` |
-
-`bga analyze --plane2 PLANE2.json` now carries the same rows as
-`element_join`, from the same function — so the report and the command
-cannot describe an element differently. Without `--plane2` the key is
-**absent**, not empty: with one plane there is no join, and its Plane 1
-half is already in `signals`.
-
-Two refusals the document keeps rather than smoothing over:
-
-- An element Plane 2 never saw is a row with its Plane 1 half and no
-  Plane 2 numbers — not zeros, which would read as *"measured, and
-  idle"*.
-- An element Plane 2 named that Plane 1 never declared (`declared:
-  false`) is listed, because hiding it would hide a real disagreement
-  between the planes, and it never carries a recommendation (`UX-66`).
-
 ## Progress on a long run (`UX-183`)
 
 The phases that take minutes — parsing a 200k-process trace, pairing it,
@@ -1905,546 +1110,6 @@ guard asserting exactly that.
 
 Turn it off on a terminal with `BGA_NO_PROGRESS=1`, or
 `bga snapshot --no-progress`.
-
-## `bga view` — the report in a browser (`UX-193`)
-
-```bash
-bga view                 # @last, opens a tab
-bga view @prev --no-browser      # prints the url instead
-```
-
-A local page over one run's published JSON. `127.0.0.1`, a port the
-kernel picks, and a fixed allowlist of documents — nothing else in the
-run is reachable, there is no directory listing, and no write method is
-answered.
-
-**It moves between runs** (`UX-394`). Three of those documents take a
-parameter:
-
-| | |
-| --- | --- |
-| `blast.json?target=…` | what one element rebuilds |
-| `whatif.json?elements=…` | what fixing a set would be worth |
-| `?run=<stamp>` | **which snapshot the whole page is of** |
-
-`bga view` is started on one run, but it serves any snapshot in that
-project's store: `?run=20260101T000000Z` builds that run's documents on
-demand and the page renders them. The rail draws a picker when the
-store holds **two or more** — below that there is no choice to offer,
-so there is no control. `?run=` naming a stamp the store does not have
-falls back to the run the server was started on, rendered whole rather
-than an error page.
-
-The stamp is in the URL, so a link to a run is a link somebody else can
-open, and the browser's back button moves between runs.
-
-**The picker is windowed** (`UX-528`). `store.json` carries the last
-`STORE_WINDOW = 12` snapshots, not the store: at 100 snapshots the
-picker drew 100 options, the store trend 100 rows, and `store.json` was
-34,056 B against 4,121 B at 12. The rest is a second document,
-`store-all.json`, offered in the manifest and fetched only when a
-reader asks for "show all N snapshots" — so a long store costs the page
-nothing until it is wanted. A run outside the window is still
-reachable: the picker grows a box that takes a stamp, which is the same
-`?run=` the menu follows. The window is the same 12 the element
-sparklines use (`HISTORY_POINTS_MAX`), because it is the same question
-— the last dozen runs of this project.
-
-An **export has no store** — it is one file over one run — so it
-renders no picker at all.
-
-**It renders the schema, not the report.** The page asks
-`schemas.json` what each key *is* — a duration, a share, a findings
-array, a table with these columns — and renders from that. Two things
-follow, and both are deliberate:
-
-- A field added to `analyze/v7` appears in the viewer with **no change
-  to the viewer**.
-- Anything the viewer should show has to enter the published schema
-  first, where `--format json`, CI and every external consumer get it
-  too.
-
-The page is a handful of files checked into the repository under
-`bga/viewer/` — HTML, one stylesheet and a few ES modules — with no
-bundler, no npm and no build step. A richer TypeScript app is a welcome *consumer* of these
-payloads rather than a replacement: the view-hints below exist so one
-can be written without this project blessing a frontend stack.
-
-### Three views that draw (`UX-196`)
-
-The page carries three things a table could not say:
-
-- **The band.** Compare's noise band as a strip, the baseline runs as
-  dots, the candidate as a marker. `UX-170`'s **disputed region** — a
-  candidate outside the band but inside the range the baselines
-  themselves spanned — took a paragraph in prose and read like a
-  paradox; drawn, the marker simply sits between the strip's edge and
-  the dots' extent.
-- **The store trend.** `--list` made visual. Snapshots that are not
-  measurements (failed, interrupted, suspended) are drawn as squares
-  rather than dropped — they are on the disk, so they are on the chart.
-- **The blast explorer.** A box taking a url, a path or an element
-  name, answered by `blast.json?target=…`, which calls the same
-  function `bga blast` calls. The served answer is byte-identical to
-  `bga blast --format json` (`--no-cost`, because a page should not
-  block on the full pipeline).
-
-Exactly two custom SVGs, no library behind either, and nothing
-recomputed in the browser — the payloads already carry the band edges,
-the observed extent and the verdict.
-
-```bash
-bga snapshot --list --format json     # store/v1, what the trend draws
-```
-
-The text listing and this JSON render from the same rows, so the
-drawing and the terminal cannot disagree about what is on disk.
-
-### What the page leads with (`UX-202`)
-
-Above the sections, two things a list of tables could not say:
-
-- **The evidence header** — confidence and its band, Plane 2's
-  coverage, the host line, and the run's incompleteness. `UX-156`'s
-  tone: what this capture can and cannot support, stated *before* any
-  number is believed. A failed, interrupted or suspended run says so
-  here rather than in a banner floating above an otherwise ordinary
-  report.
-- **The overview waterfall** — the real duration, down through the
-  attribution gaps to the certified floors, each segment labelled with
-  its published number and linked to the section that explains it.
-
-**Every number in both is read from a published field.** Nothing is
-computed in the browser; the one division in the waterfall is a CSS
-width. A gap the JSON does not carry enters `analyze/v7` first, where
-`--format json`, CI and every other consumer get it too — which is why
-`confidence.band`, `run_instance.incomplete_reason` and
-`plane2_coverage` are fields rather than viewer logic.
-
-### Whose analysis the page is showing (`UX-533`)
-
-```bash
-bga view @last --reanalyse    # analyse with this build, not the capture's
-```
-
-The page serves the analysis the **capture** published, so a run
-captured by an older build renders that build's answer. The evidence
-header says which: *analysed at capture by bga X*, *analysed here by
-bga X*, or — when the stored file records a contract set this build has
-moved past — the same sentence plus how many of `analyze`'s always-published
-sections are absent from it, and the command to re-run with.
-
-`--reanalyse` is that command. It analyses the run with this build and
-serves that instead; the stored file is **read, never written**, so the
-page and the CI comment that quotes the stored analysis do not diverge.
-Staleness is `UX-249`'s contract set — a build that moved nothing
-publishes the same set — not a version comparison.
-
-### Finding your way around it (`UX-199`)
-
-Every section carries an `id`, a generated table of contents sits at the
-top, sections collapse (and remember it), and a jump box finds an
-element by name. An exported report keeps all of it, plus the questions
-page inlined and the blast search box hidden — it asks a server, and an
-export does not have one.
-
-### What the page opens with (`UX-207`)
-
-The first screen is a **decision**, and everything below it is the
-evidence for that decision. `analyze/v7` publishes a `headline` block —
-the diagnosis (`chain_bound`, `scheduler_bound` or `inconclusive`), the
-ratio it was decided by, what the opportunity is worth, and the three
-elements to look at first, each pointing at the finding that reasons
-about it. The panel renders that block; it derives nothing, so the
-terminal, CI and the page cannot disagree about what should be fixed
-first.
-
-### Sections named as questions, and a rail (`UX-209`)
-
-Sections are titled by the question they answer — *"Where did the
-wall-clock go?"*, *"How much faster could this build possibly be?"* —
-with the schema key kept as a muted subtitle so an anchor pasted into
-an issue still reads. The question is a schema declaration
-(`bga:question`), not a viewer table, so it reaches the text renderer
-too.
-
-The contents groups those sections into a rail rather than listing them
-in payload order:
-
-```text
-decide       what this run concluded, and what to fix first
-act          where the wall-clock went, which elements bind
-prove        the floors, the capacity verdict, what did not add up
-investigate  the graph's shape, one resource's blast radius
-raw          the capture's own identity
-```
-
-A section whose schema declares no rail lands in `raw` — never nowhere.
-
-### One click from investigation (`UX-208`)
-
-- A column can declare that it holds element uids (`role: "element"`),
-  and every row of such a table earns the same **Inspect** — jump to
-  that element elsewhere in the report, and open it in Perfetto where
-  there is a timeline. One loop in the renderer, no per-table code.
-- Critical-path boxes carry a popover with the element, its kind, its
-  duration and its share, read from the published entry.
-- Every SQL block has a **Copy** button.
-- Tables get a `Top 10 ▾` preset over any declared quantity column; the
-  badge still says `10 of 1,202`, because a reader who cannot see the
-  denominator cannot tell a filtered table from a small one.
-- The blast box opens with the payload's top-ranked targets as chips.
-
-### What to run next (`UX-218`)
-
-The report ends with the next commands, chosen by what this run
-measured, with the run path and the element already filled in.
-
-Verbatim from `bga gen-synthetic --store /tmp/bga-demo` then
-`cd /tmp/bga-demo && bga analyze @last`, 2026-09-03 (`UX-577`) — the
-seed store `UX-330` plants, so this block is **reproducible, not
-kept**: the same two commands print the same eight lines on any
-machine. It used to quote a stamp from an `examples/06` store that no
-clone has, advising a `compare` that store refused with exit 6.
-
-```text
-Next:
-  layer02/mod001.bst is the longest thing on the critical path at 14.4s, 54% of it - the build cannot finish sooner than this chain.
-    bga blast layer02/mod001.bst @20260303T091500Z
-  layer02/mod001.bst is the first thing to fix, worth 6.6s - this is what changing it rebuilds.
-    bga blast layer02/mod001.bst @20260303T091500Z
-  Make the change, then capture it the same way - run it in /tmp/bga-demo.
-    bga snapshot -- bst build all.bst
-  Whether it helped, judged against this store's noise - run it in /tmp/bga-demo.
-    bga compare @prev @last
-```
-
-Both runs of that store are full runs, which is why the last line is
-offered at all: `UX-78` refuses a full baseline against an incremental
-candidate with exit 6, so a store whose `@prev` and `@last` differ in
-`run_mode` is advised the newest run that *does* pair —
-`bga compare @<stamp> @last` — or, where the store holds no such run,
-is not advised to compare at all (`UX-577`).
-
-Every line under a reason is a command as `bga` would receive it, and
-`UX-326` is why that is worth saying: for six rounds the last two were
-not. `bga snapshot <project>` put the project where the *build command*
-goes and crashed; `bga compare … --project` named a flag `bga compare`
-does not have. Both are now parsed by the parser that would receive
-them, in
-[`tests/unit/test_the_printed_sentences_are_contracts.py`](../../tests/unit/test_the_printed_sentences_are_contracts.py).
-
-Same list in `--format json` as `next_steps`, and in the page's
-decision panel with a Copy button beside each — one function, so the
-terminal, CI and the page cannot advise differently.
-
-**Which** step is right depends on the run, so it is decided in the
-pipeline rather than by whatever is reading the report. A chain-bound
-build is not told to add builders. A run outside a store is not told to
-compare against a previous one it does not have. A run with no Plane 2
-report is not told to look inside its elements. Each step names the
-published field it follows from, so the advice can be checked against
-the number behind it.
-
-### Findings show their evidence (`UX-217`)
-
-Each finding renders the numbers it was drawn from, in the units the
-schema declares them in:
-
-```text
-⚠ 12.5% of wall-clock is untracked tail
-   category      untracked_tail_us
-   category_us   2 ms
-   share         12.5%
-```
-
-Those are published fields, in published units — `share: 0.125` is a
-share and renders as a percentage; `category_us: 2000` is microseconds
-and renders as a duration. A finding whose evidence key the schema does
-not describe renders it raw rather than guessing at a unit.
-
-### Everything about one element, in one place (`UX-216`)
-
-Every element the report discusses gets its own section: what it holds
-of the critical path, what a fix is worth, what it rebuilds, and —
-where Plane 2 saw it — how busy the cores were, how many jobs it asked
-for and what it peaked at. The findings that name it are there, and so
-is what joins the critical path if you fix it.
-
-Every mention of an element links to it: a table row's **Inspect**, a
-critical-path box, a finding's element list, a top action, a blast-tree
-row. A section says where else in the report the element appears, read
-from what the page actually drew.
-
-`bga view` before this shipped 19 Inspect affordances on `examples/06`
-that resolved to nothing — the anchor scheme and the ids never matched.
-The guard now resolves every one of them.
-
-### A link that shows what you were looking at (`UX-211`)
-
-**Copy link to this view**, beside the contents. The filter, the
-thresholds, the sort, the Top-N, the collapsed sections and the folds
-travel in the URL fragment, so what lands in the issue is the view you
-built rather than the unfiltered wall. `#floors` still means exactly
-what it meant; the state follows a `~`. The hash wins where it speaks
-and your own remembered state stands where it is silent — and it works
-from an exported `file://` report, where browser storage may not exist
-at all.
-
-### Verdicts without the palette (`UX-212`)
-
-The trend's dots differ by **shape** as well as colour — one per
-verdict kind, from a map the schema declares — and the band's noise
-strip and observed extent differ by outline. Both survive a grayscale
-print and a colour-blind reader.
-
-### Interrogating the tables (`UX-205`)
-
-Each table gets a filter box with a row-count badge (`12 of 1,202`) and,
-on every quantity column, a threshold typed in that column's own unit:
-
-```text
-> 5s        on a duration column
->= 512mb    on a size column
-< 10%       on a share column
-```
-
-The unit parses because the schema *declares* what the column is — and
-the comparison runs against the published value, never the formatted
-text. A cell copies on double-click as its raw value; **Copy shown
-rows** puts the filtered rows on the clipboard as JSON that parses.
-
-Measured at 4,000 rows: 146 ms to render, 20 ms to filter. There is no
-windowed rendering, deliberately — machinery without a measured need is
-how a thin viewer stops being one.
-
-### Two drawings, and no DAG viewer (`UX-206`)
-
-- **The chain, drawn** — the critical path as a sequence of boxes whose
-  widths are the published `share_of_path`. Long chains fold in the
-  middle (`UX-187`'s fold) and open in place.
-- **The blast tree** — a blast answer as an indented hierarchy, direct
-  consumers first, then the closure by depth, each row with its kind
-  and measured work. The depth is published in `blast/v2` as
-  `blast_tree`; the page does not walk a graph.
-
-A general BuildStream DAG rendering stays deliberately unbuilt — it
-answers no question anyone asks. The argument is in
-[Direction 7](../design/directions.md).
-
-### The report as one file (`UX-195`)
-
-```bash
-bga view @last --export report.html
-```
-
-The same page, as an attachment: the run's JSON inlined, the CSS and
-both modules inlined, the timeline carried as a `data:` URL. No port, no
-server, no network — it opens from a downloads folder, a CI artifact
-viewer, or an email.
-
-**A large document travels compacted** (`UX-529`). Past
-`DATA_COMPACT_MIN_B` — 200,000 B of JSON — a payload is written as one
-gzipped, base64-encoded `application/octet-stream` block instead of
-readable JSON text, and the page inflates it on load. Nothing is
-refused and nothing is dropped: it is the same document, and a reader
-does nothing about it. Measured on the two seeded runs
-(`bga gen-synthetic --seed 1`, and the same with `--layers 20
---width 200`):
-
-```text
-elements   report.json   gzip+base64   ratio
-   1,202       628,335        69,172   0.110
-   4,002     2,041,945       193,492   0.095
-```
-
-The threshold sits above both committed fixtures (30 KB and 80 KB of
-data), so the small exports a person reads in an editor stay readable
-and the large ones a person mails stay mailable.
-
-**What it weighs, in three parts.** A report is not "page plus data":
-it also carries the JSON Schema for every document in it, so a reader
-can ask what a number means with no network. That third part travels
-whole whether or not a run has the rows it describes, which is why it
-is counted separately (`UX-342`).
-
-Measured in round 65 on a cold two-plane capture of `examples/06`
-(38 s, `bga snapshot -- bst build all.bst` against an isolated
-`XDG_CACHE_HOME`, then `bga view <run> --export report.html`):
-
-```text
-total       520,048 B   508 KiB
-  source    283,979 B   54.6%   the modules and the stylesheet
-  contract   81,623 B   15.7%   the embedded schemas
-  data      154,446 B   29.7%   the payload and the inlined timeline
-```
-
-And on the 1,202-element synthetic run
-(`bga gen-synthetic /tmp/scale --seed 1`), same round:
-
-```text
-total     1,197,665 B  1170 KiB
-  source    283,922 B   23.7%
-  contract   81,623 B    6.8%
-  data      832,120 B   69.5%
-```
-
-**Source and contract are the same bytes on both runs** — they are the
-page, and a bigger project does not make them bigger. What scales is
-the data. On a small project the page is the larger half; on a real one
-the data passes it and keeps going, which is the ratio the thinness
-rule is about.
-
-Both data figures predate the compaction above: round 80 (`UX-529`)
-took the 1,202-element run's data half from 629,385 B to 70,222 B and
-the 4,002-element one from 2,042,989 B to 194,536 B. The shape of the
-statement is unchanged — the data is still what scales — but the
-constant in front of it is an order of magnitude smaller.
-
-> Round 21 measured 638 KiB with the page at 6.0% on the same synthetic
-> run, and round 23 measured 158 KiB with the page at 90,611 B on
-> `examples/06`. Both are superseded by the figures above — kept
-> because a dated measurement is evidence about when the page grew, and
-> `UX-132`'s rule is to mark such a figure rather than to rewrite it.
-> The page has roughly tripled across rounds 24–64 (the decision panel,
-> the rails, the chapters, the table tools, the shape channel, the
-> query library) and the embedded contract is new since round 51.
-
-Four ceilings, and they are not all in the same unit. Two are byte
-bounds on what is *carried*; one is on what Perfetto has to **draw**,
-which is what actually decides whether a big capture opens (`UX-430`);
-and one is on the page `bga` itself writes, whatever the run
-(`UX-1052`). None is enforced by refusing to write your report — a
-report that large is still your report — and each says which one it
-was:
-
-| constant | the bound | measured against | when it is the one that bit |
-| --- | --- | --- | --- |
-| `EXPORT_BUDGET_B` | 8 MiB | the whole written file: source + contract + data | nothing to do; the note says an attachment may not survive it |
-| `PAGE_BUDGET_B` | 166,250 B | the **page half**: the file less its data blocks — `index.html`, the stylesheet, and the viewer module gzipped with its loader (`UX-1052`) | nothing; it bounds the viewer `bga` writes, never your run. `--export` prints the page and data halves apart, and a release is held to it |
-| `TRACE_BUDGET_B` | 4 MiB | the **gzipped trace** before it is base64-encoded — one part of the data half | the trace is left out and the page names the bound; `bga timeline` renders one beside the snapshot |
-| `TRACE_TRACK_BUDGET` | 8,000 tracks | the rows Perfetto opens: one process track per element, one thread track per traced pid — **processes**, not slices, so the spine's second record of one process is not a second row (`UX-406`) | nothing, for an export: it renders again with `--planes 1` and the handoff sentence says it did (`UX-530`). For `bga timeline`, `--planes 1` or `--only-element` narrow what is *drawn* rather than what is carried |
-
-The third is the one a reader is least likely to guess at, because the
-byte figure looks fine when it bites: measured on the seeded scale run
-at twelve processes an element, the trace is **491 KB against a 4 MiB
-bound and 16,832 tracks** (round 83's re-measurement, the same one the
-table above carries). `--planes 1` drops the process lanes and is
-a 14x reduction there — and 26x at twenty-four processes an element,
-since Plane 1's own track count does not move with the process
-population (`UX-445`).
-
-`TRACE_TRACK_BUDGET`'s value is one sample and says so — see its
-docstring in `tools/bga_view.py`, and `UX-445` for what is still
-unmeasured about it.
-
-Since `UX-530` an export **degrades before it refuses**: it renders the
-whole timeline, and if that is over either bound it renders again with
-`--planes 1` and carries that instead, saying which step it took and
-what the whole one would have drawn. Refusal is what is left when every
-step `bga timeline` offers is still over. Measured on a capture of the
-item's own shape — 8,140 processes over four elements:
-
-```text
-both planes    8,152 tracks   8,146 slices     over the 8,000 ceiling
---planes 1         7 tracks       6 slices     carried
-```
-
-For CI, put it beside the comment step — see
-[`ci-comment.md`](ci-comment.md).
-
-### The Perfetto handoff (`UX-194`)
-
-```bash
-bga view --perfetto      # skip the report, hand the timeline straight over
-```
-
-`bga view`'s page carries an **Open timeline in Perfetto** button when
-the run has one, and `--perfetto` goes there directly. Below 4 MiB the
-trace crosses **tab to tab**: the page opens `ui.perfetto.dev`, pings
-until it answers, and `postMessage`s the bytes.
-
-**Above 4 MiB compressed, Perfetto fetches it instead** (`UX-299`).
-Carrying the trace costs at least two copies of it inside the report
-tab — `arrayBuffer()` materialises the whole response and `postMessage`
-structured-clones it — before Perfetto decompresses a third in its own;
-the `?url=` deep link has none of them. The page finds out which case
-it is in with a `HEAD` at the moment you click, because knowing the
-size any earlier would mean rendering the trace, which is exactly what
-`bga view`'s startup no longer does. The same 4 MiB decides whether
-`--export` inlines the trace: above it the exported page says the
-trace's size and carries this command instead of the bytes.
-
-**Nothing is uploaded.** It looks exactly like an upload — a public URL
-opens and your build data appears in it — so it is worth saying plainly:
-ui.perfetto.dev is a static site, the trace is processed in your
-browser, and there is nowhere for it to be sent.
-
-The bytes go over gzipped, which Perfetto sniffs itself. Measured on a
-real capture of `examples/06` (871 events, both planes merged):
-
-```text
-272,964 B  ->  24,782 B   (9.1%, 11x smaller)
-```
-
-`--perfetto` needs the server alive while the tab fetches the trace, so
-it does not exit the moment the browser launches — Ctrl-C once Perfetto
-has it. A run with no raw Plane 2 log has no timeline to hand over and
-exits **7** rather than opening a page that would 404.
-
-The handoff page also carries a list of **questions worth asking in
-Perfetto** (`perfetto.html`, under the button that opens the trace they
-ask about) — eighteen paste-ready PerfettoSQL queries, with a control
-that swaps in whichever of this run's elements you are asking about.
-They are docs, not a feature: the SQL engine is Perfetto's. `UX-373`
-merged them in from the separate `sql.html`, whose URL still redirects
-here.
-
-**When to press the button.** The report has no time axis: every number
-in it is a total, a per-element aggregate or a ranking. So a question
-that needs *when*, or needs one individual **process** rather than the
-element around it, is a question for the trace — and one that does not
-is already answered on the page. Ten of the eighteen canned questions
-genuinely need the trip; eight are sharper instruments for something
-the page has said already.
-[`what-the-viewer-answers.md`](what-the-viewer-answers.md) sorts them,
-names the three places the report holds the element's answer and the
-trace holds the process's, and says which of the eight
-[roles](../design/roles.md) the trip actually serves — R1 and R2 only.
-
-**Format**: `bga timeline` writes **Perfetto's own TrackEvent protobuf**
-by default, gzipped as a stream, with `--format chrome` for the legacy
-Chrome JSON that `chrome://tracing` and any pipeline already parsing it
-still want (`UX-298`). Direction 7 argued for the JSON and named its
-revisit trigger; `UX-298` is that revisit, so the argument to read now
-is the one in `UX-298` rather than the direction that preceded it.
-
-### View-hints v1
-
-Annotations in the JSON Schema, so a renderer does not have to guess
-what a number means. JSON Schema ignores keywords it does not know, so
-a hinted document validates exactly as before, and `UX-190`'s rule
-applies — adding a hint is an addition; changing what one *means* is a
-version bump.
-
-| Hint | Says |
-| --- | --- |
-| `bga:quantity` | `duration_us`, `bytes`, `share`, `count`, `seconds`, `ratio` |
-| `bga:severity` | this array is findings; that key carries the severity |
-| `bga:columns` | column order for an array of objects |
-| `bga:direction` | `lower_is_better` / `higher_is_better` / `neutral`, for signed deltas |
-
-Read them straight out of the tool:
-
-```bash
-bga analyze --schema | jq '.properties.total_duration_us'
-# { "bga:quantity": "duration_us" }
-```
-
-A quantity outside that closed set, or a hint on a key the document
-does not declare, is refused when the schema is built — a mistyped hint
-is invisible at the point of use, because the renderer just falls
-through and prints a plausible-looking raw number.
 
 ## `bga blast` — what rebuilds if I touch this (`UX-172`)
 
@@ -2648,6 +1313,86 @@ app.bst, lib-a.bst..lib-f.bst (7 elements, 6-9% of the critical path each, 2.0-3
 - **Coverage is carried through.** A recommendation built on 81% of an element's processes says so (`UX-45`), and elements Plane 1 ranks that Plane 2 never traced are named rather than passed over.
 - The two planes' timelines are **not** merged and cannot be — see [`docs/design/architecture.md`](../design/architecture.md). This is a join, and is deliberately named as one.
 
+## `bga whatif`
+
+What would the build drop to if I fixed these? See [its contract and worked example](json-contracts.md#choosing-the-fixes-ux-230).
+
+## `bga junction-cost`
+
+N variant builds, or one junctioned invocation? See [its contract and worked example](json-contracts.md#n-variant-builds-or-one-junctioned-invocation-ux-904).
+
+## `bga cache-trend`
+
+Is the cache getting worse? A series of runs, not a pair — `bga cache-trend @prev @last`. See [its finding, `cache-trend-regression`](#the-full-findingsid-set).
+
+## `bga bundle`
+
+Pack a capture into one file, load one, or resolve pseudonyms. See [its modes](#carrying-a-capture-to-another-machine-ux-520).
+
+## `bga view`
+
+Open a run's report in a browser (`tools.bga_view`). See [the page, chapter by chapter](viewer.md).
+
+## `bga capture`
+
+Plane 2: trace processes inside sandboxes (`tools.bst_native_build_tracer`). See [its flags](#flags-reachable-only-from---help).
+
+## `bga wrap`
+
+Run a command, writing a log bga can ingest (`tools.bst_run_wrapped`); every flag is in `bga wrap --help`.
+
+## `bga extract`
+
+Turn a log + project into a run directory (`tools.bst_extract_run`); every flag is in `bga extract --help`.
+
+## `bga rebuild-set`
+
+Which elements a change would force a rebuild of (`tools.bst_rebuild_set`); every flag is in `bga rebuild-set --help`.
+
+## `bga checkout-cost`
+
+Measure what checking out an artifact costs (`tools.bst_checkout_cost`); every flag is in `bga checkout-cost --help`.
+
+## `bga run-context`
+
+Produce run-context.json on its own (`tools.bst_run_context`); every flag is in `bga run-context --help`.
+
+## `bga graph-from-show`
+
+Turn `bst show` output into graph.json (`tools.bst_show_to_graph`); every flag is in `bga graph-from-show --help`.
+
+## `bga log-to-chrome`
+
+Convert a BuildStream log to Chrome Trace JSON (`tools.bst_log_to_chrome_trace`); every flag is in `bga log-to-chrome --help`.
+
+## `bga chrome-to-trace`
+
+Convert Chrome Trace JSON to trace/v9 (`tools.chrome_trace_to_bga_trace`); every flag is in `bga chrome-to-trace --help`.
+
+## `bga native-to-chrome`
+
+Plane 2 trace to Chrome Trace JSON (`tools.native_trace_to_chrome_trace`); every flag is in `bga native-to-chrome --help`.
+
+## `bga cache-logs`
+
+Plane 3: mine BuildStream's own element logs (`tools.bst_cache_logs`); every flag is in `bga cache-logs --help`.
+
+## `bga cross-check`
+
+Cross-check an analysis against other figures (`tools.bga_cross_check`); every flag is in `bga cross-check --help`.
+
+## `bga release-notes`
+
+Generate a release body from the closed backlog rows (`tools.bga_release_notes`); every flag is in `bga release-notes --help`.
+
+## `bga gen-synthetic`
+
+Generate a synthetic run directory at a scale (`tools.gen_synthetic_scale_run`); every flag is in `bga gen-synthetic --help`.
+
+## `bga baseline`
+
+Assemble a baseline set and band-compare against it (`tools.bst_baseline_set`); every flag is in `bga baseline --help`.
+
 ## How many builders, and what stops you
 
 Two Plane 2 numbers answer the `--builders` question, and they answer
@@ -2823,7 +1568,7 @@ said what was true in the meantime, and filed the contract this is.
 ### The memory envelope (`UX-104`)
 
 `memory_envelope` is what decides whether `--builders` can go up, and it
-is a published key of [`correlate/v2`](#the-two-plane-join-published-ux-215):
+is a published key of [`correlate/v2`](json-contracts.md#the-two-plane-join-published-ux-215):
 
 ```bash
 bga correlate @last -f json | jq .memory_envelope
@@ -3060,3 +1805,5 @@ written — the number was always right, only the silence around it changed.
 - [Project README](../../README.md)
 - [Architecture Overview](../design/architecture.md) — both analysis planes, and every extension beyond the original spec
 - [v9 Specification](../spec/specification.md)
+- [The JSON contracts](json-contracts.md) — every schema id, its keys, and the versioning rule
+- [The browser report](viewer.md) — `bga view`, chapter by chapter

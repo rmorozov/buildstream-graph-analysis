@@ -33,4 +33,6 @@ def test_each_row_states_the_value_its_constant_holds():
     wrong = {
         name: (_stated(row), getattr(view, name)) for name, row in rows.items() if _stated(row) != getattr(view, name)
     }
-    assert wrong == {}, f"docs/guides/cli.md states a bound the code does not hold, {{name: (stated, code)}}: {wrong}"
+    assert wrong == {}, (
+        f"docs/guides/viewer.md states a bound the code does not hold, {{name: (stated, code)}}: {wrong}"
+    )

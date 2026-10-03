@@ -352,7 +352,7 @@ class TestTheGuidesEvidenceBlockIsTheReport:
 # `_derived_sentences()` builds from the population, it names the ids it
 # counts, or it is a dated finding in `HISTORICAL`.
 
-CLI = REPO / "docs/guides/cli.md"
+CLI = REPO / "docs/guides/viewer.md"
 SKILL = REPO / ".claude/skills/measure/SKILL.md"
 HARNESS = REPO / "tools/dev_perfetto_queries.py"
 TIMELINE = REPO / "tools/bga_timeline.py"
@@ -525,7 +525,7 @@ def _derived_sentences():
     other = WORDS[len(rest)]
     return {
         "README.md": [f"sorts all {WORDS[total]} canned questions"],
-        "docs/guides/cli.md": [
+        "docs/guides/viewer.md": [
             f"— {WORDS[total]} paste-ready PerfettoSQL queries",
             f"{head} canned questions genuinely need the trip; {other} are sharper",
         ],

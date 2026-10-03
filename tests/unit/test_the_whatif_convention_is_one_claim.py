@@ -37,7 +37,7 @@ import re
 import pytest
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
-GUIDE = REPO / "docs/guides/cli.md"
+GUIDE = REPO / "docs/guides/json-contracts.md"
 ARCHITECTURE = REPO / "docs/design/architecture.md"
 
 # Each claim, and the phrases that carry it. Phrases rather than one
@@ -92,7 +92,9 @@ class TestTheClaimTravelsWithTheNumber:
         """And the reader who learns the command from the guide has it
         before they ever run it."""
         missing = [p for p in CLAIMS[claim] if p not in _guide_section()]
-        assert missing == [], f"docs/guides/cli.md's whatif section no longer carries {claim!r}: {missing} absent"
+        assert missing == [], (
+            f"docs/guides/json-contracts.md's whatif section no longer carries {claim!r}: {missing} absent"
+        )
 
 
 class TestTheReasoningHasAHome:

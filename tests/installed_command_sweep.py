@@ -214,6 +214,7 @@ def invocations(fx: Fixtures):
         "blast": (OK, ["blast", fx.element, run]),
         # `UX-904`: two runs of one type; refusals are answers, so it exits 0.
         "junction-cost": (OK, ["junction-cost", run, str(fx.snapshot / "run")]),
+        "variant-cost": (OK, ["variant-cost", run, str(fx.snapshot / "run")]),
         # `UX-520`, and a **path**, not `@last`: this sweep runs from an
         # empty cwd (see `_run` below), so there is no project store for
         # a stamp to resolve against, and `bundle` takes no `--project`

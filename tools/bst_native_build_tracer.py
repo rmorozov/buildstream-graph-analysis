@@ -1730,24 +1730,32 @@ def _parse_element_kinds(show_output: str) -> "_ElementKindsMap":
     that does not split into exactly two tokens is skipped, not raised
     on - the same degrade-not-raise posture as `_parse_max_jobs_from_vars`."""
     kinds = _ElementKindsMap()
-    short_owners = {}
     for line in show_output.splitlines():
         parts = line.split()
-        if len(parts) != 2:
-            continue
-        name, kind = parts
-        kinds[name] = kind
+        if len(parts) == 2:
+            kinds[parts[0]] = parts[1]
+    owners, kinds.junctions, kinds.collisions = _claim_short_names(list(kinds))
+    for short, owner in owners.items():
+        kinds.setdefault(short, kinds[owner])
+    return kinds
+
+
+def _claim_short_names(names) -> tuple[dict, int, int]:
+    """UX-1311: `({short: owning full name}, junctions, collisions)` over
+    every element name. A top-level name owns itself; among junction-
+    qualified names the first claimant of a short spelling wins and a
+    later different one is a collision, counted, not stored."""
+    owners = {name: name for name in names if ":" not in name}
+    junctions = collisions = 0
+    for name in names:
         if ":" not in name:
             continue
-        kinds.junctions += 1
+        junctions += 1
         short = name.rsplit(":", 1)[-1]
-        owner = short_owners.get(short)
-        if owner is None:
-            short_owners[short] = name
-            kinds.setdefault(short, kind)
-        elif owner != name:
-            kinds.collisions += 1
-    return kinds
+        owner = owners.setdefault(short, name)
+        if owner != name and ":" in owner:
+            collisions += 1
+    return {k: v for k, v in owners.items() if k != v}, junctions, collisions
 
 
 def jobserver_kinds_warning(
@@ -1908,6 +1916,15 @@ def _parse_dep_list(raw: str) -> list[str]:
     return [line.strip()[2:].strip() for line in raw.splitlines() if line.strip().startswith("- ")]
 
 
+def _with_short_names(auth_map: dict, names: list) -> dict:
+    """UX-1311: `auth_map` plus each owned short spelling, the name the shim reads from `--dir`."""
+    owners, _, _ = _claim_short_names(names)
+    for short, owner in owners.items():
+        if owner in auth_map:
+            auth_map.setdefault(short, auth_map[owner])
+    return auth_map
+
+
 def _parse_jobserver_show_records(stdout: str) -> tuple[str, str, dict, dict, dict]:
     """UX-1011/UX-1005 track C: `read_jobserver_bst_show`'s stdout
     parse, split out to keep that function's own branching under the
@@ -1954,7 +1971,13 @@ def _parse_jobserver_show_records(stdout: str) -> tuple[str, str, dict, dict, di
                     if isinstance(notparallel, bool)
                     else str(notparallel).strip().lower() not in ("", "false", "no", "0")
                 )
-    return ("\n".join(kinds_lines), "".join(vars_blocks), auth_map, element_deps, element_notparallel)
+    return (
+        "\n".join(kinds_lines),
+        "".join(vars_blocks),
+        _with_short_names(auth_map, list(element_deps)),
+        element_deps,
+        element_notparallel,
+    )
 
 
 def read_jobserver_bst_show(

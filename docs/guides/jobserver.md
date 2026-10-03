@@ -114,7 +114,10 @@ public:
 
 Globs match the element name, the first matching group wins, and the
 flag repeats. A style outside the four is ignored, as is a malformed
-`public:` block: the element falls through to `auto`. The flag's full
+`public:` block: the element falls through to `auto`.
+The annotation works on a junctioned element too, and a glob matches the
+element's name inside its own project, without the junction prefix
+(`my_recipe.bst`, not `toolchain.bst:my_recipe.bst`). The flag's full
 entry is in [`cli.md`](cli.md#what-each-flag-does-in-full).
 
 ## What is not measured yet

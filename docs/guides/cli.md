@@ -319,6 +319,7 @@ jobserver: off -> auto (4)                            # the compare header names
 | `--jobserver-auth fd\|fifo\|auto` | The `--jobserver-auth` style forwarded to the tracer (default `auto`), as `bga capture run --jobserver-auth` (`UX-841`, `UX-875`); unused when `--jobserver` is off |
 | `--plan @prev\|@last\|PATH` | Bias the jobserver by a prior run's own slack; needs `--jobserver auto\|N` |
 | `prune --keep N` / `--older-than DAYS` / `--max-store SIZE` | Delete old snapshots; `--dry-run` says what would go |
+| `--prune` | The flag form of the same deletion; needs `--keep`, `--older-than` and/or `--max-store`, and `--keep`, `--older-than`, `--max-store` and `--dry-run` read as "with `--prune`" |
 
 `bga snapshot` exits with **the wrapped build's own exit code**. A
 failed build is not a successful snapshot; equally, a comparison verdict
@@ -638,6 +639,10 @@ By default, `bga` prints a human-readable summary to stdout, leading with a synt
 The Key Findings/Confidence blocks are shown for the full `analyze` report only - the section subcommands (`graph`/`floors`/`replay`/`utilisation`/`diagnostics`) and `--format csv` do not render them. They are **not** presentation-only: since `UX-75` every conclusion in them is computed once in `bga/findings.py` and published to `--format json` as the `findings` array described below, so the two formats cannot disagree.
 
 ### Options
+
+#### Evidence under each claim (`--explain`)
+
+`--explain` prints, under each claim, its evidence fields, the rule that fired and the query that deepens it. Opt-in, and the same flag on `bga analyze`, `graph`, `floors`, `replay`, `utilisation`, `diagnostics` and `bga correlate`.
 
 #### Output Format
 
@@ -1188,6 +1193,8 @@ bga compare /path/to/before-run /path/to/after-run --format json | jq '.verdict'
 
 The verdict is one of `improved`/`regressed`/`no significant change`/`within the baseline set's own observed range` (`UX-170` — outside the band, but a duration the baseline runs themselves reached, so not evidence of a change)/`not comparable (baseline has no measurable duration)` (a >=1% change in total build duration, relative to the baseline, is the significance threshold), always followed by an explicit caveat when either run's confidence is below the "high" band, and a **refusal** (`UX-78`) when the two runs are not comparable at all — either their graphs share fewer than half their element UIDs (they may not even be the same project) or one is a caches-off run and the other incremental. A refusal prints the failing check to stderr, prints no comparison, and exits **6** — deliberately not 4 or 5, so a CI job keying on the gates cannot read a wrong-artifact-path bug as a regression. `--allow-mismatch` restores the older behaviour: the warning is printed above the comparison and the exit code is the gates' own. Otherwise the exit code is 0 for a successful comparison regardless of verdict — comparing is not itself a failure condition. `--capacity`, if given, applies symmetrically to both runs.
 
+`--band-k K` sets the noise band's width in scaled-MAD units; `bga baseline --band-k K` passes it through to this compare.
+
 ### CI Regression Gate (`--fail-on-regression`)
 
 Not spec-mandated (`UX-3`) - opt-in gating mode for a CI pipeline that wants to actually *fail* on a genuine regression, not just report it:
@@ -1348,6 +1355,8 @@ app.bst, lib-a.bst..lib-f.bst (7 elements, 6-9% of the critical path each, 2.0-3
 
 What would the build drop to if I fixed these? See [its contract and worked example](json-contracts.md#choosing-the-fixes-ux-230).
 
+- `--element UID` — an element to treat as fixed (instant); repeatable. One longest-path recompute with every named element zeroed, never a sum of their individual savings.
+
 ## `bga junction-cost`
 
 N variant builds, or one junctioned invocation? See [its contract and worked example](json-contracts.md#n-variant-builds-or-one-junctioned-invocation-ux-904).
@@ -1364,9 +1373,16 @@ Pack a capture into one file, load one, or resolve pseudonyms. See [its modes](#
 
 Open a run's report in a browser (`tools.bga_view`). See [the page, chapter by chapter](viewer.md).
 
+- `--perfetto` — skip the report and hand the run's timeline straight to ui.perfetto.dev, tab to tab; nothing is uploaded.
+- `--no-browser` — print the URL instead of opening it, for a remote shell or to `curl` the payloads.
+- `--port N` — listen on port `N` instead of the ephemeral one the kernel picks (the server stays on 127.0.0.1).
+- `--compare BASELINE` — draw the band against `BASELINE` instead of the run before `RUN` in the same store; same alias grammar (`@last`, `@prev`, a stamp prefix, a path). Read in `main` as `run_store.resolve(args.compare)`; [the band](viewer.md#three-views-that-draw-ux-196) says what it changes.
+
 ## `bga capture`
 
 Plane 2: trace processes inside sandboxes (`tools.bst_native_build_tracer`). See [its flags](#flags-reachable-only-from---help).
+
+- `bga capture run --host-samples PATH` — where to write the host's memory series while the build runs: JSON Lines (`host-samples/v1`), one sample every `HOST_SAMPLE_INTERVAL_S` seconds, of `/proc/meminfo` keys. It sits beside the report, not inside it.
 
 ## `bga wrap`
 
@@ -1374,27 +1390,55 @@ Run a command, writing a log bga can ingest (`tools.bst_run_wrapped`); every fla
 
 ## `bga extract`
 
-Turn a log + project into a run directory (`tools.bst_extract_run`); every flag is in `bga extract --help`.
+Turn a log + project into a run directory (`tools.bst_extract_run`); every flag is in `bga extract --help`. The ones no other page names:
+
+- `--format auto|wrapped|raw` — the input log's format, with `bga log-to-chrome`'s semantics.
+- `--cpu-budget N` — the CPU cores the build is *intended* to use, the operator's declared envelope as against the detected host core count; it governs the oversubscription check (`UX-15`).
+- `--artifact-weights` — walk each element's artifact in the local CAS to record what it weighs (`UX-907`). Off by default: it reads one blob per directory in every artifact.
+- `--build-type TYPE` — what kind of build this was (`night`, `review`, `guard`, free text); two runs declaring different types are two populations (`UX-898`). Defaults to `$BGA_BUILD_TYPE`.
+- `--variant NAME=VALUE` — a named dimension of what the build did (`arch=aarch64`, `sanitizer=address`); repeatable. Defaults to `$BGA_BUILD_VARIANT`, comma-separated (`UX-903`). Both are in [the environment table](#switches-you-set).
+- `--cache-usage` — walk the local CAS and record what the cache currently holds (`UX-896`). Off by default: it is the only part of the capacity block that costs anything; without it the block still carries the configured quota and the volume under it.
+- `--memory-budget-mb N` — the memory (MB) the build is *intended* to use, operator-declared. With `--estimated-job-memory-mb` it drives the memory oversubscription check (`UX-21`).
+- `--estimated-job-memory-mb N` — a rough, operator-supplied footprint (MB) of one concurrent build job: a constant, not a measurement. Meaningful only with `--memory-budget-mb`.
+- `--native-max-jobs N` — override the real `--max-jobs` the build ran with (`make -jN` inside each sandbox, not `--builders`). Without it the value is the wrapped log's recorded invocation (`UX-29`), else the invocation parse, else the graph's resolved `max-jobs` (`UX-377`; `bst_extract_run.py`'s `typical_resolved_max_jobs`); the flag always wins, and the run records which source the published value came from (`native_max_jobs_source`).
+- `--trace-epsilon-us N` — quantization epsilon of the trace in microseconds (default 50000, Part 3.2).
+- `--start-time ISO8601` — anchor for a raw log's elapsed timestamps; defaults to the log file's mtime.
+- `--interrupted` — record that the log's build was interrupted, so the run declares itself unfinished. Needed when re-running from the hint an interrupted capture printed; `bga snapshot` sets it for you.
+- `--strict` — fail instead of warning unless the project uses `ref-storage: project.refs` and that file has no uncommitted changes (`P4-13`).
+- `--bst-bin PATH` — the `bst` executable to call (default `bst` on `PATH`).
 
 ## `bga rebuild-set`
 
 Which elements a change would force a rebuild of (`tools.bst_rebuild_set`); every flag is in `bga rebuild-set --help`.
 
+- `--cut ELEMENT` — required; the element to rebuild, with everything above it over build edges. Repeatable.
+- `--count-only` — print only the size of the resulting set, not its members.
+
 ## `bga checkout-cost`
 
 Measure what checking out an artifact costs (`tools.bst_checkout_cost`); every flag is in `bga checkout-cost --help`.
 
+- `compare --format auto|wrapped|raw` — the log format, as `bga log-to-chrome`'s; `--json` emits JSON instead of the human-readable summary.
+- `compare --individual LOG [LOG ...]` — the logs of checking the elements out one invocation each (BuildStream's per-invocation overhead is paid once per log).
+- `compare --consolidated LOG` — the log of checking out one `kind: stack` element depending on all of them (one payment of that overhead). Both are required.
+
 ## `bga run-context`
 
-Produce run-context.json on its own (`tools.bst_run_context`); every flag is in `bga run-context --help`.
+Produce run-context.json on its own (`tools.bst_run_context`); every flag is in `bga run-context --help`. It takes the same `--build-type`, `--variant`, `--memory-budget-mb`, `--estimated-job-memory-mb`, `--native-max-jobs`, `--trace-epsilon-us` and `--start-time` as [`bga extract`](#bga-extract), with the same meaning, plus `--format` and `--cpu-budget` (same meaning), and:
+
+- `--host NAME` — optional host identifier to record.
 
 ## `bga graph-from-show`
 
 Turn `bst show` output into graph.json (`tools.bst_show_to_graph`); every flag is in `bga graph-from-show --help`.
 
+- `--bst-bin PATH` — the `bst` executable to call (default `bst`, resolved via `PATH`).
+
 ## `bga log-to-chrome`
 
 Convert a BuildStream log to Chrome Trace JSON (`tools.bst_log_to_chrome_trace`); every flag is in `bga log-to-chrome --help`.
+
+- `--start-time ISO8601` — anchor for raw-format elapsed timestamps (only meaningful with `--format raw` or `auto`'s raw fallback); defaults to the input file's mtime.
 
 ## `bga chrome-to-trace`
 
@@ -1404,9 +1448,18 @@ Convert Chrome Trace JSON to trace/v9 (`tools.chrome_trace_to_bga_trace`); every
 
 Plane 2 trace to Chrome Trace JSON (`tools.native_trace_to_chrome_trace`); every flag is in `bga native-to-chrome --help`.
 
+- `--anchor-element ELEMENT` — required; a real element present in both traces, used to put Plane 2's `CLOCK_MONOTONIC` onto Plane 1's wall-clock timeline.
+
 ## `bga cache-logs`
 
-Plane 3: mine BuildStream's own element logs (`tools.bst_cache_logs`); every flag is in `bga cache-logs --help`.
+Plane 3: mine BuildStream's own element logs (`tools.bst_cache_logs`); every flag is in `bga cache-logs --help`. Beyond the prose [above](#flags-reachable-only-from---help):
+
+- `--project NAME` — only this project's logs.
+- `--all` — report over every project in the log tree at once (`UX-127`).
+- `--list` — list the projects the tree holds, with log counts and time spans, and exit.
+- `--graph RUN/graph.json` — a run directory's graph, so a rebuild caused by an upstream key change can be told from one whose own definition changed.
+- `--native-report PLANE2.json` — a Plane 2 report from the same build, to put the traced configure measurement beside the self-reported one.
+- `-f text|json` / `--format text|json`, `-o PATH` / `--output PATH` — the output format, and a file to write instead of stdout.
 
 ## `bga cross-check`
 
@@ -1416,13 +1469,33 @@ Cross-check an analysis against other figures (`tools.bga_cross_check`); every f
 
 Generate a release body from the closed backlog rows (`tools.bga_release_notes`); every flag is in `bga release-notes --help`.
 
+- `--from START` — required; the closed-row marker of the previous release.
+- `--to END` — the closed-row marker of this release; default every row there is now.
+
 ## `bga gen-synthetic`
 
-Generate a synthetic run directory at a scale (`tools.gen_synthetic_scale_run`); every flag is in `bga gen-synthetic --help`.
+Generate a synthetic run directory at a scale (`tools.gen_synthetic_scale_run`); every flag is in `bga gen-synthetic --help`. Byte-reproducible from `--seed`.
+
+- `--builders N` — the builders count recorded in the run (see `--store` for its store default).
+- `--layers N` / `--width N` — the graph's shape: how many layers (default 12), how many elements per layer (default 100). With `--store`, a `--layers`, `--width` or `--builders` left at its default is replaced by the store's small values (3, 4, 4); one you pass still means what it says.
+- `--run-id ID` — the `run_identity_hash` written to every file; it must match across the three files or ingestion rejects the directory.
+- `--store` — plant a whole store (a project root, two snapshots, and per snapshot the wrapped log and Plane 2 records `timeline` and `capture report` need) instead of one run directory; the no-BuildStream seed the README's quick start points at. Defaults to a small graph.
+- `--runs N` — with `--store`, how many snapshots to plant (default 2, the minimum that makes `@prev`, `compare` and the trend answer).
+- `--workload cc|binaries` — with `--store`, Plane 2's population: `cc`, one compiler per element; `binaries`, 8 elements exec'ing 200-500 fake binaries each and the rest 3-10.
 
 ## `bga baseline`
 
-Assemble a baseline set and band-compare against it (`tools.bst_baseline_set`); every flag is in `bga baseline --help`.
+Assemble a baseline set and band-compare against it (`tools.bst_baseline_set`); every flag is in `bga baseline --help`. Its CI use: [`ci-comment.md`](ci-comment.md#the-sequence).
+
+- `--glob GLOB` — the ref glob selecting one comparable set, e.g. `'captures/fdsdk/953683fb-incremental-b4j4-*'`. The default takes every incremental capture, which is a set only if one commit is under capture; name the tuple explicitly in CI.
+- `--candidate RUN` — a candidate run directory (or snapshot alias). Given one, `baseline` band-compares it against the fetched set and returns that compare's exit code.
+- `-f text|json` / `--format text|json` — the output format.
+- `-n COUNT` / `--count COUNT` — how many of the newest captures to fetch; default 3.
+- `--exclude PATTERN` — drop a capture before the newest N are taken: a run id or a glob over the ref name (`'*-cold-*'`); repeatable. The remedy for a set that differs on `target`, `trace_spine` or `trace_opens`, none of which the ref name carries.
+- `--repo DIR` — the checkout to run the remote queries from; default the working directory.
+- `--band-k K` — passed through to `bga compare --band-k`.
+- `--remote REMOTE` — the remote (name or URL) the captures were published to; default `origin`. Read as `list_capture_refs(args.remote, …)`.
+- `--workdir DIR` — where the fetched run directories are materialised; default a temporary directory removed on exit, so pass it to keep them.
 
 ## How many builders, and what stops you
 

@@ -39,7 +39,6 @@ task file, which is the only place it ever lived twice.
 | UX-1304 | [`bga-jobserver-env` is validated and recorded, and no sandbox ever reads it](UX-1304-bga-jobserver-env-is-validated-and-recorded-and-no-sandbox-ever-reads-it.md) | capture | Medium | R2 | 🔴 Not Started |
 | UX-1305 | [a capture that recorded zero processes has no troubleshooting guide](UX-1305-a-capture-that-recorded-zero-processes-has-no-troubleshooting-guide.md) | docs | Medium | R1 | 🔴 Not Started |
 | UX-1306 | [no guide says the run store grows, or how to prune it](UX-1306-no-guide-says-the-run-store-grows-or-how-to-prune-it.md) | docs | Medium | R1, R5 | 🔴 Not Started |
-| UX-1307 | [about twenty user-facing flags are named by no doc at all](UX-1307-about-twenty-user-facing-flags-are-named-by-no-doc-at-all.md) | docs | Medium | R1, R4, R5 | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

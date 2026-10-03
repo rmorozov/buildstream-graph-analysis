@@ -41,7 +41,9 @@ significance rule of 1%. Judged against the band those three define, the
 same pair is `NO SIGNIFICANT CHANGE` — which is the truth. `bga baseline`
 assembles that set from published refs, refuses one whose captures are
 not comparable (exit 6), and warns when they came from different `bga`
-revisions.
+revisions. `--remote` names the remote (default `origin`) the captures
+were published to, and `--workdir DIR` keeps the fetched run directories
+instead of deleting a temporary one on exit.
 
 **When it exits 6.** The ref name carries `<commit>-<mode>-b<builders>j<max_jobs>`
 and nothing else, so a set differing on `target`, `trace_spine` or

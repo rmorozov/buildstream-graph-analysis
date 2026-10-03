@@ -580,7 +580,7 @@ def create_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--prune",
         action="store_true",
-        help="Delete old snapshots. Needs --keep and/or --older-than.",
+        help="Delete old snapshots. Needs --keep, --older-than and/or --max-store.",
     )
     parser.add_argument(
         "--keep",

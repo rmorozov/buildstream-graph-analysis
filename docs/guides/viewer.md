@@ -77,7 +77,9 @@ The page carries three things a table could not say:
   candidate outside the band but inside the range the baselines
   themselves spanned — took a paragraph in prose and read like a
   paradox; drawn, the marker simply sits between the strip's edge and
-  the dots' extent.
+  the dots' extent. `bga view RUN --compare BASELINE` draws it against
+  `BASELINE` (an alias, stamp prefix or path) instead of the run before
+  `RUN` in the same store.
 - **The store trend.** `--list` made visual. Snapshots that are not
   measurements (failed, interrupted, suspended) are drawn as squares
   rather than dropped — they are on the disk, so they are on the chart.

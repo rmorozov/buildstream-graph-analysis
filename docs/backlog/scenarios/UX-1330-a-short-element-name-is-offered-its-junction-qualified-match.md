@@ -1,6 +1,6 @@
 # UX-1330: `whatif --element pkgs/gcc-libs.bst` is refused without offering the junction-qualified element it means
 
-**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the junction-heavy onboarding walk, 2026-10-03 (`/mnt/project-files/onboarding-walk-2026-10-03/onboarding-walk.md`) | **Serves:** R1 | **Topic:** cli | **Area:** bga | **Shape:** judgement | **Reading:** container
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the junction-heavy onboarding walk, 2026-10-03 (`/mnt/project-files/onboarding-walk-2026-10-03/onboarding-walk.md`) | **Serves:** R1 | **Topic:** cli | **Area:** bga | **Shape:** judgement | **Reading:** container
 
 **Guard:** `tests/unit/test_a_short_element_name_is_offered_its_junction_qualified_match.py`
 
@@ -58,3 +58,7 @@ document tests; the wider blast/whatif-naming sweep stopped at 1 failure, `test_
 | prefix match instead of last component | the longer-name test | 1 failed |
 | `blast` payload key always `[]` | payload-from-fixture test | 1 failed |
 | drop both blast text lines | blast text tests | 2 failed |
+
+### Deviation from the Required Fix
+
+The verifier held it: `did_you_mean` was a required key; made optional and always-written, folded. 8b5a9327 then admits always-written keys in the blast emit guard; the surface is 628. (`1780e288`)

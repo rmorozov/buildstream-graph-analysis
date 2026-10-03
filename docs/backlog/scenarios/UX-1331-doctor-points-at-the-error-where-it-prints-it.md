@@ -1,6 +1,6 @@
 # UX-1331: `doctor` says "read the error below" above the error, and warns about suspend inside a container
 
-**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the junction-heavy onboarding walk, 2026-10-03 (`/mnt/project-files/onboarding-walk-2026-10-03/onboarding-walk.md`) | **Serves:** R1 | **Topic:** capture | **Area:** tools | **Shape:** judgement | **Reading:** container
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the junction-heavy onboarding walk, 2026-10-03 (`/mnt/project-files/onboarding-walk-2026-10-03/onboarding-walk.md`) | **Serves:** R1 | **Topic:** capture | **Area:** tools | **Shape:** judgement | **Reading:** container
 
 **Guard:** `tests/unit/test_doctor.py::TestTheRemedyPointsTheWayTheReportPrints`, `tests/unit/test_a_capture_that_slept.py::TestDoctorSuggestsIt`
 
@@ -55,3 +55,7 @@ container: pid 1 is process_api)"; remedy reads "read the error above".
 | drop the pid-1 test | `test_the_container_env_var_and_a_non_systemd_pid_1_each_count` | 1 failed |
 | drop the `container` env test | same | 1 failed |
 | drop `/.dockerenv` | `test_a_container_marker_file_reports_ok_naming_the_container[/.dockerenv]` | 1 failed |
+
+### Deviation from the Required Fix
+
+The verifier held a container false positive on non-systemd init; fixed with the known inits and cgroup, folded. (`3f7b1eb1`)

@@ -1,6 +1,6 @@
 # UX-1320: Plane 2 keys a junctioned element by its full name, not the short name the shim keeps
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the junction-heavy onboarding walk, 2026-10-03 (`/mnt/project-files/onboarding-walk-2026-10-03/onboarding-walk.md`) | **Serves:** R1, R2 | **Topic:** capture | **Area:** tools | **Shape:** judgement | **Reading:** container
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the junction-heavy onboarding walk, 2026-10-03 (`/mnt/project-files/onboarding-walk-2026-10-03/onboarding-walk.md`) | **Serves:** R1, R2 | **Topic:** capture | **Area:** tools | **Shape:** judgement | **Reading:** container
 
 **Guard:** `tests/unit/test_plane2_keys_a_junctioned_element_by_its_full_name.py`
 
@@ -114,3 +114,7 @@ are exactly the import and the three stacks, which run no sandbox. The walk's 13
 | M7 | a projectless sandbox guessed from its short name | 1 of 10 |
 | M8 | the `bst show` gate always off | 1 of 10 |
 | M9 | the shim never records `project` | 4 of 10 |
+
+### Deviation from the Required Fix
+
+The live join is 12 of 12 traced (16 in Plane 1), not 13: an import and three stacks run no sandbox. Reverses UX-1311's no-collision assertion: any top-vs-junction short name now counts as a collision. Unguarded: the `%{build-deps}` fill in `load_and_summarize` (removing it stays green). Two forced baseline entries (S603, PLR0913); `dev_sizes` growth not adopted. (`753f2907`)

@@ -1,6 +1,6 @@
 # UX-1322: `bga snapshot -- ./build.sh` ends in a Python traceback; a project built through a wrapper cannot be captured
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the junction-heavy onboarding walk, 2026-10-03 (`/mnt/project-files/onboarding-walk-2026-10-03/onboarding-walk.md`) | **Serves:** R1 | **Topic:** capture | **Area:** tools | **Shape:** judgement | **Reading:** container
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the junction-heavy onboarding walk, 2026-10-03 (`/mnt/project-files/onboarding-walk-2026-10-03/onboarding-walk.md`) | **Serves:** R1 | **Topic:** capture | **Area:** tools | **Shape:** judgement | **Reading:** container
 
 **Guard:** `tests/unit/test_a_build_run_through_a_wrapper_script_is_captured.py`
 
@@ -89,3 +89,7 @@ pre-build `bst show` reads need the inner argv). The guard: 8 passed.
 
 The closing `measure-again` hint repeats the wrapper the snapshot ran (`bga snapshot -- ./build.sh
 groups/all.bst`), read from `capture-context.txt`; a `bst` command keeps `bst build TARGETS`.
+
+### Deviation from the Required Fix
+
+Wrapper plus `--jobserver` is refused; a wrapper that builds nothing exits 2; an absolute-path `bst` is a refusal. The post-build inner-argv swap was unguarded in the track and guarded in the fixup. `quality_baseline` S603/S606 entries were forced. `test_the_verification_log_is_true` also fails at base 44afd957. (`12a06696`)

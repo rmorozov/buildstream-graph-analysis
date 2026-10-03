@@ -1,6 +1,6 @@
 # UX-1323: `compare` calls two incremental runs that rebuilt different elements IMPROVED, and the cold-then-incremental refusal names no next step
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the junction-heavy onboarding walk, 2026-10-03 (`/mnt/project-files/onboarding-walk-2026-10-03/onboarding-walk.md`) | **Serves:** R1, R4 | **Topic:** analysis | **Area:** bga | **Shape:** judgement | **Reading:** container
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the junction-heavy onboarding walk, 2026-10-03 (`/mnt/project-files/onboarding-walk-2026-10-03/onboarding-walk.md`) | **Serves:** R1, R4 | **Topic:** analysis | **Area:** bga | **Shape:** judgement | **Reading:** container
 
 **Guard:** `tests/unit/test_a_comparison_of_different_work_is_not_a_verdict.py`
 
@@ -82,3 +82,7 @@ Verdict: DIFFERENT WORK
 | duration gate returns False on different_work | `--fail-on-regression` exits 4; band gate | 2 failed, 7 passed |
 
 Reverted from copies; 9 passed.
+
+### Deviation from the Required Fix
+
+Page budget had 33 B headroom, so the viewer label/class entries for `different_work` were dropped. The gates still read the total delta (documented). The verifier held the merge until the guard gap closed (abs-delta fixture, fail-on-regression pin). (`dd435c5c`)

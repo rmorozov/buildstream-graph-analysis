@@ -1,6 +1,6 @@
 # UX-1321: `bga blast` on a junction, or a path inside a junctioned project, says it rebuilds nothing
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the junction-heavy onboarding walk, 2026-10-03 (`/mnt/project-files/onboarding-walk-2026-10-03/onboarding-walk.md`) | **Serves:** R2, R3 | **Topic:** analysis | **Area:** bga | **Shape:** judgement | **Reading:** container
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the junction-heavy onboarding walk, 2026-10-03 (`/mnt/project-files/onboarding-walk-2026-10-03/onboarding-walk.md`) | **Serves:** R2, R3 | **Topic:** analysis | **Area:** bga | **Shape:** judgement | **Reading:** container
 
 **Guard:** `tests/unit/test_blast_prices_a_junction_bump.py`
 
@@ -99,3 +99,7 @@ gives 16 of 16. The 13 is the base path's figure, which the key diff confirms.
 | A | `startswith(name + ":")` → `startswith(name)`, against the sibling `junctions/platform.bst-extra.bst` (verifier) | 2 failed, 6 passed |
 
 Restored: 8 passed.
+
+### Deviation from the Required Fix
+
+The junction itself reads 16 of 16, not the walk's 13: every top element build-depends on base's toolchain. The base path reads 13 (bst full-key moves, 13 of 16); the walk's 11 was wrong. A local junction's figure is an upper bound ("at most"). An element file path is read as that element, beyond the brief. (`27ba451a`)

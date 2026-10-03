@@ -1,6 +1,6 @@
 # UX-1329: The README's real-project install line installs the user's project, and `bga --help` buries doctor, snapshot and view
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the junction-heavy onboarding walk, 2026-10-03 (`/mnt/project-files/onboarding-walk-2026-10-03/onboarding-walk.md`) | **Serves:** R1 | **Topic:** docs | **Area:** bga | **Shape:** judgement | **Reading:** container
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the junction-heavy onboarding walk, 2026-10-03 (`/mnt/project-files/onboarding-walk-2026-10-03/onboarding-walk.md`) | **Serves:** R1 | **Topic:** docs | **Area:** bga | **Shape:** judgement | **Reading:** container
 
 **Guard:** `tests/unit/test_the_first_commands_are_the_first_thing_help_shows.py`
 
@@ -65,3 +65,7 @@ block beside `release-notes`; README line 101 `pip install -e ".[bst]"` (also li
 | description without the block | order + opens-first | 2 failed |
 | README back to `pip install -e ".[bst]"` | install-line + no-`-e` | 2 failed |
 | README without the `[bst]` extra | install-line test | 1 failed |
+
+### Deviation from the Required Fix
+
+`release-notes` sits under a "maintainer tools" heading; the help cap 51 -> 57. The commit also carries lint fixes for UX-1330 and UX-1331's files. (`564b2f37`)

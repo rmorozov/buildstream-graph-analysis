@@ -1,6 +1,6 @@
 # UX-1325: `bga cache-logs PROJECT` reads only the top project's logs and says nothing about the junctioned projects beside them
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the junction-heavy onboarding walk, 2026-10-03 (`/mnt/project-files/onboarding-walk-2026-10-03/onboarding-walk.md`) | **Serves:** R1, R3 | **Topic:** analysis | **Area:** tools | **Shape:** judgement | **Reading:** container
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the junction-heavy onboarding walk, 2026-10-03 (`/mnt/project-files/onboarding-walk-2026-10-03/onboarding-walk.md`) | **Serves:** R1, R3 | **Topic:** analysis | **Area:** tools | **Shape:** judgement | **Reading:** container
 
 **Guard:** `tests/unit/test_cache_logs_reads_every_junctioned_project.py`
 
@@ -84,3 +84,7 @@ during the session because other tracks were building.
 | `--project` walks junctions too | `--project` reads one project | 1 failed, 3 passed |
 
 Reverted from the copy: 4 passed.
+
+### Deviation from the Required Fix
+
+The phase table shows 12 of 13 building elements: `toolchain.bst` import builds in 0 s and `phase_breakdown` skips zero-duration. The "seen" dedupe clause is unguarded (no diamond fixture). (`abe0daea`)

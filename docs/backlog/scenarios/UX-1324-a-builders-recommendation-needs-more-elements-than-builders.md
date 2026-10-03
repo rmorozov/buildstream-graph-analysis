@@ -1,6 +1,6 @@
 # UX-1324: A run that rebuilt one element recommends `--builders 1` because memory binds, while saying memory fits 15.7 GB
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the junction-heavy onboarding walk, 2026-10-03 (`/mnt/project-files/onboarding-walk-2026-10-03/onboarding-walk.md`) | **Serves:** R1, R5 | **Topic:** analysis | **Area:** bga | **Shape:** judgement | **Reading:** container
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the junction-heavy onboarding walk, 2026-10-03 (`/mnt/project-files/onboarding-walk-2026-10-03/onboarding-walk.md`) | **Serves:** R1, R5 | **Topic:** analysis | **Area:** bga | **Shape:** judgement | **Reading:** container
 
 **Guard:** `tests/unit/test_a_builders_recommendation_needs_more_elements_than_builders.py`
 
@@ -67,3 +67,7 @@ line does; a guard over a fixture with one built element asserts it. Reading tak
 | finding ignores `withheld` | text, json | 2 failed, 3 passed |
 
 Reverted from copies; 5 passed.
+
+### Deviation from the Required Fix
+
+Rule: `built_elements < builders` withholds the recommendation; no count withholds nothing. The merged tree reddened `test_no_schema_description_names_a_key` on `withheld`'s prose; reworded in a fixup, autosquashed. (`793c3f02`)

@@ -36,18 +36,6 @@ task file, which is the only place it ever lived twice.
 | UX-1284 | [a link step that peaks above every compile before it is reserved at the compile's size](UX-1284-a-late-memory-peak-is-under-reserved.md) | capture | Medium | R4, R5 | 🔴 Not Started |
 | UX-1309 | [`--prune` deletes a snapshot whose capture is still running](UX-1309-prune-deletes-a-snapshot-whose-capture-is-still-running.md) | capture | Medium | R1, R5 | 🔴 Not Started |
 | UX-1310 | [the decision log says which auth style each element was forced to, and by which switch](UX-1310-the-decision-log-says-which-auth-style-each-element-was-forced-to-and-why.md) | capture | High | R1, R2 | 🔴 Not Started |
-| UX-1320 | [Plane 2 keys a junctioned element by its full name, not the short name the shim keeps](UX-1320-plane-2-keys-a-junctioned-element-by-its-full-name.md) | capture | High | R1, R2 | 🔴 Not Started |
-| UX-1321 | [`bga blast` on a junction, or a path inside a junctioned project, says it rebuilds nothing](UX-1321-blast-prices-a-junction-bump.md) | analysis | High | R2, R3 | 🔴 Not Started |
-| UX-1322 | [`bga snapshot -- ./build.sh` ends in a Python traceback; a project built through a wrapper cannot be captured](UX-1322-a-build-run-through-a-wrapper-script-is-captured.md) | capture | High | R1 | 🔴 Not Started |
-| UX-1323 | [`compare` calls two incremental runs that rebuilt different elements IMPROVED, and the cold-then-incremental refusal names no next step](UX-1323-a-comparison-of-different-work-is-not-a-verdict.md) | analysis | High | R1, R4 | 🔴 Not Started |
-| UX-1324 | [A run that rebuilt one element recommends `--builders 1` because memory binds, while saying memory fits 15.7 GB](UX-1324-a-builders-recommendation-needs-more-elements-than-builders.md) | analysis | High | R1, R5 | 🔴 Not Started |
-| UX-1325 | [`bga cache-logs PROJECT` reads only the top project's logs and says nothing about the junctioned projects beside them](UX-1325-cache-logs-reads-every-project-a-junction-brings-in.md) | analysis | High | R1, R3 | 🔴 Not Started |
-| UX-1326 | [`bga blast --no-cost` refuses without a snapshot, though `bst show` holds everything it needs](UX-1326-the-structural-questions-answer-before-the-first-capture.md) | analysis | Medium | R1, R3 | 🔴 Not Started |
-| UX-1327 | [No report section answers which junction's elements cost the most, and `junction-cost` is about variants](UX-1327-a-run-rolls-up-by-junction.md) | analysis | Medium | R3, R5 | 🔴 Not Started |
-| UX-1328 | [`bga doctor` warns every project whose toolchain arrives through a junction to run bga's own example scripts](UX-1328-doctor-counts-what-junctions-stage.md) | capture | Medium | R1 | 🔴 Not Started |
-| UX-1329 | [The README's real-project install line installs the user's project, and `bga --help` buries doctor, snapshot and view](UX-1329-the-first-commands-are-the-first-thing-help-shows.md) | docs | Medium | R1 | 🔴 Not Started |
-| UX-1330 | [`whatif --element pkgs/gcc-libs.bst` is refused without offering the junction-qualified element it means](UX-1330-a-short-element-name-is-offered-its-junction-qualified-match.md) | cli | Low | R1 | 🔴 Not Started |
-| UX-1331 | [`doctor` says "read the error below" above the error, and warns about suspend inside a container](UX-1331-doctor-points-at-the-error-where-it-prints-it.md) | capture | Low | R1 | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

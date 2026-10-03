@@ -1,6 +1,6 @@
 # UX-1327: No report section answers which junction's elements cost the most, and `junction-cost` is about variants
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the junction-heavy onboarding walk, 2026-10-03 (`/mnt/project-files/onboarding-walk-2026-10-03/onboarding-walk.md`) | **Serves:** R3, R5 | **Topic:** analysis | **Area:** bga | **Shape:** judgement | **Reading:** container
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the junction-heavy onboarding walk, 2026-10-03 (`/mnt/project-files/onboarding-walk-2026-10-03/onboarding-walk.md`) | **Serves:** R3, R5 | **Topic:** analysis | **Area:** bga | **Shape:** judgement | **Reading:** container
 
 **Guard:** `tests/unit/test_a_run_rolls_up_by_junction.py` over the committed capture `tests/fixtures/nested_junctions/run`
 
@@ -88,3 +88,6 @@ nested base (66.7%). `variant-cost` is the name; `junction-cost` dispatches and 
 | `junction-cost` alias dropped | 1 failed, 7 passed | alias |
 | section on an unjunctioned run | 1 failed, 7 passed | unjunctioned |
 
+### Deviation from the Required Fix
+
+`variant-cost` is the command and `junction-cost` its alias. Totals read 5/5/6, not 4/5/6. The verifier held on 3 doc/schema reds and the fixup found 5 more (key-path prose, Part 32.4, reader map R3, CHANGELOG Unreleased, Verification Log); squashed into one commit. The contracts surface is 635 keys with UX-1330's `did_you_mean`. (`7ac2d5b6`)

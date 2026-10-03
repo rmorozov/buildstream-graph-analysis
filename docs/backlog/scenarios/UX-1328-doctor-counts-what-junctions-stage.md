@@ -1,6 +1,6 @@
 # UX-1328: `bga doctor` warns every project whose toolchain arrives through a junction to run bga's own example scripts
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the junction-heavy onboarding walk, 2026-10-03 (`/mnt/project-files/onboarding-walk-2026-10-03/onboarding-walk.md`) | **Serves:** R1 | **Topic:** capture | **Area:** tools | **Shape:** judgement | **Reading:** container
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the junction-heavy onboarding walk, 2026-10-03 (`/mnt/project-files/onboarding-walk-2026-10-03/onboarding-walk.md`) | **Serves:** R1 | **Topic:** capture | **Area:** tools | **Shape:** judgement | **Reading:** container
 
 **Guard:** `tests/unit/test_doctor.py::TestTheCensusChecksAreTwoDifferentThings`
 
@@ -57,3 +57,7 @@ Bare project outside `examples/` still warns, with a remedy that names no bga sc
 | junction kind never matched | junction test | 1 failed |
 | non-local source never matched | remote-source test | 1 failed |
 | `if unseen:` never taken | junction + remote tests | 2 failed |
+
+### Deviation from the Required Fix
+
+None beyond the group: the verifier passed it. (`1bad70d2`)

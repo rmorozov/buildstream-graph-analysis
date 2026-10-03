@@ -1,6 +1,6 @@
 # UX-1326: `bga blast --no-cost` refuses without a snapshot, though `bst show` holds everything it needs
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the junction-heavy onboarding walk, 2026-10-03 (`/mnt/project-files/onboarding-walk-2026-10-03/onboarding-walk.md`) | **Serves:** R1, R3 | **Topic:** analysis | **Area:** bga | **Shape:** judgement | **Reading:** container
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the junction-heavy onboarding walk, 2026-10-03 (`/mnt/project-files/onboarding-walk-2026-10-03/onboarding-walk.md`) | **Serves:** R1, R3 | **Topic:** analysis | **Area:** bga | **Shape:** judgement | **Reading:** container
 
 **Guard:** `tests/unit/test_blast_answers_before_the_first_capture.py`
 
@@ -93,3 +93,7 @@ default is BuildStream's own, every element, and `bst show` with no target fails
 | E | `no_snapshot` ignores `list_runs`, against a snapshot present (verifier) | 1 failed, 6 passed |
 
 Restored: 7 passed.
+
+### Deviation from the Required Fix
+
+carbon without `--target` does not answer: no `defaults: targets`, and bare `bst show` fails on pkgs/mozjs.bst, so bga prints bst's error and "Pass --target" rather than invent a target. `--target ELEMENT` is a new, undeclared option. The UX-1321 wording and the C901 split landed in this commit. (`cb6c7f71`)

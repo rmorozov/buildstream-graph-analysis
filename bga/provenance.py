@@ -41,6 +41,7 @@ from typing import Any, Optional
 
 from . import correlate as _correlate
 from . import findings as _findings
+from . import junction_rollup as _junction_rollup
 from . import schemas as _schemas
 from . import shown as qty
 from .cache_effectiveness import HEALTHY_HIT_RATIO, POOR_HIT_RATIO, TRANSFER_SHARE_NOTABLE
@@ -600,6 +601,20 @@ _CLAIMS = {
     "cache-hit-ratio": (
         ("cache.hit_share", "cache.built_elements", "cache.cached_elements", "confidence.run_mode"),
         _cache_hit_rule,
+        (),
+    ),
+    # `UX-1327`: the gap is computed, not published, so the rule names no observed path.
+    "junction-cache-gap": (
+        ("by_junction.rows",),
+        _rule(
+            "HIT_SHARE_GAP",
+            float(_junction_rollup.HIT_SHARE_GAP),
+            ">=",
+            None,
+            f"Published on an incremental run when a junction of {_junction_rollup.MIN_ELEMENTS} elements or more "
+            f"sits {round(_junction_rollup.HIT_SHARE_GAP * 100)} points or more below the top project's hit share.",
+            module="bga/junction_rollup.py",
+        ),
         (),
     ),
     # `UX-896`: two claims under one id, and both fire on a recorded

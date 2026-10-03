@@ -703,6 +703,53 @@ def _render_resource_blast_section(result: AnalysisResult, section, by_kind, ful
     return lines
 
 
+_JUNCTION_NAME_WIDTH = 48
+
+
+def _format_by_junction(result) -> list[str]:
+    """UX-1327: per junction prefix, what built, what was cached, what held the path, what a bump rebuilds."""
+    block = getattr(result, 'by_junction', None) or {}
+    rows = block.get('rows') or []
+    if not rows:
+        return []
+    width = min(_JUNCTION_NAME_WIDTH, max(len("  " * row['depth'] + row['name']) for row in rows))
+    width = max(width, len("project / junction"))
+    total = block.get('graph_elements') or 0
+    lines = ["By Junction:", ""]
+    lines.append(
+        f"  {'project / junction':<{width}}{'elements':>9}{'build+asm':>10}{'built':>7}{'cached':>7}"
+        f"{'build':>9}{'on path':>9}{'of path':>8}{'bump':>8}"
+    )
+    for row in rows:
+        name = "  " * row['depth'] + row['name']
+        bump = "-" if row['bump_blast_elements'] is None else f"{row['bump_blast_elements']}/{total}"
+        numbers = (
+            f"{row['elements']:>9}{str(row['building']) + '+' + str(row['assembling']):>10}"
+            f"{row['built']:>7}{row['cached']:>7}{qty.duration(row['build_us']):>9}"
+            f"{qty.duration(row['critical_path_us']):>9}{qty.share(row['critical_path_share']):>8}{bump:>8}"
+        )
+        if len(name) > width:
+            lines.append(f"  {name}")
+            lines.append(f"  {'':<{width}}{numbers}")
+        else:
+            lines.append(f"  {name:<{width}}{numbers}")
+    lines.extend(
+        [
+            "",
+            "  Each element counts under its deepest junction prefix. Built ran a BUILD task in this run;",
+            "  cached did not. Build is those tasks' summed time - work, not wall clock. Bump is what",
+            "  bumping that junction rebuilds: every element behind it, nested ones too, and all downstream.",
+            "",
+        ]
+    )
+    return lines
+
+
+def _render_by_junction_section(result: AnalysisResult, section, by_kind, full_sections, explain) -> list[str]:
+    """UX-1327: with the shared sources, a grouping of the graph read against this run."""
+    return _format_by_junction(result) if section in (None, 'graph') else []
+
+
 def _render_floors_section(result: AnalysisResult, section, by_kind, full_sections, explain) -> list[str]:
     """Certified Floors (Parts 14-17)."""
     lines = []
@@ -1340,6 +1387,7 @@ def _render_footer_section(result: AnalysisResult, section, by_kind, full_sectio
 _render_header_section.heading = "Build Efficiency Report"
 _render_key_findings_section.heading = "Key Findings:"
 _render_resource_blast_section.heading = "Shared Sources (blast radius by resource):"
+_render_by_junction_section.heading = "By Junction:"
 _render_floors_section.heading = "Certified Floors:"
 _render_attribution_section.heading = "Attribution Breakdown:"
 _render_replay_section.heading = "Replay:"
@@ -1360,6 +1408,7 @@ _TEXT_REPORT_SECTIONS = [
     _render_header_section,
     _render_key_findings_section,
     _render_resource_blast_section,
+    _render_by_junction_section,
     _render_floors_section,
     _render_attribution_section,
     _render_replay_section,

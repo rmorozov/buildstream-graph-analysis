@@ -1740,7 +1740,7 @@ def cmd_whatif(args: argparse.Namespace) -> int:
 
 
 def cmd_junction_cost(args: argparse.Namespace) -> int:
-    """Execute `bga junction-cost RUN RUN [RUN...]` (UX-904): N variant builds against one junctioned invocation.
+    """Execute `bga variant-cost RUN RUN [RUN...]`, alias `junction-cost` (UX-904): N variants or one invocation.
 
     A question, not a gate: a refusal is the answer, so it exits 0.
     """
@@ -2291,6 +2291,17 @@ class _UsageErrorParser(argparse.ArgumentParser):
         self.exit(EXIT_GENERAL, f"{self.prog}: error: {message}\n")
 
 
+class _CommandListHelp(argparse.RawDescriptionHelpFormatter):
+    """argparse measures a command name one indent short of where it prints it; measure it where it prints."""
+
+    def add_argument(self, action):
+        super().add_argument(action)
+        if action.help is not argparse.SUPPRESS:
+            for sub in self._iter_indented_subactions(action):
+                width = len(self._format_action_invocation(sub)) + self._current_indent
+                self._action_max_length = max(self._action_max_length, width)
+
+
 class _CompactSubParser(_UsageErrorParser):
     """A subparser that inherits the compact help layout without every
     `add_parser` call having to remember to pass it (`UX-158`)."""
@@ -2677,30 +2688,34 @@ def _add_whatif_subcommand(subparsers) -> None:
 
 
 def _add_junction_cost_subcommand(subparsers) -> None:
-    junction_parser = subparsers.add_parser(
-        'junction-cost',
-        help="N variant builds, or one junctioned invocation?",
-        description='Price N separate builds of one type under different '
-        'variants against one junctioned invocation: elements shared by '
-        'cache key, the pipeline paid N times, the union floor and a '
-        'lower bound on one invocation. A projection with its assumptions '
-        'stated; refusals are answers, so it always exits 0.',
-    )
-    junction_parser.add_argument('run_dirs', nargs='+', metavar='RUN', help='A run of one variant. Two or more.')
-    junction_parser.add_argument(
-        '-f',
-        '--format',
-        choices=['text', 'json'],
-        default='text',
-        help='Output format: text (human-readable), json (machine-readable).',
-    )
-    junction_parser.add_argument(
-        '-o',
-        '--output',
-        default=None,
-        help='Write output to PATH instead of stdout.',
-    )
-    junction_parser.set_defaults(func=cmd_junction_cost)
+    # UX-1327: `variant-cost` is the name; `junction-cost`, its old one, is an alias kept out of the listing.
+    for name, listed in (('variant-cost', True), ('junction-cost', False)):
+        help_kwargs = {'help': "N variants or one junctioned invocation? (was junction-cost)"} if listed else {}
+        junction_parser = subparsers.add_parser(
+            name,
+            description=('' if listed else 'An alias of `bga variant-cost`, its old name. ')
+            + 'Price N separate builds of one type under different '
+            'variants against one junctioned invocation: elements shared by '
+            'cache key, the pipeline paid N times, the union floor and a '
+            'lower bound on one invocation. A projection with its assumptions '
+            'stated; refusals are answers, so it always exits 0.',
+            **help_kwargs,
+        )
+        junction_parser.add_argument('run_dirs', nargs='+', metavar='RUN', help='A run of one variant. Two or more.')
+        junction_parser.add_argument(
+            '-f',
+            '--format',
+            choices=['text', 'json'],
+            default='text',
+            help='Output format: text (human-readable), json (machine-readable).',
+        )
+        junction_parser.add_argument(
+            '-o',
+            '--output',
+            default=None,
+            help='Write output to PATH instead of stdout.',
+        )
+        junction_parser.set_defaults(func=cmd_junction_cost)
 
 
 def _add_cache_trend_subcommand(subparsers) -> None:
@@ -2979,7 +2994,7 @@ def create_parser() -> argparse.ArgumentParser:
             # every tool to build the parser - on every `bga analyze`.
             _tool_help() + "\n\nSee docs/guides/cli.md for detailed usage examples and workflows."
         ),
-        formatter_class=argparse.RawDescriptionHelpFormatter,
+        formatter_class=_CommandListHelp,
     )
 
     parser.add_argument(
@@ -3062,6 +3077,7 @@ _SCHEMA_BY_COMMAND = {
     # which is why the guard over this table is structural now rather
     # than a second list somebody has to remember.
     "whatif": schemas.WHATIF,
+    "variant-cost": schemas.JUNCTION_COST,
     "junction-cost": schemas.JUNCTION_COST,
     # UX-339: and the capacity sweep, which is `R5`'s command and was
     # the one printed document a consumer could not version-check.

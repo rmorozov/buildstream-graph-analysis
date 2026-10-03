@@ -559,6 +559,69 @@ def a_build_that_pulls(
     return run_context, graph, trace
 
 
+def nested_junctions(build_us: int = 1_000_000, pull_us: int = 100_000) -> Topology:
+    """T8 (`UX-1327`): an incremental run across two nested junctions.
+
+    Top project 1 of 5 built, `junctions/platform.bst` 5 of 5, its nested
+    `junctions/base.bst` 2 of 6: platform sits 80 points below the top
+    project's hit share and fires `junction-cache-gap`; base, 13 points
+    below, does not. Serial, so every duration is its own.
+    """
+    plat = "junctions/platform.bst"
+    base = f"{plat}:junctions/base.bst"
+    rows = [
+        (f"{base}:toolchain.bst", "import", True),
+        (f"{base}:pkgs/a.bst", "cmake", True),
+        (f"{base}:pkgs/b.bst", "cmake", True),
+        (f"{base}:pkgs/c.bst", "cmake", True),
+        (f"{base}:pkgs/d.bst", "cmake", False),
+        (f"{base}:base.bst", "stack", False),
+        (f"{plat}:pkgs/e.bst", "cmake", False),
+        (f"{plat}:pkgs/f.bst", "cmake", False),
+        (f"{plat}:pkgs/g.bst", "cmake", False),
+        (f"{plat}:pkgs/h.bst", "cmake", False),
+        (f"{plat}:platform.bst", "stack", False),
+        ("apps/one.bst", "cmake", True),
+        ("apps/two.bst", "cmake", True),
+        ("apps/three.bst", "cmake", True),
+        ("apps/four.bst", "cmake", False),
+        ("groups/all.bst", "stack", True),
+    ]
+    edges = [
+        (f"{base}:toolchain.bst", f"{base}:pkgs/a.bst"),
+        (f"{base}:pkgs/a.bst", f"{base}:pkgs/b.bst"),
+        (f"{base}:pkgs/b.bst", f"{base}:base.bst"),
+        (f"{base}:pkgs/c.bst", f"{base}:base.bst"),
+        (f"{base}:pkgs/d.bst", f"{base}:base.bst"),
+        (f"{base}:base.bst", f"{plat}:pkgs/e.bst"),
+        (f"{plat}:pkgs/e.bst", f"{plat}:pkgs/f.bst"),
+        (f"{plat}:pkgs/f.bst", f"{plat}:platform.bst"),
+        (f"{plat}:pkgs/g.bst", f"{plat}:platform.bst"),
+        (f"{plat}:pkgs/h.bst", f"{plat}:platform.bst"),
+        (f"{plat}:platform.bst", "apps/four.bst"),
+        ("apps/one.bst", "groups/all.bst"),
+        ("apps/two.bst", "groups/all.bst"),
+        ("apps/three.bst", "groups/all.bst"),
+        ("apps/four.bst", "groups/all.bst"),
+    ]
+    els = [
+        dict(_element(uid, cache_key=f"k{i}", requested_target=(uid == "groups/all.bst")), element_kind=kind)
+        for i, (uid, kind, _cached) in enumerate(rows)
+    ]
+    spans, t = [], 0
+    for uid, _kind, cached in rows:
+        if cached:
+            spans.append(_span(uid, t, pull_us, kind="PULL", phase="PULL", resources=("DOWNLOAD",)))
+            t += pull_us
+        else:
+            spans.append(_span(uid, t, build_us))
+            t += build_us
+    run_context, graph, trace = _build(els, [_dependency(a, b) for a, b in edges], spans, wall_end_us=t, max_jobs=1)
+    built = sum(1 for _uid, _kind, cached in rows if not cached)
+    run_context["queue_summary"] = {"build": {"processed": built, "skipped": len(rows) - built, "failed": 0}}
+    return run_context, graph, trace
+
+
 # --- Helpers for tests that consume the above ---
 
 
@@ -718,6 +781,7 @@ COVERING_SET = {
     "ample_capacity": (ample_capacity, None),
     "a_build_that_pulls": (a_build_that_pulls, None),
     "a_chain_beside_a_crowd": (a_chain_beside_a_crowd, None),
+    "nested_junctions": (nested_junctions, None),
 }
 
 

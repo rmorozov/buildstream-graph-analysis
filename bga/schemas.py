@@ -390,6 +390,8 @@ _ANALYZE_OPTIONAL = {
     # published one only when it matches. An addition, so no bump.
     "fingerprint": "object",
     "resource_blast": "object",
+    # UX-1327: the run by junction prefix - an addition, so `analyze/v7` does not bump.
+    "by_junction": "object",
     # UX-193 found these two by serving a *real* capture: both are
     # present on every run with Plane 1 wrapper data, and absent from
     # `tests/fixtures/golden/`, so UX-190's round-trip guard - which
@@ -1688,6 +1690,7 @@ _EVIDENCE_FIELDS = {
         "Makespan against the certified floor. Measured against a bound this run proved, never against an ideal build.",
     ),
     "hit_share": ("share", "Cache hits as a share of lookups."),
+    "top_hit_share": ("share", "The top project's own elements restored over its elements, beside a junction's."),
     "largest_wait_share": ("share", "The biggest single wait category, as a share of wall-clock."),
     "primary": ("share", "How much of this run's own record supports the conclusion."),
     "share": ("share", "This finding's quantity as a share of the run's wall-clock."),
@@ -3578,6 +3581,63 @@ _ANALYZE_HINTS = {
                 "description": "One row per resource more than one element sources.",
             },
             "element_count": _BLAST_COUNTS["element_count"],
+        },
+    },
+    "by_junction": {
+        QUESTION: 'Which junction built, held the path, or rebuilds most when bumped?',
+        RAIL: 'investigate',
+        "description": "This run rolled up by junction prefix — everything before the last `:` of an element's "
+        "full name. Each element counts under its deepest prefix; every ancestor prefix is a row. Absent when "
+        "no element is junctioned.",
+        "properties": {
+            "graph_elements": {
+                QUANTITY: "count",
+                "description": "Elements in this run's graph, every project together.",
+            },
+            "critical_path_us": {
+                QUANTITY: "duration_us",
+                "description": "The critical path's summed element durations, the rows' denominator.",
+            },
+            "rows": {
+                GROWS: "junction prefixes in the graph (one per level, no cap)",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "prefix": {"description": "The junction prefix; empty for the top project."},
+                        "name": {
+                            "description": "The prefix, or for the top project the `name:` of the "
+                            "`project.conf` enclosing the run directory, else `(top project)`."
+                        },
+                        "depth": {QUANTITY: "count", "description": "Junction levels below the top project."},
+                        "elements": {QUANTITY: "count", "description": "Elements whose deepest prefix this is."},
+                        "building": {QUANTITY: "count", "description": "Of those, kinds that run build commands."},
+                        "assembling": {
+                            QUANTITY: "count",
+                            "description": "Of those, kinds that assemble (stack, import, filter, junction, "
+                            "compose, link).",
+                        },
+                        "built": {QUANTITY: "count", "description": "Of those, elements with a BUILD task here."},
+                        "cached": {QUANTITY: "count", "description": "Of those, elements with no BUILD task here."},
+                        "build_us": {
+                            QUANTITY: "duration_us",
+                            "description": "Their BUILD tasks' summed durations: work, not wall clock.",
+                        },
+                        "critical_path_us": {
+                            QUANTITY: "duration_us",
+                            "description": "Their durations on the critical path.",
+                        },
+                        "critical_path_share": {
+                            QUANTITY: "share",
+                            "description": "This row's seconds on the critical path over the whole path's; null on a run with no path.",
+                        },
+                        "bump_blast_elements": {
+                            QUANTITY: "count",
+                            "description": "What bumping this junction rebuilds: every element behind the "
+                            "prefix, nested ones too, and their downstream closure. Null for the top project.",
+                        },
+                    },
+                },
+            },
         },
     },
     "utilization_envelope": {
@@ -5774,6 +5834,8 @@ _SECTION_READERS = {
     "latent_heavies": ("R2",),
     "optimization_horizon": ("R1",),
     "resource_blast": ("R2",),
+    # `UX-1327`: `junction-cache-gap` cites `by_junction.rows`.
+    "by_junction": ("R3",),
     "violations": ("R1",),
 }
 for _key, _roles in _SECTION_READERS.items():

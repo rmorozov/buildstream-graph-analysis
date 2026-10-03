@@ -116,7 +116,7 @@ is what the chain becomes. Re-run `bga whatif @last --element A` against
 `--element A --element B` and keep the pair only if the second number
 exceeds the first.
 
-## 4. Several variants: `bga junction-cost`
+## 4. Several variants: `bga variant-cost`
 
 N builds of one project under different variants, priced against one
 junctioned invocation. Two elements are one only when their cache keys
@@ -128,11 +128,12 @@ variants share fewer. Each run line ends `(not declared)`: that is the
 run's build type, which you declare when extracting
 (`bga extract ... --build-type night --variant arch=aarch64`) so that
 runs of different types are refused rather than joined (`UX-898`).
-On your own runs, name the N store runs: `bga junction-cost @prev @last`
-(or any two or more stamp prefixes or run directories).
+On your own runs, name the N store runs: `bga variant-cost @prev @last`
+(or any two or more stamp prefixes or run directories). `junction-cost`,
+its old name, still works.
 
 ```console
-$ bga junction-cost tests/fixtures/macro_micro/run tests/fixtures/with_timeline/run
+$ bga variant-cost tests/fixtures/macro_micro/run tests/fixtures/with_timeline/run
 N separate invocations against one junctioned build: 2 runs
   054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec: (not declared), 11/11 keyed
 [... elided: the second run, the same line ...]

@@ -35,8 +35,8 @@ import os
 import statistics
 from typing import Optional
 
+from . import junction_rollup, sweep_curve
 from . import shown as qty
-from . import sweep_curve
 from .cache_effectiveness import (
     HEALTHY_HIT_RATIO,
     POOR_HIT_RATIO,
@@ -122,6 +122,8 @@ FINDING_READERS = {
     "confidence": "ci-gatekeeper",
     "efficiency-score": "ci-gatekeeper",
     "cache-hit-ratio": "ci-gatekeeper",
+    # UX-1327: which project a junction brings in rebuilt is the graph owner's question.
+    "junction-cache-gap": "graph-owner",
     "run-mode-incremental": "ci-gatekeeper",
     # R5 - the fleet.
     "memory-envelope": "capacity-operator",
@@ -423,6 +425,52 @@ def _run_command(result, *argv: str) -> Optional[list[str]]:
     """`bga <argv> <run>`, naming the run as `compute_next_steps` does; None without a run path."""
     run_dir = ((getattr(result, 'run_instance', None) or {}).get('run_dir') or '').strip()
     return ['bga', *argv, run_token(run_dir)] if run_dir else None
+
+
+def _junction_cache_findings(result: AnalysisResult) -> list[dict]:
+    """UX-1327: one finding when a junction's elements were reused far less than the top project's."""
+    if (result.confidence or {}).get('run_mode') != 'incremental':
+        return []
+    gaps = junction_rollup.cache_gaps(getattr(result, 'by_junction', None))
+    if not gaps:
+        return []
+    worst = gaps[0]
+    row = worst['row']
+    tail = row['prefix'].rpartition(':')[2]
+    against = f"against {qty.share(worst['top_hit_share'])} in the top project"
+    title = f"{qty.share(worst['hit_share'])} cache hits behind {tail} {against}"
+    if len(title) > 100:
+        title = f"{qty.share(worst['hit_share'])} cache hits behind one junction {against}"
+    gap_points = round(junction_rollup.HIT_SHARE_GAP * 100)
+    detail = [
+        f"    {gap['row']['prefix']}: {gap['row']['built']} of {gap['row']['elements']} elements built here, "
+        f"{qty.share(gap['hit_share'])} cached"
+        for gap in gaps
+    ]
+    detail.append(
+        f"    Published at {gap_points} points or more below the top project, over "
+        f"{junction_rollup.MIN_ELEMENTS} elements or more, on an incremental run"
+    )
+    return [
+        _finding(
+            'junction-cache-gap',
+            SEVERITY_MEDIUM,
+            title,
+            detail=detail,
+            evidence={
+                'prefix': row['prefix'],
+                'hit_share': worst['hit_share'],
+                'top_hit_share': worst['top_hit_share'],
+                'element_count': row['elements'],
+                'built_elements': row['built'],
+                'cached_elements': row['cached'],
+            },
+            step=_step(
+                f"Check what moved the cache keys behind {row['prefix']}: its ref, its options, "
+                f"or a cache server the top project reaches and it does not."
+            ),
+        )
+    ]
 
 
 def _cache_findings(result: AnalysisResult) -> list[dict]:
@@ -832,6 +880,8 @@ def _run_context_findings(result: AnalysisResult) -> list[dict]:
     # An incremental run's whole point is the cache, and until now the
     # report said "incremental" without ever saying how well that went.
     findings.extend(_cache_findings(result))
+    # UX-1327: beside the project-wide ratio it splits by junction.
+    findings.extend(_junction_cache_findings(result))
 
     primary = confidence.get('primary')
     if primary is not None:

@@ -36,6 +36,8 @@ from .graph.edg import (
 )
 from .ingest.loader import load_all
 from .ingest.models import STRUCTURAL_ELEMENT_KINDS, AnalysisResult, Graph, RunContext, TaskKind, Trace
+from .junction_rollup import compute_by_junction
+from .junction_rollup import project_name as junction_project_name
 from .normalize.timestamps import normalize_trace, spans_below_resolution
 from .occupancy.sweep import compute_occupancy_stats, compute_task_horizon
 from .plural import plural
@@ -1701,6 +1703,9 @@ class BuildEfficiencyAnalyzer:
         if cache_accounting:
             result.signals['cache'] = cache_accounting
 
+        # UX-1327: which junction's elements built, cached and held the path.
+        result.by_junction = self._compute_by_junction(result.signals.get('critical_path_detail'))
+
         # UX-47: which of the stages below this report section actually
         # renders. `section=None` (the `analyze` command, and every
         # programmatic caller) runs all of them, so the full report is
@@ -1792,6 +1797,12 @@ class BuildEfficiencyAnalyzer:
 
         self.analysis_result = result
         return result
+
+    def _compute_by_junction(self, critical_path_detail) -> Optional[dict]:
+        if not self.graph:
+            return None
+        name = junction_project_name(self.loaded_from)
+        return compute_by_junction(self.graph, self.normalized_tasks, critical_path_detail, name)
 
     def _compute_timestamp_agreement(self) -> dict:
         """UX-110: what the run's two independent measurements of each

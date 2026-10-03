@@ -1367,9 +1367,13 @@ What would the build drop to if I fixed these? See [its contract and worked exam
 
 - `--element UID` — an element to treat as fixed (instant); repeatable. One longest-path recompute with every named element zeroed, never a sum of their individual savings.
 
+## `bga variant-cost`
+
+N variant builds, or one junctioned invocation? `bga junction-cost` is its old name, kept as an alias (`UX-1327`); a run's own junctions are `bga analyze`'s By Junction section. See [its contract and worked example](json-contracts.md#n-variant-builds-or-one-junctioned-invocation-ux-904).
+
 ## `bga junction-cost`
 
-N variant builds, or one junctioned invocation? See [its contract and worked example](json-contracts.md#n-variant-builds-or-one-junctioned-invocation-ux-904).
+The old name of [`bga variant-cost`](#bga-variant-cost), kept as an alias (`UX-1327`).
 
 ## `bga cache-trend`
 

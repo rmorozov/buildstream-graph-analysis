@@ -6,6 +6,8 @@ drew its `thead` as well - 87 px on `restructuring`, 204 px on
 hyphen. After Expand all the current chapter sat 456-686 px under the
 top, and a rail press on the chapter you were on pushed an entry.
 `binary_cost` quantity cells ("695 ms") break across lines at 320.
+
+Styleguide §3f.
 """
 
 import pathlib

@@ -812,6 +812,17 @@ pairing for every merged row from round 103 on.
 | 168 | verifier | sonnet | UX-1311 verifier | 34k | 18 | 415 s | PASS | see round-168 |
 | 168 | implementer | sonnet | UX-1312 overrides from a file | 69k | 42 | 477 s | merged | two edge cases fixed at merge |
 | 168 | verifier | sonnet | UX-1312 verifier | 56k | 33 | 499 s | PASS | inline `#` and a spaced path; see round-168 |
+| 169 | architect | opus | architect: the sweep's shape, 22 lines | 124k | 91 | 9.1 m | complete | see round-169 |
+| 169 | implementer | opus | UX-998 track A styleguide guard ledger, with the fix resume | 741k | 106 | 69 m | merged | see round-169 |
+| 169 | implementer | opus | UX-998 track B viewer Escape and forward | 94k | 99 | 27.5 m | merged | see round-169 |
+| 169 | implementer | sonnet | UX-998 track C analysis sentences, with the fix resume | 540k | 98 | 78.8 m | merged | see round-169 |
+| 169 | implementer | sonnet | UX-998 track D dev tools and process docs | 98k | 43 | 15.9 m | merged | see round-169 |
+| 169 | verifier | sonnet | UX-998 track A verifier | 48k | 29 | 5.1 m | complete | see round-169 |
+| 169 | verifier | sonnet | UX-998 track B verifier | 41k | 10 | 14.9 m | complete | see round-169 |
+| 169 | verifier | sonnet | UX-998 track C verifier | 38k | 24 | 11 m | complete | see round-169 |
+| 169 | verifier | sonnet | UX-998 track D verifier | 61k | 17 | 15.8 m | complete | see round-169 |
+| 169 | integrator | opus | integrator: merge tracks A-D | 145k | 55 | 32.2 m | merged | see round-169 |
+| 169 | closer | sonnet | closer: ledger, round document, history | 57k | 26 | 14.6 m | complete | see round-169 |
 | 170 | implementer | sonnet | UX-1320 (judgement) | 197k | 159 | 39.2 m | merged | project names needed `bst show %{vars}` |
 | 170 | implementer | sonnet | UX-1321, UX-1326 | 192k | 146 | 50.7 m | merged | worktree sandbox refused compound shell; probes via scratch scripts |
 | 170 | implementer | sonnet | UX-1321, UX-1326 fix loop | 199k | 6 | 7.8 m | merged | see round-170 |
@@ -843,7 +854,7 @@ committed cleanly once told to run in the foreground. Three of the five
 left a derived figure or a §6 context-map row behind - the same class
 the round itself was about, arriving in the tracks' own work.
 
-What the eight hundred and fourteen rows already say: a researcher that reads a document
+What the eight hundred and twenty-five rows already say: a researcher that reads a document
 whole costs 100-180k; a walker that drives every control costs 336k;
 the two cuts cost a re-run each. The `walk` and `design-review`
 skills fix the report shape so the next rows are smaller, and the

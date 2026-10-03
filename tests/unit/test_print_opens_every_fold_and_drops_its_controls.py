@@ -3,6 +3,8 @@
 Paper has no click: a closed fold printed as its 24 px summary, 382 controls
 printed as dead buttons, and a next command was cut at the right edge.
 `.fold-more` stays - it is the count of the rows the page does not print.
+
+Styleguide §2b.
 """
 
 import functools

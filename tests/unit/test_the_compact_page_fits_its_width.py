@@ -8,6 +8,8 @@ passes the viewport; the constraints table and a table of tables fit
 their box with no word split; a query scrolls in its own box; a chapter's
 question has its head's row; the rail's steps show their whole labels; a
 16-character run name stays whole on the wordmark's row.
+
+Styleguide §6e rule 10.
 """
 
 import pathlib

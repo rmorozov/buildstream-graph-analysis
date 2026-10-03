@@ -39,6 +39,8 @@ The three rules this file holds:
 Sorting is deliberately untouched: it costs one header affordance at
 any length and helps at every one, so there is nothing for a threshold
 to scale.
+
+Styleguide §3d.
 """
 
 import json

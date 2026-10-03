@@ -128,9 +128,28 @@ def test_a_captured_run_reaches_the_projection():
     analyzer = BuildEfficiencyAnalyzer()
     analyzer.load(run)
     view = run_view(analyzer.analyze(run), analyzer.graph)
-    document = json.loads(json.dumps(project([view, view]), default=str))
+    twin = {**view, "run_id": f"{view['run_id']}-twin"}
+    document = json.loads(json.dumps(project([view, twin]), default=str))
     _validates(document)
     projected = document["projected"]
     assert len(projected["shared"]) == len(view["keys"]) > 0
     assert projected["union_floor_us"] == projected["separate_floors_us"][0] > 0
     assert projected["pipeline_saving_us"] == sum(int(p["elapsed_us"]) for p in view["phases"]) > 0
+
+
+def test_the_same_run_twice_is_refused():
+    a, _ = _pair()
+    document = project([a, copy.deepcopy(a)])
+    _validates(document)
+    assert [refusal["check"] for refusal in document["refusals"]] == ["same_run"]
+    assert document["projected"] is None
+
+
+def test_an_empty_run_id_is_labelled_not_left_blank():
+    from bga.junction_cost import render
+
+    a, b = _pair()
+    a["run_id"] = ""
+    lines = render(project([a, b]))
+    assert not any(line.startswith("  : ") for line in lines)
+    assert any(line.startswith("  (no run id): ") for line in lines)

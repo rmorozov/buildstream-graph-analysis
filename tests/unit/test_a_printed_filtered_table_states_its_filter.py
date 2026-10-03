@@ -2,6 +2,8 @@
 
 Measured before, print media on the 1,202 two-plane page after "+1,160 more": the badge printed
 "25 of 1,200 matched", the box was dropped, and no filter text reached paper.
+
+Styleguide §2b.
 """
 
 import pytest

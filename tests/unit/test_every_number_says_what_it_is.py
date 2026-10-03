@@ -236,7 +236,7 @@ CONTRACT_RUNS = {
     "junction-cost/v1": [
         "junction-cost",
         str(FIXTURES["macro_micro"]),
-        str(FIXTURES["macro_micro"]),
+        str(FIXTURES["golden"]),
         "--format",
         "json",
     ],

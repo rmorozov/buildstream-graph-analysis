@@ -6,6 +6,8 @@ list's column holding items rather than indexes, a preset sentence not
 repeating its heading, and a rail entry the ellipsis cuts carrying its
 label as a title. Chromium
 on `golden`, `macro_micro` and the 114-element two-plane run, at 1440.
+
+Styleguide §5a.
 """
 
 import sys

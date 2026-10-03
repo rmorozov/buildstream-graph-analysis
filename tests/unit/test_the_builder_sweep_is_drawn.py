@@ -1,4 +1,6 @@
-"""UX-1274: the builder sweep runs past the host to the graph's width, its curve is drawn, and its top is no knee."""
+"""UX-1274: the builder sweep runs past the host to the graph's width, its curve is drawn, and its top is no knee.
+
+Styleguide §2d."""
 
 import json
 import os

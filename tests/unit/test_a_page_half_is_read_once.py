@@ -3,6 +3,8 @@
 `export()` reports it, every size guard reads it, and the two tests that
 once counted characters count bytes (a raw non-ASCII character moves each
 by its UTF-8 width).
+
+Styleguide §3g.
 """
 
 import importlib.util

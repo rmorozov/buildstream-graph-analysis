@@ -36,6 +36,7 @@ task file, which is the only place it ever lived twice.
 | UX-1284 | [a link step that peaks above every compile before it is reserved at the compile's size](UX-1284-a-late-memory-peak-is-under-reserved.md) | capture | Medium | R4, R5 | 🔴 Not Started |
 | UX-1309 | [`--prune` deletes a snapshot whose capture is still running](UX-1309-prune-deletes-a-snapshot-whose-capture-is-still-running.md) | capture | Medium | R1, R5 | 🔴 Not Started |
 | UX-1310 | [the decision log says which auth style each element was forced to, and by which switch](UX-1310-the-decision-log-says-which-auth-style-each-element-was-forced-to-and-why.md) | capture | High | R1, R2 | 🔴 Not Started |
+| UX-1314 | [the per-element CPU curve samples the sandbox's processes, not host pids that share their number](UX-1314-the-per-element-cpu-curve-samples-the-sandboxs-processes-not-host-pids-that-share-their-number.md) | capture | Medium | R1, R5 | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

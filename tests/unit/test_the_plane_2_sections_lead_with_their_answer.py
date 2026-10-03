@@ -6,6 +6,8 @@ no section draws two pairs with one value and near-identical labels; the two
 concurrency measures carry two names; `binary_cost` ranks by a column it
 draws and names its share column; "Plane 1"/"Plane 2" and "CPU" have one
 spelling.
+
+Styleguide §6.
 """
 
 import json

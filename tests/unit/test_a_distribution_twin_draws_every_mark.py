@@ -6,6 +6,8 @@ the twin drew five. The mean was not published at all. `twinRows` in
 `bga/viewer/drawings.js` now lists min, the deciles, p95, p99, max,
 mean, n in the population's order; this reads it through node, and the
 booted export once, on the section the measurement named.
+
+Styleguide §2f.
 """
 
 import json

@@ -62,6 +62,8 @@ group, so it stays in the content column when `app.js` moves the group
 into the rail - and the group returns to **exactly** its resting
 height in the refused state, which is why the bounds below are
 unchanged rather than raised.
+
+Styleguide §3f.
 """
 
 import json

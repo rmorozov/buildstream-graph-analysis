@@ -2379,6 +2379,14 @@ def _split_by_co_change_candidates(cache_logs, dependencies) -> list[dict]:
     return findings
 
 
+def _of_the_per_element_total(result: dict, finding: dict) -> str:
+    """` (N of the M never-read edges the per-element lines count)`, both from `result`."""
+    total = sum(len(e.get('unused_dependencies') or []) for e in result.get('actionable') or [])
+    if not total:
+        return ""
+    return f" ({len(finding['edges'])} of the {total} never-read declared edges the per-element lines count)"
+
+
 def find_restructuring_findings(
     analysis: dict,
     native_report: dict,
@@ -2999,7 +3007,8 @@ def format_correlation(result: dict) -> str:
             f"Restructuring opportunity: declared build "
             f"{_count(len(finding['edges']), 'edge')} among "
             f"{_count(len(finding['elements']), 'element')} were measured "
-            f"never-read, and they chain those elements along the critical path:"
+            f"never-read, and they chain those elements along the critical path"
+            f"{_of_the_per_element_total(result, finding)}:"
         )
         lines.append("    " + " -> ".join(_chain_order(finding)))
         projection = finding.get("projection")

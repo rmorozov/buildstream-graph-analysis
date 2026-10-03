@@ -1,6 +1,8 @@
 """UX-1273: the ready queue says which ready work it counted - with a builder free
 when builder slots were recorded, every dependency-ready task when not - and none
-of it reads as the backlog behind full builders."""
+of it reads as the backlog behind full builders.
+
+Styleguide §4g."""
 
 import dataclasses
 import pathlib

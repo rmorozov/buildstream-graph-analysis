@@ -41,6 +41,8 @@ floors.t_infinity_observed  43,200,000
 headline.scheduling_gap_us   2,933,000
 total_duration_us           46,133,000
 ```
+
+Styleguide §2d.
 """
 
 import pathlib

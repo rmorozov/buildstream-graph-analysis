@@ -3,6 +3,8 @@
 `depends_on:<uid>` reaches the direct dependents only. Read on the two-plane page
 (`gen-synthetic --seed 1 --store --layers 20 --width 60`, 1,202 elements), where
 toolchain.bst's Downstream count is 1,201 and its direct dependents 1,200.
+
+Styleguide §3d.
 """
 
 import json

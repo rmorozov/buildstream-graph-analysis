@@ -315,6 +315,9 @@ def _junction_path(target: str, project_dir: Optional[str], known: set[str], inv
                 "direct": _staging(inventory, prefix, within) | _element_file(prefix, within, where, known),
             }
     for absolute in _absolute_candidates(target, project_dir):
+        # Only a path under the project root is walked; anything else is in no nested project.
+        if not absolute.startswith(root + os.sep):
+            continue
         current = os.path.dirname(absolute) if not os.path.isdir(absolute) else absolute
         while current.startswith(root + os.sep):
             if os.path.isfile(os.path.join(current, "project.conf")):

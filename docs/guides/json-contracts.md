@@ -20,7 +20,7 @@ contracts. Twenty-eight ids, and what writes each:
 | `blast/v2` | `bga blast --format json` — what a change to one resource rebuilds |
 | `correlate/v2` | `bga correlate --format json` — Plane 1 and Plane 2 joined on element uid |
 | `whatif/v1` | `bga whatif --format json` — what the build drops to if a chosen set is fixed, and whether the savings add (`UX-230`) |
-| `junction-cost/v1` | `bga junction-cost RUN RUN --format json` — N builds of one type under different variants priced against one junctioned invocation: the elements shared by cache key, the pipeline paid N times, the union floor, each figure citing its assumption (`UX-904`) |
+| `junction-cost/v1` | `bga variant-cost RUN RUN --format json` — N builds of one type under different variants priced against one junctioned invocation: the elements shared by cache key, the pipeline paid N times, the union floor, each figure citing its assumption (`UX-904`) |
 | `store/v1` | `bga snapshot --list --format json` — the runs in this project's `.bga/runs` |
 | `store-aggregate/v1` | `bga snapshot --aggregate --format json` — the store as a distribution, per host class (`UX-234`) |
 | `capacity-model/v1` | `bga snapshot --capacity N,RATE --format json` — a builder count and an arrival rate as a queue: utilization, the wait before a build starts and the number waiting, per host class, each figure carrying the assumptions its own arithmetic used (`UX-613`) |
@@ -714,12 +714,12 @@ statement rather than a missing field.
 
 ### N variant builds, or one junctioned invocation (`UX-904`)
 
-`bga junction-cost` prices N separate builds of one type under
+`bga variant-cost` (alias `junction-cost`) prices N separate builds of one type under
 different variants against one BuildStream invocation that junctions
 them together:
 
 ```bash
-bga junction-cost RUN-x86/ RUN-arm/ --format json
+bga variant-cost RUN-x86/ RUN-arm/ --format json
 ```
 
 Two elements in different variants are one element only when their

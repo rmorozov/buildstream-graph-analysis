@@ -7038,7 +7038,7 @@ _SCHEMAS = {
     ),
     JUNCTION_COST: lambda: _document(
         JUNCTION_COST,
-        "bga junction-cost RUN RUN [RUN...] --format json",
+        "bga variant-cost RUN RUN [RUN...] --format json",
         _JUNCTION_COST_REQUIRED,
         "N separate builds of one type under different variants, priced "
         "against one junctioned invocation: the elements they share by "

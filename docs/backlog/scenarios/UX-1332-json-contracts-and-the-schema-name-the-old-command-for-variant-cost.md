@@ -2,7 +2,7 @@
 
 **Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** review 37, checklist items 2 and 3 (2026-10-03) | **Serves:** R2 | **Topic:** docs | **Area:** unassigned | **Shape:** judgement | **Reading:** container
 
-**Guard:** none — open, no guard named yet
+**Guard:** test_a_schema_names_a_command_bga_has.py
 
 ## Motivation
 
@@ -33,4 +33,14 @@ Renaming the schema id (a version bump, `rules.md`'s schema rows).
 
 ## Outcome
 
-Not yet worked.
+**Gap measured.** `git grep -n "bga junction-cost" -- docs/guides/json-contracts.md bga/schemas.py` returned 4 lines (json-contracts.md:23, 717, 722; schemas.py:7041).
+
+**Close measured.** Same grep returns 0 lines. `bga variant-cost --schema | jq .title` is `bga variant-cost RUN RUN [RUN...] --format json`; the section opens "`bga variant-cost` (alias `junction-cost`)". The id `junction-cost/v1` is unmoved: `emitted_by` is the schema's `title` string, not a key, so `rules.md`'s bump rows (renamed or removed key, grown `required`) do not apply.
+
+`python3 -m pytest -n 0 tests/unit/test_a_schema_names_a_command_bga_has.py` : 3 passed. It reads every `_SCHEMAS` title that opens `bga <word>` against the parser's registered subcommands (aliases included) and `TOOL_ALIASES`.
+
+| mutation | result |
+|---|---|
+| schemas.py title `bga variant-cost RUN` -> `bga nope-cost RUN` | 2 failed, 4 passed (`test_every_emitted_by_command_is_registered`, `test_the_renamed_command_is_the_one_named`) |
+
+**Deviation.** The registered-command test alone cannot see the old name (the alias is registered); `test_the_renamed_command_is_the_one_named` pins the new one.

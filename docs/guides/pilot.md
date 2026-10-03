@@ -121,6 +121,12 @@ the `max-jobs: 3` pair, and about 2.3s per build. Sandbox admission
 on `13-mixed-graph`. The full case is
 [`serial-giant-jobserver.md`](../cases/serial-giant-jobserver.md).
 
+With it on, one element can still be kept out or given another style.
+The kit passes no extra `capture run` flags, so in a pilot that is the
+element's own `public: bga: jobserver-auth: off` (or `fd`, `fifo`,
+`flto`); every switch is in
+[`jobserver.md`](jobserver.md#one-element-not-the-whole-build).
+
 ## What the exit codes mean here
 
 From [`cli.md`](cli.md#exit-codes); the kit's `report` exits 0 on every

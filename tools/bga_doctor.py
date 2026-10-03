@@ -291,6 +291,38 @@ def check_stale_casd() -> dict:
     )
 
 
+_CONTAINER_CGROUPS = ("docker", "kubepods", "containerd", "lxc", "libpod")
+
+# A pid 1 that is a real init means a host or VM; anything else is a container's entrypoint.
+_KNOWN_INITS = frozenset(
+    {"systemd", "init", "openrc-init", "runit", "runit-init", "s6-svscan", "dinit", "upstart", "launchd", "busybox"}
+)
+
+
+def _container_kind() -> Optional[str]:
+    """What marks this as a container, or None: a container has no suspend of its own."""
+    for marker in ("/.dockerenv", "/run/.containerenv"):
+        if os.path.exists(marker):
+            return marker
+    runtime = dict(os.environ).get("container")
+    if runtime:
+        return f"container={runtime}"
+    cgroup = _read_proc("/proc/self/cgroup")
+    for name in _CONTAINER_CGROUPS:
+        if name in cgroup:
+            return f"cgroup names {name}"
+    init = _read_proc("/proc/1/comm").strip()
+    return f"pid 1 is {init}" if init and init not in _KNOWN_INITS else None
+
+
+def _read_proc(path: str) -> str:
+    try:
+        with open(path) as handle:
+            return handle.read()
+    except OSError:
+        return ""
+
+
 def check_sleep_policy() -> Optional[dict]:
     """Would this machine fall asleep during a long capture?
 
@@ -306,6 +338,9 @@ def check_sleep_policy() -> Optional[dict]:
     """
     from bga import suspend
 
+    in_container = _container_kind()
+    if in_container:
+        return _check("sleep-policy", OK, f"this machine will not suspend (running in a container: {in_container})")
     systemctl = shutil.which("systemctl")
     if not systemctl or not suspend.available()["systemd-inhibit"]:
         return None
@@ -525,7 +560,7 @@ def check_project_loads(project_dir: str) -> list[dict]:
             return [_check("project-loads", OK, f"{project_dir} loads ({target})")]
 
     message = (result.stderr or result.stdout or "").strip()
-    remedy = "read the error below - `bst show` is what this ran, and it is the same thing a build starts with"
+    remedy = "read the error above - `bst show` is what this ran, and it is the same thing a build starts with"
     if "plugin registered" in message:
         # Two different problems wear the same error, and the remedies
         # are opposites. Checking which one it is costs an import.

@@ -118,6 +118,25 @@ class TestAnUnrunnableCheckSaysSoRatherThanPassing:
         assert check_plane3()["status"] == WARN
 
 
+class TestTheRemedyPointsTheWayTheReportPrints:
+    def test_a_load_failure_says_the_error_is_above_its_remedy(self, tmp_path, monkeypatch):
+        import tools.bga_doctor as doctor
+
+        root = tmp_path / "p"
+        (root / "elements").mkdir(parents=True)
+        (root / "project.conf").write_text("name: p\nmin-version: 2.0\nelement-path: elements\n")
+        (root / "elements" / "a.bst").write_text("kind: manual\n")
+        monkeypatch.setattr(doctor.shutil, "which", lambda name: "/usr/bin/bst")
+        failed = subprocess.CompletedProcess([], 1, "", "Failed to load source plugin 'x'")
+        monkeypatch.setattr(doctor.subprocess, "run", lambda *a, **k: failed)
+
+        [finding] = doctor.check_project_loads(str(root))
+        text = doctor.format_text([finding], str(root))
+
+        assert "read the error above" in finding["remedy"]
+        assert text.index("Failed to load source plugin") < text.index("read the error above")
+
+
 class TestTheCensusChecksAreTwoDifferentThings:
     def test_a_project_staging_nothing_executable_is_warned_about(self, bare_project):
         findings = {f["id"]: f for f in check_staged_sources(str(bare_project))}

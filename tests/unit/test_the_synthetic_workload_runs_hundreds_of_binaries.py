@@ -107,7 +107,8 @@ def test_one_seed_gives_one_plane2(stores):
 
 
 def test_the_workload_moves_plane2_alone(stores):
-    for heavy, default in zip(stores["heavy"], stores["default"], strict=True):
+    assert len(stores["heavy"]) == len(stores["default"])
+    for heavy, default in zip(stores["heavy"], stores["default"]):
         for name in ("build.log", "run/graph.json", "run/trace.json"):
             assert (heavy / name).read_bytes() == (default / name).read_bytes(), name
         with open(default / "run" / "graph.json", encoding="utf-8") as handle:

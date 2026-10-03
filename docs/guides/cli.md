@@ -64,6 +64,8 @@ wants the underlying program can find it. Dispatch is lazy — only the
 module actually invoked is imported, so `bga analyze` does not pay to
 import the native tracer and the trace converters on every run.
 
+`bga --help` opens with a three-line *Start here* (`UX-1329`) naming `bga doctor .`, `bga snapshot -- bst build TARGET` and `bga view`, in the order a first session runs them; `release-notes` is a maintainer command and is not listed among the user's.
+
 **The table below is that block**, alias for alias and module for
 module:
 [`test_the_alias_table_is_the_help.py`](../../tests/unit/test_the_alias_table_is_the_help.py)
@@ -209,6 +211,8 @@ Captures go to `.bga/runs/<UTC-stamp>/` under the project, holding
 `run/`, `plane2.json`, the wrapped log and a `capture-context.txt` — the
 same layout the published capture refs use, so nothing downstream learns
 a second shape. `.bga/` gitignores itself.
+
+The command after `--` need not start with `bst` (`UX-1322`): `bga snapshot -- ./build.sh` runs it with a `bst` shim first on `PATH` that execs the real `bst` and records the log of its `build` invocation. A command that ran no `bst build` is refused by name after it exits, leaving no snapshot claiming the build produced no elements; any refusal before the build comes before the hook compile.
 
 ### Naming runs: `@last`, `@prev`, `@<stamp-prefix>`
 
@@ -621,6 +625,7 @@ Read-only, one line per check, and a concrete remedy on every failure. It invent
 
 Details worth knowing:
 
+- **Containers and junctions** (`UX-1328`, `UX-1331`). The `sleep-policy` check reports ok, naming the container, where the host is one. The stage check counts what the project's local junctions stage too, and warns only when nothing in the project or them stages an executable and the project declares no junction or remote source; otherwise it reports what it could not see as info. Its remedy reads "read the error above", and names `examples/stage_*.sh` only inside this repository's example projects.
 - **bwrap is probed, not just found.** Presence is not the check that matters — bwrap's namespace setup succeeds and then the sandbox fails to bring up loopback, deep inside a build. `doctor` runs the same trivial sandboxed command CI's `bst-smoke` job does.
 - **The compiler is the capture's own, and it compiles the real hook** (`UX-1287`). `c-compiler` resolves `cc` then `gcc` exactly as `compile_hook` does and compiles `tools/native_trace/hook.c` once into a scratch directory it removes, so a missing compiler and one that cannot build the hook (no libc headers) are both a `FAIL` worded as the capture would raise it, naming `build-essential`. A compiler that cannot link `-static` stays a warning: only `--trace-spine` needs it.
 - **"No element plugin registered for kind" gets two different remedies**, because it has two different causes: the package is missing, or the project has not declared it. Telling a user to install what they already have is how a diagnostic loses its reader.
@@ -1487,6 +1492,7 @@ Plane 2 trace to Chrome Trace JSON (`tools.native_trace_to_chrome_trace`); every
 Plane 3: mine BuildStream's own element logs (`tools.bst_cache_logs`); every flag is in `bga cache-logs --help`. Beyond the prose [above](#what-each-flag-does-in-full):
 
 - `--project NAME` — only this project's logs.
+- `bga cache-logs PROJECT_DIR` reads every junction's log tree too (`UX-1325`), resolving each junction's project name from its local checkout's `project.conf`, recursively; element names carry the junction prefix. A junction whose name it cannot resolve is named in one line, with `--project` as the way to add it.
 - `--all` — report over every project in the log tree at once (`UX-127`).
 - `--list` — list the projects the tree holds, with log counts and time spans, and exit.
 - `--graph RUN/graph.json` — a run directory's graph, so a rebuild caused by an upstream key change can be told from one whose own definition changed.

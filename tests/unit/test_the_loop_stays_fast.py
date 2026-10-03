@@ -188,7 +188,8 @@ class TestTheSelectorStillSelects:
     # `UX-1302`'s snapshot guard runs `bga.cli.main`: median 41, p90 68, max 201 over 820.
     # Round 168's merged tree (UX-1304/1311/1312's guards over the shim, the tracer and `bga.cli`): median 41, p90 68, max 204 over 827.
     # Round 170's merged tree (UX-1320..1331's guards over `bga.cli`, `bga.blast` and the shim): median 41, p90 69, max 209 over 837.
-    CEILING = {"median": 41, "p90": 69, "max": 209}
+    # Round 171 (UX-1332..1334: three guards over `bga.cli`, `bga.schemas`, `bga.compare`): median 41, p90 70, max 210 over 840.
+    CEILING = {"median": 41, "p90": 70, "max": 210}
     POPULATION_FLOOR = 60
     #: `UX-645`: **13 census + 14 of your own**. The census floor is
     #: inside this bound because those files run - the figure is what

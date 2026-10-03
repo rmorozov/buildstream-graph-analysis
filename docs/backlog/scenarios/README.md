@@ -36,6 +36,9 @@ task file, which is the only place it ever lived twice.
 | UX-1284 | [a link step that peaks above every compile before it is reserved at the compile's size](UX-1284-a-late-memory-peak-is-under-reserved.md) | capture | Medium | R4, R5 | 🔴 Not Started |
 | UX-1309 | [`--prune` deletes a snapshot whose capture is still running](UX-1309-prune-deletes-a-snapshot-whose-capture-is-still-running.md) | capture | Medium | R1, R5 | 🔴 Not Started |
 | UX-1310 | [the decision log says which auth style each element was forced to, and by which switch](UX-1310-the-decision-log-says-which-auth-style-each-element-was-forced-to-and-why.md) | capture | High | R1, R2 | 🔴 Not Started |
+| UX-1332 | [`json-contracts.md` and the `junction-cost/v1` schema still name `bga junction-cost` as the emitter](UX-1332-json-contracts-and-the-schema-name-the-old-command-for-variant-cost.md) | docs | Low | R2 | 🔴 Not Started |
+| UX-1333 | [the `compare/v2` schema description lists four verdicts and the code emits a fifth, `different work`](UX-1333-the-compare-contract-and-its-schema-prose-omit-the-different-work-verdict.md) | contracts | Medium | R1, R4 | 🔴 Not Started |
+| UX-1334 | [wrapper-script capture, `cache-logs` across junctions, doctor's junction check and help's start block are in no guide](UX-1334-four-junction-round-changes-no-guide-names.md) | docs | Medium | R1, R2 | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

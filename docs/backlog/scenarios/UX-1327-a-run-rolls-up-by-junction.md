@@ -90,4 +90,4 @@ nested base (66.7%). `variant-cost` is the name; `junction-cost` dispatches and 
 
 ### Deviation from the Required Fix
 
-`variant-cost` is the command and `junction-cost` its alias. Totals read 5/5/6, not 4/5/6. The verifier held on 3 doc/schema reds and the fixup found 5 more (key-path prose, Part 32.4, reader map R3, CHANGELOG Unreleased, Verification Log); squashed into one commit. The contracts surface is 635 keys with UX-1330's `did_you_mean`. (`7ac2d5b6`)
+`variant-cost` is the command and `junction-cost` its alias. Totals read 5/5/6, not 4/5/6. The verifier held on 3 doc/schema reds and the fixup found 5 more (key-path prose, Part 32.4, reader map R3, CHANGELOG Unreleased, Verification Log); squashed into one commit. The contracts surface is 635 keys with UX-1330's `did_you_mean`. (`0ea3dc88`)

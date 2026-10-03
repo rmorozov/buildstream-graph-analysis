@@ -41,7 +41,7 @@ spread   dev_touching.py --spread: 35-209 of 837 test files
 - Environmental reds (missing records) buried 5 real ones among 119 in
   `UX-1327`'s track.
 - The merged tree reddened the schema-prose guard on `withheld`, and the
-  blast emit guard needed an integration fix (`8b5a9327`, surface 628).
+  blast emit guard needed an integration fix (`84548195`, surface 628).
 - `test_the_verification_log_is_true` fails at base `44afd957` too.
 
 ## Agents

@@ -92,4 +92,4 @@ groups/all.bst`), read from `capture-context.txt`; a `bst` command keeps `bst bu
 
 ### Deviation from the Required Fix
 
-Wrapper plus `--jobserver` is refused; a wrapper that builds nothing exits 2; an absolute-path `bst` is a refusal. The post-build inner-argv swap was unguarded in the track and guarded in the fixup. `quality_baseline` S603/S606 entries were forced. `test_the_verification_log_is_true` also fails at base 44afd957. (`12a06696`)
+Wrapper plus `--jobserver` is refused; a wrapper that builds nothing exits 2; an absolute-path `bst` is a refusal. The post-build inner-argv swap was unguarded in the track and guarded in the fixup. `quality_baseline` S603/S606 entries were forced. `test_the_verification_log_is_true` also fails at base 44afd957. (`71c8dfae`)

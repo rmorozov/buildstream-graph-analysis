@@ -61,4 +61,4 @@ document tests; the wider blast/whatif-naming sweep stopped at 1 failure, `test_
 
 ### Deviation from the Required Fix
 
-The verifier held it: `did_you_mean` was a required key; made optional and always-written, folded. 8b5a9327 then admits always-written keys in the blast emit guard; the surface is 628. (`1780e288`)
+The verifier held it: `did_you_mean` was a required key; made optional and always-written, folded. 84548195 then admits always-written keys in the blast emit guard; the surface is 628. (`fd4141f8`)

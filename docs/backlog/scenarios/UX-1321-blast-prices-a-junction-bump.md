@@ -102,4 +102,4 @@ Restored: 8 passed.
 
 ### Deviation from the Required Fix
 
-The junction itself reads 16 of 16, not the walk's 13: every top element build-depends on base's toolchain. The base path reads 13 (bst full-key moves, 13 of 16); the walk's 11 was wrong. A local junction's figure is an upper bound ("at most"). An element file path is read as that element, beyond the brief. (`27ba451a`)
+The junction itself reads 16 of 16, not the walk's 13: every top element build-depends on base's toolchain. The base path reads 13 (bst full-key moves, 13 of 16); the walk's 11 was wrong. A local junction's figure is an upper bound ("at most"). An element file path is read as that element, beyond the brief. (`a104c487`)

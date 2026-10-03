@@ -70,4 +70,4 @@ Reverted from copies; 5 passed.
 
 ### Deviation from the Required Fix
 
-Rule: `built_elements < builders` withholds the recommendation; no count withholds nothing. The merged tree reddened `test_no_schema_description_names_a_key` on `withheld`'s prose; reworded in a fixup, autosquashed. (`793c3f02`)
+Rule: `built_elements < builders` withholds the recommendation; no count withholds nothing. The merged tree reddened `test_no_schema_description_names_a_key` on `withheld`'s prose; reworded in a fixup, autosquashed. (`fbd71cbb`)

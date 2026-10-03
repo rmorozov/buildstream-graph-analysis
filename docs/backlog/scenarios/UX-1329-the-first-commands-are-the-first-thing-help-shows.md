@@ -68,4 +68,4 @@ block beside `release-notes`; README line 101 `pip install -e ".[bst]"` (also li
 
 ### Deviation from the Required Fix
 
-`release-notes` sits under a "maintainer tools" heading; the help cap 51 -> 57. The commit also carries lint fixes for UX-1330 and UX-1331's files. (`564b2f37`)
+`release-notes` sits under a "maintainer tools" heading; the help cap 51 -> 57. The commit also carries lint fixes for UX-1330 and UX-1331's files. (`61cd78ce`)

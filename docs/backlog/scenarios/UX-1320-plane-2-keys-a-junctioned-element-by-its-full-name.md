@@ -117,4 +117,4 @@ are exactly the import and the three stacks, which run no sandbox. The walk's 13
 
 ### Deviation from the Required Fix
 
-The live join is 12 of 12 traced (16 in Plane 1), not 13: an import and three stacks run no sandbox. Reverses UX-1311's no-collision assertion: any top-vs-junction short name now counts as a collision. Unguarded: the `%{build-deps}` fill in `load_and_summarize` (removing it stays green). Two forced baseline entries (S603, PLR0913); `dev_sizes` growth not adopted. (`753f2907`)
+The live join is 12 of 12 traced (16 in Plane 1), not 13: an import and three stacks run no sandbox. Reverses UX-1311's no-collision assertion: any top-vs-junction short name now counts as a collision. Unguarded: the `%{build-deps}` fill in `load_and_summarize` (removing it stays green). Two forced baseline entries (S603, PLR0913); `dev_sizes` growth not adopted. (`2d1901b2`)

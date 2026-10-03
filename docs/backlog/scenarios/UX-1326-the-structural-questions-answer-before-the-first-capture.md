@@ -96,4 +96,4 @@ Restored: 7 passed.
 
 ### Deviation from the Required Fix
 
-carbon without `--target` does not answer: no `defaults: targets`, and bare `bst show` fails on pkgs/mozjs.bst, so bga prints bst's error and "Pass --target" rather than invent a target. `--target ELEMENT` is a new, undeclared option. The UX-1321 wording and the C901 split landed in this commit. (`cb6c7f71`)
+carbon without `--target` does not answer: no `defaults: targets`, and bare `bst show` fails on pkgs/mozjs.bst, so bga prints bst's error and "Pass --target" rather than invent a target. `--target ELEMENT` is a new, undeclared option. The UX-1321 wording and the C901 split landed in this commit. (`9bbdd3d0`)

@@ -2,6 +2,8 @@
 
 Measured before, on the 1,202-element `--workload binaries` page: a jump to lognormal-308 landed on by_binary
 unfiltered ("25 of 601"); an unmounted binary was filtered into binary_cost instead.
+
+Styleguide §3c.
 """
 
 import collections

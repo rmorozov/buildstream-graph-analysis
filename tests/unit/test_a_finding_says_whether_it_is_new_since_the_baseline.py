@@ -4,6 +4,8 @@ Two stores. `mixed`: only @last has Plane 2, so a finding on one side only is
 not compared. `same`: every run has Plane 2; the oldest is unpublished, the
 second's analysis drops one finding, @prev's gains one @last lacks and loses one
 @last holds. `bga compare` keys on finding id, so ids are asserted unique first.
+
+Styleguide §1b.
 """
 
 import gzip

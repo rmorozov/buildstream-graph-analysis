@@ -4,6 +4,8 @@ An open long-text fold shows its text once and is not labelled by a
 character count; every Why fold opens below its row; a table of two rows
 or fewer carries no badge and no strip, and a one-row array is pairs;
 an element card's "Also in:" link reads its section's own title.
+
+Styleguide §5a.
 """
 
 import pathlib

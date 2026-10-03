@@ -7,6 +7,8 @@ Top-N select's name is a phrase, and a partial uid several elements
 share says how many. On the heavy-binary page a Jump press lands an
 element's card, a mounted binary row and a row past the bound at the
 target's scroll margin, below its table's stuck tools for a row.
+
+Styleguide §3h.
 """
 
 import sys

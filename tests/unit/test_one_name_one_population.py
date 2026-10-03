@@ -3,6 +3,8 @@
 Measured before, on the 1,202-element run (`--layers 20 --width 60`):
 the preset "Latent heavies" drew 1,180 elements (`observed_critical ==
 false`), and the section asking the same question published 0.
+
+Styleguide §6e rule 2.
 """
 
 import pytest

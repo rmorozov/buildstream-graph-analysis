@@ -3,6 +3,8 @@
 The glyph is a `::before`; its left edge is derived from the computed style
 the browser lays it out with. Chromium on `macro_micro` at 1440x900 (rail
 column, `overflow: auto`) and 390x844 (the drawer, opened as a reader does).
+
+Styleguide §3h.
 """
 
 import sys

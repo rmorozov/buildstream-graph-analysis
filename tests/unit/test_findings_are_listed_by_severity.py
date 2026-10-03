@@ -2,6 +2,8 @@
 
 Severity first, then `compute_findings`' argued order; an indented note
 stays directly under the table it qualifies.
+
+Styleguide §1c.
 """
 
 import pathlib

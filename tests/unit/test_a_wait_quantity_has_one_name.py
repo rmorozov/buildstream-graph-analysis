@@ -1,6 +1,8 @@
 """UX-1269: each wait quantity has one drawn name, the decision states how the
 gap relates to resource wait, the Effective CPUs gloss agrees with its source,
-and a costliest binary under the opportunity floor carries no step."""
+and a costliest binary under the opportunity floor carries no step.
+
+Styleguide §6e rule 2."""
 
 import json
 import pathlib

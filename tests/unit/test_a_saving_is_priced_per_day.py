@@ -1,4 +1,6 @@
-"""UX-1276: with a declared build rate, a saving reads in agent-hours a day and names where the rate came from."""
+"""UX-1276: with a declared build rate, a saving reads in agent-hours a day and names where the rate came from.
+
+Styleguide §1b."""
 
 import json
 import os

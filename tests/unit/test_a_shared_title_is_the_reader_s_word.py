@@ -5,6 +5,8 @@ Read on the 1,802-element two-plane page (`gen-synthetic --seed 1 --store
 label of each; the old words (`probability`, `durations`) still parse as that
 column. 30 layers, so the chain outruns the ranked sections and its tail
 elements open on-demand cards (`UX-1244`: at 20 every chain row has a ranked one).
+
+Styleguide §6e rule 2.
 """
 
 import json

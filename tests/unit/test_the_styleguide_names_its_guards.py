@@ -371,6 +371,90 @@ class TestTheTableIsHeldToTheScan:
         assert len(cited) > 15, f"only {len(cited)} sections are cited"
 
 
+#: Browser-starting guards that cite no styleguide section, at `UX-998`'s
+#: round-169 sweep. Shrink-only: a name here that now cites one reds, and
+#: so does the set outgrowing `UNCITED_MAX`.
+UNCITED = frozenset(
+    {
+        "test_a_browser_drive_starts_clean.py",
+        "test_a_filter_is_a_property_of_a_table.py",
+        "test_a_finding_card_prints_no_null.py",
+        "test_a_finding_reaches_the_timeline.py",
+        "test_a_fold_stays_open_in_the_link.py",
+        "test_a_killed_browser_does_not_outlive_the_worker.py",
+        "test_a_pair_list_keeps_its_pairs_on_one_row.py",
+        "test_a_rail_click_lands_on_its_section.py",
+        "test_a_rail_click_reaches_the_writer.py",
+        "test_a_reader_role_demotes.py",
+        "test_a_sentence_lives_on_its_door.py",
+        "test_a_shapeable_population_is_drawn.py",
+        "test_a_task_uid_is_not_a_label.py",
+        "test_all_rows_means_all_rows.py",
+        "test_back_after_a_reveal_re_folds.py",
+        "test_focus_keeps_the_reading_position.py",
+        "test_labels_are_sentence_case.py",
+        "test_one_bad_row_costs_one_section.py",
+        "test_one_bucket_one_row.py",
+        "test_one_page_behind_the_button.py",
+        "test_plane_two_says_what_it_ran.py",
+        "test_the_console_stays_clean.py",
+        "test_the_fragment_keeps_up_with_the_fold.py",
+        "test_the_guards_measure_the_page.py",
+        "test_the_handoff_has_a_fixture.py",
+        "test_the_journey_has_an_answer_key.py",
+        "test_the_label_is_for_the_reader.py",
+        "test_the_lead_names_the_planes_it_has.py",
+        "test_the_page_has_geometry.py",
+        "test_the_page_keeps_the_names_it_was_given.py",
+        "test_the_page_moves_between_runs.py",
+        "test_the_query_asks_about_this_run.py",
+        "test_the_rail_and_the_jump_box_write_the_anchor.py",
+        "test_the_rail_says_it_is_not_the_way_out.py",
+        "test_the_rail_says_what_the_heading_says.py",
+        "test_the_rail_takes_a_step.py",
+        "test_the_six_low_defects_stay_fixed.py",
+        "test_the_synthesis_reaches_the_page.py",
+        "test_the_two_capabilities_are_offered.py",
+        "test_the_viewer_js_ships_compressed.py",
+    }
+)
+UNCITED_MAX = 40
+
+
+@functools.lru_cache(maxsize=1)
+def _browser_guards():
+    """`{name: cites a styleguide section}` over every unit test that boots a browser."""
+    from tests.unit import test_the_tiers_are_a_partition as partition
+
+    sections = set(_sections(STYLEGUIDE))
+    found = {}
+    for rel in _unit_tests():
+        path = REPO / rel
+        if partition.BOOTS_A_BROWSER.search(partition._code(path)):
+            text = path.read_text(encoding="utf-8", errors="replace")
+            found[path.name] = bool(set(CITATION.findall(text)) & sections)
+    return found
+
+
+class TestEveryBrowserGuardCitesItsSection:
+    """The scan above reads section to test, so a guard citing no section
+    was invisible to it: rounds 155-163 found 44 such guards by hand."""
+
+    def test_a_browser_guard_cites_a_section_or_is_named_uncited(self):
+        silent = sorted(name for name, cites in _browser_guards().items() if not cites and name not in UNCITED)
+        assert not silent, f"{silent} boot a browser and cite no styleguide §; cite the rule each holds"
+
+    def test_the_uncited_list_only_shrinks(self):
+        guards = _browser_guards()
+        stale = sorted(name for name in UNCITED if guards.get(name, True))
+        assert not stale, f"{stale} cite a section or no longer boot a browser; drop them from UNCITED"
+        assert len(UNCITED) <= UNCITED_MAX, f"UNCITED grew to {len(UNCITED)}; it only shrinks"
+
+    def test_the_population_is_the_browser_guards(self):
+        """A pattern that stopped matching would empty both clauses above."""
+        assert len(_browser_guards()) > 100, len(_browser_guards())
+
+
 class TestTheCountedFiguresDerive:
     def test_the_row_cap_names_its_constant(self):
         """§3 said "default 20" and no constant had that value."""

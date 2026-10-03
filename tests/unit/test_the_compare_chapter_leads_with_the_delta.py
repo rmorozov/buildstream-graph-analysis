@@ -3,6 +3,8 @@
 `compare/v2` publishes `total_duration_delta_share`; `compareLead` in
 `chapters.js` is the one sentence, drawn as the chapter's lead and in the
 decision panel. A single snapshot has no chapter and one absence sentence.
+
+Styleguide §6.
 """
 
 import json

@@ -4,6 +4,8 @@
 inside a string, template or regex literal; `_uncommented_css` drops the
 whitespace no selector or value reads. Golden's page half, `bga view
 --export`: 151,228 -> 142,828 B.
+
+Styleguide §3g.
 """
 
 import json

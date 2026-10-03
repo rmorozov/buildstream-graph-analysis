@@ -17,12 +17,12 @@ from .test_bst_extract_run import BST_AVAILABLE
 
 REPO = Path(__file__).resolve().parents[2]
 PROJECT = REPO / "tests/fixtures/bst_show_project"
-GUIDE = REPO / "docs/guides/cli.md"
+GUIDE = REPO / "docs/design/areas/tools-native_trace.md"
 BST_SKIP_REASON = "bst not found on PATH - see docs/spec/ingestion-pipeline.md"
 
 #: The mode's own leakage surface, named in the Motivation: `make`'s
 #: and `cargo`'s real jobserver auth variables, plus every `BST_TRACE_*`
-#: name the tracer's capture path uses - read from the guide rather
+#: name the tracer's capture path uses - read from its area page (UX-1290) rather
 #: than copied, so a name added there is a name checked here.
 _JOBSERVER_ENV = {
     "MAKEFLAGS": "--jobserver-auth=3,4 -j4",
@@ -33,9 +33,11 @@ _JOBSERVER_ENV = {
 
 def _bst_trace_names() -> list:
     text = GUIDE.read_text(encoding="utf-8")
-    start = text.index("### `BST_TRACE_*`")
-    end = text.index("## `bga timeline`", start)
-    return sorted(set(re.findall(r"`(BST_TRACE_[A-Z0-9_]+)`", text[start:end])))
+    start = text.index("## `BST_TRACE_*`")
+    end = text.find("\n## ", start + 1)
+    names = sorted(set(re.findall(r"`(BST_TRACE_[A-Z0-9_]+)`", text[start : end if end > 0 else None])))
+    assert len(names) > 30, f"{GUIDE} names only {len(names)} BST_TRACE_* variables"
+    return names
 
 
 def _leaking_env() -> dict:

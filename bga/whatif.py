@@ -109,6 +109,17 @@ def _sum_of_individual(graph, durations, selected) -> int:
     return int(sum(savings.get(uid, 0) for uid in selected))
 
 
+def did_you_mean(name: str, known) -> list[str]:
+    """Junction-qualified uids whose last `:` component is `name`, all of them, sorted."""
+    return sorted(uid for uid in known if uid.rsplit(":", 1)[-1] == name)
+
+
+def _suggestions(unknown, known) -> str:
+    return "".join(
+        f" Did you mean {', '.join(matches)}?" for matches in (did_you_mean(name, known) for name in unknown) if matches
+    )
+
+
 def _refusals(graph, durations, selected) -> list[dict]:
     if not selected:
         return [
@@ -130,7 +141,7 @@ def _refusals(graph, durations, selected) -> list[dict]:
                 "elements": unknown,
                 "sentence": f"Not in this run's graph: {', '.join(unknown)}. "
                 f"A subset quietly missing a member projects a "
-                f"different question from the one asked.",
+                f"different question from the one asked." + _suggestions(unknown, known),
             }
         ]
     unmeasured = [uid for uid in selected if not durations.get(uid)]

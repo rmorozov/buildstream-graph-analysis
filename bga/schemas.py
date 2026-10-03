@@ -1302,6 +1302,11 @@ _BLAST_REQUIRED = {
     "measured": "boolean",
 }
 
+# `UX-1330`: permitted rather than required - a key entering `required` under the live `blast/v2` id
+# breaks a document already written (`UX-629`); `bga blast` writes it on every answer.
+_BLAST_OPTIONAL = {"did_you_mean": "array"}
+_BLAST_ALWAYS_WRITTEN = ("did_you_mean",)
+
 
 # The hints themselves. Kept beside the key lists they annotate, so a
 # field and its rendering are edited in one place - `UX-190`'s finding
@@ -6878,7 +6883,9 @@ _SCHEMAS = {
         "What a change to one resource rebuilds: the direct consumers, "
         "the closure, the split into kinds that build and kinds that "
         "assemble, and the measured cost unless --no-cost was passed.",
+        optional=_BLAST_OPTIONAL,
         hints=_BLAST_HINTS,
+        always_written=_BLAST_ALWAYS_WRITTEN,
     ),
     CORRELATE: lambda: _document(
         CORRELATE,

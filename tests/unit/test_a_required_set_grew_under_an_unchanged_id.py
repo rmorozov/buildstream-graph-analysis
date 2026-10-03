@@ -272,5 +272,65 @@ def comparison(tmp_path_factory):
     return json.loads(done.stdout)
 
 
+#: `blast/v2`'s required set before `UX-1330`, written down rather than derived.
+BLAST_V2_REQUIRED_BEFORE_UX_1330 = frozenset(
+    [
+        "also_matched",
+        "assembling_count",
+        "blast_count",
+        "blast_elements",
+        "blast_tree",
+        "building_count",
+        "by_element_kind",
+        "direct_count",
+        "direct_elements",
+        "element_count",
+        "element_exists",
+        "has_inventory",
+        "keying",
+        "kind",
+        "measured",
+        "measured_elements",
+        "measured_us",
+        "resolved_as",
+        "schema",
+        "target",
+    ]
+)
+
+
+class TestBlastV2KeptItsRequiredSetWhenDidYouMeanArrived:
+    def test_the_required_set_did_not_grow(self):
+        assert frozenset(_schema("blast/v2")["required"]) == BLAST_V2_REQUIRED_BEFORE_UX_1330
+
+    def test_the_key_is_permitted_and_declared_always_written(self):
+        schema = _schema("blast/v2")
+        assert "did_you_mean" in schema["properties"]
+        assert "did_you_mean" in _always_written("blast/v2")
+
+    def test_the_emitter_writes_it_on_every_answer(self):
+        from bga import blast
+
+        answer = blast.blast(REPO / "tests/fixtures/synthetic_multi_subproject", "libcore.bst", measure=False)
+        assert "did_you_mean" in answer
+        found = blast.blast(
+            REPO / "tests/fixtures/synthetic_multi_subproject", "core-utils.bst:libcore.bst", measure=False
+        )
+        assert found["did_you_mean"] == []
+
+    @needs_jsonschema
+    def test_a_document_written_before_ux_1330_validates(self):
+        types = {"string": "x", "array": [], "integer": 0, "boolean": True, "object": {}, "": None}
+        schema = _schema("blast/v2")
+        document = {
+            key: types[schema["properties"][key].get("type", "")]
+            if isinstance(schema["properties"][key].get("type", ""), str)
+            else None
+            for key in BLAST_V2_REQUIRED_BEFORE_UX_1330
+        }
+        document["schema"] = "blast/v2"
+        jsonschema.validate(document, schema)
+
+
 if __name__ == "__main__":  # pragma: no cover
     raise SystemExit(pytest.main([__file__, "-v"]))

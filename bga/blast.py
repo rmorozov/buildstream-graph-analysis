@@ -24,6 +24,7 @@ from typing import Optional
 
 from . import schemas
 from . import sources as sources_mod
+from . import whatif as whatif_mod
 from .graph.edg import build_element_graph, compute_element_durations, compute_reachability
 from .ingest.loader import load_all
 from .plural import plural
@@ -324,6 +325,8 @@ def blast(run_dir, target: str, project_dir: Optional[str] = None, measure: bool
         # UX-178: "this name is not an element here" and "this element
         # rebuilds nothing" are different answers.
         "element_exists": target in known,
+        # UX-1330: junction-qualified elements whose last component is the name given.
+        "did_you_mean": [] if target in known else whatif_mod.did_you_mean(target, known),
         # UX-182: "not measured because you asked for the cheap answer"
         # is a different fact from "this run measured nothing".
         "measured": measure,
@@ -418,6 +421,8 @@ def format_blast_text(answer: dict) -> str:
             lines.append(
                 "  No element of that name is in this run. Check the spelling, or pass a path or a repository url."
             )
+            if answer.get('did_you_mean'):
+                lines.append(f"  Did you mean {', '.join(answer['did_you_mean'])}?")
             return "\n".join(lines)
         if answer['resolved_as'] != 'element' and not answer['has_inventory']:
             lines.append(
@@ -427,6 +432,8 @@ def format_blast_text(answer: dict) -> str:
             lines.append("  one, so a url or a path cannot be resolved against it.")
         else:
             lines.append("  Nothing in this run sources it. Touching it rebuilds nothing here.")
+        if answer.get('did_you_mean'):
+            lines.append(f"  Did you mean {', '.join(answer['did_you_mean'])}?")
         return "\n".join(lines)
 
     named = ", ".join(answer['direct_elements'][:6])

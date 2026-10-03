@@ -180,7 +180,7 @@ the blocks a reader meets first, and `certified_headroom`, the number
 Key Findings leads with, had never been in the population at all. It was
 302 such keys when that was filed and 305 when it landed. One level and
 no further: `blast_radius_distribution.deciles` is in the population and
-its own nine buckets are not. The surface is **626 keys** today, and
+its own nine buckets are not. The surface is **627 keys** today, and
 that figure is derived from the walk rather than typed here.
 
 So the statement of coverage, which is now a statement and not a
@@ -333,6 +333,7 @@ can look one up.
 | `element_count` | Elements in the project, as the denominator for the reach above. |
 | `has_inventory` | Whether the run carried a source inventory; without one, a url or path target cannot be resolved. |
 | `element_exists` | Whether an element-named target is in the graph at all — so "rebuilds nothing" can be told from "is not there". |
+| `did_you_mean` | When an element-named target is not in the graph: the junction-qualified elements whose last `:` component is the name given (`UX-1330`); empty otherwise. Permitted rather than required, and written on every answer (`UX-629`). |
 
 `correlate/v2`:
 

@@ -1194,6 +1194,7 @@ def compute_capacity_recommendation(
     knee_range_top: Optional[int] = None,
     builders: Optional[int] = None,
     native_max_jobs: Optional[int] = None,
+    built_elements: Optional[int] = None,
 ) -> dict:
     """UX-09, finally answered: what should `--builders` and `--max-jobs`
     be, and which constraint is the reason (`UX-116`).
@@ -1230,6 +1231,8 @@ def compute_capacity_recommendation(
     host_cores = (plane2_capacity or {}).get('host_cpu_count')
     if cores_busy is None or not host_cores or not builders or builders <= 0:
         return {}
+    if built_elements is not None and built_elements < builders:
+        return _withheld_recommendation(plane2_capacity, builders, native_max_jobs, built_elements)
 
     constraints = []
     if knee:
@@ -1297,6 +1300,28 @@ def compute_capacity_recommendation(
             "over the whole run rather than over the contended window. One capture "
             "in, one recommendation out — no configuration was tried."
         ),
+    }
+
+
+def _withheld_recommendation(plane2_capacity: dict, builders: int, native_max_jobs, built_elements: int) -> dict:
+    """`UX-1324`: fewer built elements than builders measure no bound at `builders`, so none is recommended."""
+    reason = (
+        f"Builders recommendation withheld: this run built {_count(built_elements, 'element')}, "
+        f"too few to measure a bound for {_count(builders, 'builder')}."
+    )
+    return {
+        'verdict': reason,
+        'builders': builders,
+        'native_max_jobs': native_max_jobs,
+        'host_cpu_count': plane2_capacity['host_cpu_count'],
+        'cores_busy': plane2_capacity['cores_busy'],
+        'constraints': [],
+        'binding_constraint': None,
+        'recommended_builders': None,
+        'builders_change': None,
+        'pinned_elements': plane2_capacity.get('pinned_elements') or [],
+        'withheld': {'built_elements': built_elements, 'reason': reason},
+        'caveat': "A bound needs at least as many built elements as builders; a cold-cache capture builds them all.",
     }
 
 

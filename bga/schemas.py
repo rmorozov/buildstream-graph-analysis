@@ -3844,6 +3844,16 @@ _ANALYZE_HINTS = {
                 "consumer that drops this sentence is left "
                 "with a number that looks like a setting."
             },
+            # UX-1324: present only when the run built fewer elements than builders.
+            "withheld": {
+                "description": "Why no builders value is recommended: the run built fewer elements than "
+                "its builders, so no bound at that count was measured; the recommendation, its binding "
+                "constraint and its change are null beside it, and no constraint is listed.",
+                "properties": {
+                    "built_elements": {QUANTITY: "count", "description": "Elements this run built."},
+                    "reason": {"description": "The withheld line, as the report prints it."},
+                },
+            },
             "sweep_memory_builders": {
                 QUANTITY: "count",
                 "description": "The largest swept builder count "

@@ -1568,7 +1568,9 @@ bga analyze tests/fixtures/macro_micro/run \
 
 Absent, not empty, when the block declines — the table below says when
 that is. Read `caveat` before acting on `recommended_builders`: it is a
-hypothesis to time, not a setting to apply.
+hypothesis to time, not a setting to apply. A run that built fewer
+elements than its builders measured no bound at that count, so
+`withheld` says so and `recommended_builders` is null (`UX-1324`).
 
 **How it is derived, and what it will not do.** One capture in, one
 recommendation out: no configuration is tried. The sweep replays the

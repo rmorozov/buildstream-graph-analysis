@@ -2,7 +2,7 @@
 
 **Priority:** High | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the junction-heavy onboarding walk, 2026-10-03 (`/mnt/project-files/onboarding-walk-2026-10-03/onboarding-walk.md`) | **Serves:** R1, R5 | **Topic:** analysis | **Area:** bga | **Shape:** judgement | **Reading:** container
 
-**Guard:** none — open, no guard named yet
+**Guard:** `tests/unit/test_a_builders_recommendation_needs_more_elements_than_builders.py`
 
 ## Motivation
 
@@ -40,3 +40,30 @@ On the stand-in's one-element incremental run, no "Lower --builders" line appear
 line does; a guard over a fixture with one built element asserts it. Reading taken in this container.
 
 ## Outcome
+
+**Gap measured** (`bga analyze /root/walk/jproj/.bga/runs/20261003T135218Z/run`, at `2725b2b1`; `cache.built_elements` 2, `--builders` 4):
+
+```text
+  1 builder: memory binds — below the 4 configured
+    -> Lower --builders to 1.
+    memory allows 1: the 1-builder envelope fits in 15.7 GB (measured over 1 element peak, so it says nothing above 1)
+```
+
+**Close measured** (same run, this container; `grep -c "Lower --builders"` prints 0):
+
+```text
+  2 elements built, too few to bound 4 builders: builders recommendation withheld
+```
+
+`--format json`: `capacity_recommendation.verdict` "Builders recommendation withheld: this run built 2 elements, too few to measure a bound for 4 builders.", `withheld: {built_elements: 2, reason}`, `recommended_builders`/`binding_constraint`/`builders_change` null, `constraints` empty; `agent_sizing.builders.recommended` null; the finding's step is `why_none`. The cold run `135009Z` still reads `3 builders: graph binds`. The count is `cache.built_elements` (the Pipeline Summary's build `processed`); absent, nothing is withheld. `withheld` is a permitted key (surface 626 -> 627 keys in `json-contracts.md`), no schema bump.
+
+**Mutation table** (`python3 -m pytest -n 1 -q tests/unit/test_a_builders_recommendation_needs_more_elements_than_builders.py`, 5 tests):
+
+| mutation | reddened | count |
+|---|---|---|
+| never withhold (`< builders` -> `< 0`) | unit, text, json | 3 failed, 2 passed |
+| boundary `<` -> `<=` | as many built as builders still recommends | 1 failed, 4 passed |
+| `cli` passes `built_elements=None` | text, json | 2 failed, 3 passed |
+| finding ignores `withheld` | text, json | 2 failed, 3 passed |
+
+Reverted from copies; 5 passed.

@@ -462,6 +462,7 @@ def _capacity_recommendation(analyzer, result, context, native_report: Optional[
         knee_range_top=top,
         builders=builders,
         native_max_jobs=getattr(context, 'native_max_jobs', None),
+        built_elements=((getattr(result, 'signals', None) or {}).get('cache') or {}).get('built_elements'),
     )
     if not recommendation:
         return recommendation

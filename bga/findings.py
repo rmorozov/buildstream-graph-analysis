@@ -1271,6 +1271,9 @@ def _capacity_recommendation_finding(result: AnalysisResult) -> list[dict]:
     recommendation = getattr(result, 'capacity_recommendation', None) or {}
     if not recommendation:
         return []
+    withheld = recommendation.get('withheld')
+    if withheld:
+        return [_capacity_withheld_finding(recommendation, withheld)]
 
     binding = recommendation['binding_constraint']
     recommended = recommendation['recommended_builders']
@@ -1410,6 +1413,29 @@ def _capacity_recommendation_finding(result: AnalysisResult) -> list[dict]:
         # UX-1143: the page section drawing this evidence; the card links there rather than repeating it.
         | {'section': 'capacity_recommendation'}
     ]
+
+
+def _capacity_withheld_finding(recommendation: dict, withheld: dict) -> dict:
+    """`UX-1324`: the recommendation's own withheld line, and no builders step."""
+    built, builders = withheld['built_elements'], recommendation['builders']
+    advice = recommendation.get('max_jobs_advice') or {}
+    return _finding(
+        'capacity-recommendation',
+        SEVERITY_INFO,
+        f"{plural(built, 'element')} built, too few to bound {plural(builders, 'builder')}: builders recommendation withheld",
+        # The per-element -j advice is not bounded by builders, so it stays where it changes something.
+        detail=_max_jobs_advice_detail(advice)
+        if any(r.get('max_jobs_change') for r in advice.get('elements') or [])
+        else [],
+        evidence={
+            'builders': builders,
+            'built_elements': built,
+            'binding_constraint': None,
+            'recommended_builders': None,
+            'builders_change': None,
+        },
+        step=_none(recommendation['caveat']),
+    ) | {'section': 'capacity_recommendation'}
 
 
 def _swap_observed_finding(result: AnalysisResult) -> list[dict]:

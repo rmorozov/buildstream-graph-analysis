@@ -75,7 +75,7 @@ is which before touching any of them.
 | `BST_TRACE_SPINE_CENSUS` | the census `auto` consults to decide whether this element is worth the spine's price | `tools/native_trace/bwrap_shim.py` |
 | `BST_TRACE_NO_INJECT` | `=1` runs the shim through to the real `bwrap` injecting nothing, so a refusal can be told from a capture defect. `bga snapshot --no-inject` sets it | `tools/native_trace/bwrap_shim.py` |
 | `BST_TRACE_DIAGNOSTICS` | a path the shim writes `bwrap`'s own stderr to, so a sandbox that refused says what it objected to | `tools/native_trace/bwrap_shim.py` |
-| `BST_TRACE_ARGV_MAX` | how much of a recorded `argv` is kept before truncation; the default is the shim's `DEFAULT_ARGV_RECORD_LIMIT` | `tools/native_trace/bwrap_shim.py` |
+| `BST_TRACE_ARGV_MAX` | with `BST_TRACE_ARGV_LOG` set, the most `bwrap` invocations the shim records into that log; the default is the shim's `DEFAULT_ARGV_RECORD_LIMIT` (32), a non-integer falls back to it, 0 records none | `tools/native_trace/bwrap_shim.py` |
 | `BST_TRACE_WRAPPER_CAP` | the most tokens one jobserver wrapper (`ld.lld`, `lld`, `ld.gold`, `mold`, `ninja`) may acquire before running its tool — the pool's own ceiling, set only when `--jobserver` is on (`UX-846`) | `tools/native_trace/wrappers/_common.sh` |
 | `BST_TRACE_LTO_CAP` | the static `-flto=N` cap the GCC-driver shim (`gcc`/`g++`/`cc`/`c++`) rewrites an already-present `-flto`/`-flto=jobserver`/`-flto=auto` to — default `nproc`, the same ceiling `resolve_jobserver_ceiling`'s own `auto` uses; `bga capture run --lto-cap N` sets it (`UX-880`) | `tools/native_trace/wrappers/_common.sh` |
 | `BST_TRACE_WRAPPER_DIR_OVERRIDE` | an operator's own wrapper directory (`docs/guides/wrapper-contract.md`), mounted alongside or instead of the shipped one; `bga capture run --wrapper-dir PATH` sets it (`UX-881`) | `tools/native_trace/bwrap_shim.py` |
@@ -87,7 +87,7 @@ into the child environment and the shim requires them:
 
 | name | what it is | where |
 |---|---|---|
-| `BST_TRACE_REAL_BWRAP` | the real `bwrap` the shim shadows and finally executes | `tools/bst_native_build_tracer.py` |
+| `BST_TRACE_REAL_BWRAP` | the real `bwrap` the shim shadows and finally executes; the tracer sets it to `shutil.which("bwrap")`, and the shim's `set BST_TRACE_REAL_BWRAP` message is read in [`real-project.md`](../../guides/real-project.md#troubleshooting-plane-2-recorded-zero-processes) | `tools/bst_native_build_tracer.py` |
 | `BST_TRACE_BIND_SRC` | the host directory holding the hook and the spine | `tools/bst_native_build_tracer.py` |
 | `BST_TRACE_BIND_DST` | where that directory is bound inside the sandbox | `tools/bst_native_build_tracer.py` |
 | `BST_TRACE_PRELOAD_SO` | the hook's path *inside* the sandbox, for `LD_PRELOAD` | `tools/bst_native_build_tracer.py` |

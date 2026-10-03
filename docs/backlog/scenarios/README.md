@@ -37,7 +37,6 @@ task file, which is the only place it ever lived twice.
 | UX-1301 | [four capture flags appear in no `--help`, under a heading that says they do](UX-1301-four-capture-flags-appear-in-no-help-under-a-heading-that-says-they-do.md) | capture | High | R1, R2 | 🔴 Not Started |
 | UX-1302 | [`bga snapshot` refuses the per-element jobserver and capture-log flags `capture run` takes, and no doc says so](UX-1302-bga-snapshot-refuses-the-per-element-jobserver-and-capture-log-flags-capture-run.md) | capture | High | R1, R2 | 🔴 Not Started |
 | UX-1304 | [`bga-jobserver-env` is validated and recorded, and no sandbox ever reads it](UX-1304-bga-jobserver-env-is-validated-and-recorded-and-no-sandbox-ever-reads-it.md) | capture | Medium | R2 | 🔴 Not Started |
-| UX-1305 | [a capture that recorded zero processes has no troubleshooting guide](UX-1305-a-capture-that-recorded-zero-processes-has-no-troubleshooting-guide.md) | docs | Medium | R1 | 🔴 Not Started |
 | UX-1306 | [no guide says the run store grows, or how to prune it](UX-1306-no-guide-says-the-run-store-grows-or-how-to-prune-it.md) | docs | Medium | R1, R5 | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**

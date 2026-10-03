@@ -171,3 +171,9 @@ or 5, after the comment is written. Nothing else changes.
 
 GitLab and other CI wrappers (the script is CI-agnostic; only the
 workflow is GitHub's), a PyPI wheel, and the jobserver during the pilot.
+
+## When a capture recorded zero processes
+
+A kept bundle with `PLANE 2 CAPTURED NOTHING` in its log, or a capture that
+stops on `the bwrap shim at ...`, is read in
+[`real-project.md`](real-project.md#troubleshooting-plane-2-recorded-zero-processes).

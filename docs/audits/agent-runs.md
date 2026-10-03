@@ -786,6 +786,7 @@ pairing for every merged row from round 103 on.
 | 166 | verifier | sonnet | UX-902 verifier (first launch) | 16k | 5 | 29 s | blocked | launched with the session's cwd in another repo, got that repo's worktree |
 | 166 | verifier | sonnet | UX-902 verifier | 48k | 27 | 406 s | complete | see round-166 |
 | 166 | verifier | sonnet | UX-1279 verifier | 49k | 33 | 471 s | complete | see round-166 |
+| 168 | researcher | sonnet | docs gap audit for UX-1300's thread (UX-1301..1308) | 66k | 24 | 203 s | complete | the flag scan read 41 `--help` outputs, which hide the four translated flags; found only by reading `bga/cli.py` |
 
 Round 101's four tracks are **not** here: this session could not
 identify their transcripts with certainty after a context rebuild, and
@@ -798,7 +799,7 @@ committed cleanly once told to run in the foreground. Three of the five
 left a derived figure or a §6 context-map row behind - the same class
 the round itself was about, arriving in the tracks' own work.
 
-What the seven hundred and sixty-nine rows already say: a researcher that reads a document
+What the seven hundred and seventy rows already say: a researcher that reads a document
 whole costs 100-180k; a walker that drives every control costs 336k;
 the two cuts cost a re-run each. The `walk` and `design-review`
 skills fix the report shape so the next rows are smaller, and the

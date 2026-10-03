@@ -1,7 +1,7 @@
 """UX-1253: the run's verdicts are checked against each other, and a
 contradiction is published as a violation naming both sides.
 
-Styleguide §6e rule 2."""
+Styleguide §1c."""
 
 import json
 import subprocess

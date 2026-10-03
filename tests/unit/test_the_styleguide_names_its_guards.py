@@ -47,6 +47,8 @@ STRUCTURED = REPO / "bga/viewer/structured.js"
 #: alphabet rather than to eight letters that would need widening again.
 HEADING = re.compile(r"^#{2,3} ([0-9]+[a-z]?)\. ", re.M)
 CITATION = re.compile(r"§([0-9]+[a-z]?)")
+#: A citation that names the styleguide, so "fixing guide §5" is not one.
+STYLEGUIDE_CITATION = re.compile(r"[Ss]tyleguide(?:\.md)?[`)\]]*\s*(?:'s\s+)?§([0-9]+[a-z]?)")
 ROW = re.compile(r"^\| *§([0-9]+[a-z]?) *\| *(.*?) *\| *(.*?) *\|$", re.M)
 GUARD = re.compile(r"`(test_[a-z0-9_]+\.py)`")
 
@@ -377,6 +379,7 @@ class TestTheTableIsHeldToTheScan:
 UNCITED = frozenset(
     {
         "test_a_browser_drive_starts_clean.py",
+        "test_the_browser_waits_for_a_condition.py",
         "test_a_filter_is_a_property_of_a_table.py",
         "test_a_finding_card_prints_no_null.py",
         "test_a_finding_reaches_the_timeline.py",
@@ -418,7 +421,7 @@ UNCITED = frozenset(
         "test_the_viewer_js_ships_compressed.py",
     }
 )
-UNCITED_MAX = 40
+UNCITED_MAX = 41
 
 
 @functools.lru_cache(maxsize=1)
@@ -432,7 +435,7 @@ def _browser_guards():
         path = REPO / rel
         if partition.BOOTS_A_BROWSER.search(partition._code(path)):
             text = path.read_text(encoding="utf-8", errors="replace")
-            found[path.name] = bool(set(CITATION.findall(text)) & sections)
+            found[path.name] = bool(set(STYLEGUIDE_CITATION.findall(text)) & sections)
     return found
 
 

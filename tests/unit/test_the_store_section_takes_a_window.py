@@ -25,6 +25,8 @@ The two nodes and 226 characters N=100 does not share with N=12 are the
 sentence that says it is a window and the control that opens the rest -
 `UX-419`'s badge, one drawing over. A window that does not say how deep
 it goes is §3a's defect, so they are the point rather than the residue.
+
+Styleguide §3a.
 """
 
 import json

@@ -121,6 +121,23 @@ class TestNothingReachesPastTheFloor:
             "matrix job is the only thing that sees it:\n  " + "\n  ".join(offenders)
         )
 
+    def test_no_zip_takes_strict_below_3_10(self):
+        """UX-1335: `zip(strict=)` is 3.10+, and tests run on the floor too."""
+        assert _floor() < (3, 10), "the floor reached 3.10; retire this clause"
+        offenders = []
+        for root in (*PACKAGE, "tests"):
+            for path in sorted((REPO / root).rglob("*.py")):
+                tree = ast.parse(path.read_text(encoding="utf-8"))
+                for node in ast.walk(tree):
+                    if (
+                        isinstance(node, ast.Call)
+                        and isinstance(node.func, ast.Name)
+                        and node.func.id == "zip"
+                        and any(k.arg == "strict" for k in node.keywords)
+                    ):
+                        offenders.append(f"{path.relative_to(REPO).as_posix()}:{node.lineno}")
+        assert offenders == [], f"zip(strict=) needs Python 3.10: {offenders}"
+
     def test_the_table_would_have_caught_the_one_that_shipped(self):
         """The reproduction, because the clause above is now green and
         cannot show what it was for. `bit_count` is in the table at

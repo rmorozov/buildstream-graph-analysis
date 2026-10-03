@@ -285,6 +285,10 @@ def parse_element_max_jobs(opts: list[str]) -> Optional[int]:
                 bare = _BARE_INT_RE.match(value.strip())
                 if bare:
                     return int(bare.group(1))
+    for name, prefix in _declared_prefixes(os.environ.get("BST_TRACE_JOBSERVER_ENV")):
+        own = _setenv_value(opts, name)
+        if own is not None and _declared_width(own, prefix) is not None:
+            return _declared_width(own, prefix)
     return None
 
 
@@ -358,7 +362,8 @@ def kind_job_env(kind, auth_value, ninja_probe=None, wrappers_dir=None, jobs_pre
     the cmake treatment under it (policy `jobs_env`) rather than
     `unknown_kind` when it carries one, since `JOBS` is the recipe's
     own promise to spend it, whatever its kind; UX-1003: `"MAKEFLAGS"`
-    (`recipe_promise`) reads as a make recipe."""
+    (`recipe_promise`) reads as a make recipe. UX-1304: with none of
+    them, a `bga-jobserver-env` declaration sets each `NAME` (`declared_env`)."""
     if kind in _MAKE_LIKE_KINDS:
         return [("MAKEFLAGS", auth_value)], [], "make"
     if kind == "cargo":
@@ -369,9 +374,55 @@ def kind_job_env(kind, auth_value, ninja_probe=None, wrappers_dir=None, jobs_pre
         return [("MAKEFLAGS", auth_value)], [], "make"
     if jobs_present == "MAXJOBS":
         return [("MAKEFLAGS", auth_value)], [], "maxjobs_env"
+    if jobs_present == "DECLARED":
+        return [], [], JOBSERVER_UNKNOWN_KIND
     if jobs_present:
         return _ninja_aware_env(ninja_probe, wrappers_dir, auth_value, "jobs_env")
+    declared = declared_job_env(os.environ.get("BST_TRACE_JOBSERVER_ENV"), _project_max_jobs_env())
+    if declared:
+        return [*declared, ("MAKEFLAGS", auth_value)], [], "declared_env"
     return [], [], JOBSERVER_UNKNOWN_KIND
+
+
+def _declared_prefixes(declared: Optional[str]) -> list:
+    """UX-1304: `BST_TRACE_JOBSERVER_ENV`'s `NAME=PREFIX,...` as `(NAME, PREFIX)` pairs."""
+    pairs = []
+    for entry in (declared or "").split(","):
+        name, sep, prefix = entry.strip().partition("=")
+        if sep and name.strip() and prefix.strip():
+            pairs.append((name.strip(), prefix.strip()))
+    return pairs
+
+
+def declared_job_env(declared: Optional[str], width: Optional[int]) -> list:
+    """UX-1304: `project.conf`'s `bga-jobserver-env` (`NAME=PREFIX,...`, the
+    tracer's `BST_TRACE_JOBSERVER_ENV`) as `(NAME, PREFIX + width)` pairs, the
+    way BuildStream composes `JOBS: -j%{max-jobs}`; `[]` with either unknown, or
+    a width of 1 - the build target's `%{max-jobs}`, which a `notparallel` target reports."""
+    if width is None or width <= 1:
+        return []
+    return [(name, f"{prefix}{width}") for name, prefix in _declared_prefixes(declared)]
+
+
+def _declared_width(value: str, prefix: str) -> Optional[int]:
+    """UX-1304: a composed declared `NAME`'s width - its value with `PREFIX` stripped, an integer."""
+    rest = value.strip()
+    if rest.startswith(prefix):
+        rest = rest[len(prefix) :].strip()
+    bare = _BARE_INT_RE.match(rest)
+    return int(bare.group(1)) if bare else None
+
+
+def _respect_composed(pairs: list, opts: list[str]) -> list:
+    """UX-1304: under `declared_env`, a composed `MAKEFLAGS` keeps its contents
+    with the auth appended."""
+    kept = []
+    for var, value in pairs:
+        own = _setenv_value(opts, var)
+        if var == "MAKEFLAGS" and own:
+            value = f"{own} {value}"
+        kept.append((var, value))
+    return kept
 
 
 _MAKEFLAGS_JOBS_RE = re.compile(r"(?:^|\s)-j\s*\d")
@@ -389,6 +440,10 @@ def recipe_promise(opts: list[str]):
     for name in _MAXJOBS_VARS:
         if _BARE_INT_RE.match((_setenv_value(opts, name) or "").strip()):
             return "MAXJOBS"
+    # UX-1304: a declared `NAME` BuildStream composed is the recipe's own width - inject nothing.
+    for name, _prefix in _declared_prefixes(os.environ.get("BST_TRACE_JOBSERVER_ENV")):
+        if _setenv_value(opts, name) is not None:
+            return "DECLARED"
     return None
 
 
@@ -510,13 +565,15 @@ def _make_probe_cache_path(jobserver_path: Optional[str], element: Optional[str]
 # UX-877: `kind_job_env`'s own policy names whose MAKEFLAGS a *make*
 # reads - ninja_client/ninja_wrapper/ninja_static hand MAKEFLAGS (or
 # nothing) to ninja, not make, so fifo is never a problem for them.
-_MAKE_CONSUMER_POLICIES = frozenset({"make", "cargo", "cmake_meson", "jobs_env"})
+_MAKE_CONSUMER_POLICIES = frozenset({"make", "cargo", "cmake_meson", "jobs_env", "declared_env"})
 
 # UX-878: of those, the policies whose MAKEFLAGS an *unwrapped* native
 # jobserver client (gcc-lto, cargo) reads directly - "make" excluded,
 # since its MAKEFLAGS consumer is make itself, a direct child, for which
 # a raw fd is valid. UX-1001/UX-1006: both ninja policies too - ninja 1.13 reads only `fifo:`, gcc's lto1 deadlocks on a blocking fd pair.
-_COMPILER_SAFE_POLICIES = frozenset({"cmake_meson", "jobs_env", "cargo", "ninja_client", "ninja_wrapper"})
+_COMPILER_SAFE_POLICIES = frozenset(
+    {"cmake_meson", "jobs_env", "declared_env", "cargo", "ninja_client", "ninja_wrapper"}
+)
 
 # UX-913: of those, the policies whose MAKEFLAGS consumer is `make`
 # itself - a direct child, for which a raw fd is valid - so the scrub
@@ -875,6 +932,8 @@ def _jobserver_injection(opts: list[str], binds: tuple, decision: str, pool: dic
         else:
             # UX-878: a scrub leaves no jobserver, so an emptied JOBS would serialize the build; drop it too and the recipe's own -jN stands (jobserver-off behaviour).
             pairs = [pair for pair in pairs if pair[0] != "JOBS"]
+    if policy == "declared_env":
+        pairs = _respect_composed(pairs, opts)
     auth_injected = any(var == "MAKEFLAGS" for var, _ in pairs)
     tokens = []
     for var, value in pairs:

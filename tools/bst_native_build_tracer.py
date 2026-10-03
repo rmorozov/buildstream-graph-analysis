@@ -2095,6 +2095,18 @@ def structural_ranking(element_kinds: dict, element_deps: dict, element_notparal
     }
 
 
+def _declared_jobserver_env(project_dir: str) -> Optional[str]:
+    """UX-1304: `project.conf`'s `bga-jobserver-env` re-serialized `NAME=PREFIX,...`
+    for the shim; `None` when absent or malformed."""
+    from .bst_extract_run import _read_bga_jobserver_env
+
+    try:
+        entries = _read_bga_jobserver_env(project_dir)
+    except RuntimeError:
+        return None
+    return ",".join(f"{e['name']}={e['prefix']}" for e in entries) or None
+
+
 def _write_kinds_read(
     bind_dir: str, jobserver: Optional[int], element_kinds: Optional[dict], diagnostic: dict
 ) -> Optional[str]:
@@ -2469,6 +2481,12 @@ def run_traced_build(
                 env["BST_TRACE_ELEMENT_KINDS"] = captured_kinds
             else:
                 env.pop("BST_TRACE_ELEMENT_KINDS", None)
+            # UX-1304: `bga-jobserver-env`, for a kind outside the table; a malformed one is extraction's error.
+            declared_env = _declared_jobserver_env(project_dir)
+            if declared_env:
+                env["BST_TRACE_JOBSERVER_ENV"] = declared_env
+            else:
+                env.pop("BST_TRACE_JOBSERVER_ENV", None)
             # UX-882: the per-element annotation table's input, same
             # shape as `element_kinds.json` beside it - the shim falls
             # back to it only when the command-line override does not
@@ -2552,6 +2570,7 @@ def run_traced_build(
             env.pop("BST_TRACE_PROJECT_MAX_JOBS", None)
             env.pop("BST_TRACE_ELEMENT_KINDS", None)
             env.pop("BST_TRACE_ELEMENT_AUTH_MAP", None)
+            env.pop("BST_TRACE_JOBSERVER_ENV", None)
             env.pop("BST_TRACE_WRAPPER_DIR", None)
             env.pop("BST_TRACE_WRAPPER_CAP", None)
             env.pop("BST_TRACE_LTO_CAP", None)

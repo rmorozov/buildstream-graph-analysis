@@ -69,9 +69,26 @@ that applies wins (`tools/native_trace/bwrap_shim.py`'s
 
 An element none of them names gets `auto`, and what `auto` gives it
 depends on its kind: a kind outside the shipped table (`make`,
-`autotools`, `cmake`, `meson`, `cargo`) joins only when
-BuildStream composes `MAKEFLAGS`, `JOBS` or `MAXJOBS` into its sandbox
-(`kind_job_env`), and gets nothing otherwise.
+`autotools`, `cmake`, `meson`, `cargo`) joins when BuildStream
+composes `MAKEFLAGS`, `JOBS` or `MAXJOBS` into its sandbox
+(`kind_job_env`). Without one, it joins only if `project.conf`
+declares the variable its plugin reads the width from:
+
+```yaml
+variables:
+  bga-jobserver-env: "MYJOBS=-j"
+```
+
+Each `NAME=PREFIX` entry is then set to `PREFIX` followed by the
+project's `max-jobs` (`MYJOBS=-j4`), beside the `MAKEFLAGS` auth, and
+`jobserver_decisions` reads policy `declared_env`. An element that
+already composes any declared `NAME` owns its width: nothing is
+injected, no other `NAME` and no auth (`unknown_kind`), and `MYJOBS=-j1`
+reads `pinned`; a value off the declared prefix (`--jobs=1` against
+`-j`) blocks injection the same way. A composed `MAKEFLAGS` keeps its
+contents, with the auth appended. With
+no declaration, or the project's `max-jobs` unread or `1`, the element
+gets nothing (`unknown_kind`).
 
 The four styles, for the last two rows:
 

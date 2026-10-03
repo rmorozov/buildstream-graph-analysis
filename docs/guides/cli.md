@@ -558,6 +558,34 @@ Use published capture refs (`bga baseline`, `UX-96`) rather than the
 store. The store is the laptop's analogue of them, and a CI runner has
 no persistent project directory to keep one in.
 
+## `.bga/config` — the project's remembered settings (`UX-1303`)
+
+`<project>/.bga/config` is one JSON object (`run_store.write_config`:
+indent 2, sorted keys). `bga snapshot` rewrites it on every run and
+keeps keys it does not know, so hand-edited keys survive. A file that
+is missing, not JSON, or not an object reads as `{}`
+(`run_store._json_dict`), and the next snapshot overwrites it.
+
+| key | default | written by | format | what it changes |
+|---|---|---|---|---|
+| `trace_opens` | `true` | `bga snapshot` (`--trace-opens` / `--no-trace-opens`) | JSON boolean | whether the next capture traces file opens (`take_snapshot` in `tools/bga_snapshot.py`) |
+| `trace_spine` | `"auto"` | `bga snapshot` (`--trace-spine=off\|on\|auto`) | JSON string | the ptrace spine policy of the next capture; see [Sticky flags](#sticky-flags) |
+| `builds_per_day` | absent | by hand | JSON number > 0; anything else reads as undeclared (`bga/build_rate.py`) | the viewer's decision panel and `bga snapshot --list` carry `build_rate` (`per_day`, `source`), and the panel prices a saving in agent-hours a day beside it (`UX-1276`); never counted from snapshot stamps |
+| `public_junctions` | `{}` | by hand | `{"<junction>.bst": {"checkout": "<path>", "tag": "<git tag>"}}` | `bga bundle --export --anonymize` passes the element names of that junction's tagged tree through unchanged instead of pseudonymizing them (`public_junctions` in `bga/run_store.py`, `bga/bundle.py`); a checkout or tag it cannot read refuses the export |
+
+```json
+{
+  "builds_per_day": 40,
+  "public_junctions": {"freedesktop-sdk.bst": {"checkout": "../fdo-sdk", "tag": "freedesktop-sdk-24.08"}},
+  "trace_opens": true,
+  "trace_spine": "auto"
+}
+```
+
+Every key `bga/` and `tools/` read from this file is a row above;
+`tests/unit/test_the_config_section_names_every_key_the_code_reads.py`
+collects them from the source.
+
 ## `bga doctor` — before anything else (`UX-125`)
 
 ```bash

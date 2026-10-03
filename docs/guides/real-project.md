@@ -126,6 +126,9 @@ and `--trace-spine`. Decide them once (`bga snapshot --trace-spine=off
 Every report still records what actually ran, so a sticky flag cannot
 make a capture *claim* something it did not do.
 
+Every key `.bga/config` holds, including the two you edit by hand,
+is in [the `.bga/config` section of the CLI reference](cli.md#bga-config--the-projects-remembered-settings-ux-1303).
+
 `.bga/` gitignores itself the first time it is written. Snapshots are
 build artifacts: delete any of them whenever you like, nothing else
 refers to them.

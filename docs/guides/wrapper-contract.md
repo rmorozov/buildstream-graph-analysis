@@ -46,6 +46,13 @@ spends the acquired width:
 | `threads` | `--threads=<width>` | `ld.lld`, `lld`, `ld.gold`, `mold` |
 | `flto` | not a token-holder at all — see below | the `flto/` GCC-driver shims |
 
+A `ninja` that is itself a jobserver client holds nothing and loses the
+recipe's `-j`, which would turn its client off: 1.13 and later on a
+`fifo:` auth, and a pre-1.13 build carrying the community patch (ninja
+PR #1140, found by the warning string in its binary). The patch reads
+only an fd pair, so on a `fifo:` auth the wrapper opens the fifo on fd 9
+and puts `--jobserver-fds=9,9` ahead of it in `MAKEFLAGS` (`UX-1336`).
+
 `flto` is a different mechanism: it never holds a token. It strips
 `--jobserver-auth=…` from the `MAKEFLAGS` it hands the real compiler
 (a grandchild across the sandbox boundary cannot open the raw fd) and,

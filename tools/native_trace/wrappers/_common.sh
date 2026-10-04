@@ -254,6 +254,16 @@ bga_run_wrapped() {
             1.1[3-9]* | 1.[2-9][0-9]* | [2-9]*) bga_client=1 ;;
         esac
         case $auth in fifo:*) ;; *) bga_client=0 ;; esac
+        # UX-1316: the pre-1.13 community patch (ninja PR #1140) is a client of an fd pair only, named nowhere but its binary.
+        if [ "$bga_client" = 0 ] && LC_ALL=C grep -q 'ignoring GNU make jobserver' "$real" 2>/dev/null; then
+            bga_client=1
+            case $auth in
+                fifo:*)
+                    exec 9<>"${auth#fifo:}"
+                    # Read first by the patch; gcc and make read the trailing --jobserver-auth.
+                    export MAKEFLAGS="--jobserver-fds=9,9 $MAKEFLAGS" ;;
+            esac
+        fi
     fi
     if [ "$bga_client" = 0 ]; then
         bga_hold "$auth"

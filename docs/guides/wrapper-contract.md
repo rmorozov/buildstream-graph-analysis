@@ -46,6 +46,13 @@ spends the acquired width:
 | `threads` | `--threads=<width>` | `ld.lld`, `lld`, `ld.gold`, `mold` |
 | `flto` | not a token-holder at all — see below | the `flto/` GCC-driver shims |
 
+A `ninja` that is itself a jobserver client holds nothing and loses the
+recipe's `-j`, which would turn its client off: 1.13 and later on a
+`fifo:` auth, and a pre-1.13 build carrying the community patch (ninja
+PR #1140, found by the warning string in its binary). The patch reads
+only an fd pair, so on a `fifo:` auth the wrapper opens the fifo on fd 9
+and puts `--jobserver-fds=9,9` ahead of it in `MAKEFLAGS` (`UX-1336`).
+
 `flto` is a different mechanism: it never holds a token. It strips
 `--jobserver-auth=…` from the `MAKEFLAGS` it hands the real compiler
 (a grandchild across the sandbox boundary cannot open the raw fd) and,
@@ -62,9 +69,11 @@ tool" — the reference implementation (`bga_find_real` in
 `_common.sh`) walks `PATH`, skips its own directory, resolves symlinks
 (`readlink -f`), and also skips any candidate whose own first three
 lines carry a UX-846 marker (a copy of a wrapper, not a symlink, would
-otherwise re-enter). It additionally exports `BGA_WRAPPER_TOOL` and
-refuses outright (exit 127) if a process already carries that same
-tool name — belt and braces against the loop a symlink or relocated
+otherwise re-enter). It additionally exports `BGA_WRAPPER_TOOL=tool:PID` (and
+`BGA_WRAPPER_FORK` on forked commands) and refuses outright (exit 127)
+if its own PID or parent PID is the recorded one - a nested build
+under the real tool is a descendant, not a repeat, and any chain stops at
+16 wrappers deep (`BGA_WRAPPER_DEPTH`, `UX-1315`) — belt and braces against the loop a symlink or relocated
 copy produced in production once (32,000 processes, a container
 restart).
 

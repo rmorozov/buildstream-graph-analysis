@@ -365,7 +365,7 @@ class TestTheReentryGuardRefusesInIsolation:
         env = dict(os.environ)
         env["PATH"] = f"{fake_dir}{os.pathsep}{env['PATH']}"
         # Already "inside" a wrapper invocation for this same tool.
-        env["BGA_WRAPPER_TOOL"] = "ld.lld"
+        env["BGA_WRAPPER_FORK"] = f"ld.lld:{os.getpid()}"
 
         result = subprocess.run(["sh", str(WRAPPERS / "ld.lld")], env=env, capture_output=True, text=True, timeout=2)
         assert result.returncode == 127, (result.stdout, result.stderr)

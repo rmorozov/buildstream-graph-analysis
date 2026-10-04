@@ -62,9 +62,11 @@ tool" — the reference implementation (`bga_find_real` in
 `_common.sh`) walks `PATH`, skips its own directory, resolves symlinks
 (`readlink -f`), and also skips any candidate whose own first three
 lines carry a UX-846 marker (a copy of a wrapper, not a symlink, would
-otherwise re-enter). It additionally exports `BGA_WRAPPER_TOOL` and
-refuses outright (exit 127) if a process already carries that same
-tool name — belt and braces against the loop a symlink or relocated
+otherwise re-enter). It additionally exports `BGA_WRAPPER_TOOL=tool:PID` (and
+`BGA_WRAPPER_FORK` on forked commands) and refuses outright (exit 127)
+if its own PID or parent PID is the recorded one - a nested build
+under the real tool is a descendant, not a repeat, and any chain stops at
+16 wrappers deep (`BGA_WRAPPER_DEPTH`, `UX-1315`) — belt and braces against the loop a symlink or relocated
 copy produced in production once (32,000 processes, a container
 restart).
 

@@ -203,17 +203,22 @@ bga_run_wrapped() {
     flag_style=$1
     shift
 
-    # UX-846 (post-merge incident): the last line, independent of
-    # whatever `bga_find_real` above concludes - if this process is
-    # already inside a wrapper invocation for the *same* tool name, it
-    # is a repeat by construction and must never recurse again,
-    # regardless of the cause. Exported before `bga_find_real` or
-    # `--help` ever run, so every process in the chain carries it.
-    if [ "${BGA_WRAPPER_TOOL:-}" = "$bga_tool" ]; then
+    # UX-846/UX-1315: refuse only a recursion. `exec`ing a wrapper copy keeps
+    # this PID ($$ matches the tool marker); forking one makes this shell its
+    # PPID (the fork marker, set only on the forked command lines below). A
+    # nested build is a descendant of the real tool, which matches neither.
+    if [ "${BGA_WRAPPER_TOOL:-}" = "$bga_tool:$$" ] || [ "${BGA_WRAPPER_FORK:-}" = "$bga_tool:$PPID" ]; then
         echo "bga: $bga_tool: wrapper re-entered itself" >&2
         exit 127
     fi
-    export BGA_WRAPPER_TOOL="$bga_tool"
+    export BGA_WRAPPER_TOOL="$bga_tool:$$"
+    # A recursion through an intermediate shell matches neither marker; a depth cap bounds it.
+    case ${BGA_WRAPPER_DEPTH:-0} in '' | *[!0-9]*) BGA_WRAPPER_DEPTH=0 ;; esac
+    if [ "${BGA_WRAPPER_DEPTH:-0}" -ge 16 ]; then
+        echo "bga: $bga_tool: wrapper re-entered itself (nested 16 deep)" >&2
+        exit 127
+    fi
+    export BGA_WRAPPER_DEPTH=$((${BGA_WRAPPER_DEPTH:-0} + 1))
 
     real=$(bga_find_real) || {
         echo "bga: $bga_tool: no real tool found on PATH past $bga_self_dir" >&2
@@ -238,14 +243,14 @@ bga_run_wrapped() {
     # UX-846: the same fact the capture's pass-through policy probed
     # before the build, checked again here - belt and braces against a
     # tool that ended up on this PATH despite speaking the protocol.
-    if "$real" --help 2>&1 | grep -qi jobserver; then
+    if BGA_WRAPPER_FORK="$bga_tool:$$" "$real" --help 2>&1 | grep -qi jobserver; then
         exec "$real" "$@"
     fi
     # UX-1001: ninja 1.13+ is a client whose `--help` never says so - it
     # holds no tokens, but still loses the recipe's -j, which turns the client off.
     bga_client=0
     if [ "$bga_tool" = ninja ]; then
-        case $("$real" --version 2>/dev/null) in
+        case $(BGA_WRAPPER_FORK="$bga_tool:$$" "$real" --version 2>/dev/null) in
             1.1[3-9]* | 1.[2-9][0-9]* | [2-9]*) bga_client=1 ;;
         esac
         case $auth in fifo:*) ;; *) bga_client=0 ;; esac
@@ -286,7 +291,7 @@ bga_run_wrapped() {
         exec "$real" "$@"
     fi
     case "$flag_style" in
-        dashj) "$real" -j "$width" "$@" ;;
-        *) "$real" "--threads=$width" "$@" ;;
+        dashj) BGA_WRAPPER_FORK="$bga_tool:$$" "$real" -j "$width" "$@" ;;
+        *) BGA_WRAPPER_FORK="$bga_tool:$$" "$real" "--threads=$width" "$@" ;;
     esac
 }

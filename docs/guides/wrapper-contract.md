@@ -45,6 +45,7 @@ spends the acquired width:
 | `dashj` | `-j <width>` | `ninja` |
 | `threads` | `--threads=<width>` | `ld.lld`, `lld`, `ld.gold`, `mold` |
 | `flto` | not a token-holder at all — see below | the `flto/` GCC-driver shims |
+| `isolate` | not a token-holder: a reopened copy of an fd-pair auth | `ctest` |
 
 A `ninja` that is itself a jobserver client holds nothing and loses the
 recipe's `-j`, which would turn its client off: 1.13 and later on a
@@ -52,6 +53,13 @@ recipe's `-j`, which would turn its client off: 1.13 and later on a
 PR #1140, found by the warning string in its binary). The patch reads
 only an fd pair, so on a `fifo:` auth the wrapper opens the fifo on fd 9
 and puts `--jobserver-fds=9,9` ahead of it in `MAKEFLAGS` (`UX-1336`).
+
+`isolate` is for a tool that is itself a client but joins an fd-pair pool
+through libuv: ctest 3.29 and later dup the auth's fds and set `O_NONBLOCK`,
+which lands on the open file description make shares, and make 4.2.1 then
+aborts with `read jobs pipe: Resource temporarily unavailable`. The wrapper
+reopens the read end on fd 9 and rewrites the auth to `9,9`; a `fifo:` auth
+is already opened per process and passes through (`UX-1337`).
 
 `flto` is a different mechanism: it never holds a token. It strips
 `--jobserver-auth=…` from the `MAKEFLAGS` it hands the real compiler

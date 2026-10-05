@@ -21,6 +21,7 @@ to instead of superseded:
 | [`round-register.md`](round-register.md) | which rounds happened and when, derived from the committed union — every round document, the ledger's round column and every round a task file names, never `git log` — dated by the document's own dateline; only the one next round, still without its document, is held out of it (`UX-744`, `UX-782`, `UX-926`) |
 | [`directions-history.md`](directions-history.md) | the round, status and verification chapters `design/directions.md` carried between its Directions, and the round-history table every round adds a row to (`UX-1293`) |
 | [`retro-2026-09-28.md`](retro-2026-09-28.md) | the first weekly retro (`UX-999`) — the week's findings by class, main's CI history, three `optimization` proposals |
+| [`retro-2026-10-05.md`](retro-2026-10-05.md) | the second weekly retro — the ledger by class, main's 3.9 cell red since 2026-09-29 on a dev pin above the floor, three `optimization` proposals |
 
 The rounds themselves:
 

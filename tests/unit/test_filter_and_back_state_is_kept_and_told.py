@@ -287,9 +287,11 @@ def seen(uris):
             out[label] = {"back": {}, "ahead": {}, "rail": {}}
             for width, height in ((1440, 900), (390, 844)):
                 walked = [v for v in browser.journey(uri, _STEPS, width, height) if v is not None]
-                out[label]["back"][width] = dict(zip(_NAMES, walked, strict=True))
+                assert len(walked) == len(_NAMES), walked
+                out[label]["back"][width] = dict(zip(_NAMES, walked))
                 ahead = browser.journey(uri, _AHEAD, width, height)[1:]
-                out[label]["ahead"][width] = dict(zip(_AHEAD_NAMES, ahead, strict=True))
+                assert len(ahead) == len(_AHEAD_NAMES), ahead
+                out[label]["ahead"][width] = dict(zip(_AHEAD_NAMES, ahead))
                 out[label][width] = browser.measure(uri, _FILTER, width, height)
                 out[label]["rail"][width] = browser.measure(uri, _RAIL, width, height)
             out[label]["search"] = browser.measure(uri, _SEARCH)

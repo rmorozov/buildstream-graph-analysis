@@ -420,6 +420,7 @@ KNOWN_SKIP_REASONS = {
         "the one reason here that names its own coverage elsewhere",
         0,
     ),
+    "tomllib arrives in 3.11; the newest-Python cell reads it": ("UX-1335's pin guard, read on 3.11+", 0),
     # `UX-588`: never taken while the floor is 3.9. It exists so the
     # PEP 604 clause retires itself the day the floor moves, rather
     # than passing on a check that no longer applies.

@@ -197,8 +197,30 @@ bga_hold() {
     trap bga_release EXIT INT TERM HUP
 }
 
-# `flag_style` is `threads` (--threads=N), `dashj` (-j N) or `flto`
-# (UX-880 - not a token-holder at all, see `bga_run_flto` above).
+# UX-1337: a client that joins an fd-pair pool through libuv (ctest >= 3.29)
+# sets O_NONBLOCK on the description it shares with make, and make 4.2.1
+# then dies on EAGAIN ("read jobs pipe"). A reopen gives it its own.
+bga_run_isolated() {
+    real=$1
+    shift
+    flags=
+    pair=
+    for flag in ${MAKEFLAGS:-}; do
+        case $flag in
+            --jobserver-auth=fifo:*) ;;
+            --jobserver-auth=*,* | --jobserver-fds=*,*) pair=${flag#*=}; continue ;;
+        esac
+        flags="$flags $flag"
+    done
+    if [ -n "$pair" ]; then
+        exec 9<>/dev/fd/"${pair%%,*}"
+        export MAKEFLAGS="${flags# } --jobserver-auth=9,9"
+    fi
+    exec "$real" "$@"
+}
+
+# `flag_style` is `threads` (--threads=N), `dashj` (-j N), `flto` (UX-880)
+# or `isolate` (UX-1337) - the last two are not token-holders at all.
 bga_run_wrapped() {
     flag_style=$1
     shift
@@ -227,6 +249,9 @@ bga_run_wrapped() {
 
     if [ "$flag_style" = "flto" ]; then
         bga_run_flto "$real" "$@"
+    fi
+    if [ "$flag_style" = "isolate" ]; then
+        bga_run_isolated "$real" "$@"
     fi
 
     auth=

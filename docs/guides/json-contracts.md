@@ -511,7 +511,7 @@ and `parallelism`:
 | `open_records_note`, `static_binary_disclaimer` | Why a process may be missing from `max_concurrency`, and what `LD_PRELOAD` cannot see in the capture's own words. The census above bounds it; this says what is being bounded. |
 | `configure_cpu_us`, `configure_share` | In `configure_phase`: CPU spent in configure work across the run, summed over processes so it exceeds wall-clock where they ran in parallel, and that as a share of all CPU Plane 2 saw. A floor, for the reason its `note` gives. |
 | `unmeasured_processes`, `spine_sourced_processes` | In `cpu_time`: processes no CPU could be read from — a signal death or an exec replacement leaves no rusage behind — and how many of the measured came from the spine rather than the hook. |
-| `per_element_series` | Each element's CPU rate over time, as `[t_us, cores]` points on the host sampler's tick. The totals beside it are unchanged: this says what shape a total had. A process shorter than one tick is in the total and absent from the curve, and a failed `/proc` read ends a series rather than reading zero. |
+| `per_element_series` | Each element's CPU rate over time, as `[t_us, cores]` points on the host sampler's tick. The totals beside it are unchanged: this says what shape a total had. A process shorter than one tick is in the total and absent from the curve, and a failed `/proc` read ends a series rather than reading zero. Present only under `--jobserver`: the shim's decision rows name each sandbox's host root. |
 
 The distributions — `element_duration_distribution`,
 `blast_radius_distribution`, `fan_in_distribution`, and `correlate/v2`'s

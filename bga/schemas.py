@@ -5117,7 +5117,9 @@ _ANALYZE_HINTS = {
                 "tick is in the total and absent from "
                 "the curve, and a `/proc` read that "
                 "failed ends a series rather than "
-                "reading zero."
+                "reading zero. Present only under "
+                "`--jobserver`: the shim's decision "
+                "rows name each sandbox's host root."
             },
             "note": {"description": "What a CPU figure here means, in a sentence."},
         },

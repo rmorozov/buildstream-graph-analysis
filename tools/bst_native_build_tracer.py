@@ -137,8 +137,8 @@ from .jobserver import (
     summarize_jobserver_tokens_by_element,
     tokens_by_element,
 )
-from .jobserver.memory import read_build_memory, read_cgroup_limit_bytes
-from .jobserver.pool import opening_seed
+from .jobserver.memory import opening_share, read_build_memory, read_cgroup_limit_bytes
+from .jobserver.pool import capped_width, opening_seed
 
 #: UX-901: `JOBSERVER_SERIES_CAP`/`summarize_jobserver_ledger`/
 #: `summarize_jobserver_tokens_by_element`/`tokens_by_element` are
@@ -9345,10 +9345,18 @@ def main(argv: Optional[list[str]] = None) -> int:
         cli_seed = jobserver_seed
         jobserver_mode = os.environ.get("BGA_JOBSERVER_MODE") or "off"
         seed_typed = os.environ.get("BGA_JOBSERVER_SEED_TYPED") == "1"
-        jobserver_seed = opening_seed(jobserver_seed, project_max_jobs, jobserver_mode, bool(args.plan), seed_typed)
+        seed_args = (jobserver_mode, bool(args.plan), seed_typed)
+        uncapped_seed = opening_seed(jobserver_seed, project_max_jobs, *seed_args)
+        capped_jobs = capped_width(project_max_jobs, opening_share())
+        jobserver_seed = opening_seed(jobserver_seed, capped_jobs, *seed_args)
         jobserver_seed_bound = None
         if jobserver_mode == "auto" and args.jobserver:
-            jobserver_seed_bound = "typed" if seed_typed else ("max_jobs" if jobserver_seed != cli_seed else "cores")
+            if seed_typed:
+                jobserver_seed_bound = "typed"
+            elif jobserver_seed != uncapped_seed:
+                jobserver_seed_bound = "cgroup"
+            else:
+                jobserver_seed_bound = "max_jobs" if jobserver_seed != cli_seed else "cores"
         jobserver_decisions_path = (
             os.path.join(scratch_mkdtemp(args.project_dir, "jobserver-"), "jobserver_decisions.jsonl")
             if args.jobserver

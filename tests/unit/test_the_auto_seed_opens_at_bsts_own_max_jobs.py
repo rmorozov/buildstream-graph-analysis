@@ -84,7 +84,7 @@ def test_two_giants_that_do_not_fit_get_no_token_past_the_seed(tmp_path):
     assert controller.pool == 7
 
 
-def _run_main(tmp_path, monkeypatch, seed_typed):
+def _run_main(tmp_path, monkeypatch, seed_typed, share=1.0):
     seen = {}
 
     def fake_metadata(project_dir, cmd, jobserver):
@@ -101,6 +101,7 @@ def _run_main(tmp_path, monkeypatch, seed_typed):
         monkeypatch.delenv(cli.JOBSERVER_SEED_TYPED_ENV, raising=False)
     monkeypatch.setattr(tracer, "read_jobserver_metadata_for_build", fake_metadata)
     monkeypatch.setattr(tracer, "run_traced_build", fake_run_traced_build)
+    monkeypatch.setattr(tracer, "opening_share", lambda: share)  # UX-1339: not the container's own cgroup
     raw_log = tmp_path / "raw.log"
     raw_log.write_bytes(b"")
     output = tmp_path / "report.json"

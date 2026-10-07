@@ -2006,11 +2006,25 @@ jobs:
           python3 examples/check_shape_property.py memory-giant "$OUT/plane2-auto.json" \
             giant.bst 200 | tee "$OUT/property.txt"
 
+      - name: Build + capture 17-late-peak-giant (UX-1284)
+        # The link's lto1 peak over the largest cc1, off the raw log's END
+        # lines (late_k 2 at 20000 lines: 2.97x measured outside bst).
+        run: |
+          set -euo pipefail
+          PROJ=examples/17-late-peak-giant
+          OUT=artifacts/17-late-peak-giant
+          mkdir -p "$OUT"
+          rm -rf ~/.cache/buildstream ~/.local/share/buildstream
+          bga capture run --run-dir "$OUT/run-off" --raw-log "$OUT/trace.log" --jobserver off \
+            "$PROJ" "$OUT/plane2-off.json" -- bst --option unit_lines 20000 --option late_k 2 build all.bst
+          python3 examples/check_shape_property.py late-peak "$OUT/trace.log" \
+            giant.bst 2 | tee "$OUT/property.txt"
+
       - name: UX-1132 shape properties as notices
         # Below the noisy builds, whatever they did: annotations are what a session reads.
         if: always()
         run: |
-          for shape in 14-two-giants 15-wide-chain 16-memory-bound-giant; do
+          for shape in 14-two-giants 15-wide-chain 16-memory-bound-giant 17-late-peak-giant; do
             f="artifacts/$shape/property.txt"
             if [ -s "$f" ]; then echo "::notice title=UX-1132 $shape::$(head -c 400 "$f")"
             else echo "::warning title=UX-1132 $shape::no property line - the build or its check did not run"; fi

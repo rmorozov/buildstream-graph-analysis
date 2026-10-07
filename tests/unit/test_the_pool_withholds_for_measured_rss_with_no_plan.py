@@ -49,6 +49,7 @@ def _controller(tmp_path, *, live, finished, available, seed=4, drained=True, sa
     ledger = str(tmp_path / "ledger.jsonl")
     paths = {"seed": seed, "trace_log": str(trace_log), "decisions": str(decisions)}
     paths.update({"meminfo": str(meminfo), "proc_root": str(proc), "memory": str(tmp_path / "no-psi")})
+    paths["self_cgroup"] = str(tmp_path / "no-cgroup")  # UX-1282: the runner's own cgroup cap must not bind
     return tracer.PoolController(fd, 16, capacity=16, ledger_path=ledger, psi_paths=paths), ledger
 
 

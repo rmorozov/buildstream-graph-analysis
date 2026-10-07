@@ -368,10 +368,13 @@ def _peak_rss_and_host_memory(
         for uid, entry in per_element.items()
         if (converted := kb_to_bytes(entry.get('peak_rss_kb'))) is not None
     }
-    mem_total_kb = (host_samples or {}).get('header', {}).get('mem_total_kb')
+    header = (host_samples or {}).get('header', {})
+    mem_total_kb = header.get('mem_total_kb')
     if not peak_rss_bytes or not mem_total_kb:
         return None, None
-    return peak_rss_bytes, kb_to_bytes(mem_total_kb)
+    # UX-1282: a container's cgroup cap, when tighter, is the memory the build had.
+    mem_limit_kb = header.get('mem_limit_kb')
+    return peak_rss_bytes, kb_to_bytes(min(mem_total_kb, mem_limit_kb) if mem_limit_kb else mem_total_kb)
 
 
 def _max_jobs_advice(analyzer, native_report: dict) -> dict:
@@ -3266,6 +3269,17 @@ def set_jobserver_mode_env(mode: Optional[str]) -> None:
     before the tracer's `main()` reads it back for `run-context.json`.
     """
     os.environ['BGA_JOBSERVER_MODE'] = mode or 'off'
+    os.environ.pop(JOBSERVER_SEED_TYPED_ENV, None)
+
+
+#: UX-1283: set when the user typed `--jobserver-seed`, so the tracer leaves it unclamped under `auto`.
+JOBSERVER_SEED_TYPED_ENV = 'BGA_JOBSERVER_SEED_TYPED'
+
+
+def _mark_typed_seed(tracer_args: list) -> None:
+    """UX-1283: `JOBSERVER_SEED_TYPED_ENV` when `tracer_args` carry a hand-typed `--jobserver-seed`."""
+    if any(tok == '--jobserver-seed' or tok.startswith('--jobserver-seed=') for tok in tracer_args):
+        os.environ[JOBSERVER_SEED_TYPED_ENV] = '1'
 
 
 def _jobserver_argv_tokens(mode: Optional[str], ceiling: Optional[int], seed: Optional[int], eq: bool) -> list:
@@ -3342,6 +3356,7 @@ def _translate_capture_jobserver(argv: list) -> list:
             continue
         out.append(tok)
         i += 1
+    _mark_typed_seed(tracer_args)
     new_rest = out + (['--'] + wrapped_cmd if has_sep else [])
     return argv[:2] + new_rest
 

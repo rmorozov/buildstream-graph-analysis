@@ -152,7 +152,7 @@ flags, not variables (`--trace-opens`, `--trace-spine`, `--jobserver`).
 
 ### Set by `bga` itself, listed for debugging
 
-`BGA_BASELINE_RUN_DIR` and `BGA_JOBSERVER_MODE` are written by
+`BGA_BASELINE_RUN_DIR`, `BGA_JOBSERVER_MODE` and `BGA_JOBSERVER_SEED_TYPED` are written by
 `bga snapshot` and `bga capture` into the child they start.
 
 More names sit in the same namespace and are **not** switches to
@@ -163,6 +163,7 @@ deserves an answer:
 |---|---|---|
 | `BGA_BASELINE_RUN_DIR` | a previous run directory whose `graph.json` `tools/bst_extract_run.py`'s `extract_run` compares this build's own fingerprint against, reusing it on an exact match instead of a fresh `bst show --deps all` (`UX-1083`) — the same `BGA_JOBSERVER_MODE` shape, set by `bga snapshot` beside the previous healthy snapshot it already picks for the compare. Unset when there isn't one (a first capture) or the tracer's `run` command is invoked directly | `tools/bga_snapshot.py`, `tools/bst_native_build_tracer.py` |
 | `BGA_JOBSERVER_MODE` | `off`/`auto`/`n` — `bga capture` sets it beside the `--jobserver N` it already resolves from `--jobserver auto\|N\|off` (`UX-851`), so `tools/bst_native_build_tracer.py run` can record which mode ran without parsing its own argv for the distinction. Unset (read as `off`) when the tracer's `run` command is invoked directly, outside `bga capture` | `tools/bst_native_build_tracer.py` |
+| `BGA_JOBSERVER_SEED_TYPED` | `1` when `bga capture run` was handed a `--jobserver-seed` by hand (`UX-1283`), so `tools/bst_native_build_tracer.py run` keeps that seed under `auto` rather than clamping it to the target's `max-jobs` less one. Cleared beside `BGA_JOBSERVER_MODE`; unset when the tracer is invoked directly | `bga/cli.py`, `tools/bst_native_build_tracer.py` |
 | `BGA_FORCE_PROGRESS` | draws the progress line onto a pipe, so a test can compare a run with progress genuinely on against one with it off. Deliberately not a user-facing switch: it writes control characters into a redirected stderr, which is the one thing `UX-183` exists to prevent | `bga/progress.py` |
 | `BGA_STRICT_HINTS` | not an environment variable at all — a page global, set from the browser console, that makes the report complain about a number carrying no declared `bga:quantity` | `bga/viewer/format.js` |
 | `BGA_TIER_ANY` | set into the child environment by `make test-touching` and by the pre-commit selector, and read by nothing in this tree (`UX-630`) | `tools/dev_touching.py` |

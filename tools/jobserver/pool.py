@@ -104,6 +104,19 @@ def open_jobserver(n: int, scratch: str, seed: Optional[int] = None) -> tuple[st
     return path, fd, tokens
 
 
+def opening_seed(
+    seed: Optional[int], project_max_jobs: Optional[int], mode: str, planned: bool, typed: bool = False
+) -> Optional[int]:
+    """UX-1283: under `auto` with no plan, the FIFO opens at bst's own
+    `off` width for one element (`project_max_jobs - 1` tokens beside the
+    implicit one) rather than a cores-sized seed; every token past it
+    passes `MemoryGate`. Unchanged for `n`, a plan, a typed seed, or no
+    max-jobs read."""
+    if seed is None or mode != "auto" or planned or typed or project_max_jobs is None:
+        return seed
+    return min(seed, max(0, project_max_jobs - 1))
+
+
 def _readable_tokens(fd: int) -> int:
     """Tokens in the FIFO no client has read (`FIONREAD`), `0` when unreadable."""
     readable = array.array("i", [0])

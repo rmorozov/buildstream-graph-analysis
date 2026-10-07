@@ -21,6 +21,86 @@ except (ValueError, OSError, AttributeError):  # pragma: no cover
 MEMORY_RESERVE_JOBS = 1
 
 
+#: v1 reports "no limit" as a page-rounded `LONG_MAX`; anything this large is no cap.
+_V1_UNLIMITED = 1 << 62
+
+
+def _read_int(path: str) -> Optional[int]:
+    try:
+        with open(path, encoding="utf-8") as handle:
+            text = handle.read().strip()
+        return None if text == "max" else int(text)
+    except (OSError, ValueError):
+        return None
+
+
+def _working_set(directory: str, usage_name: str, inactive_key: str) -> int:
+    """Usage minus reclaimable `inactive_file` page cache (the kubelet's working set), else plain usage."""
+    usage = _read_int(os.path.join(directory, usage_name)) or 0
+    try:
+        with open(os.path.join(directory, "memory.stat"), encoding="utf-8") as handle:
+            stat = dict(line.split()[:2] for line in handle if len(line.split()) >= 2)
+        return max(0, usage - int(stat[inactive_key]))
+    except (OSError, ValueError, KeyError):
+        return usage
+
+
+def _cgroup_caps(cgroup_root: str, self_cgroup: str) -> list[tuple[int, int]]:
+    """`(limit, working set)` bytes for every capped memory cgroup on this process's path, leaf to root."""
+    try:
+        with open(self_cgroup, encoding="utf-8") as handle:
+            lines = handle.read().splitlines()
+    except OSError:
+        return []
+    caps = []
+    for line in lines:
+        _hier, _, rest = line.partition(":")
+        controllers, _, path = rest.partition(":")
+        if controllers == "":
+            base, names = cgroup_root, ("memory.max", "memory.current", "inactive_file")
+        elif "memory" in controllers.split(","):
+            base, names = (
+                f"{cgroup_root}/memory",
+                ("memory.limit_in_bytes", "memory.usage_in_bytes", "total_inactive_file"),
+            )
+        else:
+            continue
+        parts = [part for part in path.split("/") if part]
+        for depth in range(len(parts), -1, -1):
+            directory = os.path.join(base, *parts[:depth])
+            limit = _read_int(os.path.join(directory, names[0]))
+            if limit is not None and limit < _V1_UNLIMITED:
+                caps.append((limit, _working_set(directory, *names[1:])))
+    return caps
+
+
+def read_cgroup_limit_bytes(
+    cgroup_root: str = "/sys/fs/cgroup", self_cgroup: str = "/proc/self/cgroup"
+) -> Optional[int]:
+    """The tightest memory limit over this process's cgroup and every ancestor, else `None`."""
+    caps = _cgroup_caps(cgroup_root, self_cgroup)
+    return min(limit for limit, _usage in caps) if caps else None
+
+
+def read_build_memory(
+    meminfo: str = "/proc/meminfo", cgroup_root: str = "/sys/fs/cgroup", self_cgroup: str = "/proc/self/cgroup"
+) -> tuple[Optional[int], str]:
+    """`(bytes, bound_by)`: the lower of `MemAvailable` and the tightest cgroup limit minus working set."""
+    available = None
+    try:
+        with open(meminfo, encoding="utf-8") as handle:
+            for line in handle:
+                if line.startswith("MemAvailable:"):
+                    available = int(line.split()[1]) * 1024
+                    break
+    except (OSError, ValueError, IndexError):
+        available = None
+    headroom = [max(0, limit - usage) for limit, usage in _cgroup_caps(cgroup_root, self_cgroup)]
+    if headroom and (available is None or min(headroom) < available):
+        return min(headroom), "cgroup"
+    return available, "meminfo"
+
+
 def _end_fields(line: str) -> Optional[tuple[str, int]]:
     """`(element, maxrss_bytes)` from one hook END line, else `None`."""
     if not line.startswith("END "):

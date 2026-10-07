@@ -133,6 +133,7 @@ from .jobserver import (
     summarize_jobserver_tokens_by_element,
     tokens_by_element,
 )
+from .jobserver.memory import read_build_memory, read_cgroup_limit_bytes
 
 #: UX-901: `JOBSERVER_SERIES_CAP`/`summarize_jobserver_ledger`/
 #: `summarize_jobserver_tokens_by_element`/`tokens_by_element` are
@@ -926,6 +927,12 @@ def read_host_sample() -> dict:
     return sample
 
 
+def read_host_memory_bound() -> dict:
+    """`UX-1282`: the cgroup cap the build runs under, and whether it or `MemAvailable` binds."""
+    limit = read_cgroup_limit_bytes()
+    return {"mem_limit_kb": None if limit is None else limit // 1024, "mem_bound_by": read_build_memory()[1]}
+
+
 class HostSampler:
     """A background thread writing one JSON object per sample.
 
@@ -971,6 +978,7 @@ class HostSampler:
             "monotonic_at_start": time.monotonic(),
             "mem_total_kb": first.get("mem_total_kb"),
             "swap_total_kb": first.get("swap_total_kb"),
+            **read_host_memory_bound(),
             # Named rather than inferred from an empty file: "this host
             # exposes no /proc/meminfo" and "the build was too short to
             # sample" are different facts.

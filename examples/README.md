@@ -414,6 +414,16 @@ twogiants|widechain|memgiant`: `off` at `bst`'s defaults against
 the host's `MemTotal`/`nproc`. `codspeed-probe.yml` runs the three legs
 and keeps each leg's captures as an artifact.
 
+## 17-late-peak-giant
+
+One giant whose last step out-peaks every compile before it (`UX-1284`):
+32 plain units of `unit_lines` lines compile wide, then 4 `-flto` units
+of `late_k` x `unit_lines` lines link with `-flto-partition=one`, one
+`lto1` after every `cc1`. Measured outside `bst` with gcc 13 at 20000
+lines: `cc1` 152 MB, `lto1` 451 MB at `late_k 2`. CI builds it under
+`off` and reads the ratio off the raw log's END lines (`late-peak`);
+the Graviton leg `latepeak` runs `off` against `autocap` at `late_k 4`.
+
 ## Shared setup
 
 `01-resource-contention`, `02-deep-chain-mixed-kinds`, and

@@ -68,6 +68,7 @@ import atexit
 import bisect
 import contextlib
 import errno
+import fnmatch
 import gzip
 import hashlib
 import itertools
@@ -1336,6 +1337,45 @@ def write_decisions_with_sandbox_make(captured: str, destination: str, jobserver
             handle.write(json.dumps(row, sort_keys=True) + "\n")
 
 
+def _auth_map_globs(auth_map_str: Optional[str]) -> list[str]:
+    """UX-1310: every glob `resolve_auth_override` would try, in order, once each."""
+    globs = []
+    for group in (auth_map_str or "").split(";"):
+        style, sep, rest = group.partition(":")
+        if sep and style.strip() in _AUTH_OVERRIDE_STYLES:
+            globs += [glob.strip() for glob in rest.split(",") if glob.strip()]
+    return list(dict.fromkeys(globs))
+
+
+def forced_auth_summary(decisions: list, auth_map_str: Optional[str], element_auth_map: Optional[dict]) -> list[str]:
+    """UX-1310: one line per element a per-element override forced, then one
+    warning per override glob no decision row matched, per annotation naming
+    an element that never ran, and per annotation style outside the four."""
+    rows = [row for row in decisions or [] if row.get("element")]
+    ran = {row["element"] for row in rows}
+    lines, seen = [], set()
+    for row in rows:
+        if row.get("forced_by") and row["element"] not in seen:
+            seen.add(row["element"])
+            how = "--jobserver-auth-override" if row["forced_by"] == "command_line" else "its public: annotation"
+            lines.append(f"Jobserver auth: {row['element']} forced to {row['forced_style']} by {how}")
+    for glob in _auth_map_globs(auth_map_str):
+        if not any(fnmatch.fnmatch(element, glob) for element in ran):
+            lines.append(f"Warning: --jobserver-auth-override glob {glob!r} matched no element in this build")
+    named = {}
+    for name, style in (element_auth_map or {}).items():
+        named.setdefault(name.rsplit(":", 1)[-1], (name, style))
+    for short, (name, style) in named.items():
+        if style not in _AUTH_OVERRIDE_STYLES:
+            lines.append(
+                f"Warning: {name} annotates jobserver-auth: {style}, not one of "
+                f"{', '.join(sorted(_AUTH_OVERRIDE_STYLES))}; ignored"
+            )
+        elif short not in ran:
+            lines.append(f"Warning: {name}'s jobserver-auth annotation names an element this build never ran")
+    return lines
+
+
 def lto_preflight_warnings(decisions: list, jobserver_fifo: Optional[str]) -> list[str]:
     """UX-883: one line per element that is both on a sub-4.4 sandbox
     make and drives a compiler directly (`_COMPILER_SAFE_POLICIES`,
@@ -1909,18 +1949,25 @@ def resolve_junction_names(
     return resolved, summary
 
 
+def _public_auth_raw(public_raw: str) -> Optional[str]:
+    """UX-1310: `%{public}`'s `bga: jobserver-auth:` as written, in the four or not;
+    `None` for no `bga:` key or a non-mapping `bga:` block."""
+    bga_block = _parse_yaml_mapping(public_raw).get("bga")
+    if not isinstance(bga_block, dict) or "jobserver-auth" not in bga_block:
+        return None
+    style = bga_block.get("jobserver-auth")
+    if style is False:  # YAML 1.1: unquoted "off" loads as a bool
+        style = "off"
+    return str(style)
+
+
 def _public_auth_style(public_raw: str) -> Optional[str]:
     """UX-882: `%{public}`'s own `bga: jobserver-auth:` sub-domain -
     `yaml.safe_load` via `_parse_yaml_mapping`, so a malformed or absent
     block degrades to `{}` rather than raising. `None` for no `bga:`
     key, a non-mapping `bga:` block, or a value outside the four
     override styles `resolve_auth_override` already accepts."""
-    bga_block = _parse_yaml_mapping(public_raw).get("bga")
-    if not isinstance(bga_block, dict):
-        return None
-    style = bga_block.get("jobserver-auth")
-    if style is False:  # YAML 1.1: unquoted "off" loads as a bool
-        style = "off"
+    style = _public_auth_raw(public_raw)
     return style if style in _AUTH_OVERRIDE_STYLES else None
 
 
@@ -2022,7 +2069,7 @@ def _parse_jobserver_show_records(stdout: str) -> tuple[str, str, dict, dict, di
         if name and kind:
             kinds_lines.append(f"{name} {kind}")
         vars_blocks.append(vars_raw)
-        style = _public_auth_style(public_raw)
+        style = _public_auth_raw(public_raw)  # UX-1310: kept outside the four so the summary warns; the shim ignores it
         if name and style is not None:
             auth_map[name] = style
         if name:
@@ -2809,6 +2856,11 @@ def run_traced_build(
             # the FIFO whose dirname the probe cache is keyed under.
             for line in lto_preflight_warnings(read_jobserver_decisions(captured_decisions), jobserver_fifo):
                 print(line, file=sys.stderr)
+            if jobserver_fifo:
+                auth_map_str = os.environ.get("BST_TRACE_JOBSERVER_AUTH_MAP")
+                decisions = read_jobserver_decisions(captured_decisions)
+                for line in forced_auth_summary(decisions, auth_map_str, element_auth_map):
+                    print(line, file=sys.stderr)
             close_jobserver(jobserver_fifo, jobserver_fd)
         return returncode
 

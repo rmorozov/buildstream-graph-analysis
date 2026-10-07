@@ -82,6 +82,19 @@ def read_cgroup_limit_bytes(
     return min(limit for limit, _usage in caps) if caps else None
 
 
+def opening_share(
+    meminfo: str = "/proc/meminfo", cgroup_root: str = "/sys/fs/cgroup", self_cgroup: str = "/proc/self/cgroup"
+) -> float:
+    """UX-1339: `min(1, cgroup limit / MemTotal)`; `1.0` with no cap or no `MemTotal`."""
+    limit = read_cgroup_limit_bytes(cgroup_root, self_cgroup)
+    try:
+        with open(meminfo, encoding="utf-8") as handle:
+            total = next(int(line.split()[1]) * 1024 for line in handle if line.startswith("MemTotal:"))
+    except (OSError, ValueError, IndexError, StopIteration):
+        return 1.0
+    return 1.0 if limit is None or total <= 0 else min(1.0, limit / total)
+
+
 def read_build_memory(
     meminfo: str = "/proc/meminfo", cgroup_root: str = "/sys/fs/cgroup", self_cgroup: str = "/proc/self/cgroup"
 ) -> tuple[Optional[int], str]:
@@ -155,6 +168,7 @@ class MemoryGate:
         self.proc_root = proc_root
         self.finished_peak: dict[str, int] = {}
         self._offset = 0
+        self._unsettled: Optional[str] = None
 
     def _read_finished(self) -> None:
         try:
@@ -187,7 +201,8 @@ class MemoryGate:
                 sandboxes[row["pid"]] = row["element"]
         return sandboxes
 
-    def withhold(self, pool: int) -> Optional[str]:
+    def _measure(self) -> Optional[tuple[int, int, int, int]]:
+        """`(per_job, live jobs, available, live_total)`; `None` with nothing to read or a job unsettled (`_unsettled`)."""
         table = _proc_table(self.proc_root)
         children: dict[int, list[int]] = {}
         for pid, (ppid, _rss) in table.items():
@@ -203,17 +218,36 @@ class MemoryGate:
         if not live_max:
             return None
         self._read_finished()
+        self._unsettled = None
         for element in sorted(live_max):
             if live_max[element] > self.finished_peak.get(element, 0):
-                return f"rss unsettled {element} live {live_max[element]}>finished {self.finished_peak.get(element, 0)}"
+                self._unsettled = (
+                    f"rss unsettled {element} live {live_max[element]}>finished {self.finished_peak.get(element, 0)}"
+                )
+                return None
         available = self.mem_available()
         if available is None:
             return None
         per_job = max(max(live_max[e], self.finished_peak.get(e, 0)) for e in live_max)
-        jobs = pool + len(live_max) + 1 + MEMORY_RESERVE_JOBS
+        return per_job, len(live_max), available, live_total
+
+    def withhold(self, pool: int) -> Optional[str]:
+        measured = self._measure()
+        if measured is None:
+            return self._unsettled
+        per_job, live, available, live_total = measured
+        jobs = pool + live + 1 + MEMORY_RESERVE_JOBS
         if per_job * jobs > available + live_total:
             return f"rss {per_job}x{jobs}>{available}+{live_total}"
         return None
+
+    def over(self, pool: int) -> bool:
+        """UX-1339: the tokens already out do not fit - the same sum as `withhold`, without the token being added."""
+        measured = self._measure()
+        if measured is None:
+            return False
+        per_job, live, available, live_total = measured
+        return per_job * (pool + live + MEMORY_RESERVE_JOBS) > available + live_total
 
 
 def _task_children(pid: int, proc_root: str) -> Optional[list[int]]:

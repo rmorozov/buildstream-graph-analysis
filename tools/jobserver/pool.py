@@ -120,6 +120,11 @@ def opening_seed(
     return min(seed, max(0, project_max_jobs - 1))
 
 
+def capped_width(project_max_jobs: Optional[int], share: float) -> Optional[int]:
+    """UX-1339: `floor(max_jobs x share)`, `share` = cgroup limit / MemTotal; `opening_seed` then takes one off."""
+    return None if project_max_jobs is None else int(project_max_jobs * min(1.0, share))
+
+
 def _readable_tokens(fd: int) -> int:
     """Tokens in the FIFO no client has read (`FIONREAD`), `0` when unreadable."""
     readable = array.array("i", [0])
@@ -305,6 +310,7 @@ class PoolController:
         self.psi_memory_path = psi_paths.get("memory") or _PSI_MEMORY_PATH
         self.psi_memory_present = os.path.exists(self.psi_memory_path)
         self.memory_psi_withdraws = 0
+        self.memory_rss_withdraws = 0
         self.interval_s = JOBSERVER_POOL_INTERVAL_S
         self.psi_bound = JOBSERVER_POOL_PSI_BOUND
         self.memory_psi_bound = JOBSERVER_POOL_MEMORY_PSI_BOUND
@@ -395,6 +401,16 @@ class PoolController:
             reason = f"busy {busy_cores}>capacity {self.capacity}"
         return action, reason
 
+    def _withdraw_over_width(self) -> bool:
+        """UX-1339: the width already out does not fit the memory - read one unread token back."""
+        if not (self.memory_gate and self.pool > 0 and self.memory_gate.over(self.pool)):
+            return False
+        if _readable_tokens(self.fd) > 0 and self._try_withdraw():
+            self.pool -= 1
+            self.memory_rss_withdraws += 1
+            return True
+        return False
+
     def _handle_underload(self, busy_cores: float) -> tuple[str, str]:
         """Below `capacity - 1` - the two-sample hysteresis before a
         `+` lands, gated by the ceiling."""
@@ -435,10 +451,11 @@ class PoolController:
             else:
                 self._below_streak = 0
                 reason = f"busy {busy_cores} within band"
+        if action == "hold" and self._withdraw_over_width():
+            action, reason = "withdraw", "rss over width"
         if action in ("add", "withdraw"):
             self.moves += 1
-            if action == "withdraw" and psi_mem_over:
-                self.memory_psi_withdraws += 1
+            self.memory_psi_withdraws += reason.startswith("memory psi") and action == "withdraw"
         row = {
             "t_us": int(time.time() * 1_000_000),
             "busy_cores": busy_cores,

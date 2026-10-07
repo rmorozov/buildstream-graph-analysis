@@ -271,7 +271,7 @@ VOCABULARIES = {
     "parallelism_finding": Vocabulary(frozenset({"pinned_to_one_job", "underachieved_requested_jobs"}), None),
     "jobserver_auth": Vocabulary(frozenset({"fd", "fifo"}), None),
     "jobserver_mode": Vocabulary(frozenset({"off", "auto", "n"}), None),
-    "jobserver_seed_bound": Vocabulary(frozenset({"max_jobs", "cores", "typed"}), None),
+    "jobserver_seed_bound": Vocabulary(frozenset({"max_jobs", "cores", "typed", "cgroup"}), None),
     "artifact_weight_source": Vocabulary(frozenset({"cas_walk", "ref_absent", "incomplete", "budget_exceeded"}), None),
 }
 

@@ -368,10 +368,13 @@ def _peak_rss_and_host_memory(
         for uid, entry in per_element.items()
         if (converted := kb_to_bytes(entry.get('peak_rss_kb'))) is not None
     }
-    mem_total_kb = (host_samples or {}).get('header', {}).get('mem_total_kb')
+    header = (host_samples or {}).get('header', {})
+    mem_total_kb = header.get('mem_total_kb')
     if not peak_rss_bytes or not mem_total_kb:
         return None, None
-    return peak_rss_bytes, kb_to_bytes(mem_total_kb)
+    # UX-1282: a container's cgroup cap, when tighter, is the memory the build had.
+    mem_limit_kb = header.get('mem_limit_kb')
+    return peak_rss_bytes, kb_to_bytes(min(mem_total_kb, mem_limit_kb) if mem_limit_kb else mem_total_kb)
 
 
 def _max_jobs_advice(analyzer, native_report: dict) -> dict:

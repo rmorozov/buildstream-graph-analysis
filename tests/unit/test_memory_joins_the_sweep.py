@@ -150,6 +150,17 @@ def test_peak_rss_and_host_memory_needs_both_halves():
     assert _peak_rss_and_host_memory(host_samples, native_report) == ({"core.bst": 2_000_000 * 1024}, 8_000_000 * 1024)
 
 
+def test_the_advice_reads_the_cgroup_cap_when_it_is_below_the_host():
+    """UX-1282: a capture's `mem_limit_kb` below `mem_total_kb` is the memory the build had."""
+    from bga.cli import _peak_rss_and_host_memory
+
+    native_report = {"peak_memory": {"per_element": {"core.bst": {"peak_rss_kb": 2_000_000}}}}
+    capped = {"header": {"mem_total_kb": 64_000_000, "mem_limit_kb": 20_000_000}}
+    assert _peak_rss_and_host_memory(capped, native_report)[1] == 20_000_000 * 1024
+    loose = {"header": {"mem_total_kb": 8_000_000, "mem_limit_kb": 20_000_000}}
+    assert _peak_rss_and_host_memory(loose, native_report)[1] == 8_000_000 * 1024
+
+
 def test_bga_sweep_plane2_runs_end_to_end_in_text():
     """The real CLI path: `_attach_plane2_capacity` now runs ahead of
     the format branch for both formats, and `_finish_capacity_

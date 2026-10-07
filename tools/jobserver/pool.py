@@ -20,7 +20,7 @@ from typing import Optional
 
 from ..native_trace.bwrap_shim import JOBSERVER_PINNED
 from ._jsonl import jsonl_rows
-from .memory import MemoryGate
+from .memory import MemoryGate, read_build_memory
 
 #: Bound by `bst_native_build_tracer` right after it defines its own
 #: `/proc/stat` reader - `None` until then, which only matters to a
@@ -40,6 +40,9 @@ _PSI_SOME_AVG10_RE = re.compile(r"avg10=([\d.]+)")
 #: UX-850: `/proc/meminfo`'s own path, parameterised so a guard scripts
 #: it away from the host's own.
 _MEMINFO_PATH = "/proc/meminfo"
+# UX-1282: the cgroup mount and this process's own membership, scripted the same way.
+_CGROUP_ROOT = "/sys/fs/cgroup"
+_SELF_CGROUP = "/proc/self/cgroup"
 
 #: UX-845 / Direction 20 argument 2: how often the pool is reconsidered -
 #: an order of magnitude faster than `make -l`'s one-minute EMA, read
@@ -268,7 +271,7 @@ class PoolController:
         one class up): `{"cpu": path, "memory": path}`, both optional -
         `None`/absent resolves to the real `/proc/pressure/*` file, so a
         guard scripts either or both away from the host's own.
-        `trace_log`/`decisions` (UX-1134, with `meminfo`/`proc_root`
+        `trace_log`/`decisions` (UX-1134, with `meminfo`/`proc_root`/`cgroup_root`/`self_cgroup`
         optional) arm the no-plan `MemoryGate`.
         `psi_paths["broker_owns_audit"]` (UX-854's verifier, same cap):
         `True` when a `Broker` exists for this same ledger/FIFO - one
@@ -302,11 +305,12 @@ class PoolController:
         self.pool = ceiling - 1 if seed is None else min(seed, ceiling - 1)
         # UX-1134: with no plan, measured RSS gates each `+` (`trace_log`/`decisions` given only then).
         meminfo = psi_paths.get("meminfo") or _MEMINFO_PATH
+        cgroup = (psi_paths.get("cgroup_root") or _CGROUP_ROOT, psi_paths.get("self_cgroup") or _SELF_CGROUP)
         self.memory_gate = (
             MemoryGate(
                 psi_paths["trace_log"],
                 psi_paths["decisions"],
-                lambda: read_mem_available_bytes(meminfo),
+                lambda: read_build_memory(meminfo, *cgroup)[0],
                 psi_paths.get("proc_root") or "/proc",
             )
             if psi_paths.get("trace_log") and psi_paths.get("decisions")
@@ -530,7 +534,8 @@ class Broker:
         """`scratch` (UX-849's own arg-count cap, the `kind_context`
         shape `_resolve_kind_and_probe` already uses one module over):
         `{"decisions": path, "proxies_dir": path, "peak_rss": {element:
-        bytes}, "meminfo_path": path, "raw_log_path": path}` - UX-850
+        bytes}, "meminfo_path": path, "cgroup_root": path, "self_cgroup": path,
+        "raw_log_path": path}` - UX-850
         added the peak-RSS pair, UX-854 the raw log path `poll()` rereads
         for `pid_to_element` once a second; all optional (`{}`/the real
         file) for a guard driving `tick()`/`note_running`/`note_done`
@@ -558,6 +563,7 @@ class Broker:
         # its own planned peak RSS leaves room for.
         self.peak_rss = dict(scratch.get("peak_rss") or {})
         self.meminfo_path = scratch.get("meminfo_path") or _MEMINFO_PATH
+        self.cgroup_paths = (scratch.get("cgroup_root") or _CGROUP_ROOT, scratch.get("self_cgroup") or _SELF_CGROUP)
         self.memory_withheld = 0
         self.raw_log_path = scratch.get("raw_log_path")
         self.pid_to_element: dict = {}
@@ -724,7 +730,7 @@ class Broker:
         order = sorted((self.running & self.proxy_fds.keys()), key=lambda element: (self.slack_for(element), element))
         # UX-850: read once per tick, not per element - `MemAvailable`
         # moves on the host's own clock, not the broker's ordering.
-        mem_available = read_mem_available_bytes(self.meminfo_path) if self.peak_rss else None
+        mem_available = read_build_memory(self.meminfo_path, *self.cgroup_paths)[0] if self.peak_rss else None
         remaining = moved
         for element in order:
             if remaining <= 0:

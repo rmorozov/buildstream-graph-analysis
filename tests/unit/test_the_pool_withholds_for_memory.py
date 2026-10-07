@@ -28,7 +28,7 @@ def _broker(tmp_path, elements, plan, peak_rss=None, meminfo_path=None, ceiling=
     proxies_dir = str(tmp_path / "proxies")
     proxy_fds = tracer.create_jobserver_proxies(proxies_dir, dict.fromkeys(elements, "make"))
     ledger = str(tmp_path / "ledger.jsonl")
-    scratch = {"proxies_dir": proxies_dir}
+    scratch = {"proxies_dir": proxies_dir, "self_cgroup": str(tmp_path / "no-cgroup")}  # UX-1282: host cap unread
     if peak_rss is not None:
         scratch["peak_rss"] = peak_rss
     if meminfo_path is not None:

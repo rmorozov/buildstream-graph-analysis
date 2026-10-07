@@ -91,8 +91,22 @@ leaf: usage_in_bytes 3914866688, total_inactive_file 1367068672
 would have counted as spent. The tracer's header here reads
 `{'mem_limit_kb': 14008820, 'mem_bound_by': 'cgroup'}` (MemTotal 16480968).
 No v2 memory controller in this container, so v2 is the scripted
-guard's alone. The memgiant Graviton leg under a 20 GB cap stays
-owner:CodSpeed Graviton.
+guard's alone.
+
+**Graviton reading** (bga-bench run 37616908079, job 112777350313): the
+`memcap` leg, memgiant's `autocap` arm inside a v2 cgroup at
+`memory.max` 20 GB (`0::/bga-cap max 21474836480`), rung sized to the cap
+(`mem_lines 240000`). The gate reads the cgroup, holds every add, and all
+three builds complete with no OOM:
+
+```text
+autocap-1  wall 415.05 s  mem 16274M  peak 8  start 7 max 7 adds 0 rss-holds 933  cgroup peak 17736M oom_kill 0
+autocap-2  wall 413.50 s  mem 16285M  peak 8  start 7 max 7 adds 0 rss-holds 937  cgroup peak 17955M oom_kill 0
+autocap-3  wall 413.34 s  mem 16143M  peak 8  start 7 max 7 adds 0 rss-holds 920  cgroup peak 17955M oom_kill 0
+```
+
+At `mem_lines 320000` (run 37606960927) the opening width alone overran
+the cap (OOM, `adds 0`, `withdraws 0`); filed as UX-1339.
 
 **Mutation table** (18 tests over both guard files, scratchpad `mutate.py`,
 reverted from a copy; reverted run `18 passed`):

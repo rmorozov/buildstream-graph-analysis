@@ -35,7 +35,8 @@ OPTS=
 [ "$MODE" != widechain ] || PROJ=$(cd "$PROJ/../15-wide-chain" && pwd)  # one wide element ready at a time
 if [ "$MODE" = memcap ] || [ "$MODE" = twomemgiants ] || [ "$MODE" = memgiant ]; then
     PROJ=$(cd "$PROJ/../16-memory-bound-giant" && pwd)  # cc1 sized to oversubscribe RAM 1.5x at one job per core
-    OPTS="--option mem_lines $(awk -v n="$(nproc)" '/^MemTotal:/{per = $2 / 1024 * 1.5 / n; r = 80000
+    cap_kb=$([ "$MODE" = memcap ] && echo $((20 * 1024 * 1024)) || echo 0)  # memcap sizes the rung to its cgroup, not the host
+    OPTS="--option mem_lines $(awk -v n="$(nproc)" -v cap="$cap_kb" '/^MemTotal:/{per = (cap > 0 ? cap : $2) / 1024 * 1.5 / n; r = 80000
         split("80000 160000 240000 320000 480000", rungs, " ")
         for (i in rungs) if (rungs[i] / 1000 * 6.6 + 20 <= per && rungs[i] + 0 > r) r = rungs[i]; print r}' /proc/meminfo)"
     echo "::notice title=memgiant::$OPTS"

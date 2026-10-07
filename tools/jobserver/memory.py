@@ -214,3 +214,61 @@ class MemoryGate:
         if per_job * jobs > available + live_total:
             return f"rss {per_job}x{jobs}>{available}+{live_total}"
         return None
+
+
+def _task_children(pid: int, proc_root: str) -> Optional[list[int]]:
+    """`pid`'s children from `task/*/children`; `None` where the kernel has no such file."""
+    try:
+        kids: list[int] = []
+        for tid in os.listdir(f"{proc_root}/{pid}/task"):
+            with open(f"{proc_root}/{pid}/task/{tid}/children", encoding="utf-8") as handle:
+                kids.extend(int(token) for token in handle.read().split())
+    except (OSError, ValueError):
+        return None
+    return kids
+
+
+class _TaskChildren:
+    """`_descendants`' `children` mapping, read from `task/*/children` one pid at a time."""
+
+    def __init__(self, proc_root: str):
+        self.proc_root = proc_root
+
+    def get(self, pid: int, default=()):
+        kids = _task_children(pid, self.proc_root)
+        return default if kids is None else kids
+
+
+def sandbox_children(root: int, proc_root: str = "/proc"):
+    """UX-1314: the children mapping a tick walks - `task/*/children` where `root` has it, else one ppid scan."""
+    if _task_children(root, proc_root) is not None:
+        return _TaskChildren(proc_root)
+    children: dict[int, list[int]] = {}
+    for pid, (ppid, _rss) in _proc_table(proc_root).items():
+        children.setdefault(ppid, []).append(pid)
+    return children
+
+
+def sandbox_tree(root: int, children) -> list[int]:
+    """`root` and its host descendants, root first."""
+    return [root, *_descendants(root, children)]
+
+
+def follow_sandbox_roots(decisions: str, offset: int) -> tuple[dict[int, str], int]:
+    """UX-1314: `({host root pid: element}, offset)` from the decision rows past `offset`; a partial last line waits."""
+    try:
+        with open(decisions, "rb") as handle:
+            handle.seek(offset)
+            chunk = handle.read()
+    except OSError:
+        return {}, offset
+    complete = chunk[: chunk.rfind(b"\n") + 1]
+    roots: dict[int, str] = {}
+    for line in complete.decode("utf-8", errors="replace").splitlines():
+        try:
+            row = json.loads(line)
+        except ValueError:
+            continue
+        if isinstance(row, dict) and isinstance(row.get("pid"), int) and row.get("element"):
+            roots[row["pid"]] = row["element"]
+    return roots, offset + len(complete)

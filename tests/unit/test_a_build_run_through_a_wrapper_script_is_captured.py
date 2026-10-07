@@ -98,6 +98,7 @@ def test_a_command_that_runs_no_bst_build_is_refused_in_one_line(project, capsys
 def test_a_snapshot_with_no_bst_build_leaves_no_husk(project, capsys, monkeypatch):
     proj, _env = project
     monkeypatch.setattr(tracer, "main", lambda argv: bst_run_wrapped.NO_BST_BUILD_EXIT)
+    monkeypatch.setenv("BGA_NO_PROGRESS", "1")  # undone at teardown: --no-progress writes os.environ
     code = bga_snapshot.main(["--project", str(proj), "--no-progress", "--", str(proj / "nobst.sh")])
     assert code == bst_run_wrapped.NO_BST_BUILD_EXIT
     assert run_store.list_snapshots(str(proj)) == []

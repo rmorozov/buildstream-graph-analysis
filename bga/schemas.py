@@ -3401,6 +3401,11 @@ _RUN_INSTANCE_HINT = {
                     "max(0, ceiling — builders) under auto, "
                     "ceiling — 1 otherwise; null when off.",
                 },
+                "seed_bound": {
+                    "description": "What bounded the seed under auto: the "
+                    "target's own max-jobs less one with no plan, the "
+                    "host's cores, or a hand-typed seed; null otherwise.",
+                },
                 "auth": {"description": "fd or fifo, the auth style the tracer used; null when the jobserver was off."},
                 "project_max_jobs": {
                     QUANTITY: "count",

@@ -214,7 +214,14 @@ class TestTheTracerAssemblesTheBlockFromItsReportAndTheEnvironment:
     def test_a_resolved_capture_carries_every_field(self, monkeypatch):
         monkeypatch.setenv('BGA_JOBSERVER_MODE', 'n')
         report = {'jobserver': 4, 'jobserver_seed': 3, 'jobserver_auth': 'fd', 'project_max_jobs': 8}
-        assert _jobserver_block(report) == {'mode': 'n', 'ceiling': 4, 'seed': 3, 'auth': 'fd', 'project_max_jobs': 8}
+        assert _jobserver_block(report) == {
+            'mode': 'n',
+            'ceiling': 4,
+            'seed': 3,
+            'seed_bound': None,
+            'auth': 'fd',
+            'project_max_jobs': 8,
+        }
 
     def test_no_jobserver_and_no_variable_reads_off(self, monkeypatch):
         monkeypatch.delenv('BGA_JOBSERVER_MODE', raising=False)
@@ -222,6 +229,7 @@ class TestTheTracerAssemblesTheBlockFromItsReportAndTheEnvironment:
             'mode': 'off',
             'ceiling': None,
             'seed': None,
+            'seed_bound': None,
             'auth': None,
             'project_max_jobs': None,
         }
@@ -267,6 +275,7 @@ class TestExtractionWritesTheJobserverBlockToRunContext:
             "mode": "off",
             "ceiling": None,
             "seed": None,
+            "seed_bound": None,
             "auth": None,
             "project_max_jobs": None,
         }

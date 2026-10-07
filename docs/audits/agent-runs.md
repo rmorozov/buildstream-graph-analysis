@@ -842,6 +842,20 @@ pairing for every merged row from round 103 on.
 | 170 | verifier | sonnet | UX-1325 verifier | 28k | 14 | 1.4 m | complete | PASS |
 | 170 | verifier | sonnet | UX-1327 verifier | 45k | 24 | 11.6 m | complete | held: 3 doc/schema reds |
 | 170 | verifier | sonnet | UX-1328, UX-1329, UX-1330, UX-1331 verifier | 36k | 20 | 1.8 m | complete | held 1330 (required key), 1331 (container false positive) |
+| 171 | implementer | — | UX-1282 | — | — | — | merged | tokens, calls, wall not in the brief |
+| 171 | verifier | sonnet | UX-1282 verifier | — | — | — | complete | tokens, calls, wall not in the brief |
+| 171 | implementer | — | UX-1283 | — | — | — | merged | tokens, calls, wall not in the brief |
+| 171 | verifier | sonnet | UX-1283 verifier | — | — | — | complete | tokens, calls, wall not in the brief |
+| 171 | implementer | — | UX-1284 | — | — | — | merged | tokens, calls, wall not in the brief |
+| 171 | verifier | sonnet | UX-1284 verifier | — | — | — | complete | tokens, calls, wall not in the brief |
+| 171 | implementer | — | UX-1310 | — | — | — | merged | tokens, calls, wall not in the brief |
+| 171 | verifier | sonnet | UX-1310 verifier | — | — | — | complete | tokens, calls, wall not in the brief |
+| 171 | implementer | — | UX-1314 | — | — | — | merged | tokens, calls, wall not in the brief |
+| 171 | verifier | sonnet | UX-1314 verifier | — | — | — | complete | tokens, calls, wall not in the brief |
+| 171 | integrator | — | integrator: merge the five tracks | — | — | — | merged | not in the brief |
+| 171 | graviton | — | bga-bench run 37606960927: twomemgiants, pairs, cap3 | — | — | — | complete | memgiant leg lost its runner (UX-1281) |
+| 171 | graviton | — | bga-bench run 37616908079: memcap under a 20 GB cap | — | — | — | complete | OOM at mem_lines 320000, filed UX-1339 |
+| 171 | closer | sonnet | closer: ledger, round document, history | — | — | — | complete | tokens, calls, wall not in the brief |
 
 Round 101's four tracks are **not** here: this session could not
 identify their transcripts with certainty after a context rebuild, and
@@ -854,7 +868,7 @@ committed cleanly once told to run in the foreground. Three of the five
 left a derived figure or a §6 context-map row behind - the same class
 the round itself was about, arriving in the tracks' own work.
 
-What the eight hundred and twenty-five rows already say: a researcher that reads a document
+What the eight hundred and thirty-nine rows already say: a researcher that reads a document
 whole costs 100-180k; a walker that drives every control costs 336k;
 the two cuts cost a re-run each. The `walk` and `design-review`
 skills fix the report shape so the next rows are smaller, and the

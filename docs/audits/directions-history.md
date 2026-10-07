@@ -359,6 +359,7 @@ lives in `agent-runs.md`'s rows, counted per round from there.
 | [168](round-168.md) | the per-element jobserver switches and a docs gap audit - `UX-1300` (the jobserver guide names all four switches and the four styles); `UX-1301`..`UX-1308` filed from the audit |
 | [169](round-169.md) | the bookkeeping sweep - 22 ledger lines resolved under `UX-998` (12 swept in four tracks, 1 promoted as `UX-1314`, 6 dropped as fixed); every browser guard cites a styleguide § or is named in `UNCITED`; the exported page at 166,249 of 166,250 B |
 | [170](round-170.md) | the junction-heavy onboarding walk's rows - `UX-1320`..`UX-1331` in seven tracks (Plane 2 keys a junctioned element by its full name, `blast` reads a junction, a wrapped build is captured, a comparison of different work is no verdict, `analyze` rolls up by junction, `doctor` and `--help` first-run fixes); five verifier holds closed |
+| [171](round-171.md) | the memory gate reads the cgroup - `UX-1282`, `UX-1283`, `UX-1284`, `UX-1310`, `UX-1314`, `UX-1338` in five tracks (Graviton memcap completes under a 20 GB cap at 240000 `mem_lines`; the late step is `as`, ratio 4.39); `UX-1339` filed |
 
 ## Verification Log
 

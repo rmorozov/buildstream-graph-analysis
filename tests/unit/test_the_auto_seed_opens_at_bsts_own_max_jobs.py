@@ -63,6 +63,7 @@ def _two_giants_at_the_opening_seed(tmp_path, available):
     os.read(fd, seed)
     paths = {"seed": seed, "trace_log": str(trace_log), "decisions": str(decisions)}
     paths.update({"meminfo": str(meminfo), "proc_root": str(proc), "memory": str(tmp_path / "no-psi")})
+    paths["self_cgroup"] = str(tmp_path / "no-cgroup")  # UX-1282: the runner's own cgroup cap must not bind
     ledger = str(tmp_path / "ledger.jsonl")
     controller = tracer.PoolController(fd, 16, capacity=16, ledger_path=ledger, psi_paths=paths)
     controller.tick(busy_cores=2.0, psi_some10=0.0)

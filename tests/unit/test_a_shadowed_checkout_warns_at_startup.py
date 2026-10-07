@@ -27,7 +27,7 @@ def _run_from(cwd: Path) -> str:
         text=True,
         timeout=30,
     )
-    assert proc.stdout.strip() == "bga 0.5.0", proc.stdout + proc.stderr
+    assert proc.stdout.strip() == "bga 0.6.0", proc.stdout + proc.stderr
     return proc.stderr
 
 

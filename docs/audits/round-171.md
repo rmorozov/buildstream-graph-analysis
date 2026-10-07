@@ -1,12 +1,13 @@
 # Round 171 - the memory gate reads the cgroup, and four residue rows
 
-Run on 2026-10-07: five product rows merged, `UX-1338` closed with them,
-and two Graviton dispatches read the memory rows.
+Run on 2026-10-07: six product rows merged, `UX-1338` closed with them,
+and three Graviton dispatches read the memory rows. `UX-1339` was filed
+mid-round and taken into it at the owner's word.
 
 ```text
-closed   UX-1282 UX-1283 UX-1284 UX-1310 UX-1314 UX-1338
-filed    UX-1339
-index    dev_close_task.py --counts: 1283 scenarios, 7 open, 1276 closed
+closed   UX-1282 UX-1283 UX-1284 UX-1310 UX-1314 UX-1338 UX-1339
+filed    UX-1339 (closed in-round)
+index    dev_close_task.py --counts: 1283 scenarios, 6 open, 1277 closed
 spread   dev_touching.py --spread: 35-212 of 851 test files
 ```
 
@@ -27,11 +28,19 @@ spread   dev_touching.py --spread: 35-212 of 851 test files
 - `UX-1314`: the per-element CPU curve samples the sandbox's processes;
   no live bwrap reading here, `unshare` stood in.
 - `UX-1338`: no progress leaks into the next test; no deviation.
+- `UX-1339`: the opening seed scales to the cgroup's share of MemTotal
+  (8 x 20/31 opens at 4), and an over-width tick reads one unread token
+  back. memcap at 320000 completes 3/3, `oom_kill 0`, `start 4 max 5`
+  (run 37635876457). The withdraw cannot fire before the first END, and
+  its counter reaches no report field.
 
 ## Lessons
 
-- A 20 GB cap passes at 240000 `mem_lines` and OOMs at 320000: the
-  opening width is the next row (`UX-1339`).
+- A 20 GB cap passes at 240000 `mem_lines` and OOMs at 320000: holding
+  adds cannot help once the opening width is over the cap, so the seed,
+  not a withdraw, carried `UX-1339`.
+- The verifier found a leaf-only cap mutation the guard missed: a
+  scripted tree must put the cap where the code is meant to walk to.
 - One Graviton runner was lost (`UX-1281`) and its leg has no reading.
 
 ## Agents
@@ -50,5 +59,10 @@ spread   dev_touching.py --spread: 35-212 of 851 test files
 | 171 | verifier | sonnet | UX-1314 verifier | — | — | — | complete | tokens, calls, wall not in the brief |
 | 171 | integrator | — | integrator: merge the five tracks | — | — | — | merged | not in the brief |
 | 171 | graviton | — | bga-bench run 37606960927: twomemgiants, pairs, cap3 | — | — | — | complete | memgiant leg lost its runner (UX-1281) |
-| 171 | graviton | — | bga-bench run 37616908079: memcap under a 20 GB cap | — | — | — | complete | OOM at mem_lines 320000, filed UX-1339 |
+| 171 | graviton | — | bga-bench run 37616908079: memcap at 240000 under a 20 GB cap, latepeak | — | — | — | complete | memcap 3/3 no OOM; the 320000 OOM (run 37606960927) filed UX-1339 |
 | 171 | closer | sonnet | closer: ledger, round document, history | — | — | — | complete | tokens, calls, wall not in the brief |
+| 171 | architect | — | UX-1339 | 51k | 13 | 3.5 m | complete | share from MemTotal, not headroom; withdraw cannot pass 320000 alone |
+| 171 | implementer | sonnet | UX-1339 | 79k | 62 | 29.5 m | merged | worktree guard refused compound shell; PLR0913 moved the share to capped_width |
+| 171 | verifier | sonnet | UX-1339 verifier | 55k | 15 | 16.2 m | complete | leaf-only cap mutation survived; add relabelled withdraw |
+| 171 | implementer | sonnet | UX-1339 fix loop | 87k | 15 | 7.5 m | merged | see round-171 |
+| 171 | graviton | — | bga-bench run 37635876457: memcap at 320000 under a 20 GB cap | — | — | — | complete | start 4, 3/3, oom_kill 0 |

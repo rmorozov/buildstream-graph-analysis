@@ -32,7 +32,6 @@ task file, which is the only place it ever lived twice.
 | UX-1280 | [the x86 16-core cells of the builders-and-auto default are the owner's run, and it is written down](UX-1280-the-x86-16-core-cells-are-the-owners-run.md) | capture | High | R4, R5 | 🔴 Not Started |
 | UX-1281 | [the memgiant Graviton leg outlives its runner on the third repeat, and its readings die with it](UX-1281-the-memgiant-leg-loses-its-runner-on-a-later-repeat.md) | capture | Medium | R4, R5 | 🔴 Not Started |
 | UX-1309 | [`--prune` deletes a snapshot whose capture is still running](UX-1309-prune-deletes-a-snapshot-whose-capture-is-still-running.md) | capture | Medium | R1, R5 | 🔴 Not Started |
-| UX-1339 | [the pool's opening width can exceed a cgroup cap, and nothing takes tokens back](UX-1339-the-opening-seed-can-exceed-a-cgroup-cap.md) | capture | High | R4, R5 | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

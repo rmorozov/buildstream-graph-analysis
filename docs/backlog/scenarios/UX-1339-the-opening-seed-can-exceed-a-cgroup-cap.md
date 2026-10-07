@@ -1,6 +1,6 @@
 # UX-1339: the pool's opening width can exceed a cgroup cap, and nothing takes tokens back
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-1282, UX-1283 | **Found by:** round 171's `memcap` Graviton leg (bga-bench run 37606960927, job 112744687340, 2026-10-07) | **Serves:** R4, R5 | **Topic:** capture | **Area:** tools | **Shape:** mechanical | **Reading:** owner:CodSpeed Graviton
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-1282, UX-1283 | **Found by:** round 171's `memcap` Graviton leg (bga-bench run 37606960927, job 112744687340, 2026-10-07) | **Serves:** R4, R5 | **Topic:** capture | **Area:** tools | **Shape:** mechanical | **Reading:** owner:CodSpeed Graviton
 
 **Guard:** tests/unit/test_the_opening_seed_scales_to_a_cgroup_cap.py
 
@@ -86,7 +86,20 @@ or none are unread. `seed_bound` is `cgroup` when the share binds (added to
 | `opening_share` reads the leaf cap only | tightest-cap-over-ancestors | 1 failed, 7 passed |
 | the withdraw runs on any tick, not only a `hold` | add-not-relabelled | 1 failed, 7 passed |
 
-**Acceptance (Graviton `memcap` leg, `start 4`, 3/3, `oom_kill 0`):** pending the session's run.
+**Acceptance (Graviton `memcap` leg, `start 4`, 3/3, `oom_kill 0`):** met.
+bga-bench run 37635876457, job 112841843724, `mem_lines 320000` in
+`0::/bga-cap max 21474836480` on the 31 GB host:
+
+```text
+autocap-1  wall 726.74 s  mem 15698M  peak 6  start 4 max 5 adds 1 rss-holds 1463 withdraws 1  cgroup peak 17378M oom_kill 0
+autocap-2  wall 719.09 s  mem 15706M  peak 6  start 4 max 5 adds 1 rss-holds 1461 withdraws 1  cgroup peak 17378M oom_kill 0
+autocap-3  wall 720.34 s  mem 15705M  peak 6  start 4 max 5 adds 1 rss-holds 1465 withdraws 1  cgroup peak 17310M oom_kill 0
+```
+
+Same leg before the fix (run 37606960927): `start 7 max 7 adds 0`, cgroup
+OOM kill at 4m35s. `withdraws 1` per run is the over-width withdraw
+after the first END, read back one unread token; psiw is 0, so it is not
+a PSI withdraw.
 
 Deviation: the share lives in `capped_width` (pool.py), not an `opening_seed` argument (a sixth parameter trips PLR0913, a baselined family); the over-width withdraw is `_withdraw_over_width` (tick hit C901). Also `tests/unit/test_the_auto_seed_opens_at_bsts_own_max_jobs.py`
 pinning `tracer.opening_share` so the container's own cgroup does not leak in.

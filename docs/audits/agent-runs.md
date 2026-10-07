@@ -854,8 +854,13 @@ pairing for every merged row from round 103 on.
 | 171 | verifier | sonnet | UX-1314 verifier | — | — | — | complete | tokens, calls, wall not in the brief |
 | 171 | integrator | — | integrator: merge the five tracks | — | — | — | merged | not in the brief |
 | 171 | graviton | — | bga-bench run 37606960927: twomemgiants, pairs, cap3 | — | — | — | complete | memgiant leg lost its runner (UX-1281) |
-| 171 | graviton | — | bga-bench run 37616908079: memcap under a 20 GB cap | — | — | — | complete | OOM at mem_lines 320000, filed UX-1339 |
+| 171 | graviton | — | bga-bench run 37616908079: memcap at 240000 under a 20 GB cap, latepeak | — | — | — | complete | memcap 3/3 no OOM; the 320000 OOM (run 37606960927) filed UX-1339 |
 | 171 | closer | sonnet | closer: ledger, round document, history | — | — | — | complete | tokens, calls, wall not in the brief |
+| 171 | architect | — | UX-1339 | 51k | 13 | 3.5 m | complete | share from MemTotal, not headroom; withdraw cannot pass 320000 alone |
+| 171 | implementer | sonnet | UX-1339 | 79k | 62 | 29.5 m | merged | worktree guard refused compound shell; PLR0913 moved the share to capped_width |
+| 171 | verifier | sonnet | UX-1339 verifier | 55k | 15 | 16.2 m | complete | leaf-only cap mutation survived; add relabelled withdraw |
+| 171 | implementer | sonnet | UX-1339 fix loop | 87k | 15 | 7.5 m | merged | see round-171 |
+| 171 | graviton | — | bga-bench run 37635876457: memcap at 320000 under a 20 GB cap | — | — | — | complete | start 4, 3/3, oom_kill 0 |
 
 Round 101's four tracks are **not** here: this session could not
 identify their transcripts with certainty after a context rebuild, and
@@ -868,7 +873,7 @@ committed cleanly once told to run in the foreground. Three of the five
 left a derived figure or a §6 context-map row behind - the same class
 the round itself was about, arriving in the tracks' own work.
 
-What the eight hundred and thirty-nine rows already say: a researcher that reads a document
+What the eight hundred and forty-four rows already say: a researcher that reads a document
 whole costs 100-180k; a walker that drives every control costs 336k;
 the two cuts cost a re-run each. The `walk` and `design-review`
 skills fix the report shape so the next rows are smaller, and the

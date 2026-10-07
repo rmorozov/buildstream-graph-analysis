@@ -74,8 +74,21 @@ available, the second low tick adds (pool 8); 8 GB available, it holds
 --jobserver auto` sets `BGA_JOBSERVER_SEED_TYPED=1`; the tracer then keeps
 it (seed 15, `seed_bound "typed"`). `seed_bound` is documented in
 `bga/schemas.py`'s `jobserver` block and classed `B:jobserver_seed_bound`
-in `bga/disclosure.py`. The Graviton reading (two giants at once;
-memgiant/pairs/cap3 against run 37031346135) is the owner's, not taken.
+in `bga/disclosure.py`.
+
+**Graviton reading** (bga-bench run 37606960927, 16x A72, 31 GB): two
+memory giants ready at once (`twomemgiants`, `auto` at bst's builders)
+open at bst's max-jobs - 1 and the gate holds the widening; pairs and
+cap3 keep their wins (cap3 within 1% of run 37031346135's 261/112):
+
+```text
+twomemgiants auto-1  wall 851 s  mem 26785 M  peak 9  pool start 7 max 9 adds 2 rss-holds 1990
+twomemgiants auto-2  wall 840 s  mem 26727 M  peak 8  pool start 7 max 8 adds 1 rss-holds 1987
+pairs  off 138.0 136.9 137.0 s (giant-peak 8)   auto 107.4 107.2 107.0 s (16)
+cap3   off 259.8 258.3 258.5 s                  auto 110.4 108.4 110.0 s
+```
+
+memgiant gave no reading: the runner lost communication (UX-1281).
 
 ```text
 $ python3 -m pytest -q -p no:xdist tests/unit/test_the_auto_seed_opens_at_bsts_own_max_jobs.py

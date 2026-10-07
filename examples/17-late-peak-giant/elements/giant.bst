@@ -8,12 +8,16 @@ depends:
 sources:
 - kind: local
   path: files/gen/cmake
+# the sandbox stages no mkdir: a second copy of the generator makes late/
+- kind: local
+  path: files/gen/cmake
+  directory: late
 variables:
   generator: Unix Makefiles
 config:
   configure-commands:
   - sh generate.sh giant 32 %{unit_lines}
-  - mkdir late && cd late && sh ../generate.sh late 4 $((%{late_k} * %{unit_lines}))
+  - cd late && sh generate.sh late 4 $((%{late_k} * %{unit_lines}))
   - |
     cat >> CMakeLists.txt <<'LATE'
     file(GLOB LATE_SOURCES "late/*.c")

@@ -10,6 +10,10 @@ name: CodSpeed runner probe
 
 on:
   workflow_dispatch:
+    inputs:
+      legs:
+        description: JSON list of graviton_arms.sh legs; empty runs the default matrix
+        default: ""
   push:
     branches: [claude/project-thread-bim9mu, claude/project-thread-pxl1wp]
     paths: [.github/workflows/codspeed-probe.yml, examples/11-serial-giant/graviton_arms.sh]
@@ -26,7 +30,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        leg: [mixed8, twogiants, widechain, memgiant, latepeak]
+        leg: ${{ fromJSON(inputs.legs || '["mixed8", "twogiants", "widechain", "memgiant", "latepeak"]') }}
     steps:
       - uses: actions/checkout@v7
 

@@ -179,7 +179,9 @@ class TestTheWiring:
     def test_the_probe_runs_every_leg_and_keeps_the_captures(self):
         probe = yaml.safe_load((REPO / ".github/workflows/codspeed-probe.yml").read_text(encoding="utf-8"))
         job = probe["jobs"]["probe"]
-        assert {leg for leg, _ in SHAPES.values()} <= set(job["strategy"]["matrix"]["leg"])
+        legs = job["strategy"]["matrix"]["leg"]  # a dispatch may pick legs; the default runs every shape
+        default = json.loads(re.search(r"\|\| '(\[.*\])'", legs).group(1)) if isinstance(legs, str) else legs
+        assert {leg for leg, _ in SHAPES.values()} <= set(default)
         uploads = [s for s in job["steps"] if str(s.get("uses", "")).startswith("actions/upload-artifact")]
         assert uploads and uploads[0].get("if") == "always()", uploads
         assert "/arms" in uploads[0]["with"]["path"], uploads[0]

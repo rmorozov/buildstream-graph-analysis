@@ -15,6 +15,10 @@
 # auto` at the safe cap (cores less one element's max-jobs, min(cpus, 8)).
 # UX-1284: `latepeak` runs examples/17 at late_k 4 the same way, each arm's
 # raw log kept and its lto1-over-cc1 ratio a notice per repeat.
+# UX-1282: `memcap` is memgiant's `autocap` arm inside a cgroup v2 capped at
+# 20G (sudo), the gate's cgroup reading against the uncapped run's width.
+# UX-1283: `twomemgiants` is `auto` at bst's own builders on examples/16's
+# both.bst - two giants on one pool, the seed's overcommit case; 2 repeats.
 set -eu
 MODE=$1
 PROJ=$(cd "$(dirname "$0")" && pwd)
@@ -29,12 +33,18 @@ OLDPWD_REPO=$(cd "$PROJ/../.." && pwd)
 OPTS=
 [ "$MODE" != twogiants ] || PROJ=$(cd "$PROJ/../14-two-giants" && pwd)  # two giants, two critical chains
 [ "$MODE" != widechain ] || PROJ=$(cd "$PROJ/../15-wide-chain" && pwd)  # one wide element ready at a time
-if [ "$MODE" = memgiant ]; then
+if [ "$MODE" = memcap ] || [ "$MODE" = twomemgiants ] || [ "$MODE" = memgiant ]; then
     PROJ=$(cd "$PROJ/../16-memory-bound-giant" && pwd)  # cc1 sized to oversubscribe RAM 1.5x at one job per core
     OPTS="--option mem_lines $(awk -v n="$(nproc)" '/^MemTotal:/{per = $2 / 1024 * 1.5 / n; r = 80000
         split("80000 160000 240000 320000 480000", rungs, " ")
         for (i in rungs) if (rungs[i] / 1000 * 6.6 + 20 <= per && rungs[i] + 0 > r) r = rungs[i]; print r}' /proc/meminfo)"
     echo "::notice title=memgiant::$OPTS"
+fi
+if [ "$MODE" = memcap ]; then  # this shell and every child in a 20G cgroup; the host keeps its RAM
+    CG=/sys/fs/cgroup/bga-cap
+    echo +memory | sudo -n tee /sys/fs/cgroup/cgroup.subtree_control >/dev/null || true
+    sudo -n mkdir -p "$CG" && echo 20G | sudo -n tee "$CG/memory.max" >/dev/null && echo $$ | sudo -n tee "$CG/cgroup.procs" >/dev/null
+    echo "::notice title=memcap::$(cat /proc/self/cgroup) max $(cat "$CG/memory.max")"
 fi
 if [ "$MODE" = latepeak ]; then
     PROJ=$(cd "$PROJ/../17-late-peak-giant" && pwd)  # a link whose lto1 out-peaks every cc1 before it
@@ -111,7 +121,7 @@ mode_in() {  # mode_in <mode...>: is $MODE one of them
 }
 
 per_element() {  # the modes whose arms print every element's width
-    mode_in noharm mixed mixed8 twogiants widechain memgiant latepeak
+    mode_in noharm mixed mixed8 twogiants widechain memgiant latepeak memcap twomemgiants
 }
 
 used_mb() {
@@ -124,7 +134,10 @@ spined() {  # the spine alone reports how processes ended
 
 why() {  # a failed arm's cause as a notice: bst's own failure lines and the kernel's OOM kills
     echo "::notice title=$1 failed::$(grep -E ' FAILURE |Killed|rror' "$OUT/$1.log" | head -3 | cut -c1-200 | paste -sd'|' -) | oom: $(sudo -n dmesg 2>/dev/null | grep -ciE 'out of memory|oom-kill') kill(s), $(sudo -n dmesg 2>/dev/null | grep -iE 'killed process' | tail -1 | cut -c1-160)"
-    # UX-1134: whether the pool's gate ran - the controller's ledger, copied beside the capture on failure too
+    pool_line "$1"
+}
+
+pool_line() {  # UX-1134: whether the pool's gate ran - the controller's ledger, copied beside the capture on failure too
     echo "::notice title=$1 pool::$(python3 -c 'import json, sys
 rows = [r for r in map(json.loads, open(sys.argv[1])) if "action" in r and "pool" in r]
 acts = [r["action"] for r in rows]
@@ -144,7 +157,9 @@ build() {  # build <arm> <repeat> <plane2 path or -> -- <command...>
     ! grep -q '^[0-9.]* BGA-ARM-FAILED$' "$OUT/$arm-$i.log" || { kill $sampler; why "$arm-$i"; tail -40 "$OUT/$arm-$i.log"; exit 1; }
     b1=$(busy); kill $sampler; read -r wall < "$OUT/time"
     [ "$MODE" != noharm ] || [ "$i" != 1 ] || { echo "== $arm head"; sed -n '1,/ START /p' "$OUT/$arm-$i.log" | cut -c1-200; }
-    ! mode_in mixed twogiants widechain memgiant latepeak || [ "$i" != 1 ] || { echo "== $arm bst lines"; grep -E ' (START|SUCCESS|FAILURE) |Pipeline Summary' "$OUT/$arm-$i.log" | cut -c1-160; }
+    ! mode_in memcap twomemgiants || pool_line "$arm-$i"
+    [ "$MODE" != memcap ] || echo "::notice title=memcap $i::cgroup peak $(( $(cat /sys/fs/cgroup/bga-cap/memory.peak 2>/dev/null || echo 0) / 1048576 ))M, $(grep -E '^oom_kill ' /sys/fs/cgroup/bga-cap/memory.events 2>/dev/null)"
+    ! mode_in mixed twogiants widechain memgiant latepeak memcap twomemgiants || [ "$i" != 1 ] || { echo "== $arm bst lines"; grep -E ' (START|SUCCESS|FAILURE) |Pipeline Summary' "$OUT/$arm-$i.log" | cut -c1-160; }
     mem=$(( $(sort -n "$OUT/mem" | tail -1) - m0 ))
     [ "$plane2" = - ] || plane2=$(ls $plane2 2>/dev/null | tail -1)
     [ "$plane2" = - ] || traced "$plane2" || { echo "::error title=$arm::Plane 2 traced 0 processes"; exit 1; }
@@ -157,6 +172,7 @@ build() {  # build <arm> <repeat> <plane2 path or -> -- <command...>
 }
 
 for i in 1 2 3; do
+    [ "$MODE" != twomemgiants ] || [ "$i" != 3 ] || break  # two giants a build: two repeats fit the job's 90 minutes
     case $MODE in
     pairs|cap3|noharm)
         for m in off auto; do
@@ -180,6 +196,12 @@ for i in 1 2 3; do
             --jobserver off . "$OUT/off-$i.json" -- bst $OPTS build all.bst
         build autocap "$i" "$OUT/autocap-$i.json" -- bga capture run --run-dir "$OUT/run-autocap-$i" \
             --jobserver auto . "$OUT/autocap-$i.json" -- bst $OPTS --builders "$SAFE" build all.bst ;;
+    memcap)  # memgiant's autocap arm alone: `off` at 8 jobs may not fit 20G, and is not the question
+        build autocap "$i" "$OUT/autocap-$i.json" -- bga capture run --run-dir "$OUT/run-autocap-$i" \
+            --jobserver auto . "$OUT/autocap-$i.json" -- bst $OPTS --builders "$SAFE" build all.bst ;;
+    twomemgiants)  # no --builders: the seed is cores - 1 before UX-1283, bst's max-jobs - 1 after
+        build auto "$i" "$OUT/auto-$i.json" -- bga capture run --run-dir "$OUT/run-auto-$i" \
+            --jobserver auto . "$OUT/auto-$i.json" -- bst $OPTS build both.bst ;;
     latepeak)  # memgiant's two arms, raw logs kept for the late-peak ratio
         for m in off autocap; do
             j=$([ "$m" = off ] && echo off || echo auto); b=$([ "$m" = off ] || echo "--builders $SAFE")

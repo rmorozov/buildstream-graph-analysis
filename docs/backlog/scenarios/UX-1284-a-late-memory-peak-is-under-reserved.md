@@ -52,8 +52,8 @@ with `auto` completing.
 
 ## Outcome
 
-Gate unchanged, pending the Graviton `latepeak` reading (a permission,
-not run here). No `bst`, `buildbox-casd`/`-run`, `bwrap` or staged
+Gate unchanged: the Graviton reading below completes under `auto` with
+no hold needed for the late step. No `bst`, `buildbox-casd`/`-run`, `bwrap` or staged
 toolchain in this container, so 17 was not built under `bst`; its
 `giant.bst` configure commands ran on the host gcc 13.3 under the real
 `hook.c` (`make -j4`, `BST_TRACE_ELEMENT=giant.bst`).
@@ -84,6 +84,16 @@ late_k 4`).
 ```text
 $ pytest tests/unit/test_the_new_jobserver_shapes_hold_their_property.py tests/unit/test_a_late_peak_is_held_once_live.py
 33 passed in 1.47s
+```
+
+**Graviton reading** (bga-bench run 37616908079, job 112777350447,
+nix gcc 14 on aarch64, 3 repeats per arm). The late step there is `as`
+on the LTO partition, not `lto1`, at the same ratio:
+
+```text
+off      wall 115.38 114.53 114.52 s  mem 1607/1649/1639M  giant-peak 8
+autocap  wall 112.58 112.54 112.16 s  mem 2599/2552/2605M  giant-peak 15  rss-holds 13
+both     OK late-peak: giant.bst:cc1_peak=215MB late_peak=945MB(as) ratio=4.39 k=4
 ```
 
 | mutation | reddened | run printed |

@@ -32,7 +32,6 @@ task file, which is the only place it ever lived twice.
 | UX-1280 | [the x86 16-core cells of the builders-and-auto default are the owner's run, and it is written down](UX-1280-the-x86-16-core-cells-are-the-owners-run.md) | capture | High | R4, R5 | 🔴 Not Started |
 | UX-1281 | [the memgiant Graviton leg outlives its runner on the third repeat, and its readings die with it](UX-1281-the-memgiant-leg-loses-its-runner-on-a-later-repeat.md) | capture | Medium | R4, R5 | 🔴 Not Started |
 | UX-1309 | [`--prune` deletes a snapshot whose capture is still running](UX-1309-prune-deletes-a-snapshot-whose-capture-is-still-running.md) | capture | Medium | R1, R5 | 🔴 Not Started |
-| UX-1341 | [the release guide spells `bga release-notes` with positional markers the CLI refuses](UX-1341-the-release-guide-spells-release-notes-with-positional-markers.md) | docs | Low | R8 | 🔴 Not Started |
 | UX-1342 | [the headline's "top 3" and the work order name two different triples](UX-1342-the-headline-and-the-order-name-two-different-top-threes.md) | analysis | Medium | R1 | 🔴 Not Started |
 | UX-1343 | [the pull-request lane never installs on the Python floor, so a 3.9-only break reds main alone](UX-1343-the-pull-request-lane-never-installs-on-the-python-floor.md) | guards | Medium | R8 | 🔴 Not Started |
 

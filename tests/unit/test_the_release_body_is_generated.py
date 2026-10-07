@@ -150,6 +150,21 @@ class TestTheCommittedBodyIsGenerated:
         assert "Do not hand-write it" in guide
         assert "bga release-notes" in guide
 
+    def test_the_release_guides_spelling_is_one_the_cli_takes(self):
+        """`UX-1341`: step 6 read `<from> <to>`, which argparse refuses."""
+        guide = (REPO / "docs/contributing/release-guide.md").read_text(encoding="utf-8")
+        spelled = re.search(r"`bga release-notes ([^`]*)`", guide)
+        assert spelled, "the guide spells no `bga release-notes` command"
+        argv = re.sub(r"\[([^\]]*)\]", r"\1", spelled.group(1)).replace("<marker>", "1")
+        run = subprocess.run(
+            [sys.executable, "-m", "tools.bga_release_notes", *argv.split()],
+            cwd=REPO,
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+        assert run.returncode == 0, f"`bga release-notes {spelled.group(1)}`: {run.stderr.strip()[-300:]}"
+
 
 if __name__ == "__main__":  # pragma: no cover
     raise SystemExit(pytest.main([__file__, "-v"]))

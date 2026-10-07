@@ -1,6 +1,6 @@
 # UX-1338: two snapshot tests leak `BGA_NO_PROGRESS` into whichever test runs next
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** round 171's push-check (2026-10-07): `test_no_shelling_phase_is_silent.py` red 2 under the touching selector, green alone | **Serves:** R1 | **Topic:** guards | **Area:** tools | **Shape:** mechanical | **Reading:** container
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — | **Found by:** round 171's push-check (2026-10-07): `test_no_shelling_phase_is_silent.py` red 2 under the touching selector, green alone | **Serves:** R1 | **Topic:** guards | **Area:** tools | **Shape:** mechanical | **Reading:** container
 
 **Guard:** `tests/unit/test_no_shelling_phase_is_silent.py`
 

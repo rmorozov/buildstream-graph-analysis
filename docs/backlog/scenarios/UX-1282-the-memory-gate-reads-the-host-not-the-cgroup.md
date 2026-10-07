@@ -1,6 +1,6 @@
 # UX-1282: the memory gate reads the host's memory, not the cgroup a container agent is capped at
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-1134 | **Found by:** Ruslan's question on round 166 (2026-10-02): "is it generally safe to use the jobserver on an arbitrary configuration?" | **Serves:** R4, R5 | **Topic:** capture | **Area:** tools | **Shape:** mechanical | **Reading:** owner:CodSpeed Graviton
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-1134 | **Found by:** Ruslan's question on round 166 (2026-10-02): "is it generally safe to use the jobserver on an arbitrary configuration?" | **Serves:** R4, R5 | **Topic:** capture | **Area:** tools | **Shape:** mechanical | **Reading:** owner:CodSpeed Graviton
 
 **Guard:** `tests/unit/test_the_memory_gate_reads_the_cgroup.py`, `tests/unit/test_memory_joins_the_sweep.py::test_the_advice_reads_the_cgroup_cap_when_it_is_below_the_host`
 

@@ -1,6 +1,6 @@
 # UX-1284: a link step that peaks above every compile before it is reserved at the compile's size
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-1134 | **Found by:** Ruslan's promotion question on round 166 (2026-10-02): what stands between `auto` and arbitrary configurations | **Serves:** R4, R5 | **Topic:** capture | **Area:** tools | **Shape:** mechanical | **Reading:** owner:CodSpeed Graviton
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-1134 | **Found by:** Ruslan's promotion question on round 166 (2026-10-02): what stands between `auto` and arbitrary configurations | **Serves:** R4, R5 | **Topic:** capture | **Area:** tools | **Shape:** mechanical | **Reading:** owner:CodSpeed Graviton
 
 **Guard:** test_a_late_peak_is_held_once_live.py, test_the_new_jobserver_shapes_hold_their_property.py
 

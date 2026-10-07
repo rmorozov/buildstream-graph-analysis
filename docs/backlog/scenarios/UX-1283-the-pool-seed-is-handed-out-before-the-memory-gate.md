@@ -1,6 +1,6 @@
 # UX-1283: the pool's seed tokens are handed out before the memory gate has a say
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** UX-1134 | **Found by:** Ruslan's promotion question on round 166 (2026-10-02): what stands between `auto` and arbitrary configurations | **Serves:** R4, R5 | **Topic:** capture | **Area:** tools | **Shape:** mechanical | **Reading:** owner:CodSpeed Graviton
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** UX-1134 | **Found by:** Ruslan's promotion question on round 166 (2026-10-02): what stands between `auto` and arbitrary configurations | **Serves:** R4, R5 | **Topic:** capture | **Area:** tools | **Shape:** mechanical | **Reading:** owner:CodSpeed Graviton
 
 **Guard:** `tests/unit/test_the_auto_seed_opens_at_bsts_own_max_jobs.py`
 

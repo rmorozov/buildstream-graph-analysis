@@ -1,6 +1,6 @@
 # UX-1314: The per-element CPU curve samples the sandbox's processes, not host pids that share their number
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** UX-1134's architect, round 152; promoted from the bookkeeping ledger in round 169 | **Serves:** R1, R5 | **Topic:** capture | **Area:** tools | **Shape:** mechanical | **Reading:** container
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — | **Found by:** UX-1134's architect, round 152; promoted from the bookkeeping ledger in round 169 | **Serves:** R1, R5 | **Topic:** capture | **Area:** tools | **Shape:** mechanical | **Reading:** container
 
 **Guard:** `tests/unit/test_the_cpu_curve_reads_the_sandboxes_descendants.py`
 

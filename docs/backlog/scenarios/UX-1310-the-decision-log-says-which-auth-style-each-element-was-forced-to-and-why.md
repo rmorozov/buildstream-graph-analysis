@@ -1,6 +1,6 @@
 # UX-1310: the decision log says which auth style each element was forced to, and by which switch
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** Ruslan, round 168 (2026-10-03): checking a `public: bga: jobserver-auth: off` annotation on his own project, the only witness was grepping `exec_argv` in `--diagnose` output | **Serves:** R1, R2 | **Topic:** capture | **Area:** tools | **Shape:** mechanical | **Reading:** container
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** — | **Found by:** Ruslan, round 168 (2026-10-03): checking a `public: bga: jobserver-auth: off` annotation on his own project, the only witness was grepping `exec_argv` in `--diagnose` output | **Serves:** R1, R2 | **Topic:** capture | **Area:** tools | **Shape:** mechanical | **Reading:** container
 
 **Guard:** `tests/unit/test_the_decision_log_names_the_forced_auth_style.py`
 

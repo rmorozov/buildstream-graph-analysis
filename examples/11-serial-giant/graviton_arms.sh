@@ -13,6 +13,8 @@
 # UX-1132: `twogiants`/`widechain`/`memgiant` run examples/14-16, `off` at
 # bst's defaults against `autocap` - the default under test, `--jobserver
 # auto` at the safe cap (cores less one element's max-jobs, min(cpus, 8)).
+# UX-1284: `latepeak` runs examples/17 at late_k 4 the same way, each arm's
+# raw log kept and its lto1-over-cc1 ratio a notice per repeat.
 set -eu
 MODE=$1
 PROJ=$(cd "$(dirname "$0")" && pwd)
@@ -33,6 +35,10 @@ if [ "$MODE" = memgiant ]; then
         split("80000 160000 240000 320000 480000", rungs, " ")
         for (i in rungs) if (rungs[i] / 1000 * 6.6 + 20 <= per && rungs[i] + 0 > r) r = rungs[i]; print r}' /proc/meminfo)"
     echo "::notice title=memgiant::$OPTS"
+fi
+if [ "$MODE" = latepeak ]; then
+    PROJ=$(cd "$PROJ/../17-late-peak-giant" && pwd)  # a link whose lto1 out-peaks every cc1 before it
+    OPTS="--option unit_lines 20000 --option late_k 4"  # the measured point: lto1 4.43x cc1
 fi
 NCPU=$(nproc)
 SAFE=$(( NCPU - (NCPU < 8 ? NCPU : 8) )); [ "$SAFE" -ge 1 ] || SAFE=1
@@ -105,7 +111,7 @@ mode_in() {  # mode_in <mode...>: is $MODE one of them
 }
 
 per_element() {  # the modes whose arms print every element's width
-    mode_in noharm mixed mixed8 twogiants widechain memgiant
+    mode_in noharm mixed mixed8 twogiants widechain memgiant latepeak
 }
 
 used_mb() {
@@ -138,7 +144,7 @@ build() {  # build <arm> <repeat> <plane2 path or -> -- <command...>
     ! grep -q '^[0-9.]* BGA-ARM-FAILED$' "$OUT/$arm-$i.log" || { kill $sampler; why "$arm-$i"; tail -40 "$OUT/$arm-$i.log"; exit 1; }
     b1=$(busy); kill $sampler; read -r wall < "$OUT/time"
     [ "$MODE" != noharm ] || [ "$i" != 1 ] || { echo "== $arm head"; sed -n '1,/ START /p' "$OUT/$arm-$i.log" | cut -c1-200; }
-    ! mode_in mixed twogiants widechain memgiant || [ "$i" != 1 ] || { echo "== $arm bst lines"; grep -E ' (START|SUCCESS|FAILURE) |Pipeline Summary' "$OUT/$arm-$i.log" | cut -c1-160; }
+    ! mode_in mixed twogiants widechain memgiant latepeak || [ "$i" != 1 ] || { echo "== $arm bst lines"; grep -E ' (START|SUCCESS|FAILURE) |Pipeline Summary' "$OUT/$arm-$i.log" | cut -c1-160; }
     mem=$(( $(sort -n "$OUT/mem" | tail -1) - m0 ))
     [ "$plane2" = - ] || plane2=$(ls $plane2 2>/dev/null | tail -1)
     [ "$plane2" = - ] || traced "$plane2" || { echo "::error title=$arm::Plane 2 traced 0 processes"; exit 1; }
@@ -174,6 +180,14 @@ for i in 1 2 3; do
             --jobserver off . "$OUT/off-$i.json" -- bst $OPTS build all.bst
         build autocap "$i" "$OUT/autocap-$i.json" -- bga capture run --run-dir "$OUT/run-autocap-$i" \
             --jobserver auto . "$OUT/autocap-$i.json" -- bst $OPTS --builders "$SAFE" build all.bst ;;
+    latepeak)  # memgiant's two arms, raw logs kept for the late-peak ratio
+        for m in off autocap; do
+            j=$([ "$m" = off ] && echo off || echo auto); b=$([ "$m" = off ] || echo "--builders $SAFE")
+            build "$m" "$i" "$OUT/$m-$i.json" -- bga capture run --run-dir "$OUT/run-$m-$i" --raw-log "$OUT/$m-$i.trace.log" \
+                --jobserver "$j" . "$OUT/$m-$i.json" -- bst $OPTS $b build all.bst
+        done
+        echo "::notice title=latepeak $i::$(for m in off autocap; do echo "$m $(python3 "$OLDPWD_REPO/examples/check_shape_property.py" \
+            late-peak "$OUT/$m-$i.trace.log" giant.bst 4)"; done | paste -sd';' -)" ;;
     overhead)
         build none "$i" - -- bst build all.bst
         build capture "$i" ".bga/runs/*/plane2.json" -- bga snapshot --no-trace-opens -- bst build all.bst
@@ -191,6 +205,6 @@ for k in ("per_element_parallelism", "jobserver_decisions", "jobserver_pool"):
     print(k, json.dumps(r.get(k))[:1500])' "$OUT/diag.json"
         find "$OUT/run-diag" -maxdepth 2 | head -40
         exit 0 ;;
-    *) echo "usage: $0 pairs|cap3|noharm|mixed|mixed8|twogiants|widechain|memgiant|overhead|diag" >&2; exit 2 ;;
+    *) echo "usage: $0 pairs|cap3|noharm|mixed|mixed8|twogiants|widechain|memgiant|latepeak|overhead|diag" >&2; exit 2 ;;
     esac
 done

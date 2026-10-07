@@ -3,7 +3,7 @@
 # leg per matrix entry of `examples/11-serial-giant/graviton_arms.sh` -
 # `pairs` (calibration, off/auto x3), `cap3` (the same at max-jobs 3),
 # `overhead` (none/capture/trace/spine/all x3) and UX-1132's `twogiants`/
-# `widechain`/`memgiant` (examples/14-16, off against auto at the safe
+# `widechain`/`memgiant`/`latepeak` (examples/14-17, off against auto at the safe
 # cap). Host, width and the sandbox were probed in earlier runs of this
 # file; the Ryzen leg never started on the free plan.
 name: CodSpeed runner probe
@@ -26,7 +26,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        leg: [mixed8, twogiants, widechain, memgiant]
+        leg: [mixed8, twogiants, widechain, memgiant, latepeak]
     steps:
       - uses: actions/checkout@v7
 

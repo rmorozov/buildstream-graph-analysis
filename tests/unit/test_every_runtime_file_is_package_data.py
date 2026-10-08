@@ -8,11 +8,9 @@ import fnmatch
 import os
 import pathlib
 
-import pytest
+import tomllib
 
 from tools.bst_native_build_tracer import JOBSERVER_WRAPPERS_DIR
-
-tomllib = pytest.importorskip("tomllib")  # stdlib from 3.11; the PR lane runs 3.12
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 

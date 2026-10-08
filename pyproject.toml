@@ -8,7 +8,7 @@ version = "0.6.0"
 description = "BuildStream Build Efficiency Analyzer - Analyze build traces for efficiency metrics"
 readme = "README.md"
 license = {text = "MIT"}
-requires-python = ">=3.9"
+requires-python = ">=3.12"
 authors = [
     {name = "BuildStream Contributors"}
 ]
@@ -17,10 +17,9 @@ classifiers = [
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
 ]
 dependencies = [
     "networkx>=2.8",
@@ -36,9 +35,7 @@ dependencies = [
 dev = [
     "pytest>=7.0",
     "pytest-cov>=4.0",
-    # UX-1340: 6.142 on needs Python >=3.10, so the 3.9 cell pins the last one it can install.
-    "hypothesis==6.168.3; python_version >= '3.10'",
-    "hypothesis==6.141.1; python_version < '3.10'",
+    "hypothesis==6.168.3",
     # UX-927: in `dev` as well as in `nix` below, because a guard that
     # skips where nobody looks is the shape this repository keeps
     # catching - the closure guard's `zstd` clause has to really run.
@@ -84,11 +81,7 @@ dev = [
     "pytest-timeout==2.4.0",
     # UX-712: the size ledger's duplicate-block count -
     # `--enable=duplicate-code`, pip-installable and the only one of
-    # the tried tools with no CI-side account needed. Unpinned above
-    # `3.3`: pylint 4.x needs Python >=3.10 and pip resolves 3.3.9 for
-    # the 3.9 lane on its own Requires-Python metadata - verified with
-    # `pip install --dry-run` on 3.10, 3.11 and 3.12 here; 3.9 was not
-    # available to try directly.
+    # the tried tools with no CI-side account needed.
     "pylint>=3.3",
     # UX-698: the two junit readers parse with defusedxml, so bandit's
     # B314 is fixed rather than baselined.

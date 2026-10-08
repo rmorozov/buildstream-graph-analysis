@@ -2551,7 +2551,7 @@ class TestTheFailureNameIsTheLastThingInTheLog:
         """
         for step in cls._jobs()[job]["steps"]:
             condition = str(step.get("if", "")).strip()
-            if "run" not in step or "3.11" in condition:
+            if "run" not in step or "3.13" in condition:
                 continue
             if "!= '3.12'" in condition:
                 continue

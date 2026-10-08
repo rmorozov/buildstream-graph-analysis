@@ -64,31 +64,11 @@ def test_node_is_here_where_it_is_expected():
 
 
 def _package_data_for(package):
-    """`[tool.setuptools.package-data]`'s entry for `package`.
+    """`[tool.setuptools.package-data]`'s entry for `package`; `tomllib`
+    is stdlib on every Python `requires-python` admits (`UX-1348`)."""
+    import tomllib
 
-    `tomllib` is stdlib only from **3.11**, and this project supports
-    3.9 (`requires-python = ">=3.9"`, and CI's matrix runs 3.9-3.12).
-    The first version of this guard imported it unconditionally, which
-    would have failed two of the four matrix jobs - reproduced against
-    the real `python3.10` on this machine, not inferred:
-
-        $ python3.10 -c "import tomllib"
-        ModuleNotFoundError: No module named 'tomllib'
-
-    Not `importorskip`: skipping on 3.9 and 3.10 would make a packaging
-    guard silent on two thirds of the interpreters, which is `UX-197`
-    seam 6 written again. The fallback reads the one line this asserts
-    on, so the guard runs everywhere.
-    """
     text = open("pyproject.toml", encoding="utf-8").read()
-    try:
-        import tomllib
-    except ImportError:  # pragma: no cover - <3.11
-        import ast
-        import re
-
-        match = re.search(rf'^"{package}"\s*=\s*(\[[^\]]*\])', text, re.M)
-        return ast.literal_eval(match.group(1)) if match else []
     data = tomllib.loads(text)
     return data["tool"]["setuptools"]["package-data"].get(package, [])
 

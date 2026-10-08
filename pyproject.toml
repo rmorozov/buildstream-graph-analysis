@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "bga"
-version = "0.5.0"
+version = "0.6.0"
 description = "BuildStream Build Efficiency Analyzer - Analyze build traces for efficiency metrics"
 readme = "README.md"
 license = {text = "MIT"}
@@ -36,7 +36,9 @@ dependencies = [
 dev = [
     "pytest>=7.0",
     "pytest-cov>=4.0",
-    "hypothesis==6.168.3",
+    # UX-1340: 6.142 on needs Python >=3.10, so the 3.9 cell pins the last one it can install.
+    "hypothesis==6.168.3; python_version >= '3.10'",
+    "hypothesis==6.141.1; python_version < '3.10'",
     # UX-927: in `dev` as well as in `nix` below, because a guard that
     # skips where nobody looks is the shape this repository keeps
     # catching - the closure guard's `zstd` clause has to really run.

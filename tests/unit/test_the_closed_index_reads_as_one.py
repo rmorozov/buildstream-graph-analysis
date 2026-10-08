@@ -81,6 +81,12 @@ def test_no_chunk_holds_more_than_its_size():
 
 def test_a_close_appends_to_the_last_chunk(tmp_path):
     scenarios = _sandbox(tmp_path)
+    last = close_task.closed_files(scenarios)[-1]
+    lines = last.read_text(encoding="utf-8").splitlines(keepends=True)
+    rows = [i for i, line in enumerate(lines) if line.startswith("| UX-")]
+    if len(rows) >= close_task.CHUNK_ROWS:  # UX-1345: the live chunk can be full; the premise needs room
+        del lines[rows[-1]]
+        last.write_text("".join(lines), encoding="utf-8")
     before = [p.name for p in close_task.closed_files(scenarios)]
     done = _move(scenarios)
     assert done.returncode == 0, done.stdout + done.stderr

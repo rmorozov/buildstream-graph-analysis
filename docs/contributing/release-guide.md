@@ -122,7 +122,7 @@ version and freezes the row below it with its digest (step 3).
    contract delta in a sentence, and the upgrade note when there is
    one. This is the only part that is written rather than derived, and
    it is the part worth reading.
-6. **Generate the body**: `bga release-notes <from> <to>` emits the
+6. **Generate the body**: `bga release-notes --from <marker> [--to <marker>]` emits the
    closed rows between two markers, grouped by topic. Do not hand-write
    it — the narrative already exists in the closed rows (`closed_rows()`) and a third copy
    would drift (`UX-252`).

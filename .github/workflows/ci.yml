@@ -1192,6 +1192,8 @@ jobs:
           unset PYTHONPATH
           bga doctor .
           bga snapshot --diagnose -- bst --builders 2 build all.bst
+          # UX-1347: auto binds native_trace/wrappers into the sandbox, which only package-data ships.
+          bga snapshot --diagnose --jobserver auto -- bst --builders 2 build all.bst
 
       - name: The whole chain held
         run: |

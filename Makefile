@@ -139,7 +139,7 @@ lint-code:
 # UX-509: the file list comes from git, not from walking the tree - an
 # agent worktree under .claude/ is a whole second clone, and a walk
 # lints it. `--respect-gitignore` would say the same thing but only on
-# pymarkdown 0.9.34+, and the 3.9 lane resolves to 0.9.33. The cost is
+# pymarkdown 0.9.34+, and `pymarkdownlnt>=0.9` admits older. The cost is
 # that a brand-new .md is linted from its first `git add`, not before.
 lint-docs:
 	git ls-files -z -- README.md CLAUDE.md REVIEW.md CHANGELOG.md 'docs/*.md' '.claude/*.md' \

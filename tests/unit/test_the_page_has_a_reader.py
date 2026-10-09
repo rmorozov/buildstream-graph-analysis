@@ -447,9 +447,8 @@ class TestAReaderIsAShapeNotAHue:
     left rule going missing, which leaves `[data-promoted]` computed
     at 0px."""
 
-    @classmethod
     @pytest.fixture(scope="class")
-    def shaped(cls, browser, tmp_path_factory):
+    def shaped(self, browser, tmp_path_factory):
         into = tmp_path_factory.mktemp("u668")
         return {
             label: browser.measure(

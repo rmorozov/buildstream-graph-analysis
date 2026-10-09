@@ -109,9 +109,10 @@ def test_help_names_the_underlying_module():
 
 
 def test_the_alias_reaches_the_tool_through_the_real_cli():
-    """End to end through `bga`, not through the dispatcher directly."""
+    """End to end through `bga`, not through the dispatcher directly - the
+    console script's own body: 3.14's argparse names `-m bga.cli` instead (UX-1348)."""
     result = subprocess.run(
-        [sys.executable, "-m", "bga.cli", "extract", "--help"],
+        [sys.executable, "-c", "import sys; from bga.cli import main; sys.exit(main())", "extract", "--help"],
         capture_output=True,
         text=True,
     )
@@ -130,7 +131,8 @@ def test_the_tool_is_still_runnable_directly():
     )
 
     assert result.returncode == 0
-    assert "bst_extract_run.py" in result.stdout
+    # `bst_extract_run.py` to 3.13, `python -m tools.bst_extract_run` from 3.14.
+    assert "bst_extract_run" in result.stdout
 
 
 # --- UX-77: the front door ---------------------------------------------

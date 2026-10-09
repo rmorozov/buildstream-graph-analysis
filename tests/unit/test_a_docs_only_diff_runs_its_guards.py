@@ -174,7 +174,7 @@ class TestTheLaneIsThatSetPlusTheCensus:
             "make lint",
             "make check-clean",
             "dev_close_task.py --check",
-            "'python-version': '3.11'",
+            "'python-version': '3.12'",
         ):
             assert step in text, step
 

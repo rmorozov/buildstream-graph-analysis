@@ -40,7 +40,7 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-python@v7
         with:
-          python-version: "3.11"
+          python-version: "3.12"
       - name: Is this diff docs only
         id: kind
         # `UX-991`: `HEAD^1` on a `pull_request` - the merge ref's own
@@ -65,7 +65,7 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-python@v7
         with:
-          python-version: "3.11"
+          python-version: "3.12"
       - name: Install dependencies
         run: pip install -e ".[dev]"
       # `UX-997`: a doc guard this diff selects can read `tests/ci_reference.json`
@@ -93,18 +93,16 @@ jobs:
     # `UX-943`: one key per cell, because a matrix job's outputs are
     # last-writer-wins and the runner skips an empty one.
     outputs:
-      clean_39: ${{ steps.verdict.outputs.clean_39 }}
-      clean_310: ${{ steps.verdict.outputs.clean_310 }}
-      clean_311: ${{ steps.verdict.outputs.clean_311 }}
       clean_312: ${{ steps.verdict.outputs.clean_312 }}
+      clean_313: ${{ steps.verdict.outputs.clean_313 }}
+      clean_314: ${{ steps.verdict.outputs.clean_314 }}
     strategy:
       fail-fast: false
       matrix:
-        # pyproject.toml's own classifiers declare 3.9-3.12 as supported
-        # (P4-06). `UX-995`: a pull request queues behind another's
-        # matrix, and the owner chose the newest Python for it alone -
-        # a push to the default branch still runs all four.
-        python-version: ${{ fromJSON(github.event_name == 'pull_request' && '["3.12"]' || '["3.9","3.10","3.11","3.12"]') }}
+        # pyproject.toml's classifiers declare 3.12-3.14 (P4-06, `UX-1348`).
+        # `UX-995`: a pull request runs the primary cell alone, which is
+        # also the floor (`UX-1343`); a push to the default branch runs all three.
+        python-version: ${{ fromJSON(github.event_name == 'pull_request' && '["3.12"]' || '["3.12","3.13","3.14"]') }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -141,14 +139,14 @@ jobs:
       # references to keep true.
       - name: Test
         run: make test PYTEST_ARGS="--junitxml=${{ runner.temp }}/junit.xml"
-        if: matrix.python-version != '3.11' && matrix.python-version != '3.12'
+        if: matrix.python-version != '3.13' && matrix.python-version != '3.12'
 
       # UX-524: the touching map, measured rather than grepped. Coverage
       # with `--cov-context=test` records which test files executed
       # which module lines - the import chain `dev_touching`'s grep
       # cannot see, which is the class `UX-500`'s round could not close.
       #
-      # On 3.11 and never on 3.12: measured at **+20%** wall clock
+      # On 3.13 and never on 3.12: measured at **+20%** wall clock
       # (33.2s -> 40.0s on a twelve-file subset here), and 3.12 is the
       # interpreter whose seconds `UX-503`'s reference is made of. A
       # timing record taken under coverage would move every row in it.
@@ -159,7 +157,7 @@ jobs:
           make test PYTEST_ARGS="--cov=bga --cov=tools \
             --cov-context=test --cov-report= \
             --junitxml=${{ runner.temp }}/junit.xml"
-        if: matrix.python-version == '3.11' && github.event_name == 'push'
+        if: matrix.python-version == '3.13' && github.event_name == 'push'
 
       - name: Test (with a timing report)
         run: make test PYTEST_ARGS="--junitxml=${{ runner.temp }}/junit.xml"
@@ -484,18 +482,18 @@ jobs:
       # `UX-524`: the same shape one file over. `--write` reads the
       # coverage database this run left and prints one line; the map
       # itself travels as an artifact, because it is ~60 KB of rows no
-      # log reader wants after a failure (`UX-441`). `UX-995`: on 3.11
+      # log reader wants after a failure (`UX-441`). `UX-995`: on 3.13
       # now, beside the coverage step it reads, and push only - the
       # map's one reader, `touch-map-adopt`, already runs on push alone.
       - name: This run's touching map, for adopting
         run: |
           python tools/dev_touch_map.py \
             --write "${{ runner.temp }}/touch_map.candidate.json"
-        if: always() && matrix.python-version == '3.11' && github.event_name == 'push'
+        if: always() && matrix.python-version == '3.13' && github.event_name == 'push'
         continue-on-error: true
 
       - name: Upload it, so the adopt job can merge it
-        if: always() && matrix.python-version == '3.11' && github.event_name == 'push'
+        if: always() && matrix.python-version == '3.13' && github.event_name == 'push'
         uses: actions/upload-artifact@v7
         with:
           name: touch-map-candidate
@@ -671,7 +669,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
         with:
-          python-version: "3.11"
+          python-version: "3.12"
       - name: Install what the tool imports (UX-821)
         run: pip install -e ".[dev]"
       - name: Fetch what test (3.12) recorded
@@ -721,10 +719,10 @@ jobs:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
         with:
-          python-version: "3.11"
+          python-version: "3.12"
       - name: Install what the tool imports (UX-821)
         run: pip install -e ".[dev]"
-      - name: Fetch what test (3.11) measured
+      - name: Fetch what test (3.13) measured
         continue-on-error: true
         uses: actions/download-artifact@v8
         with:
@@ -734,7 +732,7 @@ jobs:
       - name: Merge it into tests/touch_map.json
         run: |
           test -f touch_map.candidate.json || {
-            echo "no candidate on this run - test (3.11) did not reach it"
+            echo "no candidate on this run - test (3.13) did not reach it"
             exit 0
           }
           python tools/dev_touch_map.py --adopt touch_map.candidate.json
@@ -757,10 +755,9 @@ jobs:
     # `UX-943`: from a run red at the drift step or nowhere - its rows
     # are that step's excursions; a red anywhere else adopts nothing.
     if: >-
-      !cancelled() && needs.test.outputs.clean_39 == 'true'
-      && needs.test.outputs.clean_310 == 'true'
-      && needs.test.outputs.clean_311 == 'true'
-      && needs.test.outputs.clean_312 == 'true'
+      !cancelled() && needs.test.outputs.clean_312 == 'true'
+      && needs.test.outputs.clean_313 == 'true'
+      && needs.test.outputs.clean_314 == 'true'
       && github.event_name == 'push'
       && github.ref == format('refs/heads/{0}',
                               github.event.repository.default_branch)
@@ -772,7 +769,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
         with:
-          python-version: "3.11"
+          python-version: "3.12"
       - name: Install what the tool imports (UX-821)
         run: pip install -e ".[dev]"
       - name: Fetch what test (3.12) recorded
@@ -828,7 +825,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
         with:
-          python-version: "3.11"
+          python-version: "3.12"
       - name: Install what the tool imports (UX-821)
         run: pip install -e ".[dev]"
       - name: Read the records branch this run publishes onto
@@ -861,7 +858,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
         with:
-          python-version: "3.11"
+          python-version: "3.12"
       - name: Install what the tool imports (UX-821)
         run: pip install -e ".[dev]"
       - name: Read the records branch this run adopts onto
@@ -887,7 +884,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
         with:
-          python-version: "3.11"
+          python-version: "3.12"
       - name: Install bga
         run: pip install -e .
       - name: Fetch the kept fdsdk capture
@@ -916,7 +913,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
         with:
-          python-version: "3.11"
+          python-version: "3.12"
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
@@ -1192,23 +1189,29 @@ jobs:
           unset PYTHONPATH
           bga doctor .
           bga snapshot --diagnose -- bst --builders 2 build all.bst
+          # UX-1347: auto binds native_trace/wrappers into the sandbox, which only package-data ships;
+          # the artifacts go first, or the second build is all cache hits and no sandbox runs.
+          bst artifact delete --deps all all.bst
+          bga snapshot --diagnose --jobserver auto -- bst --builders 2 build all.bst
 
       - name: The whole chain held
         run: |
           set -euo pipefail
           export PATH="/tmp/projvenv/bin:$PATH"
           cd /tmp/theirproject/proj
-          snapshot=$(ls -d .bga/runs/*/ | tail -1)
-          echo "snapshot: $snapshot"
-          test -d "$snapshot/run"          || { echo "no run directory" >&2; exit 1; }
-          test -s "$snapshot/plane2.json"  || { echo "no Plane 2 report" >&2; exit 1; }
-          test -s "$snapshot/build.log"    || { echo "no Plane 1 log" >&2; exit 1; }
-          ran=$(grep -c '"injected"' "$snapshot/plane2.json.diagnostics.jsonl" || true)
-          echo "the bwrap shim ran $ran time(s) from an installed wheel"
-          [ "$ran" -gt 0 ] || {
-            echo "the shim never ran: bst -> buildbox-run -> PATH shim is broken" >&2
-            exit 1
-          }
+          [ "$(ls -d .bga/runs/*/ | wc -l)" -ge 2 ] || { echo "expected two snapshots, jobserver off then auto" >&2; exit 1; }
+          for snapshot in $(ls -d .bga/runs/*/ | tail -2); do
+            echo "snapshot: $snapshot"
+            test -d "$snapshot/run"          || { echo "no run directory" >&2; exit 1; }
+            test -s "$snapshot/plane2.json"  || { echo "no Plane 2 report" >&2; exit 1; }
+            test -s "$snapshot/build.log"    || { echo "no Plane 1 log" >&2; exit 1; }
+            ran=$(grep -c '"injected"' "$snapshot/plane2.json.diagnostics.jsonl" || true)
+            echo "the bwrap shim ran $ran time(s) from an installed wheel"
+            [ "$ran" -gt 0 ] || {
+              echo "the shim never ran: bst -> buildbox-run -> PATH shim is broken" >&2
+              exit 1
+            }
+          done
           bga analyze @last > /dev/null
           echo "analyze @last resolved from the store, in a foreign venv"
 

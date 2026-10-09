@@ -1,5 +1,6 @@
-"""`UX-995`: a pull request queues behind another's matrix - the owner
-chose the newest Python for it alone; a push still runs all four.
+"""`UX-995`: a pull request queues behind another's matrix, so it runs
+one cell; `UX-1348`: that cell is the primary (the timing reference)
+and the `requires-python` floor (`UX-1343`); a push runs every classifier.
 
 Reuses `test_a_run_red_for_another_reason_adopts_nothing`'s replay
 engine (`_jobs`, `_Expr`, `_holds`, `_status`, `_matrix_cells`) rather
@@ -34,6 +35,20 @@ def _classifiers():
     found = re.findall(r'Programming Language :: Python :: (\d+\.\d+)"', text)
     assert found, "pyproject.toml declares no Python version classifiers"
     return sorted(found, key=_version_key)
+
+
+def _floor():
+    """`requires-python`'s `X.Y`, as `pyproject.toml` writes it."""
+    found = re.search(r'requires-python\s*=\s*"[>=~^]*\s*(\d+\.\d+)', PYPROJECT.read_text(encoding="utf-8"))
+    assert found, "pyproject.toml declares no requires-python"
+    return found.group(1)
+
+
+def _primary(jobs):
+    """The push cells the timing-report suite run holds on."""
+    (step,) = [s for s in jobs["test"]["steps"] if s.get("name") == "Test (with a timing report)"]
+    cells = _matrix_cells(jobs, {"event_name": "push"})
+    return [v for v in cells if _holds(step.get("if"), _push_context(v), _status(["success"]))]
 
 
 def _is_make_test_variant(step):
@@ -81,11 +96,14 @@ def test_the_push_matrix_equals_pyprojects_classifiers():
     )
 
 
-def test_the_pull_request_matrix_is_the_newest_classifier_alone():
+def test_the_pull_request_matrix_is_the_primary_cell_and_the_floor_alone():
     jobs = _jobs()
     push = _matrix_cells(jobs, {"event_name": "push"})
     pr = _matrix_cells(jobs, {"event_name": "pull_request"})
-    assert pr == [max(push, key=_version_key)], f"pull_request runs {pr}, not the newest of {push} alone"
+    assert pr == _primary(jobs), f"pull_request runs {pr}, the timing reference is {_primary(jobs)}"
+    assert pr == [min(push, key=_version_key)] == [_floor()], (
+        f"pull_request runs {pr}; the floor is {_floor()} and push runs {push}"
+    )
 
 
 def test_exactly_one_make_test_step_holds_per_event_and_cell():
@@ -119,7 +137,7 @@ def test_every_pull_request_step_moves_to_the_cell_it_keeps():
     """
     jobs = _jobs()
     push = _matrix_cells(jobs, {"event_name": "push"})
-    newest = max(push, key=_version_key)
+    (kept,) = _matrix_cells(jobs, {"event_name": "pull_request"})
     for step in jobs["test"]["steps"]:
         if _is_make_test_variant(step) or step.get("name") in PUSH_ONLY_STEPS:
             continue
@@ -127,9 +145,9 @@ def test_every_pull_request_step_moves_to_the_cell_it_keeps():
         held_on_push = any(_holds(condition, _push_context(v), _status(["success"])) for v in push)
         if not held_on_push:
             continue
-        assert _holds(condition, _pr_context(newest), _status(["success"])), (
+        assert _holds(condition, _pr_context(kept), _status(["success"])), (
             f"{step.get('name')!r} holds on some push cell but not on "
-            f"(pull_request, {newest!r}), and it is not in PUSH_ONLY_STEPS"
+            f"(pull_request, {kept!r}), and it is not in PUSH_ONLY_STEPS"
         )
 
 
@@ -137,7 +155,7 @@ def test_the_single_process_small_tier_runs_on_push_only():
     """`UX-1111`: named in `PUSH_ONLY_STEPS`, which exempts it above - so
     its own `if:` is read here, per event."""
     (step,) = [s for s in _jobs()["test"]["steps"] if s.get("name") == "Test (small tier, single process)"]
-    newest = max(_classifiers(), key=_version_key)
+    (kept,) = _matrix_cells(_jobs(), {"event_name": "pull_request"})
     ok = _status(["success"])
-    assert not _holds(step.get("if"), _pr_context(newest), ok), step.get("if")
-    assert _holds(step.get("if"), _push_context(newest), ok), step.get("if")
+    assert not _holds(step.get("if"), _pr_context(kept), ok), step.get("if")
+    assert _holds(step.get("if"), _push_context(kept), ok), step.get("if")

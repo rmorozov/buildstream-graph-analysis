@@ -1,0 +1,26 @@
+# tests
+
+Printed by `dev_area_pages.py --areas` (`UX-688`, `UX-1000`) from each task's `**Area:**` header. 18 row(s); the module tree is the fixing guide's §6.
+
+| Task | Topic | Guard |
+|---|---|---|
+| [UX-1167](https://github.com/rmorozov/buildstream-graph-analysis/blob/216fcc30865c20539e2ae95f2ac3a909ad6e47e9/docs/backlog/scenarios/UX-1167-the-page-has-255-b-of-its-150.md) | guards | `test_the_ceilings_table_states_each_bound.py`, `test_the_viewer_js_ships_compressed.py` |
+| [UX-1174](https://github.com/rmorozov/buildstream-graph-analysis/blob/216fcc30865c20539e2ae95f2ac3a909ad6e47e9/docs/backlog/scenarios/UX-1174-the-page-size-guard-subtracts-the-embedded-data.md) | guards | `test_the_report_you_can_attach.py` |
+| [UX-1181](https://github.com/rmorozov/buildstream-graph-analysis/blob/216fcc30865c20539e2ae95f2ac3a909ad6e47e9/docs/backlog/scenarios/UX-1181-two-page-half-instruments-disagree-by-169-b.md) | guards | `test_a_page_half_is_read_once.py` |
+| [UX-1215](https://github.com/rmorozov/buildstream-graph-analysis/blob/216fcc30865c20539e2ae95f2ac3a909ad6e47e9/docs/backlog/scenarios/UX-1215-a-back-pushing-browser-guard-runs-on-a.md) | guards | `test_a_browser_drive_starts_clean.py` |
+| [UX-1216](https://github.com/rmorozov/buildstream-graph-analysis/blob/216fcc30865c20539e2ae95f2ac3a909ad6e47e9/docs/backlog/scenarios/UX-1216-the-store-trend-comparison-band-and-element-history.md) | guards | `test_a_mark_says_its_value.py` |
+| [UX-1217](https://github.com/rmorozov/buildstream-graph-analysis/blob/216fcc30865c20539e2ae95f2ac3a909ad6e47e9/docs/backlog/scenarios/UX-1217-a-browser-guard-leaves-no-preference-behind-in.md) | guards | `test_a_browser_drive_starts_clean.py` |
+| [UX-1230](https://github.com/rmorozov/buildstream-graph-analysis/blob/216fcc30865c20539e2ae95f2ac3a909ad6e47e9/docs/backlog/scenarios/UX-1230-the-badge-s-all-n-matched-arm-and-the-said-back.md) | guards | `test_a_value_is_what_it_names.py`, `test_a_key_column_matches_exactly.py` |
+| [UX-1232](https://github.com/rmorozov/buildstream-graph-analysis/blob/216fcc30865c20539e2ae95f2ac3a909ad6e47e9/docs/backlog/scenarios/UX-1232-the-hang-guard-s-sleeper-does-not-take-49-9-s-of.md) | guards | `test_a_hang_is_caught_inside_the_one_run.py` |
+| [UX-1233](https://github.com/rmorozov/buildstream-graph-analysis/blob/216fcc30865c20539e2ae95f2ac3a909ad6e47e9/docs/backlog/scenarios/UX-1233-the-page-budget-is-raised-to-165-000-b.md) | guards | `test_the_ceilings_table_states_each_bound.py`, `test_the_viewer_js_ships_compressed.py` |
+| [UX-1235](https://github.com/rmorozov/buildstream-graph-analysis/blob/216fcc30865c20539e2ae95f2ac3a909ad6e47e9/docs/backlog/scenarios/UX-1235-a-binary-jump-lands-below-the-stuck-tools-at-every-width.md) | guards | `test_jump_finds_what_the_rail_lists.py`, `test_the_narrow_rail_jump_box_keeps_the_place_read.py` |
+| [UX-1260](https://github.com/rmorozov/buildstream-graph-analysis/blob/216fcc30865c20539e2ae95f2ac3a909ad6e47e9/docs/backlog/scenarios/UX-1260-the-binary-jump-landing-guard-misses-1440-rail-open.md) | guards | `test_jump_finds_what_the_rail_lists.py`, `test_a_downstream_clause_follows_the_closure.py` |
+| [UX-1262](https://github.com/rmorozov/buildstream-graph-analysis/blob/216fcc30865c20539e2ae95f2ac3a909ad6e47e9/docs/backlog/scenarios/UX-1262-no-page-guard-has-rendered-a-comparison-from-an-exported-page.md) | guards | `test_the_decision_is_said_once.py` |
+| [UX-1264](https://github.com/rmorozov/buildstream-graph-analysis/blob/216fcc30865c20539e2ae95f2ac3a909ad6e47e9/docs/backlog/scenarios/UX-1264-no-fixture-has-resource-wait-as-its-biggest-wait-category.md) | guards | `test_every_finding_publishes_its_step.py` |
+| [UX-1340](https://github.com/rmorozov/buildstream-graph-analysis/blob/216fcc30865c20539e2ae95f2ac3a909ad6e47e9/docs/backlog/scenarios/UX-1340-the-dev-extra-pins-a-hypothesis-the-3-9-cell-cannot-install.md) | guards | none — the install is CI's `test (3.9)` cell on push to `main`, which caught it; `UX-1343` brings it to the pull request |
+| [UX-1343](https://github.com/rmorozov/buildstream-graph-analysis/blob/216fcc30865c20539e2ae95f2ac3a909ad6e47e9/docs/backlog/scenarios/UX-1343-the-pull-request-lane-never-installs-on-the-python-floor.md) | guards | `test_a_pull_request_runs_the_newest_python_only.py` |
+| [UX-1345](https://github.com/rmorozov/buildstream-graph-analysis/blob/216fcc30865c20539e2ae95f2ac3a909ad6e47e9/docs/backlog/scenarios/UX-1345-the-append-guard-assumes-the-live-chunk-has-room.md) | guards | `test_the_closed_index_reads_as_one.py` |
+| [UX-1346](https://github.com/rmorozov/buildstream-graph-analysis/blob/216fcc30865c20539e2ae95f2ac3a909ad6e47e9/docs/backlog/scenarios/UX-1346-four-test-sites-use-zip-strict-which-3-9-lacks.md) | guards | none — the 3.9 cell on push to `main` is the reader, as for `UX-1340`; `UX-1343` brings it to the pull request |
+| [UX-1348](https://github.com/rmorozov/buildstream-graph-analysis/blob/216fcc30865c20539e2ae95f2ac3a909ad6e47e9/docs/backlog/scenarios/UX-1348-bga-supports-python-3-12-to-3-14.md) | guards | `test_a_pull_request_runs_the_newest_python_only.py`, `test_the_python_floor_is_a_guard.py`, `test_a_run_red_for_another_reason_adopts_nothing.py` |
+
+covered 16 / 18 (none 2, inferred r149 0, no line 0)

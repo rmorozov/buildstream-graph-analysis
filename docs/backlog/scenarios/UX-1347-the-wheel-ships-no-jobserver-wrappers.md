@@ -70,3 +70,8 @@ $ pytest -q tests/unit/test_every_runtime_file_is_package_data.py
 `wrappers/*` alone also ships `flto/` today (4 files, measured), through
 setuptools' deprecated pickup of importable directories; the guard
 matches per path component, so the subdirectory names its own glob.
+
+The first CI run of the auto snapshot (job 113826863246, `8cb5fc4f`) read
+`the bwrap shim ran 0 time(s)`: the off build had cached every artifact,
+so the auto build ran no sandbox. The step now deletes the artifacts
+between the two, and the chain check reads both snapshots.

@@ -1189,7 +1189,9 @@ jobs:
           unset PYTHONPATH
           bga doctor .
           bga snapshot --diagnose -- bst --builders 2 build all.bst
-          # UX-1347: auto binds native_trace/wrappers into the sandbox, which only package-data ships.
+          # UX-1347: auto binds native_trace/wrappers into the sandbox, which only package-data ships;
+          # the artifacts go first, or the second build is all cache hits and no sandbox runs.
+          bst artifact delete --deps all all.bst
           bga snapshot --diagnose --jobserver auto -- bst --builders 2 build all.bst
 
       - name: The whole chain held
@@ -1197,17 +1199,19 @@ jobs:
           set -euo pipefail
           export PATH="/tmp/projvenv/bin:$PATH"
           cd /tmp/theirproject/proj
-          snapshot=$(ls -d .bga/runs/*/ | tail -1)
-          echo "snapshot: $snapshot"
-          test -d "$snapshot/run"          || { echo "no run directory" >&2; exit 1; }
-          test -s "$snapshot/plane2.json"  || { echo "no Plane 2 report" >&2; exit 1; }
-          test -s "$snapshot/build.log"    || { echo "no Plane 1 log" >&2; exit 1; }
-          ran=$(grep -c '"injected"' "$snapshot/plane2.json.diagnostics.jsonl" || true)
-          echo "the bwrap shim ran $ran time(s) from an installed wheel"
-          [ "$ran" -gt 0 ] || {
-            echo "the shim never ran: bst -> buildbox-run -> PATH shim is broken" >&2
-            exit 1
-          }
+          [ "$(ls -d .bga/runs/*/ | wc -l)" -ge 2 ] || { echo "expected two snapshots, jobserver off then auto" >&2; exit 1; }
+          for snapshot in $(ls -d .bga/runs/*/ | tail -2); do
+            echo "snapshot: $snapshot"
+            test -d "$snapshot/run"          || { echo "no run directory" >&2; exit 1; }
+            test -s "$snapshot/plane2.json"  || { echo "no Plane 2 report" >&2; exit 1; }
+            test -s "$snapshot/build.log"    || { echo "no Plane 1 log" >&2; exit 1; }
+            ran=$(grep -c '"injected"' "$snapshot/plane2.json.diagnostics.jsonl" || true)
+            echo "the bwrap shim ran $ran time(s) from an installed wheel"
+            [ "$ran" -gt 0 ] || {
+              echo "the shim never ran: bst -> buildbox-run -> PATH shim is broken" >&2
+              exit 1
+            }
+          done
           bga analyze @last > /dev/null
           echo "analyze @last resolved from the store, in a foreign venv"
 

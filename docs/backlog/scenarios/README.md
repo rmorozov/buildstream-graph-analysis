@@ -33,6 +33,7 @@ task file, which is the only place it ever lived twice.
 | UX-1281 | [the memgiant Graviton leg outlives its runner on the third repeat, and its readings die with it](UX-1281-the-memgiant-leg-loses-its-runner-on-a-later-repeat.md) | capture | Medium | R4, R5 | 🔴 Not Started |
 | UX-1309 | [`--prune` deletes a snapshot whose capture is still running](UX-1309-prune-deletes-a-snapshot-whose-capture-is-still-running.md) | capture | Medium | R1, R5 | 🔴 Not Started |
 | UX-1342 | [the headline's "top 3" and the work order name two different triples](UX-1342-the-headline-and-the-order-name-two-different-top-threes.md) | analysis | Medium | R1 | 🔴 Not Started |
+| UX-1349 | [browser tests are 59% of CI's test seconds, against UX-690's 40%](UX-1349-browser-tests-are-59-percent-of-ci-seconds.md) | guards | Medium | R8 | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

@@ -82,3 +82,5 @@ done") was false when the absent element is the order's first step; the line
 now says the table ranks by critical-path time and the order by what each step
 saves once the steps before it are done. Line is longer; README's 107 lines
 unchanged. Guard grew from 4 to 9 cases.
+
+**Fix (round 173):** the line names the absent element by its step in the order ("so step 2 enters here"), since the order line already names it and a card names one once (`test_findings_say_each_thing_once`); the guard resolves each step against the order line.

@@ -28,13 +28,15 @@ def test_the_line_names_exactly_the_joint_elements_missing_from_the_table(run):
 
     assert absent
     assert len(lines) == 1
-    assert _named(lines[0]) == absent
+    assert _named(lines[0], joint) == absent
     if run.name == "run":
-        assert "codegen.bst" in lines[0]
+        assert "codegen.bst" in [s for s in joint["detail"] if "In this order" in s][0]
 
 
-def _named(line):
-    return set(re.split(r", | and ", re.search(r" so (.*?) enters? here", line).group(1)))
+def _named(line, joint):
+    order = re.findall(r"([^\s>]+) \(\d", next(s for s in joint["detail"] if "In this order" in s))
+    nums = re.split(r", | and ", re.search(r" so steps? (.*?) enters? here", line).group(1))
+    return {order[int(n) - 1] for n in nums}
 
 
 def _synthetic(elements, shown):
@@ -46,37 +48,37 @@ def _synthetic(elements, shown):
 
 
 def test_no_line_when_every_joint_element_is_in_the_table():
-    _, lines = _lines(_outlook_findings(_synthetic(["A", "B"], ["A", "B"])))
+    joint, lines = _lines(_outlook_findings(_synthetic(["A", "B"], ["A", "B"])))
     assert lines == []
 
 
 def test_a_line_when_one_is_missing():
-    _, lines = _lines(_outlook_findings(_synthetic(["A", "B"], ["A"])))
-    assert len(lines) == 1 and "B enters here" in lines[0]
+    joint, lines = _lines(_outlook_findings(_synthetic(["A", "B"], ["A"])))
+    assert len(lines) == 1 and "step 2 enters here" in lines[0]
     assert "critical path" in lines[0] and "steps before it are done" in lines[0]
 
 
 def test_the_cause_holds_when_the_absent_element_is_the_first_step():
-    _, lines = _lines(_outlook_findings(_synthetic(["X", "A", "B"], ["A", "B", "C", "D"])))
-    assert len(lines) == 1 and _named(lines[0]) == {"X"}
+    joint, lines = _lines(_outlook_findings(_synthetic(["X", "A", "B"], ["A", "B", "C", "D"])))
+    assert len(lines) == 1 and _named(lines[0], joint) == {"X"}
     assert "re-ranked" not in lines[0]
 
 
 def test_only_joint_elements_are_named_never_a_table_element():
-    _, lines = _lines(_outlook_findings(_synthetic(["A", "B"], ["A", "C"])))
-    assert _named(lines[0]) == {"B"}
+    joint, lines = _lines(_outlook_findings(_synthetic(["A", "B"], ["A", "C"])))
+    assert _named(lines[0], joint) == {"B"}
 
 
 def test_two_absent_elements_take_the_plural():
-    _, lines = _lines(_outlook_findings(_synthetic(["A", "B", "C"], ["A"])))
-    assert _named(lines[0]) == {"B", "C"} and " enter here" in lines[0]
+    joint, lines = _lines(_outlook_findings(_synthetic(["A", "B", "C"], ["A"])))
+    assert _named(lines[0], joint) == {"B", "C"} and " enter here" in lines[0]
 
 
 def test_an_empty_table_names_nothing():
-    _, lines = _lines(_outlook_findings(_synthetic(["A", "B"], [])))
+    joint, lines = _lines(_outlook_findings(_synthetic(["A", "B"], [])))
     assert lines == []
 
 
 def test_a_one_step_horizon_has_no_order_and_no_line():
-    _, lines = _lines(_outlook_findings(_synthetic(["A"], ["B"])))
+    joint, lines = _lines(_outlook_findings(_synthetic(["A"], ["B"])))
     assert lines == []

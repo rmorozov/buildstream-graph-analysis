@@ -1822,13 +1822,17 @@ def _outlook_findings(result: AnalysisResult) -> list[dict]:
             for at, step in enumerate(horizon)
         )
         shown = [d['element_uid'] for d in path_elements_by_duration(result)[:TIME_CONCENTRATION_SHOWN_MAX]]
-        absent = [uid for uid in joint['elements'] if shown and uid not in shown]
+        steps = [
+            at + 1
+            for at, step in enumerate(horizon)
+            if shown and step['element_uid'] in joint['elements'] and step['element_uid'] not in shown
+        ]
         reranked = (
             [
                 f"    Not the table above: the table ranks by time on the critical path, this order by what "
-                f"each step saves once the steps before it are done, so {_and(absent)} {'enters' if len(absent) == 1 else 'enter'} here and not there"
+                f"each step saves once the steps before it are done, so {'step' if len(steps) == 1 else 'steps'} {_and([str(n) for n in steps])} {'enters' if len(steps) == 1 else 'enter'} here and not there"
             ]
-            if ordered and absent
+            if ordered and steps
             else []
         )
         findings.append(

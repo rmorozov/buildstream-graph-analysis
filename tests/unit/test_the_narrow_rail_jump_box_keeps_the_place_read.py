@@ -32,8 +32,13 @@ _JUMP = r"""
   scrollTo(0, 6000);
   await rest();
   // A section first rendered where this lands trades its 600 px placeholder for its size, and anchoring moves; land again.
-  if (Math.round(scrollY) !== 6000) { scrollTo(0, 6000); await rest(); }
+  // UX-1350: and read there past the page's 1 s dwell, or the re-land is the climb's first step.
+  if (Math.round(scrollY) !== 6000) { scrollTo(0, 6000); await rest(); await wait(1100); }
   const y = Math.round(scrollY);
+  // UX-1350: the block read, since the climb renders sections above it and anchoring moves scrollY.
+  const under = Math.max(0, document.querySelector("body > header").getBoundingClientRect().bottom) + 1;
+  const read = document.elementFromPoint(innerWidth / 2, under).closest("main [id]");
+  const readTop = read.getBoundingClientRect().top;
   while (scrollY > 0) { scrollBy(0, -400); await rest(); }
   document.querySelector(".toc-title").click();
   await wait(300);
@@ -52,13 +57,14 @@ _JUMP = r"""
     shown: [...row.closest("table").querySelectorAll(":scope > tbody > tr")].filter((r) => r.offsetParent).length } : null;
   await traverse(() => history.back());
   const back = Math.round(scrollY);
+  const drift = Math.round(read.getBoundingClientRect().top - readTop);
   const rail = document.querySelector(".toc").getAttribute("data-folded");
   await traverse(() => history.forward());
   const seen = (node) => {
     const r = node?.getBoundingClientRect();
     return Boolean(r) && r.bottom > 0 && r.top < innerHeight;
   };
-  return { y, after, pushed, land, hash: location.hash, back, rail, forward: Math.round(scrollY),
+  return { y, after, pushed, land, hash: location.hash, back, drift, read: read.id, rail, forward: Math.round(scrollY),
            focus: document.getElementById("report").getAttribute("data-focus"),
            card: seen(document.getElementById("element-layer12-mod030-bst")),
            bar: seen(document.querySelector("[data-role=focus-bar]")) };
@@ -101,7 +107,7 @@ def test_the_narrow_rail_jump_box_keeps_the_place_read(browser, big, big_binarie
     got = browser.measure(
         big_binaries if mode == "binary" else big, _JUMP.replace("MODE", f'"{mode}"'), width=390, height=844
     )
-    assert got["y"] == 6000 and abs(got["back"] - got["y"]) <= 1, got
+    assert got["y"] == 6000 and abs(got["drift"]) <= 1, got
     assert got["rail"] == "true", got
     if mode == "binary":
         assert got["pushed"] == 1 and got["hash"].startswith("#by_binary"), got

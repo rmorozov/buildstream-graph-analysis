@@ -11,7 +11,7 @@ macro_micro       342,017 -> 138,531 B          568,335 -> 364,849 B
 The module is `_viewer_module()` byte for byte once inflated, so a stack
 trace's `blob:` line is a line of that source; the served page is not
 touched. `PAGE_BUDGET_B` is in `CEILINGS`, so cli.md's table carries it.
-`UX-1167`, `UX-1233`: the owner raised it to 160,000 then 165,000 B; round 165 166,250 B.
+`UX-1167`, `UX-1233`: the owner raised it to 160,000 then 165,000 B; round 165 166,250 B; UX-1350 166,750 B.
 """
 
 import json

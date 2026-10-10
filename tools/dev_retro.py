@@ -59,7 +59,7 @@ def default_since(repo, today=None):
     return dates[-1] if dates else (today - datetime.timedelta(days=7)).isoformat()
 
 
-def added_lines(repo, relpath, since):
+def added_lines(repo, relpath, since, sign="+"):
     """`(iso_date, text)` per line a commit since `since` added to
     `relpath`, or `None` if the path does not exist at HEAD.
 
@@ -86,9 +86,17 @@ def added_lines(repo, relpath, since):
     for line in out.splitlines():
         if line.startswith("@@retro@@"):
             date = line[len("@@retro@@") :]
-        elif line.startswith("+") and not line.startswith("+++"):
+        elif line.startswith(sign) and not line.startswith(sign * 3):
             found.append((date, line[1:]))
     return found
+
+
+def _nine_cells(line):
+    """A ledger row's cells without `UX-1351`'s cost cell, or `None` for a non-row."""
+    cells = [c.strip() for c in line.split("|")[1:-1]]
+    if len(cells) not in (9, 10) or not cells[0].isdigit():
+        return None
+    return cells[:7] + cells[8:] if len(cells) == 10 else cells
 
 
 def class_key(text):
@@ -131,10 +139,13 @@ def ledger_findings(repo, since):
     added = added_lines(repo, LEDGER, since)
     if added is None:
         return [], 0
+    # A row rewritten in the window (UX-1351 widened every row) is not a new run.
+    gone = added_lines(repo, LEDGER, since, "-") or []
+    removed = {tuple(c) for _date, line in gone if (c := _nine_cells(line))}
     out, no_command = [], 0
     for _date, line in added:
-        cells = [c.strip() for c in line.split("|")[1:-1]]
-        if len(cells) != 9 or not cells[0].isdigit():
+        cells = _nine_cells(line)
+        if cells is None or tuple(cells) in removed:
             continue
         friction = cells[-1]
         if friction.lower() in NO_FINDING:

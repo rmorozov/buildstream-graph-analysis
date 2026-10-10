@@ -15,9 +15,7 @@ sys.path.insert(0, str(REPO))
 
 from tools import dev_track_cost
 
-HEADER = (
-    "| round | agent | model | task | tokens | tool calls | wall | outcome | what cost the most / what went wrong |"
-)
+HEADER = "| round | agent | model | task | tokens | tool calls | wall | cost | outcome | what cost the most / what went wrong |"
 
 
 def _record(message_id, blocks, usage, stamp, agent="researcher", model="claude-sonnet-5"):
@@ -44,7 +42,7 @@ def _transcript(tmp_path, records):
 
 
 class TestTheCellOrderIsTheHeaders:
-    def test_the_row_has_nine_cells_in_header_order(self, tmp_path):
+    def test_the_row_has_ten_cells_in_header_order(self, tmp_path):
         path = _transcript(
             tmp_path,
             [
@@ -55,12 +53,13 @@ class TestTheCellOrderIsTheHeaders:
         row = dev_track_cost.ledger_row(path, 94, "a task", "complete", "no friction")
         header_cells = [c.strip() for c in HEADER.strip("|").split("|")]
         row_cells = [c.strip() for c in row.strip("|").split("|")]
-        assert len(row_cells) == len(header_cells) == 9, row
+        assert len(row_cells) == len(header_cells) == 10, row
         assert row_cells[0] == "94"
         assert row_cells[1] == "researcher"
         assert row_cells[3] == "a task"
-        assert row_cells[7] == "complete"
-        assert row_cells[8] == "no friction"
+        assert row_cells[7].startswith("$")
+        assert row_cells[8] == "complete"
+        assert row_cells[9] == "no friction"
 
 
 class TestTheModelComesFromTheRecords:
@@ -72,7 +71,7 @@ class TestTheModelComesFromTheRecords:
             ],
         )
         row = dev_track_cost.ledger_row(path, 1, "t", "complete", "-")
-        assert "| opus |" in row, row
+        assert "| opus-5 |" in row, row
 
     def test_a_different_model_prints_a_different_word(self, tmp_path):
         path = _transcript(
@@ -82,7 +81,7 @@ class TestTheModelComesFromTheRecords:
             ],
         )
         row = dev_track_cost.ledger_row(path, 1, "t", "complete", "-")
-        assert "| fable |" in row, row
+        assert "| fable-5-1 |" in row, row
 
 
 class TestTheToolCallCount:

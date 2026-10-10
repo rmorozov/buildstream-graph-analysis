@@ -1,6 +1,6 @@
 # UX-1342: the headline's "top 3" and the work order name two different triples
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** walk seed 5 (2026-10-07), finding 3 | **Serves:** R1 | **Topic:** analysis | **Area:** bga | **Shape:** judgement | **Reading:** container
+**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** walk seed 5 (2026-10-07), finding 3 | **Serves:** R1 | **Topic:** analysis | **Area:** bga | **Shape:** mechanical | **Reading:** container
 
 **Guard:** none yet
 
@@ -24,6 +24,19 @@ elements worth fixing. Journey: `macro_micro`, example 06.
 
 Open: one triple across the headline and the order, or a sentence naming
 why they differ (codegen pays only after core).
+
+## Decision
+
+Route:     A sentence, not one shared triple. In `_outlook_findings` (`bga/findings.py:1819-1830`), take the joint-saving elements missing from the `time-concentration` table (`[d['element_uid'] for d in path_elements_by_duration(result)[:TIME_CONCENTRATION_SHOWN_MAX]]`); when that set is non-empty, append one detail line after "In this order:": `    Not the table above: each step is re-ranked once the steps before it are done, so {_and(absent)} {'enters'|'enter'} here and not there`. On macro_micro it names codegen.bst. ~8 lines of code, ~35 of test.
+Rejected:  one triple from the table's ranking: the joint figure would lose the codegen compounding UX-1135 made honest and `whatif` confirms.
+Rejected:  one triple from the horizon: the table would print codegen.bst saving 0 s alone, a false row; both triples contradict UX-440 (`test_the_two_rankings_answer_two_questions.py`): two questions over two keys.
+Rejected:  renaming "the top N" in the heading only: churns titles and never says why.
+Files:     bga/findings.py; tests/unit/test_the_order_says_why_it_is_not_the_table.py (new); tests/fixtures/with_timeline/analyze.json and tests/fixtures/golden/mixed_task_kinds/expected_output.json, both rewritten by `python3 tools/dev_refresh_analysis.py --write <fixture>`, never by hand.
+Guard:     tests/unit/test_the_order_says_why_it_is_not_the_table.py, parametrized over macro_micro/run and golden/mixed_task_kinds through `compute_findings`: the joint elements missing from the `time-concentration` finding's `elements` are exactly the uids named in the joint-saving line containing "re-ranked"; a SimpleNamespace case (as `test_the_order_marks_only_the_steps_measured_to_pay_off_later`) where every joint element is in the table prints no such line; `"codegen.bst"` pinned in the line on macro_micro.
+Mutation:  `if False:` or dropping the append reddens both fixture cases; `absent` = the full joint set reddens the exact-set clause; an unconditional line reddens the no-line case.
+Class:     product (R1, walk seed 5 finding 3)
+Split:     one track.
+Question:  none; the default keeps UX-440's two rankings and UX-1135's joint figure.
 
 ## Out of Scope
 

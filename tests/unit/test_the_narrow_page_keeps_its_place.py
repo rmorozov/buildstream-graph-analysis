@@ -119,6 +119,10 @@ _RAILED = r"""
   await rest();
   // A reread: up to half way and dwell there 2 s, the last place read (UX-1208 follow-up, walk N2).
   if (CLIMB === "reread") { y = Math.round(y / 2); scrollTo(0, y); await rest(); await wait(2000); }
+  // UX-1350: the block read, since a scrollY moves under the reader as unrendered sections settle.
+  const under = Math.max(0, document.querySelector("body > header").getBoundingClientRect().bottom) + 1;
+  const read = document.elementFromPoint(innerWidth / 2, under).closest("main [id]");
+  const readTop = read.getBoundingClientRect().top;
   // A wheel climbs in notches, each a scrollend of its own (UX-1208 follow-up); a jump is one.
   if (CLIMB !== "jump") while (scrollY > 0) { scrollBy(0, -400); await rest(); }
   else { scrollTo(0, 0); await rest(); }
@@ -136,7 +140,8 @@ _RAILED = r"""
     addEventListener("popstate", () => setTimeout(done, 1000), { once: true });
     history.back();
   });
-  return { y: Math.round(y), after, back: Math.round(scrollY), height: innerHeight,
+  return { y: Math.round(y), after, back: Math.round(scrollY), height: innerHeight, read: read.id,
+           drift: Math.round(read.getBoundingClientRect().top - readTop),
            folded, rail: rail.getAttribute("data-folded") };
 })()
 """
@@ -222,5 +227,5 @@ def test_back_after_a_rail_link_or_expand_all_lands_where_the_reader_read(browse
     drive = _RAILED.replace("PRESS", f'"{press}"').replace("CLIMB", f'"{climb}"')
     got = browser.measure({**uris, "big": big}[label], drive, width=390, height=844)
     assert got["y"] > 2 * got["height"], got
-    assert abs(got["back"] - got["y"]) <= LINE_PX, got
+    assert abs(got["drift"]) <= LINE_PX, got
     assert got["rail"] == got["folded"] == "true", got

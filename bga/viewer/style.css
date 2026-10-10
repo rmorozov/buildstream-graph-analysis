@@ -600,6 +600,8 @@ button.toc-chapter-open[aria-current="location"],
    appearance" this item is about, one scale down - a control inside a
    heading is still a control. */
 button.collapse { margin-right: var(--space-2); }
+/* UX-1350: the head's gap spaces it. */
+.section-head > button.collapse { margin-right: 0; }
 button.collapse:hover { color: var(--fg); }
 
 #jump { font: inherit; font-size: var(--font-small); margin-top: var(--space-2);
@@ -832,13 +834,8 @@ h3.category { letter-spacing: .04em;
 .table-filter { font: inherit; font-size: var(--font-small); padding: var(--space-1) var(--space-2);
                 background: var(--panel); color: inherit;
                 border: 1px solid var(--line); border-radius: 3px;
-                /* `min-width: 12rem` flat was 192px that would not shrink,
-                   and at 390px it and the `top-n` select together pushed
-                   the page to 436px wide. `min()` keeps the comfortable
-                   width where there is room and yields where there is
-                   not - the filter is still usable at any width, and the
-                   report stops scrolling sideways. */
-                min-width: min(12rem, 100%); max-width: 100%; }
+                /* `min-width: 12rem` flat pushed a 390px page to 436px; `max-width` yields. */
+                width: 12rem; min-width: min(12rem, 100%); max-width: 100%; /* UX-1350: not its font's 20ch */ }
 .table-tools .badge { font-size: var(--font-small); color: var(--muted); }
 /* `UX-1203`: Prev and Next apart, at the tools' size. */
 .table-pager { display: inline-flex; gap: var(--space-1); font-size: var(--font-small); }

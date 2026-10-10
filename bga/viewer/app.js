@@ -1161,17 +1161,30 @@ async function boot() {
     const fragment = (event) => event?.target?.closest?.("a[href^=\"#\"]")
       ?.getAttribute?.("href");
     // UX-1171: the folds and where the anchor sat, since a scrollY is stale once the folds' estimates settle.
+    // UX-1350: and the line read, as its id'd block and the child path down to it: anchoring holds it still.
+    const mark = (y = Math.max(0, document.querySelector("body > header")?.getBoundingClientRect().bottom ?? 0)) => {
+      for (let i = 1; i < 200; i += 40) { // a gap between blocks names none
+        let node = document.elementFromPoint?.(window.innerWidth / 2, y + i);
+        if (!node?.closest?.("main [id]")) continue;
+        const top = node.getBoundingClientRect().top, path = [];
+        for (; !node.id; node = node.parentElement) path.unshift([...node.parentElement.children].indexOf(node));
+        return { line: node.id, path, lineTop: top };
+      }
+    };
+    const marked = (at) => at?.path?.reduce((node, i) => node?.children[i], document.getElementById(at.line));
     const here = () => ({ scrollY: window.scrollY, rail: document.querySelector(".toc")?.getAttribute("data-folded"),
       at: document.getElementById(splitHash(location.hash).anchor)?.getBoundingClientRect().top });
     // `UX-1208`: where the reader last stopped below the narrow rail, which they climb to the top to open.
     let read = null;
-    let end = 0;
+    let end = null;
     let stop = null;
     window.addEventListener?.("scrollend", () => {
-      // A stop above the last one under the same hash is the climb to the rail, which keeps the place read.
-      const climbing = read?.[0] === location.hash && window.scrollY < end;
-      end = window.scrollY;
-      const place = [location.hash, here(), Date.now()];
+      // A stop above the last one under the same hash is the climb to the rail, which keeps the place read;
+      // a scrollY grown under a block that moved down is anchoring's, so still the climb (UX-1350).
+      const climbing = read?.[0] === location.hash && end && (window.scrollY < end.scrollY
+        || window.scrollY > end.scrollY && marked(end)?.getBoundingClientRect().top > end.lineTop);
+      end = { ...here(), ...mark() };
+      const place = [location.hash, end, Date.now()];
       if (document.querySelector(".toc")?.getBoundingClientRect().bottom < 0) [stop, read] = climbing ? [place, read] : [null, place];
     });
     // ...unless the reader dwelt there: a wheel's notches lull 600 ms, a reread lasts seconds.
@@ -1182,7 +1195,7 @@ async function boot() {
     const keepPlace = (railed) => {
       // `UX-1203` follow-up: with no such place, an opened rail's reader is at the anchor.
       const place = !railed ? here() : read?.[0] === location.hash ? read[1] : { scrollY: window.scrollY, at: null };
-      window.history.replaceState({ ...window.history.state, folds: foldSnapshot(root), sections: controls.shut(), ...place }, "");
+      window.history.replaceState({ ...window.history.state, folds: foldSnapshot(root), sections: controls.shut(), line: null, path: null, ...place }, "");
     };
     // `UX-1203` follow-up: Chrome fires popstate inside a followed fragment link's click; that is no traversal.
     let following = false;
@@ -1258,6 +1271,8 @@ async function boot() {
       if (saved.sections) controls.restore(saved.sections);
       if (saved.rail) document.querySelector(".toc")?._fold?.(saved.rail === "true");
       window.scrollTo?.(0, saved.scrollY ?? 0);
+      const read = marked(saved);
+      if (read && !read.closest("[hidden]")) { window.scrollBy?.(0, read.getBoundingClientRect().top - saved.lineTop); return; }
       const at = document.getElementById(splitHash(location.hash).anchor);
       if (saved.at !== undefined && at && !at.closest("[hidden]")) revealAndLand(at, undefined, saved.at);
     });

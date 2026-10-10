@@ -215,14 +215,8 @@ _NOTE = r"""
 
 @pytest.fixture(scope="module")
 def uris(tmp_path_factory):
-    import tools.bga_view as view
-
     found = pages.pages(tmp_path_factory, "oneset")
-    into = tmp_path_factory.mktemp("oneset-big")
-    run = pages.two_plane_run(into, ("--layers", "20", "--width", "60"))
-    page = into / "page.html"
-    view.export(str(run), str(page))
-    return {**found, "big": page.as_uri()}
+    return {**found, "big": pages.two_plane_uri(("--layers", "20", "--width", "60"))}
 
 
 @pytest.fixture(scope="module")

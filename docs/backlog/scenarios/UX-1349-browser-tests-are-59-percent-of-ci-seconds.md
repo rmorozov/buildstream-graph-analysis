@@ -48,3 +48,34 @@ Skipping, quarantining or deleting a browser test; changing the 40% target.
 
 `python3 tools/dev_shape_budget.py` on a CI reference adopted after the fix
 reads the browser share at or under 45%, with every browser test still run.
+
+## Outcome
+
+**Gap measured** (b1323876, 150 browser files from `dev_shape_budget.shapes()["browser"]`, `-n 2` — the container is shared, load average 20-28 on 4 cores):
+
+```text
+$ PYTHONPATH=. python3 -m pytest -n 2 -p no:cacheprovider --junitxml=before.xml <150 files>
+1 failed, 1822 passed, 16 skipped in 3455.03s      # the failure: narrow_rail_jump_box[jump], y 6691 != 6000, on the base
+before junit s: 6591.7                              # dev_tier_drift.measured summed
+```
+
+**Close measured** (this branch, same command, same files):
+
+```text
+2 failed, 1821 passed, 16 skipped in 2705.15s      # taken while test_the_header_keeps_its_budget (1 of the 2) was failing: it read `into`; fixed after; rerun `pytest -n 2 tests/unit/test_the_header_keeps_its_budget.py` 9 passed in 17.07s
+after junit s: 5192.2                               # -1399.5 s (-21%) junit, -750 s (-22%) wall
+```
+
+The share on a refreshed `tests/ci_reference.json` and the ledger `--adopt` are CI's, after merge.
+
+**Mutation table** (`tests/unit/test_a_page_is_built_once_per_session.py`, 5 tests; three more fixtures moved to `two_plane_uri`):
+
+| mutation | reddened | run printed |
+|---|---|---|
+| (a) `_shared` always builds (`if done.is_dir()` -> `if False`) | `test_one_fixture_is_exported_once`, `test_one_shape_is_exported_once` | 2 failed, 3 passed |
+| (b) key drops fixture and shape | `test_another_fixture_or_shape_is_another_page` | 1 failed, 4 passed |
+| (c) `export_uri` builds `FIXTURES["golden"]` whatever is asked | `test_the_shared_page_is_the_fresh_page[macro_micro]` | 1 failed, 4 passed |
+| reverted from copy | — | 5 passed |
+| (d) controller `rmtree(cache_root())` -> `pass` (`test_the_page_cache_does_not_outlive_an_xdist_session`, `-n 2` subprocess, private TMPDIR, ~6-10 s) | its one test | 1 failed |
+| (e) `pytest_configure` uid propagation -> `pass` | same | 1 failed |
+| reverted from copy | — | 25 passed (moved files, both guard files, header file) |

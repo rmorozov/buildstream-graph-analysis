@@ -54,14 +54,10 @@ _READ = r"""
 
 @pytest.fixture(scope="module")
 def uris(tmp_path_factory):
-    import tools.bga_view as view
-
     made = {}
     into = tmp_path_factory.mktemp("ux1226")
     for name, shape in (("big", BIG), ("bin", ("--workload", "binaries", *BIG))):
-        page = into / f"{name}.html"
-        view.export(str(pages.two_plane_run(into, shape, name=name)), str(page))
-        made[name] = page.as_uri()
+        made[name] = pages.two_plane_uri(shape, name=name)
     made["macro_micro"] = pages.export_uri(pages.FIXTURES["macro_micro"], into / "mm")
     return made
 

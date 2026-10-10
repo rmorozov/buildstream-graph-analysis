@@ -55,13 +55,7 @@ def test_the_payload_says_which_ready_work_it_counted():
 
 @pytest.fixture(scope="module")
 def page(tmp_path_factory):
-    import tools.bga_view as view
-
-    tmp = tmp_path_factory.mktemp("ready-queue")
-    run = pages.two_plane_run(tmp, shape=PAGE_SHAPE, runs=2)
-    out = tmp / "report.html"
-    view.export(str(run), str(out))
-    return out.as_uri()
+    return pages.two_plane_uri(PAGE_SHAPE, runs=2)
 
 
 @needs_browser

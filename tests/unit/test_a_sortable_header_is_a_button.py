@@ -75,13 +75,10 @@ _READ = r"""
 
 @pytest.fixture(scope="module")
 def read(tmp_path_factory):
-    import tools.bga_view as view
-
-    into = tmp_path_factory.mktemp("sort-big")
-    run = pages.two_plane_run(into, ("--layers", "20", "--width", "60"))
-    page = into / "page.html"
-    view.export(str(run), str(page))
-    uris = {"big": page.as_uri(), **pages.pages(tmp_path_factory, "sort", ("golden", "macro_micro"))}
+    uris = {
+        "big": pages.two_plane_uri(("--layers", "20", "--width", "60")),
+        **pages.pages(tmp_path_factory, "sort", ("golden", "macro_micro")),
+    }
     with Browser(chrome) as browser:
         return {label: browser.measure(uri, _READ, 1440, 900) for label, uri in uris.items()}
 

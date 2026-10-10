@@ -74,23 +74,12 @@ _JUMP = r"""
 
 @pytest.fixture(scope="module")
 def big(tmp_path_factory):
-    import tools.bga_view as view
-
-    into = tmp_path_factory.mktemp("jump-back")
-    page = into / "page.html"
-    view.export(str(pages.two_plane_run(into, ("--layers", "20", "--width", "60"))), str(page))
-    return page.as_uri()
+    return pages.two_plane_uri(("--layers", "20", "--width", "60"))
 
 
 @pytest.fixture(scope="module")
 def big_binaries(tmp_path_factory):
-    import tools.bga_view as view
-
-    into = tmp_path_factory.mktemp("jump-back-binaries")
-    page = into / "page.html"
-    shape = ("--workload", "binaries", "--layers", "20", "--width", "60")
-    view.export(str(pages.two_plane_run(into, shape)), str(page))
-    return page.as_uri()
+    return pages.two_plane_uri(("--workload", "binaries", "--layers", "20", "--width", "60"))
 
 
 @pytest.fixture(scope="module")

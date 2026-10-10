@@ -58,6 +58,16 @@ _LARGE = frozenset(LARGE)
 _MEDIUM = frozenset(MEDIUM)
 
 
+def pytest_configure(config):
+    """`UX-1349`: the controller fixes the run's uid, so it and its workers name one page cache."""
+    if hasattr(config, "workerinput") or not hasattr(config.option, "testrunuid"):
+        return
+    import uuid
+
+    config.option.testrunuid = config.option.testrunuid or uuid.uuid4().hex
+    os.environ["PYTEST_XDIST_TESTRUNUID"] = config.option.testrunuid
+
+
 def pytest_collection_modifyitems(config, items):
     root = pathlib.Path(config.rootpath)
     for item in items:
@@ -525,6 +535,12 @@ def pytest_sessionfinish(session, exitstatus):
     # shape this whole item is repairing, found the only way such
     # things are found - by running it against a real absence and
     # checking the complaint actually appeared.
+    if not hasattr(session.config, "workerinput"):  # UX-1349: the controller outlives every worker
+        import shutil
+
+        import pages
+
+        shutil.rmtree(pages.cache_root(), ignore_errors=True)
     if getattr(session.config.option, "keyword", None):
         return
     # UX-238: and neither does a *tier* run. `make test-small` filters

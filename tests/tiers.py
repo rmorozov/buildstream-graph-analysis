@@ -709,6 +709,10 @@ MEDIUM = (
     # `UX-1242`: two tracemalloc subprocesses at 20,000 records, and two fuzzes.
     # Measured alone in one process, `--durations=0`: 3.68s.
     "tests/unit/test_the_records_are_packed.py",  #    3.7s
+    # `UX-1349`: a pytest-xdist subprocess, and two real exports per shape.
+    # Measured alone in one process, `--durations=0`: 5.84s and 9.55s.
+    "tests/unit/test_the_page_cache_does_not_outlive_an_xdist_session.py",  #    5.8s
+    "tests/unit/test_a_page_is_built_once_per_session.py",  #    9.6s
     # `UX-667`, tiered on landing. One Chromium, one module-scoped
     # page - the rail's landing state, a 68-mark walk and the CSS
     # sweep all read from it. Measured single-process, `--durations=0`:

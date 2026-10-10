@@ -572,7 +572,7 @@ class TestTheSubagentsAreWellFormed:
     #: this the clause below reads "whoever is not on the editing list",
     #: and widening that list would exempt them silently - which is what
     #: `UX-504`'s fifth mutation did while every clause stayed green.
-    REPORTERS = {"architect", "researcher", "verifier", "walker"}
+    REPORTERS = {"architect", "guard-auditor", "researcher", "verifier", "walker"}
 
     def test_a_reporting_agent_cannot_edit_the_tree(self):
         """A verifier that could fix what it found would be judging its
@@ -604,6 +604,34 @@ class TestTheSubagentsAreWellFormed:
                 f"phrasings above are the ones the bodies carry; a fourth "
                 f"is a decision, not a pattern to lengthen"
             )
+
+    def test_the_guard_auditor_reads_on_haiku_and_escalates_to_opus(self):
+        """`UX-1353`: a cheap reader flags, one `opus` reader confirms, and only that reaches the fix list."""
+        text = (AGENTS / "guard-auditor.md").read_text(encoding="utf-8")
+        frontmatter = _FRONTMATTER.match(text)
+        head = frontmatter.group(1)
+        assert "guard-auditor" in self.REPORTERS, "guard-auditor is not on the reporting list"
+        assert re.search(r"^model:\s*haiku\s*$", head, re.M), "guard-auditor is not on haiku"
+        assert re.search(r"^effort:\s*high\s*$", head, re.M), "guard-auditor is not at effort high"
+        body = " ".join(text[frontmatter.end() :].split())
+        sentences = re.split(r"(?<=[.!?])\s+", body.replace("**", ""))
+        routing = [s for s in sentences if "opus" in s and "medium" in s and "fix list" in s]
+        assert len(routing) == 1, (
+            "guard-auditor has no one sentence routing suspects to opus at medium and the fix list"
+        )
+        assert "never as filed rows" in routing[0], "guard-auditor does not keep confirmed findings off new rows"
+        rest = routing[0].replace("never as filed rows", "")
+        assert not re.search(r"\b(never|not|no|without)\b", rest, re.I), (
+            f"the routing sentence negates itself: {routing[0]}"
+        )
+        assert any("session" in s and "launches" in s and "never" not in s.lower() for s in sentences), (
+            "guard-auditor does not say the session launches the opus reader"
+        )
+
+    def test_every_agent_is_an_editor_or_a_reporter(self):
+        """`UX-1353`: a new or dropped name must be a decision in one of the two lists."""
+        stems = {path.stem for path in self._files()}
+        assert stems - self.MAY_EDIT <= self.REPORTERS, sorted(stems - self.MAY_EDIT - self.REPORTERS)
 
     def test_the_implementer_may_edit(self):
         """`UX-504`. Without this the split reads as an exemption rather

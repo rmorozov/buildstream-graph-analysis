@@ -48,3 +48,38 @@ flags that guard and the opus reader confirms it. Its false-flag share
 over the round is stated, priced by `UX-1351`'s cost cell.
 
 ## Outcome
+
+**Gap measured.** At `b1323876`, `ls .claude/agents/` lists seven
+agents and no `guard-auditor.md`; nothing reads every new guard in a
+round.
+
+**Close measured.** `.claude/agents/guard-auditor.md` added (haiku, high,
+`Read, Grep, Glob, Bash`), `"guard-auditor"` in `REPORTERS`, new clause
+`test_the_guard_auditor_reads_on_haiku_and_escalates_to_opus`.
+`pytest tests/unit/test_the_agent_configuration_holds.py -k Subagents`:
+`23 passed, 156 deselected` (after the fix loops). The live Acceptance Test (UX-1341 plant
+flagged, opus confirms, false-flag share) is the session's reading after
+merge, per the Decision.
+
+| Mutation | Reddened | Count |
+|---|---|---|
+| `model: haiku` -> `model: sonnet` | the opus clause | 1 failed, 22 passed |
+| `Edit` added to `tools:` | `test_a_reporting_agent_cannot_edit_the_tree` | 1 failed, 22 passed |
+| `**Fix nothing.**` -> `**Read and answer.**` | `test_a_reporter_is_never_put_on_the_editing_list` | 1 failed, 22 passed |
+| `"guard-auditor"` moved REPORTERS -> MAY_EDIT | the opus clause (`in self.REPORTERS`) | 1 failed, 22 passed |
+| same move plus `Edit` in `tools:` (the swap) | the opus clause | 1 failed, 22 passed |
+| routing sentence: `goes` -> `never goes` | the opus clause | 1 failed, 22 passed |
+| routing sentence: `, never as filed rows` deleted | the opus clause | 1 failed, 22 passed |
+| routing sentence inverted (`never to one opus reader`) | the opus clause | 1 failed, 22 passed |
+| launcher sentence deleted | the opus clause | 1 failed, 22 passed |
+
+All rows re-measured at 23 tests (`-k Subagents -n 2`, base `23 passed`).
+
+**Deviation.** The Decision's mutation 3 needed the whole sentence, and its
+guard missed three escapes (REPORTERS removal, inverted routing, no named
+launcher); the fix loop closed all three.
+
+Not coded, judged by the session: a verb inversion ("refutes"), a gate
+bypass keeping the words, a hedged launcher; a string test cannot read
+meaning, the live Acceptance run after merge is the witness. Pre-existing
+gap: the `tools:` regex reads only the first frontmatter line.

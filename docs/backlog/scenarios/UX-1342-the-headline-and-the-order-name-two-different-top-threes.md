@@ -1,6 +1,6 @@
 # UX-1342: the headline's "top 3" and the work order name two different triples
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** walk seed 5 (2026-10-07), finding 3 | **Serves:** R1 | **Topic:** analysis | **Area:** bga | **Shape:** mechanical | **Reading:** container
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — | **Found by:** walk seed 5 (2026-10-07), finding 3 | **Serves:** R1 | **Topic:** analysis | **Area:** bga | **Shape:** mechanical | **Reading:** container
 
 **Guard:** `tests/unit/test_the_order_says_why_it_is_not_the_table.py`
 

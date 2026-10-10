@@ -1,6 +1,6 @@
 # UX-1353: a guard auditor reads every new test against what its task says it guards
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** UX-1351 | **Found by:** the Haiku 5.5 workflow review, 2026-10-10 — Ruslan in the project thread, 15:45; the 2026-09-28 reviewer review proposed the class | **Serves:** every round's guards, and the escapes that are guards bound to a proxy | **Topic:** guards | **Area:** unassigned | **Shape:** mechanical | **Reading:** container
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** UX-1351 | **Found by:** the Haiku 5.5 workflow review, 2026-10-10 — Ruslan in the project thread, 15:45; the 2026-09-28 reviewer review proposed the class | **Serves:** every round's guards, and the escapes that are guards bound to a proxy | **Topic:** guards | **Area:** unassigned | **Shape:** mechanical | **Reading:** container
 
 **Guard:** none — open, no guard named yet
 

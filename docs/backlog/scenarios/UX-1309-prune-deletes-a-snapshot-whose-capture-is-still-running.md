@@ -1,6 +1,6 @@
 # UX-1309: `--prune` deletes a snapshot whose capture is still running
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** UX-1306's track and verifier, round 168 (2026-10-03) | **Serves:** R1, R5 | **Topic:** capture | **Area:** tools | **Shape:** mechanical | **Reading:** container
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — | **Found by:** UX-1306's track and verifier, round 168 (2026-10-03) | **Serves:** R1, R5 | **Topic:** capture | **Area:** tools | **Shape:** mechanical | **Reading:** container
 
 **Guard:** none — open, no guard named yet
 

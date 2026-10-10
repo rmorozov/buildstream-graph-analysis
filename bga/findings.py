@@ -1821,13 +1821,23 @@ def _outlook_findings(result: AnalysisResult) -> list[dict]:
             f"{(', pays off after the step before' if at == 1 else ', pays off after the steps before') if step['element_uid'] in marked else ''})"
             for at, step in enumerate(horizon)
         )
+        shown = [d['element_uid'] for d in path_elements_by_duration(result)[:TIME_CONCENTRATION_SHOWN_MAX]]
+        absent = [uid for uid in joint['elements'] if shown and uid not in shown]
+        reranked = (
+            [
+                f"    Not the table above: the table ranks by time on the critical path, this order by what "
+                f"each step saves once the steps before it are done, so {_and(absent)} {'enters' if len(absent) == 1 else 'enter'} here and not there"
+            ]
+            if ordered and absent
+            else []
+        )
         findings.append(
             _finding(
                 'joint-saving',
                 SEVERITY_HIGH,
                 f"{qty.duration(joint_us)} ({qty.share(joint_us / total)} of the build) is what the top "
                 f"{len(joint['elements'])} are worth together",
-                detail=[f"    That is {relation}"] + ([f"    In this order: {order}"] if ordered else []),
+                detail=[f"    That is {relation}"] + ([f"    In this order: {order}"] if ordered else []) + reranked,
                 elements=list(joint['elements']),
                 evidence={
                     'joint_saving_us': joint_us,

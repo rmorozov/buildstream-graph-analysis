@@ -2,7 +2,7 @@
 
 **Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** walk seed 5 (2026-10-07), finding 3 | **Serves:** R1 | **Topic:** analysis | **Area:** bga | **Shape:** mechanical | **Reading:** container
 
-**Guard:** none yet
+**Guard:** `tests/unit/test_the_order_says_why_it_is_not_the_table.py`
 
 ## Motivation
 
@@ -46,3 +46,39 @@ The joint-saving arithmetic (`UX-1135`).
 
 On `macro_micro`, every "top 3" the text names is the same three elements,
 or the text says why not.
+
+## Outcome (round 173)
+
+**Gap measured** (`bga analyze tests/fixtures/macro_micro/run`, base `b1323876`):
+the order line read `core.bst (31.1 s) -> codegen.bst (24.1 s, pays off after
+the step before) -> lib-b.bst (20.1 s)` under a table whose top 3 was
+core/lib-b/lib-d; nothing said why codegen.bst was absent from the table.
+
+**Close measured** (same command, after):
+
+```text
+    In this order: core.bst (31.1 s) -> codegen.bst (24.1 s, pays off after the step before) -> lib-b.bst (20.1 s)
+    Not the table above: the table ranks by time on the critical path, this order by what each step saves once the steps before it are done, so codegen.bst enters here and not there
+```
+
+`tests/unit/test_the_order_says_why_it_is_not_the_table.py`: 9 passed.
+`with_timeline/analyze.json` and `golden/mixed_task_kinds/expected_output.json`
+rewritten by `tools/dev_refresh_analysis.py --write` (one detail line each;
+mixed_task_kinds names extra.bst).
+
+| Mutation | Result |
+|---|---|
+| `if ordered and absent` -> `if False` | 6 failed, 3 passed |
+| `absent` = the full joint set | 8 failed, 1 passed |
+| `if ordered and absent` -> `if ordered` (no `absent` gate) | 2 failed, 7 passed |
+| drop `+ reranked` from the detail | 6 failed, 3 passed |
+| drop `shown and` from `absent` | 1 failed, 8 passed (empty-table case) |
+| `absent` also names one table element | 7 failed, 2 passed |
+| `if ordered and absent` -> `if absent` (drop `ordered`) | 1 failed, 8 passed (one-step horizon) |
+| `enters`/`enter` -> always `enters` | 1 failed, 8 passed (two-absent case) |
+
+**Deviation:** the Decision's wording ("re-ranked once the steps before it are
+done") was false when the absent element is the order's first step; the line
+now says the table ranks by critical-path time and the order by what each step
+saves once the steps before it are done. Line is longer; README's 107 lines
+unchanged. Guard grew from 4 to 9 cases.

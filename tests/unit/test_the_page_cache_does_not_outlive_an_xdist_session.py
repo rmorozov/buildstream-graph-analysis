@@ -39,6 +39,7 @@ def test_no_cache_root_survives_an_xdist_session(tmp_path):
     env = {**os.environ, "TMPDIR": str(private), "PYTHONPATH": os.pathsep.join([str(TESTS), str(TESTS.parent)])}
     env.pop("PYTEST_XDIST_TESTRUNUID", None)
     env.pop("PYTEST_XDIST_WORKER", None)
+    env.pop("BGA_PAGE_CACHE_OWNER", None)
     cmd = [
         sys.executable,
         "-m",
@@ -57,3 +58,18 @@ def test_no_cache_root_survives_an_xdist_session(tmp_path):
     done = subprocess.run(cmd, cwd=tmp_path, env=env, capture_output=True, text=True, timeout=120)
     assert "2 passed" in done.stdout, done.stdout + done.stderr
     assert sorted(p.name for p in private.glob("bga-pages-*")) == []
+
+
+def test_a_nested_pytest_leaves_the_outer_cache_alone(tmp_path):
+    private = tmp_path / "tmp"
+    outer = private / "bga-pages-probe1349" / "m"
+    outer.mkdir(parents=True)
+    (tmp_path / "conftest.py").write_text(CONFTEST, encoding="utf-8")
+    (tmp_path / "test_tiny.py").write_text(TEST, encoding="utf-8")
+    env = {**os.environ, "TMPDIR": str(private), "PYTHONPATH": os.pathsep.join([str(TESTS), str(TESTS.parent)])}
+    env.update(PYTEST_XDIST_TESTRUNUID="probe1349", BGA_PAGE_CACHE_OWNER="1")
+    env.pop("PYTEST_XDIST_WORKER", None)
+    cmd = [sys.executable, "-m", "pytest", "-p", "no:xdist", "-p", "no:cacheprovider", "-q", "--rootdir", str(tmp_path)]
+    cmd += ["-c", os.devnull, str(tmp_path / "test_tiny.py"), "-k", "nothing_matches_this"]
+    subprocess.run(cmd, cwd=tmp_path, env=env, capture_output=True, text=True, timeout=120)
+    assert outer.is_dir()

@@ -79,3 +79,5 @@ The share on a refreshed `tests/ci_reference.json` and the ledger `--adopt` are 
 | (d) controller `rmtree(cache_root())` -> `pass` (`test_the_page_cache_does_not_outlive_an_xdist_session`, `-n 2` subprocess, private TMPDIR, ~6-10 s) | its one test | 1 failed |
 | (e) `pytest_configure` uid propagation -> `pass` | same | 1 failed |
 | reverted from copy | — | 25 passed (moved files, both guard files, header file) |
+
+Fix (round 173): `pytest_configure` claims the cache by pid in `BGA_PAGE_CACHE_OWNER`; a nested pytest inherits it and no longer deletes the outer cache (`test_a_nested_pytest_leaves_the_outer_cache_alone`; reverting to `not hasattr(workerinput)` -> 1 failed, 1 passed).

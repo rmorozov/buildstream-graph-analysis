@@ -66,6 +66,8 @@ def pytest_configure(config):
 
     config.option.testrunuid = config.option.testrunuid or uuid.uuid4().hex
     os.environ["PYTEST_XDIST_TESTRUNUID"] = config.option.testrunuid
+    # a nested pytest inherits the outer owner's pid, so it never claims the cache
+    config._bga_cache_owner = os.environ.setdefault("BGA_PAGE_CACHE_OWNER", str(os.getpid())) == str(os.getpid())
 
 
 def pytest_collection_modifyitems(config, items):
@@ -535,7 +537,7 @@ def pytest_sessionfinish(session, exitstatus):
     # shape this whole item is repairing, found the only way such
     # things are found - by running it against a real absence and
     # checking the complaint actually appeared.
-    if not hasattr(session.config, "workerinput"):  # UX-1349: the controller outlives every worker
+    if getattr(session.config, "_bga_cache_owner", False):  # UX-1349: only the claiming controller removes it
         import shutil
 
         import pages

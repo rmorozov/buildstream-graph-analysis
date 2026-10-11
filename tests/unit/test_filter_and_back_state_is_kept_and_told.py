@@ -269,7 +269,7 @@ _NAMES = ["initial", "first", "second", "third", "back_once", "back_twice", "bac
 
 
 def _two_plane(into):
-    return pages.in_place_uri(pages.two_plane_run(into, shape=pages.REVIEW_SHAPE), into)
+    return pages.two_plane_uri(pages.REVIEW_SHAPE)
 
 
 @pytest.fixture(scope="module")

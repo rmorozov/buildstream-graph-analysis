@@ -100,14 +100,10 @@ def _probe(text_filter=""):
 @pytest.fixture(scope="module")
 def seen(tmp_path_factory):
     uris = pages.pages(tmp_path_factory, prefix="ux1211", labels=["golden", "macro_micro"])
-    import tools.bga_view as view
-
-    run = pages.two_plane_run(tmp_path_factory.mktemp("ux1211-big"), ("--layers", "20", "--width", "60"))
-    page = tmp_path_factory.mktemp("ux1211-big-page") / "report.html"
-    view.export(str(run), str(page))
+    big = pages.two_plane_uri(("--layers", "20", "--width", "60"))
     with Browser(find_chrome()) as browser:
         out = {label: browser.measure(uri, _probe(), 1440, 900) for label, uri in uris.items()}
-        out["big"] = browser.measure(page.as_uri(), _probe("mod"), 1440, 900)
+        out["big"] = browser.measure(big, _probe("mod"), 1440, 900)
         return out
 
 

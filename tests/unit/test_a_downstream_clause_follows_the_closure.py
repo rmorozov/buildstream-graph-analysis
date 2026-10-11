@@ -48,13 +48,8 @@ _TYPED = r"""
 
 
 @pytest.fixture(scope="module")
-def uri(tmp_path_factory):
-    import tools.bga_view as view
-
-    into = tmp_path_factory.mktemp("ux1228")
-    page = into / "report.html"
-    view.export(str(pages.two_plane_run(into, ("--layers", "20", "--width", "60"))), str(page))
-    return page.as_uri()
+def uri():
+    return pages.two_plane_uri(("--layers", "20", "--width", "60"))
 
 
 @needs_browser

@@ -53,7 +53,7 @@ _SYNTHETIC = ("--layers", "8", "--width", "14")
 def measured(request, tmp_path_factory):
     into = tmp_path_factory.mktemp(f"u1149-{request.param}")
     if request.param == "two_plane":
-        uri = pages.in_place_uri(pages.two_plane_run(into, shape=_SYNTHETIC), into)
+        uri = pages.two_plane_uri(_SYNTHETIC)
     else:
         uri = pages.export_uri(pages.FIXTURES[request.param], into)
     with Browser(chrome) as opened:

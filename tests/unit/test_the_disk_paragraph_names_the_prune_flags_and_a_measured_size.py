@@ -54,6 +54,9 @@ def test_the_snapshot_figure_is_the_skills_and_the_fixture_is_labelled_not_a_sna
 def test_the_husk_rule_is_the_one_the_prune_code_has():
     section = _section(DISK)
     source = (ROOT / "tools/bga_snapshot.py").read_text(encoding="utf-8")
-    assert "husks = [s for s in snapshots if not run_store.has_run(s)]" in source
+    assert "husks = [s for s in snapshots if not run_store.has_run(s) and s not in in_flight]" in source
     assert "doomed = list(husks)" in source
-    assert "always deletes a snapshot that has no `run/` directory, whatever `--keep` says" in section
+    assert (
+        "always deletes a snapshot that has no `run/` directory, whatever `--keep` says, unless its capture is still running"
+        in section
+    )

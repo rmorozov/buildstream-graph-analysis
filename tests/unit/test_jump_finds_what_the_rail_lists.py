@@ -122,13 +122,8 @@ def landed(tmp_path_factory):
 
 @pytest.fixture(scope="module")
 def walked(tmp_path_factory):
-    both = pages.two_plane_run(tmp_path_factory.mktemp("ux1177-both"), pages.REVIEW_SHAPE)
-    page = tmp_path_factory.mktemp("ux1177-page") / "report.html"
-    import tools.bga_view as view
-
-    view.export(str(both), str(page))
     with Browser(find_chrome()) as browser:
-        return browser.measure(page.as_uri(), _WALK, 1440, 900)
+        return browser.measure(pages.two_plane_uri(pages.REVIEW_SHAPE), _WALK, 1440, 900)
 
 
 @needs_browser

@@ -89,12 +89,7 @@ _TAG = (
 def tree(request, tmp_path_factory):
     into = tmp_path_factory.mktemp(f"u1162-{request.param}")
     if request.param == "two_plane":
-        import tools.bga_view as view
-
-        run = pages.two_plane_run(into, pages.REVIEW_SHAPE)
-        page = pathlib.Path(into) / "report.html"
-        view.export(str(run), str(page))
-        uri = page.as_uri()
+        uri = pages.two_plane_uri(pages.REVIEW_SHAPE)
     else:
         uri = pages.export_uri(pages.FIXTURES[request.param], into)
     with Browser(chrome) as opened:

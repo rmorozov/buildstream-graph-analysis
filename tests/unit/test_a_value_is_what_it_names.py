@@ -215,13 +215,7 @@ const BARE = %s;
 
 @pytest.fixture(scope="module")
 def big_page(tmp_path_factory):
-    import tools.bga_view as view
-
-    into = tmp_path_factory.mktemp("value-big")
-    run = pages.two_plane_run(into, _BIG)
-    page = into / "page.html"
-    view.export(str(run), str(page))
-    return page.as_uri()
+    return pages.two_plane_uri(_BIG)
 
 
 @pytest.fixture(scope="module")

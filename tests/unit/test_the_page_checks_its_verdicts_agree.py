@@ -139,16 +139,12 @@ _VIOLATIONS_TEXT = "document.getElementById('violations')?.textContent ?? ''"
 
 def test_a_capacity_bound_page_names_the_matched_verdict(tmp_path):
     sys.path.insert(0, str(REPO))
-    import tools.bga_view as view
     from tests import pages
 
     chrome = find_chrome()
     if chrome is None:
         pytest.skip(NO_BROWSER)
-    run = pages.two_plane_run(tmp_path, shape=PAGE_SHAPE, runs=2)
-    page = tmp_path / 'report.html'
-    view.export(str(run), str(page))
     with Browser(chrome) as opened:
-        text = opened.measure(page.as_uri(), _VIOLATIONS_TEXT)
+        text = opened.measure(pages.two_plane_uri(PAGE_SHAPE, runs=2), _VIOLATIONS_TEXT)
     assert 'capacity_bound_vs_capacity_verdict' in text, text
     assert 'headline.diagnosis reads capacity_bound; capacity_verdict reads capacity matched demand' in text, text

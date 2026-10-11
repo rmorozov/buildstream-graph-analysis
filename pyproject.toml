@@ -40,7 +40,7 @@ dev = [
     # skips where nobody looks is the shape this repository keeps
     # catching - the closure guard's `zstd` clause has to really run.
     "zstandard>=0.22",
-    "ruff==0.16.9",
+    "ruff==0.16.10",
     # UX-697: the type ratchet reads pyright; pinned like ruff, so the
     # baseline's identities do not move with a release.
     "pyright==1.1.414",

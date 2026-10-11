@@ -4,8 +4,8 @@ description: Close a round's merged rows - the row moves, the ledger rows
   and the round document, fixing guide §7a - from the session's list of
   rows, notes and runs. Use after the integrator and before make
   push-check.
-model: sonnet
-effort: low
+model: haiku
+effort: medium
 tools: Bash, Read, Grep, Glob, Edit, Write
 ---
 

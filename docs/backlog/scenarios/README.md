@@ -27,11 +27,9 @@ task file, which is the only place it ever lived twice.
 | ID | Scenario | Topic | Priority | Serves | Status |
 |---|---|---|---|---|---|
 | UX-1014 | [the "safe cap plus auto" default is measured on more shapes and hosts before it is anyone's default](UX-1014-the-builders-and-auto-default-is-measured-on-more-shapes-and-hosts.md) | capture | High | R4, R5 | 🔴 Not Started |
-| UX-1040 | [a paired reading decides the implementers' model, and where Haiku 5.5 reads](UX-1040-a-paired-reading-decides-the-implementers-model.md) | guards | High | every round's implementer spend | 🔴 Not Started |
 | UX-1259 | [UX-861's host-core cap keeps a builder-bound run at 4 builders while the CPU could feed 18](UX-1259-the-host-core-cap-holds-a-builder-bound-run-whose-cpu-idles.md) | analysis | Medium | R1, R5 | 🔴 Not Started |
 | UX-1280 | [the x86 16-core cells of the builders-and-auto default are the owner's run, and it is written down](UX-1280-the-x86-16-core-cells-are-the-owners-run.md) | capture | High | R4, R5 | 🔴 Not Started |
 | UX-1281 | [the memgiant Graviton leg outlives its runner on the third repeat, and its readings die with it](UX-1281-the-memgiant-leg-loses-its-runner-on-a-later-repeat.md) | capture | Medium | R4, R5 | 🔴 Not Started |
-| UX-1349 | [browser tests are 59% of CI's test seconds, against UX-690's 40%](UX-1349-browser-tests-are-59-percent-of-ci-seconds.md) | guards | Medium | R8 | 🔴 Not Started |
 | UX-1352 | [a `triager` reads the red logs so the session reads a table](UX-1352-a-triager-reads-the-red-logs.md) | guards | Medium | every round's gate and every CI red on a round's pull request | 🔴 Not Started |
 | UX-1354 | [layout-free browser checks read the DOM shim instead of Chrome](UX-1354-layout-free-browser-checks-read-the-dom-shim-instead-of-chrome.md) | guards | Medium | R8 | 🔴 Not Started |
 

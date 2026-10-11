@@ -1,6 +1,6 @@
 # UX-1349: browser tests are 59% of CI's test seconds, against UX-690's 40%
 
-**Priority:** Medium | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** main's first clean push run after UX-1348, run 37943350480 attempt 2 on `216fcc30` (2026-10-09) | **Serves:** R8 | **Topic:** guards | **Area:** tests | **Shape:** mechanical | **Reading:** runner:test
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — | **Found by:** main's first clean push run after UX-1348, run 37943350480 attempt 2 on `216fcc30` (2026-10-09) | **Serves:** R8 | **Topic:** guards | **Area:** tests | **Shape:** mechanical | **Reading:** runner:test
 
 **Guard:** `tests/unit/test_the_suite_holds_its_shape_budget.py::test_the_browser_row_holds_the_ledger`
 
@@ -67,6 +67,18 @@ after junit s: 5192.2                               # -1399.5 s (-21%) junit, -7
 ```
 
 The share on a refreshed `tests/ci_reference.json` and the ledger `--adopt` are CI's, after merge.
+
+**Matched reading** (the pair above ran at load 20-28 at different hours; the -21% is load, not the change). Base `d13ab454` and the round tip `afa84040` in two worktrees, the same 150 files, `-n 2`, run in order base, tip, tip, base at load 2-8:
+
+```text
+1 base  1823 passed, 16 skipped in 1101.52s   junit 2152.0
+2 tip   1823 passed, 16 skipped in 1019.64s   junit 1991.6
+3 tip   1823 passed, 16 skipped in  908.22s   junit 1771.7
+4 base  1823 passed, 16 skipped in 1001.21s   junit 1954.8
+mean    base 2053.4 -> tip 1881.7 junit s: -171.7 s (-8.4%); wall 1051.4 -> 964.0 s (-8.3%)
+```
+
+Deviation: the cut is 8%, not the Decision's projected 52-54% share; the share UX-690 holds is the shim route's, filed `UX-1354`.
 
 **Mutation table** (`tests/unit/test_a_page_is_built_once_per_session.py`, 5 tests; three more fixtures moved to `two_plane_uri`):
 

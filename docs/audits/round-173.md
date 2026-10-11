@@ -1,14 +1,14 @@
 # Round 173 - UX-1040's paired reading: Haiku beside sonnet and opus
 
-Run on 2026-10-10: three rows closed (`UX-1309`, `UX-1342`, `UX-1353`), each
-built three ways from one brief (sonnet, opus-low, haiku arms), and
-`UX-1354` filed from `UX-1349`'s Decision. `UX-1349` waits on a measurement;
-`UX-1040` is the session's.
+Run on 2026-10-10: four rows closed (`UX-1309`, `UX-1342`, `UX-1349`,
+`UX-1353`), each built three ways from one brief (sonnet, opus-low, haiku
+arms) and verified blind by sonnet and Haiku; `UX-1040` closed on that
+reading, and `UX-1354` filed from `UX-1349`'s Decision.
 
 ```text
-closed   UX-1309 UX-1342 UX-1353
+closed   UX-1040 UX-1309 UX-1342 UX-1349 UX-1353
 filed    UX-1354
-index    dev_close_task.py --counts: 1298 scenarios, 8 open, 1290 closed
+index    dev_close_task.py --counts: 1298 scenarios, 6 open, 1292 closed
 ```
 
 ## What closed
@@ -19,6 +19,12 @@ index    dev_close_task.py --counts: 1298 scenarios, 8 open, 1290 closed
   why it is not the table; guard grew from 4 to 9 cases.
 - `UX-1353`: `.claude/agents/guard-auditor.md` on haiku, escalating to
   opus, listed in `REPORTERS`; 23 agent-configuration tests pass.
+- `UX-1349`: each browser page is built once per session and shared;
+  base, tip, tip, base on 150 files: junit -8.4%, wall -8.3%. The
+  Decision's 45% share is `UX-1354`'s.
+- `UX-1040`: opus-low not adopted (+182%), Haiku implements rows of 20
+  code lines or fewer, the Haiku verifier stays beside sonnet, the closer
+  moves to Haiku. The verdicts are in its Outcome.
 
 ## Agents
 
@@ -77,7 +83,11 @@ index    dev_close_task.py --counts: 1298 scenarios, 8 open, 1290 closed
 | implementer | sonnet-5-5 | medium | UX-1342 | fix loop 2: no commit, three guards conflict, reported the fork | $0.22 |
 | implementer | sonnet-5-5 | medium | UX-1349 | fix loop 2: nested cleanup fixed, merged | $0.12 |
 | implementer | sonnet-5-5 | medium | UX-1342 | fix loop 3: step number, merged | $0.10 |
+| closer | haiku-5-5 | medium | round | 53 ledger rows, 3 row moves, UX-1354, round doc; no close redone | $0.05 |
 
 ## UX-1040
 
-TODO(session): verdicts
+No arm merged a row unheld; every hold sat in the Decision the arms
+shared. Haiku verifiers held on real defects sonnet passed on all four
+rows; neither caught the two reds the merged tree's full suite found.
+The table and the four verdicts are `UX-1040`'s Outcome.

@@ -34,6 +34,7 @@ foundation tier with project.conf's variables: {bga-foundation:
 Full background: docs/guides/real-project.md
 """
 import argparse
+import contextlib
 import functools
 import gzip
 import json
@@ -68,6 +69,8 @@ WRAPPED_LOG_NAME = "build.log"
 # `UX-378`, named in `run_store` so the layout has one authority.
 HOST_SAMPLES_NAME = run_store.HOST_SAMPLES_NAME
 CONTEXT_NAME = "capture-context.txt"
+# UX-1309: the writer's pid while its capture runs; `_prune` spares a live one.
+CAPTURE_PID_NAME = "capture.pid"
 
 
 def cpu_topology(sysfs: str = "/sys/devices/system/cpu", cpuinfo: str = "/proc/cpuinfo") -> str:
@@ -360,6 +363,8 @@ def take_snapshot(
     from .bst_native_build_tracer import main as capture_main
 
     snapshot = snapshot or run_store.new_snapshot_dir(project)
+    with open(os.path.join(snapshot, CAPTURE_PID_NAME), "w", encoding="utf-8") as handle:
+        handle.write(str(os.getpid()))
     stamp = _producer_stamp()
     progress.set_on_row(lambda: _write_tail(snapshot, stamp))
     mode, ceiling, seed = resolve_jobserver_ceiling(jobserver, command, cpu_count=cpu_count)
@@ -410,7 +415,10 @@ def take_snapshot(
 
     apply_capture_env_flags(list(capture_env_flags))
     print(f"Capturing into {snapshot}", file=sys.stderr)
-    exit_code = capture_main(argv)
+    try:
+        exit_code = capture_main(argv)
+    finally:
+        _remove_capture_pid(snapshot)
     if keep_raw and os.path.exists(os.path.join(snapshot, RAW_LOG_NAME[:-3])):
         with progress.timed("raw log gzip", say="Compressing the raw Plane 2 log..."):
             _compress_raw_log(snapshot)
@@ -1807,7 +1815,9 @@ def parse_size(text: str) -> int:
     return int(value * _SIZE_SUFFIXES[suffix])
 
 
-def over_budget(snapshots: list[str], budget: int, protected: set, size_of) -> list[str]:
+def over_budget(
+    snapshots: list[str], budget: int, protected: set, size_of, in_flight: "set | frozenset" = frozenset()
+) -> list[str]:
     """The oldest snapshots to delete to bring a store under `budget`.
 
     `UX-300`. The keep-set is not negotiable - `@last` and `@prev` are
@@ -1815,17 +1825,44 @@ def over_budget(snapshots: list[str], budget: int, protected: set, size_of) -> l
     is left, oldest first, and a store whose protected snapshots alone
     exceed it is reported rather than emptied. Pricing, not policy:
     this returns a list, and the caller is the one that deletes.
+    `in_flight` (a capture still writing) counts in the total and is never listed.
     """
     total = sum(size_of(path) for path in snapshots)
     doomed = []
     for path in snapshots:  # oldest first, as the store lists them
         if total <= budget:
             break
-        if path in protected:
+        if path in protected or path in in_flight:
             continue
         doomed.append(path)
         total -= size_of(path)
     return doomed
+
+
+def _remove_capture_pid(snapshot: str) -> None:
+    with contextlib.suppress(FileNotFoundError):
+        os.remove(os.path.join(snapshot, CAPTURE_PID_NAME))
+
+
+def _capture_alive(snapshot: str) -> bool:
+    """True while the capture that wrote this snapshot's pid marker runs.
+
+    A missing, unreadable, absurd or dead-pid marker is a husk; `PermissionError` means alive.
+    """
+    try:
+        with open(os.path.join(snapshot, CAPTURE_PID_NAME), encoding="utf-8") as handle:
+            pid = int(handle.read().strip())
+    except (OSError, ValueError):
+        return False
+    if pid <= 0:
+        return False  # 0 and negatives name process groups, not a writer
+    try:
+        os.kill(pid, 0)
+    except PermissionError:
+        return True
+    except (OSError, OverflowError):
+        return False
+    return True
 
 
 def _prune(
@@ -1848,14 +1885,16 @@ def _prune(
         print(f"No snapshots in {project}.")
         return 0
     protected = _protected(project)
+    in_flight = {s for s in snapshots if _capture_alive(s)}
 
     # UX-167: a snapshot with no run directory - an interrupted capture
     # from before UX-157, or a `--no-inject` session - is not in
     # `list_runs`, not aliased, and not useful to anything. `--keep 2`
     # used to leave those standing while deleting run-bearing snapshots,
     # which is the store keeping exactly the wrong things.
-    husks = [s for s in snapshots if not run_store.has_run(s)]
-    live = [s for s in snapshots if s not in set(husks)]
+    # An in-flight capture has no run/ until extraction: neither husk nor live, but still in the budget.
+    husks = [s for s in snapshots if not run_store.has_run(s) and s not in in_flight]
+    live = [s for s in snapshots if run_store.has_run(s)]
 
     doomed = list(husks)
     if keep is not None:
@@ -1868,8 +1907,8 @@ def _prune(
         # --max-store 20G` means "the newest five, and under 20 GiB" -
         # the stricter of the two, not the second overruling the first.
         surviving = [s for s in snapshots if s not in set(doomed)]
-        doomed.extend(over_budget(surviving, max_store, protected, run_store.snapshot_size_bytes))
-    doomed = [s for s in dict.fromkeys(doomed) if s not in protected]
+        doomed.extend(over_budget(surviving, max_store, protected, run_store.snapshot_size_bytes, in_flight))
+    doomed = [s for s in dict.fromkeys(doomed) if s not in protected and s not in in_flight]
 
     skipped = [s for s in snapshots if s in protected]
     if not doomed:
@@ -1883,7 +1922,11 @@ def _prune(
                 f"  {run_store.human_bytes(held)} on disk, "
                 f"{'over' if held > max_store else 'within'} the "
                 f"{run_store.human_bytes(max_store)} asked for."
-                + (" Everything above it is protected by @last/@prev." if held > max_store else "")
+                + (
+                    " Everything above it is protected by @last/@prev or still being captured."
+                    if held > max_store
+                    else ""
+                )
             )
         return 0
 
@@ -1909,8 +1952,8 @@ def _prune(
         if remaining > max_store:
             print(
                 f"  still over the {run_store.human_bytes(max_store)} "
-                f"asked for - what is left is protected by @last/@prev, "
-                f"which the next comparison reads."
+                f"asked for - what is left is protected by @last/@prev "
+                f"or still being captured."
             )
     if husk_count:
         # Counted separately because they are a different thing: not old

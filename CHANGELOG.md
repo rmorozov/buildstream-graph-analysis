@@ -39,7 +39,7 @@ derivation actually reads.
 
 | release | date | closed rows | kind |
 |---|---|---|---|
-| [Unreleased](#unreleased) | — | — | breaking |
+| [0.6.0](#060--findings-that-say-what-to-do-and-a-pool-that-fits-its-cgroup-2026-10-07) | 2026-10-07 | 1280 | breaking |
 | [0.5.0](#050--the-tool-prices-its-own-cost-and-the-jobserver-2026-09-29) | 2026-09-29 | 1083 | extending |
 | [0.4.1](#041--the-tool-says-what-it-assumes-2026-09-12) | 2026-09-12 | 813 | patch |
 | [0.4.0](#040--a-capture-you-can-carry-2026-09-03) | 2026-09-03 | 537 | breaking |
@@ -62,17 +62,276 @@ Both are wrong: `pyproject.toml` enters this history at `4ace856`
 (2026-08-13) and `0.2.0` is an ordinary release. The wrong correction
 was read off a shallow clone — `UX-633`, and `UX-637` for the cause.
 
-## Unreleased
+## 0.6.0 — findings that say what to do, and a pool that fits its cgroup (2026-10-07)
+
+Named for the two halves most of the 197 rows went into. Every finding
+now publishes the step that answers it and says whether it is new, still
+open or gone since the run before (`UX-1256`, `UX-1277`); five sections
+that each publish a bound are checked to agree (`UX-1253`); Plane 2's
+processes reach the findings (`UX-1255`); and a binary that waits is told
+from one that computes, with a per-binary CPU and wall total behind "which
+binaries cost this build its time?" (`UX-1247`, `UX-1275`). The page's review
+rounds took it from raw keys and floats to keyboard sort, print and Back
+(`UX-1140`..`UX-1279`). On the capture side, `--jobserver
+auto` reads the cgroup a container agent is capped at, opens its pool
+inside that cap and takes tokens back when the jobs outgrow it (`UX-1282`,
+`UX-1283`, `UX-1339`), a patched ninja joins the pool (`UX-1336`), and
+junctions are first-class: Plane 2 keys a junctioned element by its full
+name, `bga blast` prices a junction bump, `cache-logs` reads every
+junctioned project and a run rolls up by junction (`UX-1320`, `UX-1321`,
+`UX-1325`, `UX-1327`). `bga snapshot -- ./build.sh` captures a build run
+through a wrapper script (`UX-1322`), and a pilot kit runs bga in a team's
+CI, report-only (`UX-1288`).
 
 **Contract delta:** `analyze/v7` - `by_binary` is one row per binary,
 `{binary, cpu_us, wall_us, calls, elements}` ranked by CPU, where it was
 a map of binary to calls (`UX-1247`); `analyze/v6` is read, never
-written. A bumped contract makes the next cut `breaking`.
+written. `bga junction-cost` is renamed `bga variant-cost`, the old name
+kept as an unlisted alias (`UX-1327`). A bumped contract makes this cut
+`breaking`.
+
+**Upgrade note:** a parser reading `analyze` output's `by_binary` as a map
+of binary to calls reads rows now: `{r["binary"]: r["calls"] for r in
+doc["by_binary"]}` gives the old shape back. Artifacts `analyze/v6` wrote
+still load. Scripts calling `bga junction-cost` keep working.
+
+**Carried findings.** Review 37 (closed-row marker 1264) filed `UX-1332`..
+`UX-1334`, all closed before this cut. Walk seed 5
+([`walk-seed-5.md`](docs/audits/walk-seed-5.md), on `3e3657a7`) filed
+`UX-1341`, closed here, and `UX-1342` - the headline's "top 3" and the
+work order name two different triples - which ships open. `UX-1343` ships
+open too: the pull-request lane never installs on Python 3.9, which is
+how `main`'s 3.9 cell stayed red from `057bc920` until `UX-1340`.
 
 ```text state
 contracts: analyze/v2 analyze/v3 analyze/v4 analyze/v5 analyze/v6 analyze/v7 blast/v1 blast/v2 bundle-manifest/v1 capacity-model/v1 capture-layout/v1 compare/v1 compare/v2 correlate/v1 correlate/v2 host-samples/v1 host/v1 host/v2 junction-cost/v1 plane2/v1 plane2/v2 plane2/v3 sources/v1 store-aggregate/v1 store/v1 sweep/v1 tail/v1 whatif/v1
 commands: analyze baseline blast bundle cache-logs cache-trend capture checkout-cost chrome-to-trace compare correlate cross-check diagnostics doctor extract floors gen-synthetic graph graph-from-show junction-cost log-to-chrome native-to-chrome rebuild-set release-notes replay run-context snapshot sweep timeline utilisation variant-cost view whatif wrap
 ```
+
+### What landed
+
+<!-- generated: UX-252 1083→1280 -->
+197 scenarios closed (closed-row markers 1083 → 1280).
+
+**contracts**
+
+- [UX-1100](docs/backlog/scenarios/UX-1100-cut-release-0-5-0.md) — [cut release 0.5.0 once the next features are in](docs/backlog/scenarios/UX-1100-cut-release-0-5-0.md)
+- [UX-1218](docs/backlog/scenarios/UX-1218-the-verification-log-re-grounds-at-round-159.md) — [the verification log re-grounds at round 159's merge](docs/backlog/scenarios/UX-1218-the-verification-log-re-grounds-at-round-159.md)
+- [UX-1278](docs/backlog/scenarios/UX-1278-the-verification-log-re-grounds-at-round-165.md) — [the verification log re-grounds at round 165's merge](docs/backlog/scenarios/UX-1278-the-verification-log-re-grounds-at-round-165.md)
+- [UX-1298](docs/backlog/scenarios/UX-1298-compare-publishes-where-its-band-came-from-and-what-it-skipped.md) — [`compare/v2` publishes where its band was read from and how many members it skipped for host](docs/backlog/scenarios/UX-1298-compare-publishes-where-its-band-came-from-and-what-it-skipped.md)
+- [UX-1333](docs/backlog/scenarios/UX-1333-the-compare-contract-and-its-schema-prose-omit-the-different-work-verdict.md) — [the `compare/v2` schema description lists four verdicts and the code emits a fifth, `different work`](docs/backlog/scenarios/UX-1333-the-compare-contract-and-its-schema-prose-omit-the-different-work-verdict.md)
+- [UX-1344](docs/backlog/scenarios/UX-1344-cut-release-0-6-0.md) — [cut release 0.6.0, breaking](docs/backlog/scenarios/UX-1344-cut-release-0-6-0.md)
+
+**cli**
+
+- [UX-1286](docs/backlog/scenarios/UX-1286-the-gate-reads-kept-bundles-in-place.md) — [the review gate reads its band from the bundles CI kept, without a store on the runner](docs/backlog/scenarios/UX-1286-the-gate-reads-kept-bundles-in-place.md)
+- [UX-1295](docs/backlog/scenarios/UX-1295-bundle-export-has-an-anonymize-switch.md) — [`bga bundle --export` has an `--anonymize` switch, so a pilot can share a capture without a Python call](docs/backlog/scenarios/UX-1295-bundle-export-has-an-anonymize-switch.md)
+- [UX-1330](docs/backlog/scenarios/UX-1330-a-short-element-name-is-offered-its-junction-qualified-match.md) — [`whatif --element pkgs/gcc-libs.bst` is refused without offering the junction-qualified element it means](docs/backlog/scenarios/UX-1330-a-short-element-name-is-offered-its-junction-qualified-match.md)
+
+**analysis**
+
+- [UX-1138](docs/backlog/scenarios/UX-1138-pinned-is-the-resolved-width-not-an-argv-j1.md) — [every autotools element reads "pinned to -j1", because its install step says so](docs/backlog/scenarios/UX-1138-pinned-is-the-resolved-width-not-an-argv-j1.md)
+- [UX-1139](docs/backlog/scenarios/UX-1139-the-costliest-pins-are-named-first.md) — [the capacity finding names whichever pinned elements sort first by name](docs/backlog/scenarios/UX-1139-the-costliest-pins-are-named-first.md)
+- [UX-1244](docs/backlog/scenarios/UX-1244-a-capacity-bound-run-reads-scheduler-bound.md) — [a run whose resource floor is its wall reads "scheduler-bound" and is sent to the blast ranking](docs/backlog/scenarios/UX-1244-a-capacity-bound-run-reads-scheduler-bound.md)
+- [UX-1245](docs/backlog/scenarios/UX-1245-oversubscription-evidence-reads-slot-occupancy-as-cpu.md) — [utilisation calls full builder slots "High CPU use", and its peak concurrency is always 1](docs/backlog/scenarios/UX-1245-oversubscription-evidence-reads-slot-occupancy-as-cpu.md)
+- [UX-1247](docs/backlog/scenarios/UX-1247-the-binary-question-has-no-binary-total.md) — ["Which binaries cost this build its time?" has no per-binary total to answer with](docs/backlog/scenarios/UX-1247-the-binary-question-has-no-binary-total.md)
+- [UX-1253](docs/backlog/scenarios/UX-1253-the-page-checks-its-verdicts-agree.md) — [five sections each publish a bound, and nothing checks that they agree](docs/backlog/scenarios/UX-1253-the-page-checks-its-verdicts-agree.md)
+- [UX-1255](docs/backlog/scenarios/UX-1255-plane-2-measurements-reach-the-findings.md) — [39,854 Plane 2 processes produce no finding](docs/backlog/scenarios/UX-1255-plane-2-measurements-reach-the-findings.md)
+- [UX-1256](docs/backlog/scenarios/UX-1256-every-finding-publishes-its-step.md) — [findings publish facts, and the steps live only in attribution hints and next steps](docs/backlog/scenarios/UX-1256-every-finding-publishes-its-step.md)
+- [UX-1263](docs/backlog/scenarios/UX-1263-a-relative-run-path-drops-the-snapshot-and-compare-steps.md) — [a run passed as a relative path keeps the path and drops the snapshot and compare steps](docs/backlog/scenarios/UX-1263-a-relative-run-path-drops-the-snapshot-and-compare-steps.md)
+- [UX-1265](docs/backlog/scenarios/UX-1265-the-graph-width-finding-lost-its-total-and-its-capacity-clause.md) — [the graph-width finding lost the total element count and "whatever the capacity" from its title](docs/backlog/scenarios/UX-1265-the-graph-width-finding-lost-its-total-and-its-capacity-clause.md)
+- [UX-1266](docs/backlog/scenarios/UX-1266-joint-saving-and-optimization-horizon-name-the-same-set.md) — [joint-saving and optimization-horizon name the same element set on macro_micro](docs/backlog/scenarios/UX-1266-joint-saving-and-optimization-horizon-name-the-same-set.md)
+- [UX-1268](docs/backlog/scenarios/UX-1268-a-capacity-bound-run-reads-capacity-matched-demand.md) — [a capacity-bound run reads "capacity matched demand", and the check does not see it](docs/backlog/scenarios/UX-1268-a-capacity-bound-run-reads-capacity-matched-demand.md)
+- [UX-1272](docs/backlog/scenarios/UX-1272-the-sizing-card-memory-bound-counts-one-process-per-builder.md) — [the sizing card calls builders x one process's peak "at most", while an element runs many processes at once](docs/backlog/scenarios/UX-1272-the-sizing-card-memory-bound-counts-one-process-per-builder.md)
+- [UX-1274](docs/backlog/scenarios/UX-1274-the-builder-sweep-is-drawn-and-reaches-the-graph-width.md) — ["the graph allows 8" is where the sweep stopped, and the page never shows what more builders would buy](docs/backlog/scenarios/UX-1274-the-builder-sweep-is-drawn-and-reaches-the-graph-width.md)
+- [UX-1275](docs/backlog/scenarios/UX-1275-a-binary-that-waits-is-told-from-one-that-computes.md) — [the page says 2,300 elements wait rather than compute, and nothing says what they wait in](docs/backlog/scenarios/UX-1275-a-binary-that-waits-is-told-from-one-that-computes.md)
+- [UX-1277](docs/backlog/scenarios/UX-1277-a-finding-says-whether-it-is-new-since-the-baseline.md) — [findings do not say whether they are new, still open or gone since the run before](docs/backlog/scenarios/UX-1277-a-finding-says-whether-it-is-new-since-the-baseline.md)
+- [UX-1285](docs/backlog/scenarios/UX-1285-the-band-mixes-runs-from-different-hosts.md) — [the band a review build is judged against mixes runs from different hosts](docs/backlog/scenarios/UX-1285-the-band-mixes-runs-from-different-hosts.md)
+- [UX-1321](docs/backlog/scenarios/UX-1321-blast-prices-a-junction-bump.md) — [`bga blast` on a junction, or a path inside a junctioned project, says it rebuilds nothing](docs/backlog/scenarios/UX-1321-blast-prices-a-junction-bump.md)
+- [UX-1323](docs/backlog/scenarios/UX-1323-a-comparison-of-different-work-is-not-a-verdict.md) — [`compare` calls two incremental runs that rebuilt different elements IMPROVED, and the cold-then-incremental refusal names no next step](docs/backlog/scenarios/UX-1323-a-comparison-of-different-work-is-not-a-verdict.md)
+- [UX-1324](docs/backlog/scenarios/UX-1324-a-builders-recommendation-needs-more-elements-than-builders.md) — [A run that rebuilt one element recommends `--builders 1` because memory binds, while saying memory fits 15.7 GB](docs/backlog/scenarios/UX-1324-a-builders-recommendation-needs-more-elements-than-builders.md)
+- [UX-1325](docs/backlog/scenarios/UX-1325-cache-logs-reads-every-project-a-junction-brings-in.md) — [`bga cache-logs PROJECT` reads only the top project's logs and says nothing about the junctioned projects beside them](docs/backlog/scenarios/UX-1325-cache-logs-reads-every-project-a-junction-brings-in.md)
+- [UX-1326](docs/backlog/scenarios/UX-1326-the-structural-questions-answer-before-the-first-capture.md) — [`bga blast --no-cost` refuses without a snapshot, though `bst show` holds everything it needs](docs/backlog/scenarios/UX-1326-the-structural-questions-answer-before-the-first-capture.md)
+- [UX-1327](docs/backlog/scenarios/UX-1327-a-run-rolls-up-by-junction.md) — [No report section answers which junction's elements cost the most, and `junction-cost` is about variants](docs/backlog/scenarios/UX-1327-a-run-rolls-up-by-junction.md)
+
+**capture**
+
+- [UX-1182](docs/backlog/scenarios/UX-1182-a-synthetic-example-runs-hundreds-of-fake-binaries.md) — [a synthetic example runs hundreds of fake binaries per element, drawn from named distributions](docs/backlog/scenarios/UX-1182-a-synthetic-example-runs-hundreds-of-fake-binaries.md)
+- [UX-1183](docs/backlog/scenarios/UX-1183-a-traced-element-s-binaries-reach-the-page.md) — [a traced element's binaries reach the page whole or counted](docs/backlog/scenarios/UX-1183-a-traced-element-s-binaries-reach-the-page.md)
+- [UX-1205](docs/backlog/scenarios/UX-1205-a-real-capture-of-fake-sleeping-binaries-under.md) — [a real capture of fake sleeping binaries under the LD_PRELOAD hook](docs/backlog/scenarios/UX-1205-a-real-capture-of-fake-sleeping-binaries-under.md)
+- [UX-1240](docs/backlog/scenarios/UX-1240-the-plane2-report-reads-a-large-log-lean.md) — [the Plane 2 report holds a large log's opened paths as strings in sets and parses every record twice over](docs/backlog/scenarios/UX-1240-the-plane2-report-reads-a-large-log-lean.md)
+- [UX-1241](docs/backlog/scenarios/UX-1241-a-sandbox-writes-an-opened-path-once.md) — [every process of a sandbox writes every path it opened, so a C++ element's log repeats the same headers hundreds of times](docs/backlog/scenarios/UX-1241-a-sandbox-writes-an-opened-path-once.md)
+- [UX-1242](docs/backlog/scenarios/UX-1242-the-process-records-wait-for-the-fold-packed.md) — [the Plane 2 report holds every process record as a dict until the fold, 1,232 bytes each](docs/backlog/scenarios/UX-1242-the-process-records-wait-for-the-fold-packed.md)
+- [UX-1134](docs/backlog/scenarios/UX-1134-auto-oom-kills-a-memory-bound-giant-with-no-plan.md) — [`--jobserver auto` with no plan widens a memory-bound giant into the OOM killer](docs/backlog/scenarios/UX-1134-auto-oom-kills-a-memory-bound-giant-with-no-plan.md)
+- [UX-1287](docs/backlog/scenarios/UX-1287-doctor-names-the-c-compiler-the-capture-needs.md) — [`bga doctor` names the C compiler the capture compiles its hook with](docs/backlog/scenarios/UX-1287-doctor-names-the-c-compiler-the-capture-needs.md)
+- [UX-1301](docs/backlog/scenarios/UX-1301-four-capture-flags-appear-in-no-help-under-a-heading-that-says-they-do.md) — [four capture flags appear in no `--help`, under a heading that says they do](docs/backlog/scenarios/UX-1301-four-capture-flags-appear-in-no-help-under-a-heading-that-says-they-do.md)
+- [UX-1302](docs/backlog/scenarios/UX-1302-bga-snapshot-refuses-the-per-element-jobserver-and-capture-log-flags-capture-run.md) — [`bga snapshot` refuses the per-element jobserver and capture-log flags `capture run` takes, and no doc says…
+- [UX-1304](docs/backlog/scenarios/UX-1304-bga-jobserver-env-is-validated-and-recorded-and-no-sandbox-ever-reads-it.md) — [`bga-jobserver-env` is validated and recorded, and no sandbox ever reads it](docs/backlog/scenarios/UX-1304-bga-jobserver-env-is-validated-and-recorded-and-no-sandbox-ever-reads-it.md)
+- [UX-1311](docs/backlog/scenarios/UX-1311-a-junctioned-elements-jobserver-annotation-never-reaches-the-shim.md) — [a junctioned element's jobserver annotation never reaches the shim](docs/backlog/scenarios/UX-1311-a-junctioned-elements-jobserver-annotation-never-reaches-the-shim.md)
+- [UX-1312](docs/backlog/scenarios/UX-1312-jobserver-auth-override-reads-its-groups-from-a-file-for-capture-run-and-snapshot.md) — [`--jobserver-auth-override` takes only inline groups, and real element names are long junction-relative…
+- [UX-1320](docs/backlog/scenarios/UX-1320-plane-2-keys-a-junctioned-element-by-its-full-name.md) — [Plane 2 keys a junctioned element by its full name, not the short name the shim keeps](docs/backlog/scenarios/UX-1320-plane-2-keys-a-junctioned-element-by-its-full-name.md)
+- [UX-1322](docs/backlog/scenarios/UX-1322-a-build-run-through-a-wrapper-script-is-captured.md) — [`bga snapshot -- ./build.sh` ends in a Python traceback;
+- [UX-1328](docs/backlog/scenarios/UX-1328-doctor-counts-what-junctions-stage.md) — [`bga doctor` warns every project whose toolchain arrives through a junction to run bga's own example scripts](docs/backlog/scenarios/UX-1328-doctor-counts-what-junctions-stage.md)
+- [UX-1331](docs/backlog/scenarios/UX-1331-doctor-points-at-the-error-where-it-prints-it.md) — [`doctor` says "read the error below" above the error, and warns about suspend inside a container](docs/backlog/scenarios/UX-1331-doctor-points-at-the-error-where-it-prints-it.md)
+- [UX-1315](docs/backlog/scenarios/UX-1315-a-nested-build-can-run-the-ninja-wrapper.md) — [a nested build can run the ninja wrapper](docs/backlog/scenarios/UX-1315-a-nested-build-can-run-the-ninja-wrapper.md)
+- [UX-1336](docs/backlog/scenarios/UX-1336-a-patched-ninja-joins-the-jobserver.md) — [a patched ninja joins the jobserver](docs/backlog/scenarios/UX-1336-a-patched-ninja-joins-the-jobserver.md)
+- [UX-1337](docs/backlog/scenarios/UX-1337-ctest-cannot-unblock-makes-pool.md) — [ctest cannot unblock make's pool](docs/backlog/scenarios/UX-1337-ctest-cannot-unblock-makes-pool.md)
+- [UX-1282](docs/backlog/scenarios/UX-1282-the-memory-gate-reads-the-host-not-the-cgroup.md) — [the memory gate reads the host's memory, not the cgroup a container agent is capped at](docs/backlog/scenarios/UX-1282-the-memory-gate-reads-the-host-not-the-cgroup.md)
+- [UX-1283](docs/backlog/scenarios/UX-1283-the-pool-seed-is-handed-out-before-the-memory-gate.md) — [the pool's seed tokens are handed out before the memory gate has a say](docs/backlog/scenarios/UX-1283-the-pool-seed-is-handed-out-before-the-memory-gate.md)
+- [UX-1284](docs/backlog/scenarios/UX-1284-a-late-memory-peak-is-under-reserved.md) — [a link step that peaks above every compile before it is reserved at the compile's size](docs/backlog/scenarios/UX-1284-a-late-memory-peak-is-under-reserved.md)
+- [UX-1310](docs/backlog/scenarios/UX-1310-the-decision-log-says-which-auth-style-each-element-was-forced-to-and-why.md) — [the decision log says which auth style each element was forced to, and by which switch](docs/backlog/scenarios/UX-1310-the-decision-log-says-which-auth-style-each-element-was-forced-to-and-why.md)
+- [UX-1314](docs/backlog/scenarios/UX-1314-the-per-element-cpu-curve-samples-the-sandboxs-processes-not-host-pids-that-share-their-number.md) — [the per-element CPU curve samples the sandbox's processes, not host pids that share their…
+- [UX-1339](docs/backlog/scenarios/UX-1339-the-opening-seed-can-exceed-a-cgroup-cap.md) — [the pool's opening width can exceed a cgroup cap, and nothing takes tokens back](docs/backlog/scenarios/UX-1339-the-opening-seed-can-exceed-a-cgroup-cap.md)
+
+**viewer**
+
+- [UX-1136](docs/backlog/scenarios/UX-1136-a-finding-card-prints-null.md) — [a finding card prints the word "null" between its parts](docs/backlog/scenarios/UX-1136-a-finding-card-prints-null.md)
+- [UX-1137](docs/backlog/scenarios/UX-1137-the-describe-door-shifts-every-pair.md) — [the block's `?` door takes a grid cell and shifts every term one cell over](docs/backlog/scenarios/UX-1137-the-describe-door-shifts-every-pair.md)
+- [UX-1140](docs/backlog/scenarios/UX-1140-a-quantity-in-the-decision-panel-and-provenance-prints.md) — [a quantity in the decision panel and provenance prints as a raw float or byte count](docs/backlog/scenarios/UX-1140-a-quantity-in-the-decision-panel-and-provenance-prints.md)
+- [UX-1141](docs/backlog/scenarios/UX-1141-payload-keys-and-enum-values-are-shown-to-readers.md) — [payload keys and enum values are shown to readers as the label](docs/backlog/scenarios/UX-1141-payload-keys-and-enum-values-are-shown-to-readers.md)
+- [UX-1142](docs/backlog/scenarios/UX-1142-task-ids-and-repository-paths-reach-reader-text-through.md) — [task ids and repository paths reach reader text through descriptions and notes](docs/backlog/scenarios/UX-1142-task-ids-and-repository-paths-reach-reader-text-through.md)
+- [UX-1143](docs/backlog/scenarios/UX-1143-the-capacity-recommendation-lists-its-inputs-and-never-says.md) — [the capacity recommendation lists its inputs and never says what to set](docs/backlog/scenarios/UX-1143-the-capacity-recommendation-lists-its-inputs-and-never-says.md)
+- [UX-1144](docs/backlog/scenarios/UX-1144-one-concept-carries-several-names-across-the-page.md) — [one concept carries several names across the page](docs/backlog/scenarios/UX-1144-one-concept-carries-several-names-across-the-page.md)
+- [UX-1145](docs/backlog/scenarios/UX-1145-pair-lists-reader-chips-and-the-sticky-header-fail.md) — [pair lists, reader chips and the sticky header fail the compact class](docs/backlog/scenarios/UX-1145-pair-lists-reader-chips-and-the-sticky-header-fail.md)
+- [UX-1146](docs/backlog/scenarios/UX-1146-the-decision-the-headline-and-next-steps-say-the.md) — [the decision, the headline and next steps say the same thing three times](docs/backlog/scenarios/UX-1146-the-decision-the-headline-and-next-steps-say-the.md)
+- [UX-1147](docs/backlog/scenarios/UX-1147-headings-repeat-their-chapters-question-and-finding-titles-break.md) — [headings repeat their chapter's question and finding titles break sentence case](docs/backlog/scenarios/UX-1147-headings-repeat-their-chapters-question-and-finding-titles-break.md)
+- [UX-1148](docs/backlog/scenarios/UX-1148-findings-are-not-listed-in-severity-order.md) — [findings are not listed in severity order](docs/backlog/scenarios/UX-1148-findings-are-not-listed-in-severity-order.md)
+- [UX-1149](docs/backlog/scenarios/UX-1149-backticks-and-ascii-arrows-show-as-raw-characters.md) — [backticks and ASCII arrows show as raw characters](docs/backlog/scenarios/UX-1149-backticks-and-ascii-arrows-show-as-raw-characters.md)
+- [UX-1150](docs/backlog/scenarios/UX-1150-booleans-and-dashes-stand-in-for-a-verdict.md) — [booleans and dashes stand in for a verdict](docs/backlog/scenarios/UX-1150-booleans-and-dashes-stand-in-for-a-verdict.md)
+- [UX-1151](docs/backlog/scenarios/UX-1151-the-plane-2-sections-do-not-lead-with-their.md) — [the Plane 2 sections do not lead with their answer](docs/backlog/scenarios/UX-1151-the-plane-2-sections-do-not-lead-with-their.md)
+- [UX-1152](docs/backlog/scenarios/UX-1152-folds-table-tools-and-element-card-links-repeat-what.md) — [folds, table tools and element-card links repeat what is already on screen](docs/backlog/scenarios/UX-1152-folds-table-tools-and-element-card-links-repeat-what.md)
+- [UX-1153](docs/backlog/scenarios/UX-1153-six-low-impact-layout-and-glyph-defects-from-the.md) — [six low-impact layout and glyph defects from the view UI review](docs/backlog/scenarios/UX-1153-six-low-impact-layout-and-glyph-defects-from-the.md)
+- [UX-1154](docs/backlog/scenarios/UX-1154-print-blanks-inner-folds-and-prints-its-controls.md) — [a print blanks inner folds and prints its controls](docs/backlog/scenarios/UX-1154-print-blanks-inner-folds-and-prints-its-controls.md)
+- [UX-1155](docs/backlog/scenarios/UX-1155-accessible-names-repeat-or-omit-the-thing-they-name.md) — [accessible names repeat or omit the thing they name](docs/backlog/scenarios/UX-1155-accessible-names-repeat-or-omit-the-thing-they-name.md)
+- [UX-1156](docs/backlog/scenarios/UX-1156-text-still-repeats-across-the-page.md) — [text still repeats across the page](docs/backlog/scenarios/UX-1156-text-still-repeats-across-the-page.md)
+- [UX-1157](docs/backlog/scenarios/UX-1157-compact-layout-leaves-four-defects-at-390.md) — [compact layout leaves four defects at 390](docs/backlog/scenarios/UX-1157-compact-layout-leaves-four-defects-at-390.md)
+- [UX-1158](docs/backlog/scenarios/UX-1158-filter-and-back-navigation-state-is-not-kept-or-told.md) — [filter and back-navigation state is not kept or told](docs/backlog/scenarios/UX-1158-filter-and-back-navigation-state-is-not-kept-or-told.md)
+- [UX-1159](docs/backlog/scenarios/UX-1159-key-paths-and-schema-descriptions-reach-reader-text.md) — [key paths and schema descriptions reach reader text](docs/backlog/scenarios/UX-1159-key-paths-and-schema-descriptions-reach-reader-text.md)
+- [UX-1160](docs/backlog/scenarios/UX-1160-the-pointer-travel-instrument-reads-a-content-visibility-placeholder.md) — [the pointer-travel instrument reads a content-visibility placeholder, not page geometry](docs/backlog/scenarios/UX-1160-the-pointer-travel-instrument-reads-a-content-visibility-placeholder.md)
+- [UX-1161](docs/backlog/scenarios/UX-1161-print-keeps-residue-the-round-155-print-pass.md) — [print keeps residue the round-155 print pass left](docs/backlog/scenarios/UX-1161-print-keeps-residue-the-round-155-print-pass.md)
+- [UX-1162](docs/backlog/scenarios/UX-1162-accessible-names-still-repeat-or-omit-what-they.md) — [accessible names still repeat or omit what they name](docs/backlog/scenarios/UX-1162-accessible-names-still-repeat-or-omit-what-they.md)
+- [UX-1163](docs/backlog/scenarios/UX-1163-text-the-page-says-more-than-once-round.md) — [text the page says more than once, round 155's residue](docs/backlog/scenarios/UX-1163-text-the-page-says-more-than-once-round.md)
+- [UX-1164](docs/backlog/scenarios/UX-1164-layout-residue-at-1440-and-390-after-ux.md) — [layout residue at 1440 and 390 after UX-1157](docs/backlog/scenarios/UX-1164-layout-residue-at-1440-and-390-after-ux.md)
+- [UX-1165](docs/backlog/scenarios/UX-1165-filter-and-link-state-residue-after-ux-1158.md) — [filter and link state residue after UX-1158](docs/backlog/scenarios/UX-1165-filter-and-link-state-residue-after-ux-1158.md)
+- [UX-1166](docs/backlog/scenarios/UX-1166-key-paths-and-dashes-still-reach-reader-text.md) — [key paths and dashes still reach reader text](docs/backlog/scenarios/UX-1166-key-paths-and-dashes-still-reach-reader-text.md)
+- [UX-1168](docs/backlog/scenarios/UX-1168-the-rails-mark-goes-stale-when-no-section-enters-or-leaves.md) — [the rail's mark goes stale when no section enters or leaves](docs/backlog/scenarios/UX-1168-the-rails-mark-goes-stale-when-no-section-enters-or-leaves.md)
+- [UX-1169](docs/backlog/scenarios/UX-1169-accessible-names-after-ux-1162-still-miss-the.md) — [accessible names after UX-1162 still miss the drawings' values and three labels](docs/backlog/scenarios/UX-1169-accessible-names-after-ux-1162-still-miss-the.md)
+- [UX-1170](docs/backlog/scenarios/UX-1170-filter-residue-after-ux-1165-and-ux-1163.md) — [filter residue after UX-1165 and UX-1163](docs/backlog/scenarios/UX-1170-filter-residue-after-ux-1165-and-ux-1163.md)
+- [UX-1171](docs/backlog/scenarios/UX-1171-layout-residue-at-390-and-forward.md) — [layout residue at 390 and Forward](docs/backlog/scenarios/UX-1171-layout-residue-at-390-and-forward.md)
+- [UX-1172](docs/backlog/scenarios/UX-1172-text-residue-after-ux-1166.md) — [text residue after UX-1166](docs/backlog/scenarios/UX-1172-text-residue-after-ux-1166.md)
+- [UX-1173](docs/backlog/scenarios/UX-1173-the-parallelism-structure-repeats-ids-labels-and-numbers.md) — [the #parallelism structure repeats ids, labels and numbers](docs/backlog/scenarios/UX-1173-the-parallelism-structure-repeats-ids-labels-and-numbers.md)
+- [UX-1175](docs/backlog/scenarios/UX-1175-the-exported-page-ships-indentation.md) — [the exported page ships indentation](docs/backlog/scenarios/UX-1175-the-exported-page-ships-indentation.md)
+- [UX-1176](docs/backlog/scenarios/UX-1176-announcements-after-ux-1169-and-ux-1170-do.md) — [announcements after UX-1169 and UX-1170 do not reach a screen reader](docs/backlog/scenarios/UX-1176-announcements-after-ux-1169-and-ux-1170-do.md)
+- [UX-1177](docs/backlog/scenarios/UX-1177-jump-and-the-rail-disagree-about-what-a.md) — [Jump and the rail disagree about what a level fold and a preset are, after UX-1173](docs/backlog/scenarios/UX-1177-jump-and-the-rail-disagree-about-what-a.md)
+- [UX-1178](docs/backlog/scenarios/UX-1178-layout-and-history-residue-at-390-and-after.md) — [layout and history residue at 390 and after Expand all](docs/backlog/scenarios/UX-1178-layout-and-history-residue-at-390-and-after.md)
+- [UX-1179](docs/backlog/scenarios/UX-1179-print-and-find-in-page-lose-content-the.md) — [print and find-in-page lose content the page has](docs/backlog/scenarios/UX-1179-print-and-find-in-page-lose-content-the.md)
+- [UX-1180](docs/backlog/scenarios/UX-1180-values-and-console-a-zero-length-ratio-an.md) — [values and console: a zero-length ratio, an epoch as hours, a tooltip-only explanation, a spaced hyphen, seven warnings](docs/backlog/scenarios/UX-1180-values-and-console-a-zero-length-ratio-an.md)
+- [UX-1184](docs/backlog/scenarios/UX-1184-the-task-table-s-share-column-says-it.md) — [the task table's share column says it is a share, not a duration](docs/backlog/scenarios/UX-1184-the-task-table-s-share-column-says-it.md)
+- [UX-1185](docs/backlog/scenarios/UX-1185-paging-continues-the-ranking-and-the-copy-label.md) — [paging continues the ranking, and the copy label follows the page](docs/backlog/scenarios/UX-1185-paging-continues-the-ranking-and-the-copy-label.md)
+- [UX-1186](docs/backlog/scenarios/UX-1186-the-element-task-and-binary-tables-join-focus.md) — [the element, task and binary tables join Focus, Inspect and the jump box](docs/backlog/scenarios/UX-1186-the-element-task-and-binary-tables-join-focus.md)
+- [UX-1187](docs/backlog/scenarios/UX-1187-every-element-view-carries-duration-and-level-and.md) — [every element view carries duration and level, and the card lists what an element blocks, bounded](docs/backlog/scenarios/UX-1187-every-element-view-carries-duration-and-level-and.md)
+- [UX-1188](docs/backlog/scenarios/UX-1188-the-compare-chapter-states-how-many-elements-moved.md) — [the compare chapter states how many elements moved and offers them as a bounded, filterable table](docs/backlog/scenarios/UX-1188-the-compare-chapter-states-how-many-elements-moved.md)
+- [UX-1189](docs/backlog/scenarios/UX-1189-copy-exports-the-filtered-population-not-the-page.md) — [Copy exports the filtered population, not the page](docs/backlog/scenarios/UX-1189-copy-exports-the-filtered-population-not-the-page.md)
+- [UX-1190](docs/backlog/scenarios/UX-1190-table-sort-is-keyboard-reachable-shows-its-state.md) — [table sort is keyboard-reachable, shows its state, and ranks the whole population](docs/backlog/scenarios/UX-1190-table-sort-is-keyboard-reachable-shows-its-state.md)
+- [UX-1191](docs/backlog/scenarios/UX-1191-a-key-column-matches-exactly-and-a-one.md) — [a key column matches exactly, and a one-op task table says its op once](docs/backlog/scenarios/UX-1191-a-key-column-matches-exactly-and-a-one.md)
+- [UX-1192](docs/backlog/scenarios/UX-1192-table-strips-and-the-level-profile-say-their.md) — [table strips and the level profile say their values on hover and survive an outlier](docs/backlog/scenarios/UX-1192-table-strips-and-the-level-profile-say-their.md)
+- [UX-1193](docs/backlog/scenarios/UX-1193-the-element-preset-and-the-latent-heavies-section.md) — [the element preset and the latent-heavies section use one population or two names](docs/backlog/scenarios/UX-1193-the-element-preset-and-the-latent-heavies-section.md)
+- [UX-1194](docs/backlog/scenarios/UX-1194-op-and-a-duration-threshold-meet-on-the.md) — [op: and a duration threshold meet on the table that holds durations](docs/backlog/scenarios/UX-1194-op-and-a-duration-threshold-meet-on-the.md)
+- [UX-1195](docs/backlog/scenarios/UX-1195-the-filter-grammar-matches-what-the-page-shows.md) — [the filter grammar matches what the page shows: a constant column, the displayed word, the column's name](docs/backlog/scenarios/UX-1195-the-filter-grammar-matches-what-the-page-shows.md)
+- [UX-1196](docs/backlog/scenarios/UX-1196-a-head-and-tail-fold-prints-copies-and.md) — [a head-and-tail fold prints, copies and jumps to every row it holds, and a short table keeps its sort](docs/backlog/scenarios/UX-1196-a-head-and-tail-fold-prints-copies-and.md)
+- [UX-1197](docs/backlog/scenarios/UX-1197-the-rows-shown-bound-holds-across-next-sort.md) — [the Rows-shown bound holds across Next, sort and the link, and a page step and a sort are announced and named](docs/backlog/scenarios/UX-1197-the-rows-shown-bound-holds-across-next-sort.md)
+- [UX-1198](docs/backlog/scenarios/UX-1198-focus-shows-the-focused-element-s-row-in.md) — [Focus shows the focused element's row in each keyed table, and a focus link restores the bar](docs/backlog/scenarios/UX-1198-focus-shows-the-focused-element-s-row-in.md)
+- [UX-1199](docs/backlog/scenarios/UX-1199-the-element-keyed-tables-declare-their-key-and.md) — [the element-keyed tables declare their key, and by_binary, binary_cost and serial_chains rank and name their quantity](docs/backlog/scenarios/UX-1199-the-element-keyed-tables-declare-their-key-and.md)
+- [UX-1200](docs/backlog/scenarios/UX-1200-every-element-card-lists-what-it-blocks-as.md) — [every element card lists what it blocks, as links, with one count](docs/backlog/scenarios/UX-1200-every-element-card-lists-what-it-blocks-as.md)
+- [UX-1201](docs/backlog/scenarios/UX-1201-the-compare-table-says-both-in-words-and.md) — [the compare table says 'both' in words and scales negative durations](docs/backlog/scenarios/UX-1201-the-compare-table-says-both-in-words-and.md)
+- [UX-1202](docs/backlog/scenarios/UX-1202-plotted-values-reach-a-reader-as-bounded-text.md) — [plotted values reach a reader as bounded text, and an empty status is not mounted at rest](docs/backlog/scenarios/UX-1202-plotted-values-reach-a-reader-as-bounded-text.md)
+- [UX-1203](docs/backlog/scenarios/UX-1203-the-rail-s-tools-and-the-pager-read.md) — [the rail's tools and the pager read as one set, and rail Next, Back and the card folds keep their order](docs/backlog/scenarios/UX-1203-the-rail-s-tools-and-the-pager-read.md)
+- [UX-1204](docs/backlog/scenarios/UX-1204-the-element-view-uid-box-and-an-opened.md) — [the element-view uid box and an opened SQL paste fit at 390, and views.js and element.js drawings carry titles](docs/backlog/scenarios/UX-1204-the-element-view-uid-box-and-an-opened.md)
+- [UX-1206](docs/backlog/scenarios/UX-1206-a-column-s-whole-displayed-name-reads-as.md) — [a column's whole displayed name reads as that column, and a clause not applied says the column is a share](docs/backlog/scenarios/UX-1206-a-column-s-whole-displayed-name-reads-as.md)
+- [UX-1207](docs/backlog/scenarios/UX-1207-every-map-table-s-key-column-has-one.md) — [every map table's key column has one name across header, cell label and Copy](docs/backlog/scenarios/UX-1207-every-map-table-s-key-column-has-one.md)
+- [UX-1208](docs/backlog/scenarios/UX-1208-at-390-a-rail-link-and-expand-all.md) — [at 390 a rail link and Expand all keep the reader's place for Back](docs/backlog/scenarios/UX-1208-at-390-a-rail-link-and-expand-all.md)
+- [UX-1209](docs/backlog/scenarios/UX-1209-the-rail-s-markdown-checkbox-matches-its-13.md) — [the rail's Markdown checkbox matches its 13 px tools](docs/backlog/scenarios/UX-1209-the-rail-s-markdown-checkbox-matches-its-13.md)
+- [UX-1210](docs/backlog/scenarios/UX-1210-the-critical-path-s-head-and-tail-stub.md) — [the critical path's head-and-tail stub never sorts, counts or outlives a bound, and the chain drawing shows no stale More](docs/backlog/scenarios/UX-1210-the-critical-path-s-head-and-tail-stub.md)
+- [UX-1211](docs/backlog/scenarios/UX-1211-copy-follows-the-order-on-screen.md) — [Copy follows the order on screen](docs/backlog/scenarios/UX-1211-copy-follows-the-order-on-screen.md)
+- [UX-1212](docs/backlog/scenarios/UX-1212-focus-heads-its-investigation-and-names-what-the.md) — [Focus heads its investigation and names what the document holds](docs/backlog/scenarios/UX-1212-focus-heads-its-investigation-and-names-what-the.md)
+- [UX-1213](docs/backlog/scenarios/UX-1213-a-value-reads-the-same-in-a-card.md) — [a value reads the same in a card, a table, a badge and a sentence](docs/backlog/scenarios/UX-1213-a-value-reads-the-same-in-a-card.md)
+- [UX-1214](docs/backlog/scenarios/UX-1214-a-card-s-n-more-blocks-reach-every.md) — [a card's +N more Blocks reach every element it counts](docs/backlog/scenarios/UX-1214-a-card-s-n-more-blocks-reach-every.md)
+- [UX-1219](docs/backlog/scenarios/UX-1219-back-after-collapse-all-reopens-what-it-folded.md) — [Back after Collapse all reopens what it folded](docs/backlog/scenarios/UX-1219-back-after-collapse-all-reopens-what-it-folded.md)
+- [UX-1220](docs/backlog/scenarios/UX-1220-the-narrow-rail-jump-box-keeps-the-place-read-for.md) — [the narrow rail jump box keeps the place read for Back, as its links do](docs/backlog/scenarios/UX-1220-the-narrow-rail-jump-box-keeps-the-place-read-for.md)
+- [UX-1221](docs/backlog/scenarios/UX-1221-back-after-a-card-link-restores-the-card-offset.md) — [Back after a card link restores the card offset](docs/backlog/scenarios/UX-1221-back-after-a-card-link-restores-the-card-offset.md)
+- [UX-1222](docs/backlog/scenarios/UX-1222-focus-is-one-step-back.md) — [Focus is one step Back](docs/backlog/scenarios/UX-1222-focus-is-one-step-back.md)
+- [UX-1223](docs/backlog/scenarios/UX-1223-returning-to-all-rows-restores-the-chain-order-or.md) — [returning to All rows restores the chain order, or the badge says sorted](docs/backlog/scenarios/UX-1223-returning-to-all-rows-restores-the-chain-order-or.md)
+- [UX-1224](docs/backlog/scenarios/UX-1224-a-printed-filtered-table-states-its-filter.md) — [a printed filtered table states its filter](docs/backlog/scenarios/UX-1224-a-printed-filtered-table-states-its-filter.md)
+- [UX-1225](docs/backlog/scenarios/UX-1225-a-jump-to-a-binary-lands-on-the-filtered-by-binary.md) — [a jump to a binary lands on the filtered by_binary list](docs/backlog/scenarios/UX-1225-a-jump-to-a-binary-lands-on-the-filtered-by-binary.md)
+- [UX-1226](docs/backlog/scenarios/UX-1226-a-card-label-reads-as-its-column-title.md) — [a card label reads as its column title](docs/backlog/scenarios/UX-1226-a-card-label-reads-as-its-column-title.md)
+- [UX-1227](docs/backlog/scenarios/UX-1227-the-palette-s-first-arrowdown-lands-on-its-first.md) — [the palette's first ArrowDown lands on its first row](docs/backlog/scenarios/UX-1227-the-palette-s-first-arrowdown-lands-on-its-first.md)
+- [UX-1228](docs/backlog/scenarios/UX-1228-a-transitive-downstream-clause-filters-the-elements.md) — [a transitive downstream: clause filters the elements an element blocks, through every level](docs/backlog/scenarios/UX-1228-a-transitive-downstream-clause-filters-the-elements.md)
+- [UX-1229](docs/backlog/scenarios/UX-1229-focusing-the-elements-filter-box-after-n-more-is.md) — [focusing the Elements filter box after +N more is measured at 390 for the touch keyboard](docs/backlog/scenarios/UX-1229-focusing-the-elements-filter-box-after-n-more-is.md)
+- [UX-1234](docs/backlog/scenarios/UX-1234-a-column-title-a-card-shares-reads-as-the-reader-s-word.md) — [a column title the card shares reads as the reader's word](docs/backlog/scenarios/UX-1234-a-column-title-a-card-shares-reads-as-the-reader-s-word.md)
+- [UX-1236](docs/backlog/scenarios/UX-1236-a-bare-downstream-comparison-says-what-it-read.md) — [a bare `downstream > N` says what it read, and `downstream_count > N` is guarded](docs/backlog/scenarios/UX-1236-a-bare-downstream-comparison-says-what-it-read.md)
+- [UX-1246](docs/backlog/scenarios/UX-1246-the-capacity-recommendation-names-a-policy-cap-as-cpu.md) — [the capacity recommendation names the host-core cap "CPU" while CPU does not bind](docs/backlog/scenarios/UX-1246-the-capacity-recommendation-names-a-policy-cap-as-cpu.md)
+- [UX-1248](docs/backlog/scenarios/UX-1248-a-finding-title-leads-with-its-number-and-stays-short.md) — [finding titles run to 276 characters and bury the number they lead with](docs/backlog/scenarios/UX-1248-a-finding-title-leads-with-its-number-and-stays-short.md)
+- [UX-1249](docs/backlog/scenarios/UX-1249-findings-say-each-thing-once-and-info-without-action-folds.md) — [findings name the same elements twice and ten Info findings carry no step](docs/backlog/scenarios/UX-1249-findings-say-each-thing-once-and-info-without-action-folds.md)
+- [UX-1250](docs/backlog/scenarios/UX-1250-a-next-step-command-names-the-run-by-its-snapshot.md) — [next-step commands carry a 100-character absolute run path](docs/backlog/scenarios/UX-1250-a-next-step-command-names-the-run-by-its-snapshot.md)
+- [UX-1251](docs/backlog/scenarios/UX-1251-the-floors-drawing-labels-collide-on-a-narrow-segment.md) — [the floors drawing's labels overprint each other when the chain segment is narrow](docs/backlog/scenarios/UX-1251-the-floors-drawing-labels-collide-on-a-narrow-segment.md)
+- [UX-1252](docs/backlog/scenarios/UX-1252-all-clear-counters-are-one-sentence-and-values-keep-separators.md) — [zero counters take a row each, counts lose their separators, and an absence names the wrong series](docs/backlog/scenarios/UX-1252-all-clear-counters-are-one-sentence-and-values-keep-separators.md)
+- [UX-1254](docs/backlog/scenarios/UX-1254-an-agent-sizing-card-for-the-capacity-operator.md) — [the capacity operator assembles a sizing answer from five sections](docs/backlog/scenarios/UX-1254-an-agent-sizing-card-for-the-capacity-operator.md)
+- [UX-1257](docs/backlog/scenarios/UX-1257-the-compare-chapter-leads-with-the-delta.md) — ["What changed since last time?" has an empty lead, and the first screen never says the delta](docs/backlog/scenarios/UX-1257-the-compare-chapter-leads-with-the-delta.md)
+- [UX-1258](docs/backlog/scenarios/UX-1258-the-capacity-bound-first-action-has-no-why-disclosure.md) — [the capacity-bound first action row has no numbered "Why #1" disclosure](docs/backlog/scenarios/UX-1258-the-capacity-bound-first-action-has-no-why-disclosure.md)
+- [UX-1261](docs/backlog/scenarios/UX-1261-the-binary-cost-answer-names-a-binary-its-first-page-does-not-show.md) — [#binary_cost's answer sentence names `make` over a pair table whose first page does not show make](docs/backlog/scenarios/UX-1261-the-binary-cost-answer-names-a-binary-its-first-page-does-not-show.md)
+- [UX-1267](docs/backlog/scenarios/UX-1267-ranked-element-cards-never-show-the-map-rows.md) — [ranked element cards never show the map rows ("On the path")](docs/backlog/scenarios/UX-1267-ranked-element-cards-never-show-the-map-rows.md)
+- [UX-1269](docs/backlog/scenarios/UX-1269-one-quantity-under-four-names-on-the-capacity-page.md) — [one wait quantity carries four names, and two glosses contradict their source](docs/backlog/scenarios/UX-1269-one-quantity-under-four-names-on-the-capacity-page.md)
+- [UX-1270](docs/backlog/scenarios/UX-1270-an-all-clear-group-keeps-a-no-that-answers.md) — [the all-clear group is labelled "None" and swallows a "no" or a 0 ms that answers the question](docs/backlog/scenarios/UX-1270-an-all-clear-group-keeps-a-no-that-answers.md)
+- [UX-1271](docs/backlog/scenarios/UX-1271-a-finding-step-hands-its-command-over-as-a-command.md) — [a finding's Next line runs its command into prose, with no copy control, and the High step names enum words](docs/backlog/scenarios/UX-1271-a-finding-step-hands-its-command-over-as-a-command.md)
+- [UX-1273](docs/backlog/scenarios/UX-1273-the-ready-queue-question-asks-what-it-does-not-count.md) — ["How much work was waiting to start?" excludes work waiting for a builder, so a capacity-bound run reads 1% queued](docs/backlog/scenarios/UX-1273-the-ready-queue-question-asks-what-it-does-not-count.md)
+- [UX-1276](docs/backlog/scenarios/UX-1276-a-saving-is-priced-in-agent-hours-a-day.md) — [every saving is in build seconds, and the lead asks what it is worth to the team](docs/backlog/scenarios/UX-1276-a-saving-is-priced-in-agent-hours-a-day.md)
+- [UX-1279](docs/backlog/scenarios/UX-1279-a-sort-button-names-what-pressing-it-does.md) — [a sort button's name says what pressing it does, not "sort: By binary"](docs/backlog/scenarios/UX-1279-a-sort-button-names-what-pressing-it-does.md)
+
+**guards**
+
+- [UX-1167](docs/backlog/scenarios/UX-1167-the-page-has-255-b-of-its-150.md) — [the page has 255 B of its 150,000 B budget left, and every viewer row now pays with cuts](docs/backlog/scenarios/UX-1167-the-page-has-255-b-of-its-150.md)
+- [UX-1174](docs/backlog/scenarios/UX-1174-the-page-size-guard-subtracts-the-embedded-data.md) — [the page-size guard subtracts the embedded data's characters, not its bytes](docs/backlog/scenarios/UX-1174-the-page-size-guard-subtracts-the-embedded-data.md)
+- [UX-1181](docs/backlog/scenarios/UX-1181-two-page-half-instruments-disagree-by-169-b.md) — [two page-half instruments disagree by 169 B, and two tests still count characters](docs/backlog/scenarios/UX-1181-two-page-half-instruments-disagree-by-169-b.md)
+- [UX-1215](docs/backlog/scenarios/UX-1215-a-back-pushing-browser-guard-runs-on-a.md) — [a Back-pushing browser guard runs on a fresh history](docs/backlog/scenarios/UX-1215-a-back-pushing-browser-guard-runs-on-a.md)
+- [UX-1216](docs/backlog/scenarios/UX-1216-the-store-trend-comparison-band-and-element-history.md) — [the store trend, comparison band and element history drawings are on a built test page](docs/backlog/scenarios/UX-1216-the-store-trend-comparison-band-and-element-history.md)
+- [UX-1217](docs/backlog/scenarios/UX-1217-a-browser-guard-leaves-no-preference-behind-in.md) — [a browser guard leaves no preference behind in the worker's shared Chrome](docs/backlog/scenarios/UX-1217-a-browser-guard-leaves-no-preference-behind-in.md)
+- [UX-1230](docs/backlog/scenarios/UX-1230-the-badge-s-all-n-matched-arm-and-the-said-back.md) — [the badge's all-N-matched arm and the said-back clause's owned-words rule have a mutation that reddens them](docs/backlog/scenarios/UX-1230-the-badge-s-all-n-matched-arm-and-the-said-back.md)
+- [UX-1232](docs/backlog/scenarios/UX-1232-the-hang-guard-s-sleeper-does-not-take-49-9-s-of.md) — [the hang guard's sleeper does not take 49.9 s of wall at 2.05 s of user](docs/backlog/scenarios/UX-1232-the-hang-guard-s-sleeper-does-not-take-49-9-s-of.md)
+- [UX-1233](docs/backlog/scenarios/UX-1233-the-page-budget-is-raised-to-165-000-b.md) — [the page budget is raised to 165,000 B for round 161's eleven viewer rows](docs/backlog/scenarios/UX-1233-the-page-budget-is-raised-to-165-000-b.md)
+- [UX-1235](docs/backlog/scenarios/UX-1235-a-binary-jump-lands-below-the-stuck-tools-at-every-width.md) — [a binary jump lands below the stuck tools, at every width, with the rail open](docs/backlog/scenarios/UX-1235-a-binary-jump-lands-below-the-stuck-tools-at-every-width.md)
+- [UX-1260](docs/backlog/scenarios/UX-1260-the-binary-jump-landing-guard-misses-1440-rail-open.md) — [the binary-jump landing is unguarded at 1440 with the rail open, and UX-1236's several-candidates branch has no page](docs/backlog/scenarios/UX-1260-the-binary-jump-landing-guard-misses-1440-rail-open.md)
+- [UX-1262](docs/backlog/scenarios/UX-1262-no-page-guard-has-rendered-a-comparison-from-an-exported-page.md) — [`pages.export_uri` copies only the snapshot, so no page guard has ever rendered a comparison](docs/backlog/scenarios/UX-1262-no-page-guard-has-rendered-a-comparison-from-an-exported-page.md)
+- [UX-1264](docs/backlog/scenarios/UX-1264-no-fixture-has-resource-wait-as-its-biggest-wait-category.md) — [no fixture has resource_wait as its biggest wait category, so wait-category's step is unexercised](docs/backlog/scenarios/UX-1264-no-fixture-has-resource-wait-as-its-biggest-wait-category.md)
+- [UX-1313](docs/backlog/scenarios/UX-1313-the-dangling-help-scan-reads-a-scratch-file-another-guard-deletes.md) — [the dangling-help scan reads a scratch file another guard deletes mid-run](docs/backlog/scenarios/UX-1313-the-dangling-help-scan-reads-a-scratch-file-another-guard-deletes.md)
+- [UX-1338](docs/backlog/scenarios/UX-1338-no-progress-leaks-into-the-next-test.md) — [two snapshot tests leak `BGA_NO_PROGRESS` into whichever test runs next](docs/backlog/scenarios/UX-1338-no-progress-leaks-into-the-next-test.md)
+- [UX-1340](docs/backlog/scenarios/UX-1340-the-dev-extra-pins-a-hypothesis-the-3-9-cell-cannot-install.md) — [the dev extra pins a hypothesis the 3.9 cell cannot install, and main has been red since](docs/backlog/scenarios/UX-1340-the-dev-extra-pins-a-hypothesis-the-3-9-cell-cannot-install.md)
+
+**docs**
+
+- [UX-1231](docs/backlog/scenarios/UX-1231-the-styleguide-states-two-rules-a-filtering-link.md) — [the styleguide states two rules: a filtering link moves focus to its filter, an entry naming no View is at the opening View](docs/backlog/scenarios/UX-1231-the-styleguide-states-two-rules-a-filtering-link.md)
+- [UX-902](docs/backlog/scenarios/UX-0902-the-showcase-case-file-and-its-two-capture-rule.md) — [a showcase case is two captures, and there is nowhere to put one](docs/backlog/scenarios/UX-0902-the-showcase-case-file-and-its-two-capture-rule.md)
+- [UX-1294](docs/backlog/scenarios/UX-1294-changelog-links-resolve-from-the-repo-root.md) — [the CHANGELOG's task links resolve from the repository root](docs/backlog/scenarios/UX-1294-changelog-links-resolve-from-the-repo-root.md)
+- [UX-1288](docs/backlog/scenarios/UX-1288-a-pilot-kit-runs-bga-in-a-teams-ci-in-report-only-mode.md) — [a pilot kit runs bga in a team's CI, report-only, from one script](docs/backlog/scenarios/UX-1288-a-pilot-kit-runs-bga-in-a-teams-ci-in-report-only-mode.md)
+- [UX-1292](docs/backlog/scenarios/UX-1292-stale-and-retired-doc-pages-are-corrected.md) — [the stale claims the docs audit found are corrected, and the retired stub is removed](docs/backlog/scenarios/UX-1292-stale-and-retired-doc-pages-are-corrected.md)
+- [UX-1289](docs/backlog/scenarios/UX-1289-docs-front-door-is-a-router-not-a-round-log.md) — [`docs/README.md` is a one-screen router by job, and the round log moves under `audits/`](docs/backlog/scenarios/UX-1289-docs-front-door-is-a-router-not-a-round-log.md)
+- [UX-1293](docs/backlog/scenarios/UX-1293-design-directions-holds-directions-not-round-history.md) — [`design/directions.md` holds the directions in order, and its round history moves to `audits/`](docs/backlog/scenarios/UX-1293-design-directions-holds-directions-not-round-history.md)
+- [UX-1299](docs/backlog/scenarios/UX-1299-three-pointers-name-where-the-audit-history-used-to-be.md) — [three pointers name a place in the audit and design history that is no longer there](docs/backlog/scenarios/UX-1299-three-pointers-name-where-the-audit-history-used-to-be.md)
+- [UX-1296](docs/backlog/scenarios/UX-1296-the-pilot-guide-states-a-band-threshold-and-an-exit-6-the-kit-does-not-have.md) — [`pilot.md` states a band threshold and an exit-6 behaviour the kit does not have](docs/backlog/scenarios/UX-1296-the-pilot-guide-states-a-band-threshold-and-an-exit-6-the-kit-does-not-have.md)
+- [UX-1297](docs/backlog/scenarios/UX-1297-the-pilot-workflow-keeps-no-pull-request-verdict.md) — [the pilot's workflow keeps no pull request's verdict, and its overhead control is in no file](docs/backlog/scenarios/UX-1297-the-pilot-workflow-keeps-no-pull-request-verdict.md)
+- [UX-1290](docs/backlog/scenarios/UX-1290-cli-md-is-split-into-commands-contracts-and-viewer.md) — [`cli.md` is split into a command reference, a contracts page and a viewer page, and user switches are separated from internal variables](docs/backlog/scenarios/UX-1290-cli-md-is-split-into-commands-contracts-and-viewer.md)
+- [UX-1291](docs/backlog/scenarios/UX-1291-a-sharing-a-capture-guide.md) — [one guide says how to keep, share, anonymise and reload a capture](docs/backlog/scenarios/UX-1291-a-sharing-a-capture-guide.md)
+- [UX-1300](docs/backlog/scenarios/UX-1300-the-jobserver-guide-names-every-per-element-switch.md) — [the jobserver guide names every way to keep one element out of `auto` or force its style](docs/backlog/scenarios/UX-1300-the-jobserver-guide-names-every-per-element-switch.md)
+- [UX-1303](docs/backlog/scenarios/UX-1303-bga-config-s-hand-edited-keys-have-no-section-saying-what-each-one-does.md) — [`.bga/config`'s hand-edited keys have no section saying what each one does](docs/backlog/scenarios/UX-1303-bga-config-s-hand-edited-keys-have-no-section-saying-what-each-one-does.md)
+- [UX-1308](docs/backlog/scenarios/UX-1308-the-graph-owner-has-no-end-to-end-guide.md) — [the graph owner has no end-to-end guide](docs/backlog/scenarios/UX-1308-the-graph-owner-has-no-end-to-end-guide.md)
+- [UX-1307](docs/backlog/scenarios/UX-1307-about-twenty-user-facing-flags-are-named-by-no-doc-at-all.md) — [about twenty user-facing flags are named by no doc at all](docs/backlog/scenarios/UX-1307-about-twenty-user-facing-flags-are-named-by-no-doc-at-all.md)
+- [UX-1305](docs/backlog/scenarios/UX-1305-a-capture-that-recorded-zero-processes-has-no-troubleshooting-guide.md) — [a capture that recorded zero processes has no troubleshooting guide](docs/backlog/scenarios/UX-1305-a-capture-that-recorded-zero-processes-has-no-troubleshooting-guide.md)
+- [UX-1306](docs/backlog/scenarios/UX-1306-no-guide-says-the-run-store-grows-or-how-to-prune-it.md) — [no guide says the run store grows, or how to prune it](docs/backlog/scenarios/UX-1306-no-guide-says-the-run-store-grows-or-how-to-prune-it.md)
+- [UX-1329](docs/backlog/scenarios/UX-1329-the-first-commands-are-the-first-thing-help-shows.md) — [The README's real-project install line installs the user's project, and `bga --help` buries doctor, snapshot and view](docs/backlog/scenarios/UX-1329-the-first-commands-are-the-first-thing-help-shows.md)
+- [UX-1332](docs/backlog/scenarios/UX-1332-json-contracts-and-the-schema-name-the-old-command-for-variant-cost.md) — [`json-contracts.md` and the `junction-cost/v1` schema still name `bga junction-cost` as the emitter](docs/backlog/scenarios/UX-1332-json-contracts-and-the-schema-name-the-old-command-for-variant-cost.md)
+- [UX-1334](docs/backlog/scenarios/UX-1334-four-junction-round-changes-no-guide-names.md) — [wrapper-script capture, `cache-logs` across junctions, doctor's junction check and help's start block are in no guide](docs/backlog/scenarios/UX-1334-four-junction-round-changes-no-guide-names.md)
+- [UX-1341](docs/backlog/scenarios/UX-1341-the-release-guide-spells-release-notes-with-positional-markers.md) — [the release guide spells `bga release-notes` with positional markers the CLI refuses](docs/backlog/scenarios/UX-1341-the-release-guide-spells-release-notes-with-positional-markers.md)
+
+<!-- /generated -->
 
 ## 0.5.0 — the tool prices its own cost and the jobserver (2026-09-29)
 
@@ -107,6 +366,7 @@ filed `UX-1135`, closed before this cut, and six bookkeeping lines.
 `UX-1134`'s memory gate ships with its Graviton reading still open.
 
 ```text state
+digest: 6157b7b8d5e4
 contracts: analyze/v2 analyze/v3 analyze/v4 analyze/v5 analyze/v6 blast/v1 blast/v2 bundle-manifest/v1 capacity-model/v1 capture-layout/v1 compare/v1 compare/v2 correlate/v1 correlate/v2 host-samples/v1 host/v1 host/v2 junction-cost/v1 plane2/v1 plane2/v2 plane2/v3 sources/v1 store-aggregate/v1 store/v1 sweep/v1 tail/v1 whatif/v1
 commands: analyze baseline blast bundle cache-logs cache-trend capture checkout-cost chrome-to-trace compare correlate cross-check diagnostics doctor extract floors gen-synthetic graph graph-from-show junction-cost log-to-chrome native-to-chrome rebuild-set release-notes replay run-context snapshot sweep timeline utilisation view whatif wrap
 ```

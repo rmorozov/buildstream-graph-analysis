@@ -62,12 +62,8 @@ console.log(JSON.stringify(out));
 
 @needs_browser
 def test_the_column_and_the_card_read_on_the_path_and_duration(tmp_path):
-    import tools.bga_view as view
-
-    page = tmp_path / "big.html"
-    view.export(str(pages.two_plane_run(tmp_path, ("--layers", "30", "--width", "60"), name="big")), str(page))
     with Browser(chrome) as browser:
-        got = browser.measure(page.as_uri(), _READ, 1440, 900)
+        got = browser.measure(pages.two_plane_uri(("--layers", "30", "--width", "60"), name="big"), _READ, 1440, 900)
     assert got["heads"]["probability"] == got["card"]["probability"] == "On the path", got
     assert (got["heads"]["element_durations"], got["card"]["duration_us"]) == ("Element duration", "Duration"), got
 

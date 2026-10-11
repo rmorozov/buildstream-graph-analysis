@@ -225,7 +225,7 @@ jobs:
 
       - uses: actions/setup-python@v7
         with:
-          python-version: "3.11"
+          python-version: "3.12"
 
       # BuildStream's CAS plus a freedesktop-sdk base is larger than a
       # stock runner's free space. These four directories are the usual

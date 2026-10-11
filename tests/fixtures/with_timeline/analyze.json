@@ -104,7 +104,8 @@
             "title": "23.1 s (50.0% of the build) is what the top 3 are worth together",
             "detail": [
                 "    That is more than the 16.1 s alone: a later step pays off only once the earlier ones are done",
-                "    In this order: core.bst (31.1 s) -> codegen.bst (24.1 s, pays off after the step before) -> lib-b.bst (20.1 s)"
+                "    In this order: core.bst (31.1 s) -> codegen.bst (24.1 s, pays off after the step before) -> lib-b.bst (20.1 s)",
+                "    Not the table above: the table ranks by time on the critical path, this order by what each step saves once the steps before it are done, so step 2 enters here and not there"
             ],
             "elements": [
                 "core.bst",
@@ -122,7 +123,7 @@
                 "command": "bga blast core.bst <fixture>/run"
             },
             "reader": "local-optimizer",
-            "copy_text": "BGA finding: 23.1 s (50.0% of the build) is what the top 3 are worth together\n      That is more than the 16.1 s alone: a later step pays off only once the earlier ones are done\n      In this order: core.bst (31.1 s) -> codegen.bst (24.1 s, pays off after the step before) -> lib-b.bst (20.1 s)\n  joint_saving_us 23.1 s\n  sum_of_individual_us 16.1 s\n  savings_add False\n  relation compound\n  Elements: core.bst, codegen.bst, lib-b.bst\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
+            "copy_text": "BGA finding: 23.1 s (50.0% of the build) is what the top 3 are worth together\n      That is more than the 16.1 s alone: a later step pays off only once the earlier ones are done\n      In this order: core.bst (31.1 s) -> codegen.bst (24.1 s, pays off after the step before) -> lib-b.bst (20.1 s)\n      Not the table above: the table ranks by time on the critical path, this order by what each step saves once the steps before it are done, so step 2 enters here and not there\n  joint_saving_us 23.1 s\n  sum_of_individual_us 16.1 s\n  savings_add False\n  relation compound\n  Elements: core.bst, codegen.bst, lib-b.bst\n  Run: 054a6c451c526eae4c3d22bc7eac00aba96b45a1eb3bcb42d653aba83f6f1aec\n  Captured: 2026-08-21 17:01:28 UTC",
             "trace_query": "waited-on-flow",
             "trace_queries": [
                 "waited-on-flow",
@@ -2350,10 +2351,10 @@
         }
     ],
     "document_shape": {
-        "leaves": 1579,
+        "leaves": 1580,
         "deepest_depth": 6,
         "deepest_path": "findings.[].evidence.rows.[].element_uid",
-        "deeper_than_three": 956,
-        "deeper_than_three_share": 0.6054464851171628
+        "deeper_than_three": 957,
+        "deeper_than_three_share": 0.6056962025316456
     }
 }

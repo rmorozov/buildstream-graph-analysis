@@ -72,7 +72,7 @@ def measured(request, browser, tmp_path_factory):
     """`{width: out}` for one fixture, and the path it was exported
     from - `run.run`'s value, read the same way `app.js` reads it."""
     into = tmp_path_factory.mktemp(f"u828-{request.param}")
-    uri = pages.export_uri(pages.FIXTURES[request.param], into)
+    uri = pages.export_page(pages.FIXTURES[request.param], into).as_uri()
     run_path = os.path.abspath(into / "snapshot" / pages.FIXTURES[request.param].name)
     return {width: browser.measure(uri, _MEASURE, width=width, height=height) for width, height in WIDTHS}, run_path
 

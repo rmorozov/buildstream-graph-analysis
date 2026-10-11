@@ -3401,6 +3401,12 @@ _RUN_INSTANCE_HINT = {
                     "max(0, ceiling — builders) under auto, "
                     "ceiling — 1 otherwise; null when off.",
                 },
+                "seed_bound": {
+                    "description": "What bounded the seed under auto: the "
+                    "target's own max-jobs less one with no plan, the "
+                    "host's cores, the build's cgroup memory cap, or a hand-typed seed; "
+                    "null otherwise.",
+                },
                 "auth": {"description": "fd or fifo, the auth style the tracer used; null when the jobserver was off."},
                 "project_max_jobs": {
                     QUANTITY: "count",
@@ -5117,7 +5123,9 @@ _ANALYZE_HINTS = {
                 "tick is in the total and absent from "
                 "the curve, and a `/proc` read that "
                 "failed ends a series rather than "
-                "reading zero."
+                "reading zero. Present only under "
+                "`--jobserver`: the shim's decision "
+                "rows name each sandbox's host root."
             },
             "note": {"description": "What a CPU figure here means, in a sentence."},
         },

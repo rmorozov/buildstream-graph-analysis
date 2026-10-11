@@ -27,6 +27,7 @@ from .ledger import (
     summarize_jobserver_tokens_by_element,
     tokens_by_element,
 )
+from .memory import follow_sandbox_roots, sandbox_children, sandbox_tree
 from .pool import (
     JOBSERVER_POOL_INTERVAL_S,
     AdmissionBroker,
@@ -67,6 +68,7 @@ __all__ = [
     "cached_log_ranking",
     "close_jobserver",
     "create_jobserver_proxies",
+    "follow_sandbox_roots",
     "jobserver_auth_style",
     "open_jobserver",
     "parse_cached_build_seconds",
@@ -78,6 +80,8 @@ __all__ = [
     "read_plan_peak_rss",
     "read_plan_slack",
     "report_block",
+    "sandbox_children",
+    "sandbox_tree",
     "summarize_jobserver_ledger",
     "summarize_jobserver_leaks",
     "summarize_jobserver_tokens_by_element",

@@ -95,12 +95,7 @@ _MEASURE = (
 
 
 def _two_plane(into):
-    run = pages.two_plane_run(into, ("--layers", "8", "--width", "14"))
-    page = pathlib.Path(into) / "report.html"
-    import tools.bga_view as view
-
-    view.export(str(run), str(page))
-    return page.as_uri()
+    return pages.two_plane_uri(("--layers", "8", "--width", "14"))
 
 
 @pytest.fixture(scope="module", params=["two_plane", "golden", "macro_micro"])

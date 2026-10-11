@@ -215,7 +215,7 @@ def _cell(job, python, red, github, tmp_path):
 
 def _matrix_cells(jobs, github):
     """`UX-995`: the matrix is an expression now, evaluated per event -
-    a pull request gets the newest Python alone, a push all four."""
+    a pull request gets the primary cell alone, a push every classifier."""
     return _Expr(jobs["test"]["strategy"]["matrix"]["python-version"], {"github": github}, {}).value()
 
 
@@ -276,10 +276,10 @@ def test_a_green_pull_request_adopts_nothing(tmp_path):
     "red_by_cell",
     [
         pytest.param({python: set(_suites()) for python in CELLS}, id="every-suite"),
-        pytest.param({CELLS[0]: set(_suites())}, id="one-suite"),
+        *[pytest.param({python: set(_suites())}, id=f"one-suite-{python}") for python in CELLS],
         # `UX-995`: DRIFT and PERF moved onto 3.12.
         pytest.param({"3.12": {DRIFT, PERF}}, id="drift-and-perf"),
-        pytest.param({"3.12": {DRIFT}, "3.11": set(_suites())}, id="drift-and-3.11"),
+        pytest.param({"3.12": {DRIFT}, "3.13": set(_suites())}, id="drift-and-3.13"),
     ],
 )
 def test_a_run_red_for_another_reason_adopts_nothing(red_by_cell, tmp_path):

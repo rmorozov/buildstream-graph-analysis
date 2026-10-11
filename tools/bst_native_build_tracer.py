@@ -68,6 +68,7 @@ import atexit
 import bisect
 import contextlib
 import errno
+import fnmatch
 import gzip
 import hashlib
 import itertools
@@ -119,6 +120,7 @@ from .jobserver import (
     cached_log_ranking,
     close_jobserver,
     create_jobserver_proxies,
+    follow_sandbox_roots,
     jobserver_auth_style,
     open_jobserver,
     parse_cached_build_seconds,
@@ -129,10 +131,14 @@ from .jobserver import (
     read_plan_peak_rss,
     read_plan_slack,
     report_block,
+    sandbox_children,
+    sandbox_tree,
     summarize_jobserver_ledger,
     summarize_jobserver_tokens_by_element,
     tokens_by_element,
 )
+from .jobserver.memory import opening_share, read_build_memory, read_cgroup_limit_bytes
+from .jobserver.pool import capped_width, opening_seed
 
 #: UX-901: `JOBSERVER_SERIES_CAP`/`summarize_jobserver_ledger`/
 #: `summarize_jobserver_tokens_by_element`/`tokens_by_element` are
@@ -926,6 +932,12 @@ def read_host_sample() -> dict:
     return sample
 
 
+def read_host_memory_bound() -> dict:
+    """`UX-1282`: the cgroup cap the build runs under, and whether it or `MemAvailable` binds."""
+    limit = read_cgroup_limit_bytes()
+    return {"mem_limit_kb": None if limit is None else limit // 1024, "mem_bound_by": read_build_memory()[1]}
+
+
 class HostSampler:
     """A background thread writing one JSON object per sample.
 
@@ -971,6 +983,7 @@ class HostSampler:
             "monotonic_at_start": time.monotonic(),
             "mem_total_kb": first.get("mem_total_kb"),
             "swap_total_kb": first.get("swap_total_kb"),
+            **read_host_memory_bound(),
             # Named rather than inferred from an empty file: "this host
             # exposes no /proc/meminfo" and "the build was too short to
             # sample" are different facts.
@@ -1044,11 +1057,8 @@ class HostSampler:
 #: report carries reductions and the samples stay in their own file.
 ELEMENT_CPU_SERIES_CAP = 200
 
-_TRACE_PID_RE = re.compile(r"^(START|END) pid=(\d+) ")
-_TRACE_ELEMENT_RE = re.compile(r" element=(\S+) ")
 
-
-def read_pid_cpu_us(pid: int) -> Optional[int]:
+def read_pid_cpu_us(pid: int, proc_root: str = "/proc") -> Optional[int]:
     """`utime + stime` for one pid, in microseconds, from
     `/proc/<pid>/stat` - the same two fields `spine.c`'s
     `read_cpu_times` reads once at exit, read here on a tick.
@@ -1061,7 +1071,7 @@ def read_pid_cpu_us(pid: int) -> Optional[int]:
     sampled in its own right.
     """
     try:
-        with open(f"/proc/{int(pid)}/stat", encoding="utf-8") as handle:
+        with open(f"{proc_root}/{int(pid)}/stat", encoding="utf-8") as handle:
             raw = handle.read()
     except (OSError, ValueError):
         return None
@@ -1119,23 +1129,23 @@ def element_cpu_series(rows: list, cap: int = ELEMENT_CPU_SERIES_CAP) -> dict:
 
 
 class ElementCpuSampler:
-    """`UX-893`: one `/proc/<pid>/stat` read per traced pid per tick.
+    """`UX-893`/`UX-1314`: utime+stime of every host process under each sandbox, per tick.
 
-    The tick is the host sampler's own 2.0 s (`HOST_SAMPLE_INTERVAL_S`)
-    and the clock is the trace's own `CLOCK_MONOTONIC`, so a sample and
-    a process record sit on one timeline. The pid set is read from the
-    raw trace log as the hook and the spine append to it - both write
-    `START`/`END` lines to the same stream, so a process either plane
-    saw is sampled.
-
-    Best-effort throughout, like `HostSampler`: nothing here may change
-    whether the build succeeds.
+    A sandbox's root is the host pid the shim execs `bwrap` with (its
+    decision row's `pid`); the trace log's pids are namespace-local and
+    every sandbox's start at 2, so they never key a read. Rows are per
+    host pid, so `element_cpu_series` sums rates and an exited
+    descendant ends its own series. No decisions file (no
+    `--jobserver`) is no series. Best-effort, like `HostSampler`.
     """
 
-    def __init__(self, path: str, trace_log_path: str, interval_s: float = HOST_SAMPLE_INTERVAL_S):
+    def __init__(
+        self, path: str, decisions_path: str, interval_s: float = HOST_SAMPLE_INTERVAL_S, proc_root: str = "/proc"
+    ):
         self.path = path
-        self.trace_log_path = trace_log_path
+        self.decisions_path = decisions_path
         self.interval_s = interval_s
+        self.proc_root = proc_root
         self._stop = threading.Event()
         self._thread = None
         self._handle = None
@@ -1148,10 +1158,7 @@ class ElementCpuSampler:
             self._handle = open(self.path, "w", encoding="utf-8")
         except OSError:
             return self
-        # No contract id: this file is an intermediate beside the raw
-        # log, like the jobserver ledger and the invocation log, and
-        # nothing but `attach_element_cpu_series` ever opens it. The
-        # published document is `cpu_time.per_element_series`.
+        # No contract id: an intermediate read only by `attach_element_cpu_series`.
         self._write(
             {
                 "kind": "element cpu samples",
@@ -1184,41 +1191,28 @@ class ElementCpuSampler:
             pass
 
     def _follow(self) -> None:
-        """New `START`/`END` lines since the last tick, into the live
-        pid set. The log is append-only, so an offset resumed from where
-        the last tick stopped is the whole mechanism - and no handle
-        outlives the tick."""
-        try:
-            with open(self.trace_log_path, encoding="utf-8", errors="replace") as handle:
-                handle.seek(self._offset)
-                lines = handle.readlines()
-                self._offset = handle.tell()
-        except OSError:
-            return
-        for line in lines:
-            match = _TRACE_PID_RE.match(line)
-            if not match:
+        roots, self._offset = follow_sandbox_roots(self.decisions_path, self._offset)
+        self._live.update(roots)
+
+    def tick(self, at: float) -> None:
+        self._follow()
+        children = None
+        for root, element in list(self._live.items()):
+            if read_pid_cpu_us(root, self.proc_root) is None:
+                self._live.pop(root, None)  # that sandbox has exited
                 continue
-            event, pid = match.group(1), int(match.group(2))
-            if event == "END":
-                self._live.pop(pid, None)
-                continue
-            element = _TRACE_ELEMENT_RE.search(line)
-            self._live[pid] = element.group(1) if element else "unknown"
+            if children is None:
+                children = sandbox_children(root, self.proc_root)
+            for pid in sandbox_tree(root, children):
+                cpu_us = read_pid_cpu_us(pid, self.proc_root)
+                if cpu_us is None:
+                    continue  # absent, not zero: the series ends where the readings do
+                self._write({"t": at, "pid": pid, "root": root, "element": element, "cpu_us": cpu_us})
+                self.samples += 1
 
     def _run(self) -> None:
         while not self._stop.is_set():
-            self._follow()
-            at = round(time.monotonic(), 3)
-            for pid, element in list(self._live.items()):
-                cpu_us = read_pid_cpu_us(pid)
-                if cpu_us is None:
-                    # Absent, not zero: the process is gone, and the
-                    # series ends where the readings do.
-                    self._live.pop(pid, None)
-                    continue
-                self._write({"t": at, "pid": pid, "element": element, "cpu_us": cpu_us})
-                self.samples += 1
+            self.tick(round(time.monotonic(), 3))
             self._stop.wait(self.interval_s)
 
 
@@ -1334,6 +1328,45 @@ def write_decisions_with_sandbox_make(captured: str, destination: str, jobserver
                     row, sandbox_make=(version or "").splitlines()[0], auth_style=style_for_make_version(version)
                 )
             handle.write(json.dumps(row, sort_keys=True) + "\n")
+
+
+def _auth_map_globs(auth_map_str: Optional[str]) -> list[str]:
+    """UX-1310: every glob `resolve_auth_override` would try, in order, once each."""
+    globs = []
+    for group in (auth_map_str or "").split(";"):
+        style, sep, rest = group.partition(":")
+        if sep and style.strip() in _AUTH_OVERRIDE_STYLES:
+            globs += [glob.strip() for glob in rest.split(",") if glob.strip()]
+    return list(dict.fromkeys(globs))
+
+
+def forced_auth_summary(decisions: list, auth_map_str: Optional[str], element_auth_map: Optional[dict]) -> list[str]:
+    """UX-1310: one line per element a per-element override forced, then one
+    warning per override glob no decision row matched, per annotation naming
+    an element that never ran, and per annotation style outside the four."""
+    rows = [row for row in decisions or [] if row.get("element")]
+    ran = {row["element"] for row in rows}
+    lines, seen = [], set()
+    for row in rows:
+        if row.get("forced_by") and row["element"] not in seen:
+            seen.add(row["element"])
+            how = "--jobserver-auth-override" if row["forced_by"] == "command_line" else "its public: annotation"
+            lines.append(f"Jobserver auth: {row['element']} forced to {row['forced_style']} by {how}")
+    for glob in _auth_map_globs(auth_map_str):
+        if not any(fnmatch.fnmatch(element, glob) for element in ran):
+            lines.append(f"Warning: --jobserver-auth-override glob {glob!r} matched no element in this build")
+    named = {}
+    for name, style in (element_auth_map or {}).items():
+        named.setdefault(name.rsplit(":", 1)[-1], (name, style))
+    for short, (name, style) in named.items():
+        if style not in _AUTH_OVERRIDE_STYLES:
+            lines.append(
+                f"Warning: {name} annotates jobserver-auth: {style}, not one of "
+                f"{', '.join(sorted(_AUTH_OVERRIDE_STYLES))}; ignored"
+            )
+        elif short not in ran:
+            lines.append(f"Warning: {name}'s jobserver-auth annotation names an element this build never ran")
+    return lines
 
 
 def lto_preflight_warnings(decisions: list, jobserver_fifo: Optional[str]) -> list[str]:
@@ -1909,18 +1942,25 @@ def resolve_junction_names(
     return resolved, summary
 
 
+def _public_auth_raw(public_raw: str) -> Optional[str]:
+    """UX-1310: `%{public}`'s `bga: jobserver-auth:` as written, in the four or not;
+    `None` for no `bga:` key or a non-mapping `bga:` block."""
+    bga_block = _parse_yaml_mapping(public_raw).get("bga")
+    if not isinstance(bga_block, dict) or "jobserver-auth" not in bga_block:
+        return None
+    style = bga_block.get("jobserver-auth")
+    if style is False:  # YAML 1.1: unquoted "off" loads as a bool
+        style = "off"
+    return str(style)
+
+
 def _public_auth_style(public_raw: str) -> Optional[str]:
     """UX-882: `%{public}`'s own `bga: jobserver-auth:` sub-domain -
     `yaml.safe_load` via `_parse_yaml_mapping`, so a malformed or absent
     block degrades to `{}` rather than raising. `None` for no `bga:`
     key, a non-mapping `bga:` block, or a value outside the four
     override styles `resolve_auth_override` already accepts."""
-    bga_block = _parse_yaml_mapping(public_raw).get("bga")
-    if not isinstance(bga_block, dict):
-        return None
-    style = bga_block.get("jobserver-auth")
-    if style is False:  # YAML 1.1: unquoted "off" loads as a bool
-        style = "off"
+    style = _public_auth_raw(public_raw)
     return style if style in _AUTH_OVERRIDE_STYLES else None
 
 
@@ -2022,7 +2062,7 @@ def _parse_jobserver_show_records(stdout: str) -> tuple[str, str, dict, dict, di
         if name and kind:
             kinds_lines.append(f"{name} {kind}")
         vars_blocks.append(vars_raw)
-        style = _public_auth_style(public_raw)
+        style = _public_auth_raw(public_raw)  # UX-1310: kept outside the four so the summary warns; the shim ignores it
         if name and style is not None:
             auth_map[name] = style
         if name:
@@ -2716,13 +2756,9 @@ def run_traced_build(
         # probe before it are bga's own work, and a series that included
         # them would describe this tool rather than the build.
         sampler = HostSampler(host_samples_path) if host_samples_path else contextlib.nullcontext()
-        # `UX-893`: and the per-element half of the same question, on
-        # the same tick. `captured_log` is the raw log as the hook and
-        # the spine append to it, which is where the live pid set is.
+        # `UX-893`/`UX-1314`: the per-element half, on the same tick, rooted at the shim's decision rows' host pids.
         cpu_sampler = (
-            ElementCpuSampler(cpu_samples_path, os.path.join(bind_dir, "trace.log"))
-            if cpu_samples_path
-            else contextlib.nullcontext()
+            ElementCpuSampler(cpu_samples_path, captured_decisions) if cpu_samples_path else contextlib.nullcontext()
         )
         try:
             with sampler, cpu_sampler, progress.timed_build():
@@ -2809,6 +2845,11 @@ def run_traced_build(
             # the FIFO whose dirname the probe cache is keyed under.
             for line in lto_preflight_warnings(read_jobserver_decisions(captured_decisions), jobserver_fifo):
                 print(line, file=sys.stderr)
+            if jobserver_fifo:
+                auth_map_str = os.environ.get("BST_TRACE_JOBSERVER_AUTH_MAP")
+                decisions = read_jobserver_decisions(captured_decisions)
+                for line in forced_auth_summary(decisions, auth_map_str, element_auth_map):
+                    print(line, file=sys.stderr)
             close_jobserver(jobserver_fifo, jobserver_fd)
         return returncode
 
@@ -8413,12 +8454,13 @@ def _jobserver_block(report: dict) -> dict:
     (`UX-842`) are not both landed yet, and this reads whichever of them
     the report in hand actually carries, `None` otherwise. `seed`
     (`UX-858`): what the FIFO opened holding, beside the ceiling it can
-    grow toward.
+    grow toward; `seed_bound` (`UX-1283`): what bounded it.
     """
     return {
         "mode": os.environ.get("BGA_JOBSERVER_MODE") or "off",
         "ceiling": report.get("jobserver"),
         "seed": report.get("jobserver_seed"),
+        "seed_bound": report.get("jobserver_seed_bound"),
         "auth": report.get("jobserver_auth"),
         "project_max_jobs": report.get("project_max_jobs"),
     }
@@ -9299,6 +9341,22 @@ def main(argv: Optional[list[str]] = None) -> int:
             element_deps,
             element_notparallel,
         ) = read_jobserver_metadata_for_build(args.project_dir, cmd, args.jobserver)
+        # UX-1283: under `auto` with no plan, open at bst's own max-jobs, not the cores-sized seed.
+        cli_seed = jobserver_seed
+        jobserver_mode = os.environ.get("BGA_JOBSERVER_MODE") or "off"
+        seed_typed = os.environ.get("BGA_JOBSERVER_SEED_TYPED") == "1"
+        seed_args = (jobserver_mode, bool(args.plan), seed_typed)
+        uncapped_seed = opening_seed(jobserver_seed, project_max_jobs, *seed_args)
+        capped_jobs = capped_width(project_max_jobs, opening_share())
+        jobserver_seed = opening_seed(jobserver_seed, capped_jobs, *seed_args)
+        jobserver_seed_bound = None
+        if jobserver_mode == "auto" and args.jobserver:
+            if seed_typed:
+                jobserver_seed_bound = "typed"
+            elif jobserver_seed != uncapped_seed:
+                jobserver_seed_bound = "cgroup"
+            else:
+                jobserver_seed_bound = "max_jobs" if jobserver_seed != cli_seed else "cores"
         jobserver_decisions_path = (
             os.path.join(scratch_mkdtemp(args.project_dir, "jobserver-"), "jobserver_decisions.jsonl")
             if args.jobserver
@@ -9487,6 +9545,7 @@ def main(argv: Optional[list[str]] = None) -> int:
                 # `None`/`[]` when the jobserver itself is off. Not a
                 # `jobserver*` key - stays here rather than in `report_block`.
                 report["project_max_jobs"] = project_max_jobs
+                report["jobserver_seed_bound"] = jobserver_seed_bound
                 with open(args.output, "w", encoding="utf-8") as f:
                     json.dump(report, f, indent=2)
                 # UX-296: and the two capacity scalars the store's aggregate

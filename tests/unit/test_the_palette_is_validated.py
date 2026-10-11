@@ -383,9 +383,8 @@ class TestTheChannelsAreOnThePage:
     """And the channels are not only in the stylesheet's comments —
     the rendered elements carry them."""
 
-    @classmethod
     @pytest.fixture(scope="class")
-    def rendered(cls):
+    def rendered(self):
         result = subprocess.run(
             [node, "--input-type=module", "-e", _PROBE],
             capture_output=True,

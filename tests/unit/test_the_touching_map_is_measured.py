@@ -22,7 +22,7 @@ every push:
 
 Measured before it was believed: **+20% wall clock** with the coverage
 context (33.2s -> 40.0s on a twelve-file subset), which is why it runs
-on 3.11 and never on 3.12 - the interpreter whose seconds `UX-503`'s
+on 3.13 and never on 3.12 - the interpreter whose seconds `UX-503`'s
 tier reference is made of (`UX-995`).
 """
 
@@ -180,10 +180,10 @@ class TestItComesFromCIAndNotFromHere:
         held = WORKFLOW.read_text(encoding="utf-8")
         # The `if:` that *follows* the flags, not the one before them:
         # reading backwards found the previous step's condition, and
-        # the clause passed with the coverage moved onto 3.11.
+        # the clause passed with the coverage moved onto 3.13.
         after = held.split("--cov-context=test", 1)[1]
         condition = [line for line in after.splitlines() if line.strip().startswith("if:")][0]
-        assert "3.11" in condition, condition
+        assert "3.13" in condition, condition
         assert "3.12" not in condition, condition
 
     def test_the_workflow_adopts_it_only_on_the_default_branch(self):

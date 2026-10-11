@@ -18,7 +18,7 @@ git clone --single-branch https://github.com/rmorozov/buildstream-graph-analysis
 pip install ./buildstream-graph-analysis   # or the git URL directly
 ```
 
-Needs **Python 3.9** or newer — that is `requires-python` in `pyproject.toml`, and CI runs 3.9-3.12. Plane 1 and Plane 3 work on that alone; capturing Plane 2 also needs a real `bst` and `bubblewrap`
+Needs **Python 3.12** or newer — that is `requires-python` in `pyproject.toml`, and CI runs 3.12-3.14. Plane 1 and Plane 3 work on that alone; capturing Plane 2 also needs a real `bst` and `bubblewrap`
 in the same venv (`pip install "./buildstream-graph-analysis[bst]"`, or your project's own BuildStream install; `bga[all]`
 is `bst` plus completion). `pip install -e .` from inside this checkout is the **contributor** mode,
 which is what `make test` and `make lint` expect and not what a user needs.
@@ -31,7 +31,7 @@ Tab completion — subcommands, flags, and `@last`/`@prev`/stamps wherever a run
 bga analyze tests/fixtures/golden/mixed_task_kinds --diagnostics   # or: make dev-run
 ```
 
-A three-element fixture that runs instantly. The report is **106 lines**;
+A three-element fixture that runs instantly. The report is **107 lines**;
 its two headline sections are below, verbatim, with every cut marked —
 `UX-192` is on file for a block that claimed to be full output and was
 not:

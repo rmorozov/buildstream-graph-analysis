@@ -194,8 +194,10 @@ def ledger_runs(path=LEDGER):
         cells = [c.strip() for c in line.split("|")[1:-1]]
         # The header and the `|---|` separator split into nine cells
         # too; a round is the only one that is a number.
-        if len(cells) != 9 or not cells[0].isdigit():
+        if len(cells) not in (9, 10) or not cells[0].isdigit():
             continue
+        # `UX-1351`'s cost cell sits after wall; a nine-cell row predates it.
+        cost = _number(cells[7].removeprefix("$"), "") if len(cells) == 10 else None
         runs.append(
             {
                 "round": cells[0],
@@ -205,7 +207,8 @@ def ledger_runs(path=LEDGER):
                 "tokens": _number(cells[4], "k"),
                 "calls": cells[5],
                 "wall": _number(cells[6], "m"),
-                "outcome": cells[7],
+                "cost": cost,
+                "outcome": cells[-2],
             }
         )
     return runs
@@ -295,7 +298,7 @@ def runs_report(runs, window):
     lines = [
         f"{len(runs)} run(s) in the ledger; the last {len(recent)} by kind and model.",
         "",
-        f"{'kind':14s}{'model':10s}{'runs':>6s}{'median tokens':>15s}{'median wall':>13s}",
+        f"{'kind':14s}{'model':12s}{'runs':>6s}{'median tokens':>15s}{'median wall':>13s}{'median $':>10s}",
     ]
     kinds = {}
     for run in recent:
@@ -305,7 +308,9 @@ def runs_report(runs, window):
         walled = [r["wall"] for r in group if r["wall"] is not None]
         tokens = f"{round(statistics.median(priced) / 1000)}k" if priced else "—"
         wall = f"{statistics.median(walled):.1f} m" if walled else "—"
-        lines.append(f"{agent:14s}{model:10s}{len(group):6d}{tokens:>15s}{wall:>13s}")
+        costed = [r["cost"] for r in group if r["cost"] is not None]
+        cost = f"${statistics.median(costed):.2f}" if costed else "—"
+        lines.append(f"{agent:14s}{model:12s}{len(group):6d}{tokens:>15s}{wall:>13s}{cost:>10s}")
     cut = [r for r in runs if "cut" in r["outcome"].lower()]
     unpriced = [r for r in runs if r["tokens"] is None]
     lines += [

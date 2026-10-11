@@ -195,11 +195,11 @@ alone it refuses with `Error: prune needs --keep N, --older-than DAYS and/or
 --max-store SIZE. Nothing was deleted.` `@last`, `@prev` and the newest
 healthy run are never deleted ([`cli.md`](cli.md#bga-snapshot--the-local-loop-ux-126)).
 `--prune` always deletes a snapshot that has no `run/` directory, whatever
-`--keep` says (`UX-167`, the `husks` list in `tools/bga_snapshot.py`): an
-interrupted capture or a `--no-inject` one leaves exactly that. `run/` is
-extracted after the build (`bst_native_build_tracer.py`, `args.run_dir`), so
-by the code a capture still running has none yet: do not prune while one
-runs. (Read from the code, not reproduced.)
+`--keep` says, unless its capture is still running (`UX-167`, `UX-1309`, the
+`husks` list in `tools/bga_snapshot.py`): an interrupted capture or a
+`--no-inject` one leaves exactly that. A running capture is marked by
+`capture.pid` and is kept, counted in `--keep` and `--max-store` but never
+deleted.
 The [pilot](pilot.md) keeps its own 30 bundles per class and does not touch
 `.bga/runs`.
 

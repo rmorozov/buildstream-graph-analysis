@@ -464,11 +464,10 @@ console.log(JSON.stringify({
 }));
 """
 
-    @classmethod
     @pytest.fixture(scope="class")
-    def probed(cls):
+    def probed(self):
         result = subprocess.run(
-            [node, "--input-type=module", "-e", cls._PROBE],
+            [node, "--input-type=module", "-e", self._PROBE],
             capture_output=True,
             text=True,
             cwd=REPO,
@@ -609,16 +608,15 @@ console.log(JSON.stringify({
 }));
 """
 
-    @classmethod
     @pytest.fixture(scope="class")
-    def probed(cls, tmp_path_factory):
+    def probed(self, tmp_path_factory):
         from bga import schemas
 
         into = tmp_path_factory.mktemp("u864-schema")
         schema_path = into / "schema.json"
         schema_path.write_text(json.dumps(schemas.schema(schemas.ANALYZE)), encoding="utf-8")
         result = subprocess.run(
-            [node, "--input-type=module", "-e", cls._PROBE],
+            [node, "--input-type=module", "-e", self._PROBE],
             capture_output=True,
             text=True,
             cwd=REPO,

@@ -96,7 +96,7 @@ _COUNTED = ("--layers", "40", "--width", "30", "--builders", "4")
 def measured(request, tmp_path_factory):
     into = tmp_path_factory.mktemp(f"u1140-{request.param}")
     if request.param == "two_plane":
-        uri = pages.in_place_uri(pages.two_plane_run(into, shape=_SYNTHETIC), into)
+        uri = pages.two_plane_uri(_SYNTHETIC)
     elif request.param == "counted":
         uri = pages.export_uri(pages.scale_run(into, shape=_COUNTED), into)
     else:

@@ -653,6 +653,17 @@ def _forced_auth(override: str, auth_value: str, ctx: dict) -> Optional[str]:
     return auth_value
 
 
+def _forced_auth_source(element: Optional[str]) -> Optional[tuple[str, str]]:
+    """UX-1310: `(style, forced_by)` from the same two sources and order
+    `_jobserver_injection` reads - `command_line` wins over `annotation`;
+    `None` when neither forces the element."""
+    style = resolve_auth_override(os.environ.get("BST_TRACE_JOBSERVER_AUTH_MAP"), element)
+    if style is not None:
+        return style, "command_line"
+    style = _annotation_style(element)
+    return (style, "annotation") if style is not None else None
+
+
 def sandbox_make_auth_style(
     element_kind: Optional[str],
     real_bwrap: str,
@@ -1290,8 +1301,9 @@ def record_jobserver_decision(
     `policy` is `None` for a `pinned` decision (the table is never
     consulted). `kind_context` is `_resolve_kind_and_probe`'s
     `{element_kind, ninja_probe, wrappers_dir}` - bundled into one
-    optional param to keep this under ruff's argument-count cap. Never
-    raises, same contract as `record_diagnostics`."""
+    optional param to keep this under ruff's argument-count cap. UX-1310:
+    its `forced_auth` adds `forced_style`/`forced_by` to an unpinned row.
+    Never raises, same contract as `record_diagnostics`."""
     if not log_path:
         return False
     kind_context = kind_context or {}
@@ -1328,6 +1340,9 @@ def record_jobserver_decision(
         }
         if unresolved:
             record["element_unresolved"] = True
+        forced = kind_context.get("forced_auth")
+        if forced and decision != JOBSERVER_PINNED:
+            record["forced_style"], record["forced_by"] = forced
         line = json.dumps(record, sort_keys=True) + "\n"
         fd = os.open(log_path, os.O_WRONLY | os.O_APPEND | os.O_CREAT, 0o644)
         try:
@@ -1901,6 +1916,8 @@ def _resolve_kind_and_probe(element, jobserver_fd, jobserver_fifo, project_max_j
         "wrappers_dir": wrappers_dir,
         "wrapper_dir_override": os.environ.get("BST_TRACE_WRAPPER_DIR_OVERRIDE"),
         "wrapper_mode": os.environ.get("BST_TRACE_WRAPPER_MODE"),
+        # UX-1310: a no-inject sandbox forces nothing, so its row names nothing.
+        "forced_auth": None if os.environ.get("BST_TRACE_NO_INJECT") == "1" else _forced_auth_source(element),
     }
     active = jobserver_fd is not None or jobserver_fifo is not None
     if not active:

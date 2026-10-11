@@ -77,12 +77,7 @@ _TYPE = r"""
 @pytest.fixture(scope="module")
 def heard(tmp_path_factory):
     uris = pages.pages(tmp_path_factory, prefix="ux1176", labels=["golden", "macro_micro"])
-    both = pages.two_plane_run(tmp_path_factory.mktemp("ux1176-both"), pages.REVIEW_SHAPE)
-    page = tmp_path_factory.mktemp("ux1176-both-page") / "report.html"
-    import tools.bga_view as view
-
-    view.export(str(both), str(page))
-    uris["two_plane"] = page.as_uri()
+    uris["two_plane"] = pages.two_plane_uri(pages.REVIEW_SHAPE)
     with Browser(find_chrome()) as browser:
         return {
             label: {

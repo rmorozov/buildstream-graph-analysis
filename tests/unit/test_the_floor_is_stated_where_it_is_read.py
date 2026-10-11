@@ -26,7 +26,7 @@ STATES_THE_FLOOR = ("README.md",)
 
 
 def _floor():
-    """`"3.9"` from `pyproject.toml`, as written."""
+    """`"3.12"` from `pyproject.toml`, as written."""
     text = (REPO / "pyproject.toml").read_text(encoding="utf-8")
     found = re.search(r'requires-python\s*=\s*"[>=~^]*\s*(\d+\.\d+)', text)
     assert found, "pyproject.toml declares no requires-python"

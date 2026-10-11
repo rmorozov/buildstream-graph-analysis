@@ -5,7 +5,7 @@ its reader chip or its JSON toggle; no finding title ends in a colon,
 shouts a word, or capitalises one mid-sentence (styleguide §6e.1, §6e.3).
 At 390 px a section heading's controls take their own row: every drawn h3
 spans at least 80% of its section's content width and is no taller than
-its text laid out at that full width.
+its text laid out at that width less the fold beside it.
 """
 
 import pathlib
@@ -60,12 +60,16 @@ _SQUEEZE = r"""
     if (!h.getClientRects().length) continue;
     const sec = h.closest("section[data-section]");
     const cs = getComputedStyle(sec);
+    // UX-1350: the fold keeps its place beside the heading, so the text has the row less the fold.
+    const fold = h.parentElement.querySelector(":scope > button.collapse");
+    const beside = fold && fold.getBoundingClientRect().bottom > h.getBoundingClientRect().top
+      ? fold.getBoundingClientRect().width + parseFloat(getComputedStyle(h.parentElement).columnGap || 0) : 0;
     const content = sec.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
     const probe = h.cloneNode(false);  // a bare copy in the real browser, no shim
     for (const a of [...probe.attributes]) probe.removeAttribute(a.name);
     const hs = getComputedStyle(h);
     for (const p of ["font", "letterSpacing", "wordSpacing", "lineHeight", "textTransform"]) probe.style[p] = hs[p];
-    Object.assign(probe.style, {position: "absolute", visibility: "hidden", width: `${content}px`, overflowWrap: "normal"});
+    Object.assign(probe.style, {position: "absolute", visibility: "hidden", width: `${content - beside}px`, overflowWrap: "normal"});
     probe.textContent = h.textContent;
     document.body.append(probe);
     const needs = probe.getBoundingClientRect().height;

@@ -27,16 +27,12 @@ task file, which is the only place it ever lived twice.
 | ID | Scenario | Topic | Priority | Serves | Status |
 |---|---|---|---|---|---|
 | UX-1014 | [the "safe cap plus auto" default is measured on more shapes and hosts before it is anyone's default](UX-1014-the-builders-and-auto-default-is-measured-on-more-shapes-and-hosts.md) | capture | High | R4, R5 | 🔴 Not Started |
-| UX-1040 | [a paired reading decides whether implementers move to opus at low effort](UX-1040-a-paired-reading-decides-the-implementers-model.md) | guards | Medium | every round's implementer spend | 🔴 Not Started |
 | UX-1259 | [UX-861's host-core cap keeps a builder-bound run at 4 builders while the CPU could feed 18](UX-1259-the-host-core-cap-holds-a-builder-bound-run-whose-cpu-idles.md) | analysis | Medium | R1, R5 | 🔴 Not Started |
 | UX-1280 | [the x86 16-core cells of the builders-and-auto default are the owner's run, and it is written down](UX-1280-the-x86-16-core-cells-are-the-owners-run.md) | capture | High | R4, R5 | 🔴 Not Started |
 | UX-1281 | [the memgiant Graviton leg outlives its runner on the third repeat, and its readings die with it](UX-1281-the-memgiant-leg-loses-its-runner-on-a-later-repeat.md) | capture | Medium | R4, R5 | 🔴 Not Started |
-| UX-1282 | [the memory gate reads the host's memory, not the cgroup a container agent is capped at](UX-1282-the-memory-gate-reads-the-host-not-the-cgroup.md) | capture | High | R4, R5 | 🔴 Not Started |
-| UX-1283 | [the pool's seed tokens are handed out before the memory gate has a say](UX-1283-the-pool-seed-is-handed-out-before-the-memory-gate.md) | capture | High | R4, R5 | 🔴 Not Started |
-| UX-1284 | [a link step that peaks above every compile before it is reserved at the compile's size](UX-1284-a-late-memory-peak-is-under-reserved.md) | capture | Medium | R4, R5 | 🔴 Not Started |
-| UX-1309 | [`--prune` deletes a snapshot whose capture is still running](UX-1309-prune-deletes-a-snapshot-whose-capture-is-still-running.md) | capture | Medium | R1, R5 | 🔴 Not Started |
-| UX-1310 | [the decision log says which auth style each element was forced to, and by which switch](UX-1310-the-decision-log-says-which-auth-style-each-element-was-forced-to-and-why.md) | capture | High | R1, R2 | 🔴 Not Started |
-| UX-1314 | [the per-element CPU curve samples the sandbox's processes, not host pids that share their number](UX-1314-the-per-element-cpu-curve-samples-the-sandboxs-processes-not-host-pids-that-share-their-number.md) | capture | Medium | R1, R5 | 🔴 Not Started |
+| UX-1352 | [a `triager` reads the red logs so the session reads a table](UX-1352-a-triager-reads-the-red-logs.md) | guards | Medium | every round's gate and every CI red on a round's pull request | 🔴 Not Started |
+| UX-1354 | [layout-free browser checks read the DOM shim instead of Chrome](UX-1354-layout-free-browser-checks-read-the-dom-shim-instead-of-chrome.md) | guards | Medium | R8 | 🔴 Not Started |
+| UX-1355 | [five sentences say push to main runs "all four" Pythons, and the matrix is three](UX-1355-five-sentences-say-all-four-pythons-and-the-matrix-is-three.md) | docs | Low | R2 | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

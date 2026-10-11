@@ -97,7 +97,8 @@ def test_each_phase_is_announced_and_timed(project, capsys, monkeypatch):
     assert TOTAL.match(lines[-1]), "\n".join(lines)
 
 
-def test_no_progress_prints_the_total_only(project, capsys):
+def test_no_progress_prints_the_total_only(project, capsys, monkeypatch):
+    monkeypatch.setenv("BGA_NO_PROGRESS", "1")  # undone at teardown: --no-progress writes os.environ
     lines = _second_snapshot(capsys, "--no-progress")
     assert not [l for l in lines if ELAPSED.match(l)], "\n".join(lines)
     assert not [l for l in lines if l.endswith("...")], "\n".join(lines)

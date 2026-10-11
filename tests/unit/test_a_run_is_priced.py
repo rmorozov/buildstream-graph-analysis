@@ -183,6 +183,10 @@ NO_DOCUMENT_WAIVER = {
     "132": ("2026-09-23", "UX-891..UX-894's Outcomes name it; shipped with no document (UX-926's Motivation)"),
     "133": ("2026-09-23", "UX-915's and UX-916's Found by name it; shipped with no document (UX-926's Motivation)"),
     "167": ("2026-10-03", "UX-1285..UX-1299's Outcomes name it; #314 shipped with no document (round-168.md)"),
+    "172": (
+        "2026-10-10",
+        "UX-1340, UX-1341 and UX-1344..UX-1346's Outcomes name it; the 0.6.0 release round shipped with no document",
+    ),
 }
 
 

@@ -44,13 +44,8 @@ _PRESS = r"""
 
 
 @pytest.fixture(scope="module")
-def uri(tmp_path_factory):
-    import tools.bga_view as view
-
-    into = tmp_path_factory.mktemp("ux1229")
-    page = into / "report.html"
-    view.export(str(pages.two_plane_run(into, pages.REVIEW_SHAPE)), str(page))
-    return page.as_uri()
+def uri():
+    return pages.two_plane_uri(pages.REVIEW_SHAPE)
 
 
 @needs_browser

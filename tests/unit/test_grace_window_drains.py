@@ -61,7 +61,9 @@ class TestTheStoppingBuildIsStillRead:
                 sys.exit(0)
             signal.signal(signal.SIGINT, stop)
             print("Build started", flush=True)
-            time.sleep(60)
+            # 3.14 holds a SIGINT that lands before one long sleep until it returns (UX-1348).
+            for _ in range(1200):
+                time.sleep(0.05)
         ''',
         )
         proc = _spawn(script)

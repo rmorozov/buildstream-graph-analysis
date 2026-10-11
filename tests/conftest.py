@@ -58,6 +58,18 @@ _LARGE = frozenset(LARGE)
 _MEDIUM = frozenset(MEDIUM)
 
 
+def pytest_configure(config):
+    """`UX-1349`: the controller fixes the run's uid, so it and its workers name one page cache."""
+    if hasattr(config, "workerinput") or not hasattr(config.option, "testrunuid"):
+        return
+    import uuid
+
+    config.option.testrunuid = config.option.testrunuid or uuid.uuid4().hex
+    os.environ["PYTEST_XDIST_TESTRUNUID"] = config.option.testrunuid
+    # a nested pytest inherits the outer owner's pid, so it never claims the cache
+    config._bga_cache_owner = os.environ.setdefault("BGA_PAGE_CACHE_OWNER", str(os.getpid())) == str(os.getpid())
+
+
 def pytest_collection_modifyitems(config, items):
     root = pathlib.Path(config.rootpath)
     for item in items:
@@ -420,10 +432,9 @@ KNOWN_SKIP_REASONS = {
         "the one reason here that names its own coverage elsewhere",
         0,
     ),
-    # `UX-588`: never taken while the floor is 3.9. It exists so the
-    # PEP 604 clause retires itself the day the floor moves, rather
-    # than passing on a check that no longer applies.
-    "the floor has moved to 3.10; PEP 604 is allowed": ("the floor guard's own retirement, unreachable at >=3.9", 0),
+    # `UX-588`: the PEP 604 clause retiring itself; taken since `UX-1348`'s
+    # 3.12 floor, a body skip, so the census reads 0.
+    "the floor has moved to 3.10; PEP 604 is allowed": ("the floor guard's own retirement, taken at >=3.10", 0),
     # `UX-764`: the commit-body cap's population is `origin/main..HEAD`,
     # the same one CI reads (`ci.yml:642`). A checkout without that
     # remote-tracking ref (CI's own `test` job among them - it never
@@ -526,6 +537,12 @@ def pytest_sessionfinish(session, exitstatus):
     # shape this whole item is repairing, found the only way such
     # things are found - by running it against a real absence and
     # checking the complaint actually appeared.
+    if getattr(session.config, "_bga_cache_owner", False):  # UX-1349: only the claiming controller removes it
+        import shutil
+
+        import pages
+
+        shutil.rmtree(pages.cache_root(), ignore_errors=True)
     if getattr(session.config.option, "keyword", None):
         return
     # UX-238: and neither does a *tier* run. `make test-small` filters

@@ -1,4 +1,4 @@
-"""UX-1132: examples/14-16 each hold the property they were built for,
+"""UX-1132/UX-1284: examples/14-17 each hold the property they were built for,
 and every surface that runs them names them.
 
 `check_shape_property.py` is read on synthetic captures (no `bst` here);
@@ -26,6 +26,7 @@ SHAPES = {
     "14-two-giants": ("twogiants", "two-giants"),
     "15-wide-chain": ("widechain", "wide-chain"),
     "16-memory-bound-giant": ("memgiant", "memory-giant"),
+    "17-late-peak-giant": ("latepeak", "late-peak"),
 }
 ARMS = EXAMPLES / "11-serial-giant" / "graviton_arms.sh"
 
@@ -88,6 +89,31 @@ class TestTheCheck:
         plane2, _ = _write(tmp_path, {"giant.bst": 4}, rss={"giant.bst": 83 * 1024})
         assert not check.memory_giant(plane2, "giant.bst", "200")[0]
 
+    @staticmethod
+    def _log(tmp_path, link_mb):
+        """Hook END lines: three cc1 at <= 150 MB, then a make, then the link's lto1."""
+        rows = [(1.0, 140, "/nix/store/x-gcc/libexec/gcc/cc1"), (2.0, 150, "cc1"), (3.0, 120, "cc1")]
+        rows += [(0.5, 900, "/usr/bin/other"), (4.0, link_mb, "/nix/store/x-gcc/libexec/gcc/lto1"), (5.0, 9, "make")]
+        log = tmp_path / "trace.log"
+        log.write_text(
+            "".join(
+                f"END pid={n} ppid=1 ts={ts} element=giant.bst inv=none utime=1.0 maxrss_kb={mb * 1024} cmd={b} -O0\n"
+                for n, (ts, mb, b) in enumerate(rows)
+            )
+            + "END pid=99 ppid=1 ts=6.0 element=other.bst inv=none maxrss_kb=99999999 cmd=lto1\n",
+            encoding="utf-8",
+        )
+        return str(log)
+
+    def test_a_link_at_four_compiles_holds_the_late_peak(self, tmp_path):
+        ok, line = check.late_peak(self._log(tmp_path, 600), "giant.bst", "4")
+        assert ok and "cc1_peak=150MB late_peak=600MB(lto1) ratio=4.0" in line, line
+
+    def test_a_link_no_bigger_than_a_compile_fails_it(self, tmp_path):
+        """The shape's mutation: a late step at 1x, and a peak before the last cc1 does not count."""
+        ok, line = check.late_peak(self._log(tmp_path, 150), "giant.bst", "2")
+        assert not ok and "ratio=1.0" in line, line
+
 
 def _element(shape, name):
     return yaml.safe_load((EXAMPLES / shape / "elements" / name).read_text(encoding="utf-8"))
@@ -115,6 +141,18 @@ class TestTheProjects:
         rungs = [int(v) for v in conf["options"]["mem_lines"]["values"]]
         assert min(rungs) >= 4 * 9800, rungs
 
+    def test_the_late_peak_giant_links_its_lto_units_last(self):
+        conf = yaml.safe_load((EXAMPLES / "17-late-peak-giant" / "project.conf").read_text(encoding="utf-8"))
+        assert conf["options"]["late_k"]["values"] == ["2", "4"]
+        script = "\n".join(_element("17-late-peak-giant", "giant.bst")["config"]["configure-commands"])
+        for needle in ("-flto-partition=one", "add_dependencies(late giant)", "$((%{late_k} * %{unit_lines}))"):
+            assert needle in script, needle
+
+    def test_the_latepeak_leg_runs_the_measured_point(self):
+        """unit_lines 20000, late_k 4: the one point the Outcome measured (4.43x)."""
+        block = ARMS.read_text(encoding="utf-8").split('if [ "$MODE" = latepeak ]; then', 1)[1].split("\nfi\n", 1)[0]
+        assert 'OPTS="--option unit_lines 20000 --option late_k 4"' in block, block
+
 
 class TestTheWiring:
     @pytest.mark.parametrize("shape", SHAPES)
@@ -141,7 +179,9 @@ class TestTheWiring:
     def test_the_probe_runs_every_leg_and_keeps_the_captures(self):
         probe = yaml.safe_load((REPO / ".github/workflows/codspeed-probe.yml").read_text(encoding="utf-8"))
         job = probe["jobs"]["probe"]
-        assert {leg for leg, _ in SHAPES.values()} <= set(job["strategy"]["matrix"]["leg"])
+        legs = job["strategy"]["matrix"]["leg"]  # a dispatch may pick legs; the default runs every shape
+        default = json.loads(re.search(r"\|\| '(\[.*\])'", legs).group(1)) if isinstance(legs, str) else legs
+        assert {leg for leg, _ in SHAPES.values()} <= set(default)
         uploads = [s for s in job["steps"] if str(s.get("uses", "")).startswith("actions/upload-artifact")]
         assert uploads and uploads[0].get("if") == "always()", uploads
         assert "/arms" in uploads[0]["with"]["path"], uploads[0]

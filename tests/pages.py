@@ -490,9 +490,58 @@ def export_page(fixture, into, name="report.html", store=False, **kwargs) -> pat
     return page
 
 
+def cache_root() -> pathlib.Path:
+    """`UX-1349`: one directory per test session, shared by its xdist workers."""
+    import tempfile
+
+    session = os.environ.get("PYTEST_XDIST_TESTRUNUID") or str(os.getpid())
+    return pathlib.Path(tempfile.gettempdir()) / f"bga-pages-{session}"
+
+
+def _shared(key, build) -> pathlib.Path:
+    """The directory `build(into)` filled once per session for `key`; a racing build is thrown away."""
+    import hashlib
+
+    root = cache_root()
+    done = root / hashlib.sha256(repr(key).encode()).hexdigest()[:24]
+    if done.is_dir():
+        return done
+    root.mkdir(parents=True, exist_ok=True)
+    work = root / f".tmp-{os.getpid()}-{done.name}"
+    shutil.rmtree(work, ignore_errors=True)
+    work.mkdir()
+    build(work)
+    try:
+        os.rename(work, done)
+    except OSError:
+        shutil.rmtree(work, ignore_errors=True)
+    return done
+
+
+def _committed(fixture) -> bool:
+    return pathlib.Path(fixture).resolve().is_relative_to(REPO / "tests" / "fixtures")
+
+
 def export_uri(fixture, into, name="report.html", store=False, **kwargs) -> str:
-    """The `file://` URI `Browser.measure` wants; `store=True` copies the project store."""
-    return export_page(fixture, into, name, store=store, **kwargs).as_uri()
+    """The `file://` URI `Browser.measure` wants; `store=True` copies the project store.
+
+    A committed fixture's page is built once per session and shared; `into` is untouched then.
+    """
+    if store or kwargs or not _committed(fixture):
+        return export_page(fixture, into, name, store=store, **kwargs).as_uri()
+    key = ("export", str(pathlib.Path(fixture).resolve()), name)
+    return (_shared(key, lambda work: export_page(fixture, work, name)) / name).as_uri()
+
+
+def two_plane_uri(shape=(), runs=2, name="both") -> str:
+    """`two_plane_run(shape, runs)` exported once per session. The `file://` URI."""
+
+    def build(work):
+        import tools.bga_view as view
+
+        view.export(str(two_plane_run(work, tuple(shape), name=name, runs=runs)), str(work / "report.html"))
+
+    return (_shared(("two_plane", tuple(shape), runs, name), build) / "report.html").as_uri()
 
 
 def pages(tmp_path_factory, prefix="page", labels=None) -> dict:

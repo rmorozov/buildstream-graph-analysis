@@ -132,6 +132,15 @@ element's name inside its own project, without the junction prefix
 (`my_recipe.bst`, not `toolchain.bst:my_recipe.bst`). The flag's full
 entry is in [`cli.md`](cli.md#what-each-flag-does-in-full).
 
+To check it took effect, read the capture's summary on stderr: one
+`Jobserver auth: giant.bst forced to off by ...` line per element an
+override reached, and a `Warning:` per glob that matched no element in
+the build, per annotation on an element the build never ran, and per
+annotated style outside the four. The report's `jobserver_decisions`
+rows carry the same fact: `forced_style` and `forced_by`
+(`command_line` or `annotation`), absent when nothing forced the
+element or it was pinned.
+
 ## What is not measured yet
 
 One arm64 host with slow cores carries every row. Two critical chains, a

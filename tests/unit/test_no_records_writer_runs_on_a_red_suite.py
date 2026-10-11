@@ -16,7 +16,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from test_a_run_red_for_another_reason_adopts_nothing import MAIN, _holds, _status
 from test_the_records_writers_are_one_chain import _ancestors, _jobs, _needs, _writers
 
-CLEAN = ("clean_39", "clean_310", "clean_311", "clean_312")
+CLEAN = ("clean_312", "clean_313", "clean_314")
 
 
 def _reads_a_success(job):

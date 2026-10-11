@@ -547,14 +547,14 @@ class TestTheEmitterStreams:
         writer = trackevent.TrackEventWriter(str(path))
         lane = writer.process_track("lane", pid=1)
         track = writer.thread_track("thread", parent=lane, pid=1, tid=2)
-        midway = 0
         for index in range(20_000):
-            writer.slice_begin(index * 1000, track, f"cmd {index % 40}")
+            # A distinct argv per slice: 3.14's gzip buffers writes, first bytes at 11,806 slices (UX-1348).
+            argv = f"gcc -c src/module_{index}.c -o build/module_{index}.o"
+            writer.slice_begin(index * 1000, track, f"cmd {index % 40}", annotations=(("argv", argv),))
             writer.slice_end(index * 1000 + 500, track)
-            if index == 10_000:
-                midway = path.stat().st_size
+        midway = path.stat().st_size
         assert midway > 0, (
-            "nothing had reached the file after 10,000 slices - the writer "
+            "nothing had reached the file after 20,000 slices - the writer "
             "is holding the trace rather than streaming it"
         )
         writer.close()

@@ -1,6 +1,6 @@
 """UX-539 follow-up: a 3.10+ builtin in a package that claims 3.9.
 
-`requires-python = ">=3.9"` and CI's matrix runs 3.9-3.12, but every
+`requires-python` was `">=3.9"` and CI's matrix ran 3.9-3.12, but every
 local run here is one interpreter. `UX-539`'s bitset closure reached
 for `int.bit_count()`, which arrived in **3.10**, and the whole local
 suite was green:
@@ -121,14 +121,11 @@ class TestNothingReachesPastTheFloor:
             "matrix job is the only thing that sees it:\n  " + "\n  ".join(offenders)
         )
 
-    def test_the_table_would_have_caught_the_one_that_shipped(self):
-        """The reproduction, because the clause above is now green and
-        cannot show what it was for. `bit_count` is in the table at
-        3.10 and the floor is 3.9, so the pair discriminates."""
-        assert ("bit_count", (3, 10)) in [(name, added) for name, added, _what in NEWER_THAN_THE_FLOOR]
-        assert _floor() < (3, 10), (
-            "the floor has reached 3.10, so bit_count is fine now and this reproduction should be retired with its row"
-        )
+    def test_the_table_still_reaches_past_the_floor(self):
+        """The clause above asks only rows newer than the floor; `bit_count`
+        (3.10) retired with `UX-1348`'s 3.12 floor, so one row must remain."""
+        above = [name for name, added, _what in NEWER_THAN_THE_FLOOR if added > _floor()]
+        assert above, f"no row is newer than the floor {_floor()}, so the clause above asks nothing"
 
     def test_a_name_at_or_below_the_floor_is_not_flagged(self):
         """The other direction. Without this the clause above passes by

@@ -66,12 +66,7 @@ _LOOK = r"""
 @pytest.fixture(scope="module")
 def looked(tmp_path_factory):
     uris = pages.pages(tmp_path_factory, prefix="ux1173", labels=["golden", "macro_micro"])
-    both = pages.two_plane_run(tmp_path_factory.mktemp("ux1173-both"), ("--layers", "8", "--width", "14"))
-    page = tmp_path_factory.mktemp("ux1173-both-page") / "report.html"
-    import tools.bga_view as view
-
-    view.export(str(both), str(page))
-    uris["two_plane"] = page.as_uri()
+    uris["two_plane"] = pages.two_plane_uri(("--layers", "8", "--width", "14"))
     with Browser(find_chrome()) as browser:
         return {label: browser.measure(uri, _LOOK, 1440, 900) for label, uri in uris.items()}
 

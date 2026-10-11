@@ -4,12 +4,15 @@
     two-giants   PLANE2 TRACE A B    both wider than one job, BUILD spans overlap
     wide-chain   PLANE2 E1 E2 ...    every chain element wider than one job
     memory-giant PLANE2 E FLOOR_MB   the element's peak RSS per job >= FLOOR_MB
+    late-peak    TRACE_LOG E K       what ends after E's last cc1 peaks >= K x its largest cc1
 
 Prints one line (the step's `::notice::`) and exits 1 when the property
 does not hold. A committed module, not a `run:` one-liner (`UX-354`).
 """
 
+import gzip
 import json
+import os
 import sys
 
 
@@ -67,7 +70,36 @@ def memory_giant(plane2, element, floor_mb):
     return ok, line
 
 
-CHECKS = {"two-giants": two_giants, "wide-chain": wide_chain, "memory-giant": memory_giant}
+def _ends(trace_log, element):
+    """`(ts, maxrss_kb, binary)` per hook END line of `element` (UX-1284)."""
+    opener = gzip.open if trace_log.endswith(".gz") else open
+    rows = []
+    with opener(trace_log, "rt", encoding="utf-8", errors="replace") as handle:
+        for line in handle:
+            if not line.startswith("END "):
+                continue
+            head, _, cmd = line.rstrip("\n").partition(" cmd=")
+            fields = dict(token.split("=", 1) for token in head.split(" ")[1:] if "=" in token)
+            if fields.get("element") != element or "maxrss_kb" not in fields:
+                continue
+            rows.append((float(fields["ts"]), int(fields["maxrss_kb"]), os.path.basename(cmd.split(" ", 1)[0])))
+    return rows
+
+
+def late_peak(trace_log, element, k):
+    rows = _ends(trace_log, element)
+    compiles = [r for r in rows if r[2] in ("cc1", "cc1plus")]
+    last_cc1 = max((r[0] for r in compiles), default=None)
+    late = [r for r in rows if last_cc1 is not None and r[0] > last_cc1]
+    cc1_kb = max((r[1] for r in compiles), default=0)
+    peak = max(late, key=lambda r: r[1], default=(0, 0, "-"))
+    ok = cc1_kb > 0 and peak[1] >= float(k) * cc1_kb
+    ratio = round(peak[1] / cc1_kb, 2) if cc1_kb else None
+    line = f"{element}:cc1_peak={cc1_kb // 1024}MB late_peak={peak[1] // 1024}MB({peak[2]}) ratio={ratio} k={k}"
+    return ok, line
+
+
+CHECKS = {"two-giants": two_giants, "wide-chain": wide_chain, "memory-giant": memory_giant, "late-peak": late_peak}
 
 
 def main(argv):

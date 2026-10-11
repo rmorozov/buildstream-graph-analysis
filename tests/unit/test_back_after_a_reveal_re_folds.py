@@ -119,7 +119,8 @@ def journey(tmp_path_factory):
     uri = pages.export_uri(pages.FIXTURES["macro_micro"], tmp_path_factory.mktemp("back"))
     with Browser(find_chrome()) as browser:
         seen = [value for value in browser.journey(uri, _STEPS, 1440, 900) if value is not None]
-    return dict(zip(_NAMES, seen, strict=True))
+    assert len(seen) == len(_NAMES), seen  # zip(strict=) is 3.10+ (UX-1346)
+    return dict(zip(_NAMES, seen))
 
 
 @needs_browser

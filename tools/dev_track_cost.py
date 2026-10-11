@@ -288,6 +288,8 @@ def report(path, verbose=False):
         lines.append(f"{phase:<9} {turns:6d} {tokens:10d} {100.0 * tokens / total:6.1f}")
     lines.append(f"{'TOTAL':<9} {data['responses']:6d} {total:10d} {100.0:6.1f}")
     lines.append(f"context high-water {data['peak_context']}, cache re-reads {data['cache_read']}")
+    dollars = cost_of(path)
+    lines.append("priced: " + ("— (a model with no row in PRICES)" if dollars is None else f"${dollars:.2f}"))
     if verbose:
         lines.append(f"turns in two phases: {data['ambiguous_turns']} ({data['ambiguous_tokens']} tokens)")
     return "\n".join(lines)
@@ -330,6 +332,90 @@ def implementer_transcripts(root):
 
 _MODEL_WORD = re.compile(r"[a-zA-Z]+")
 
+#: `UX-1351`: dollars per million tokens, from Claude Code 2.1.296's own
+#: billing table - input, output, 5-minute write, 1-hour write, cache read.
+PRICES = {
+    "claude-haiku-5-5": (0.10, 0.50, 0.125, 0.20, 0.01),
+    "claude-sonnet-5-5": (2.0, 10.0, 2.5, 4.0, 0.10),
+    "claude-sonnet-5": (2.0, 10.0, 2.5, 4.0, 0.20),
+    "claude-opus-5-5": (4.0, 20.0, 5.0, 8.0, 0.20),
+    "claude-opus-5": (5.0, 25.0, 6.25, 10.0, 0.50),
+    "claude-fable-5-1": (10.0, 50.0, 12.5, 20.0, 0.25),
+    "claude-fable-5": (10.0, 50.0, 12.5, 20.0, 1.0),
+}
+
+#: Haiku 5.5 bills a response whose whole prompt passes 100K tokens on a
+#: second card, five times the first; no other model here has one.
+LONG_PROMPT = {"claude-haiku-5-5": (100_000, (0.50, 2.50, 0.625, 1.0, 0.05))}
+
+
+def _base_model(raw):
+    """`claude-opus-5-5[1m]` and `claude-opus-5-5-20260101` -> `claude-opus-5-5`."""
+    raw = (raw or "").split("[")[0]
+    return re.sub(r"-\d{8}$", "", raw)
+
+
+def price(usage, model):
+    """One response's dollars, or `None` for a model with no row in `PRICES`."""
+    base = _base_model(model)
+    if base not in PRICES:
+        return None
+    rates = PRICES[base]
+    fresh = usage.get("input_tokens", 0)
+    written = usage.get("cache_creation_input_tokens", 0)
+    read = usage.get("cache_read_input_tokens", 0)
+    if base in LONG_PROMPT and fresh + written + read > LONG_PROMPT[base][0]:
+        rates = LONG_PROMPT[base][1]
+    split_ = usage.get("cache_creation") or {}
+    hour = split_.get("ephemeral_1h_input_tokens", 0)
+    five = written - hour if split_ else written
+    dollars = (
+        fresh * rates[0]
+        + usage.get("output_tokens", 0) * rates[1]
+        + five * rates[2]
+        + hour * rates[3]
+        + read * rates[4]
+    )
+    total = dollars / 1e6
+    # An advisor's consult is billed inside the executor's response, at its own model.
+    for step in usage.get("iterations") or ():
+        if step.get("type") == "advisor_message":
+            consult = price(step, step.get("model"))
+            if consult is None:
+                return None
+            total += consult
+    return total
+
+
+def _models(path):
+    """`message.model` per response, in `responses()`'s own order."""
+    order, model = [], {}
+    with open(path, encoding="utf-8") as handle:
+        for line in handle:
+            record = _record(line)
+            if record is None:
+                continue
+            message = record.get("message")
+            if record.get("type") != "assistant" or not isinstance(message, dict):
+                continue
+            key = message.get("id")
+            if key not in model:
+                order.append(key)
+                model[key] = message.get("model")
+    return [model[key] for key in order]
+
+
+def cost_of(path):
+    """A transcript's dollars, summed per response at that response's model, or `None`
+    when any response names an unpriced model - a partial sum reads as the whole."""
+    total = 0.0
+    for (_tools, usage), model in zip(responses(path), _models(path)):
+        dollars = price(usage, model)
+        if dollars is None:
+            return None
+        total += dollars
+    return total
+
 
 def _agent_and_model(path):
     """`attributionAgent` and `message.model`, from the records - never
@@ -356,6 +442,13 @@ def _model_short(raw):
     return words[0] if words else (raw or "?")
 
 
+def _model_cell(raw):
+    """`UX-1351`: family and version, `claude-sonnet-5-5` -> `sonnet-5-5`; the
+    family alone pooled Sonnet 5 with 5.5."""
+    base = _base_model(raw)
+    return base.removeprefix("claude-") if base.startswith("claude-") else _model_short(raw)
+
+
 def ledger_row(path, round_, task, outcome, friction):
     """One `agent-runs.md` row, derived from the transcript."""
     rows = responses(path)
@@ -367,9 +460,11 @@ def ledger_row(path, round_, task, outcome, friction):
     if stamps:
         wall = (_parse_ts(max(stamps)) - _parse_ts(min(stamps))).total_seconds() / 60
     wall_text = f"{wall:.1f}".removesuffix(".0")
+    dollars = cost_of(path)
+    cost = "—" if dollars is None else f"${dollars:.2f}"
     return (
-        f"| {round_} | {agent} | {_model_short(model)} | {task} | "
-        f"{round(tokens / 1000)}k | {calls} | {wall_text} m | "
+        f"| {round_} | {agent} | {_model_cell(model)} | {task} | "
+        f"{round(tokens / 1000)}k | {calls} | {wall_text} m | {cost} | "
         f"{outcome} | {friction} |"
     )
 

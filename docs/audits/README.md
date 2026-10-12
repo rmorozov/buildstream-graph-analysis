@@ -23,6 +23,7 @@ to instead of superseded:
 | [`directions-history.md`](directions-history.md) | the round, status and verification chapters `design/directions.md` carried between its Directions, and the round-history table every round adds a row to (`UX-1293`) |
 | [`retro-2026-09-28.md`](retro-2026-09-28.md) | the first weekly retro (`UX-999`) — the week's findings by class, main's CI history, three `optimization` proposals |
 | [`retro-2026-10-05.md`](retro-2026-10-05.md) | the second weekly retro — the ledger by class, main's 3.9 cell red since 2026-09-29 on a dev pin above the floor, three `optimization` proposals |
+| [`retro-2026-10-12.md`](retro-2026-10-12.md) | the third weekly retro — a quiet ledger, the browser-share guard adopted up 9.2 points in two days, last week's proposals unfiled |
 
 The rounds themselves:
 

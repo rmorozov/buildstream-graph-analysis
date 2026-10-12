@@ -181,8 +181,10 @@ whole context as fresh tokens. Measured on this session from round 46
 on, at round 94 (2026-09-05): 11 rebuilds were 3.76M of 5.16M tokens
 (73 %); every read, write and test together under a fifth. So the
 orchestrator reads reports, never diffs or logs — the `verifier` reads
-the diff, the track pastes its Outcome parts — and a tool result over
-a screen goes to a file and is read by its head. A batch is as many
+the diff, the track pastes its Outcome parts, the `triager` reads a red
+log (`make push-check`, a CI job's tail, a pull request's CI event) and
+returns its table (`UX-1352`) — and a tool result over a screen goes to
+a file and is read by its head. A batch is as many
 tracks as the merge can price (1.46-1.83 commits per item), not as
 many as the context can hold.
 

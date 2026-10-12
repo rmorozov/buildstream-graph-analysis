@@ -572,7 +572,7 @@ class TestTheSubagentsAreWellFormed:
     #: this the clause below reads "whoever is not on the editing list",
     #: and widening that list would exempt them silently - which is what
     #: `UX-504`'s fifth mutation did while every clause stayed green.
-    REPORTERS = {"architect", "guard-auditor", "researcher", "verifier", "walker"}
+    REPORTERS = {"architect", "guard-auditor", "researcher", "triager", "verifier", "walker"}
 
     def test_a_reporting_agent_cannot_edit_the_tree(self):
         """A verifier that could fix what it found would be judging its
@@ -627,6 +627,22 @@ class TestTheSubagentsAreWellFormed:
         assert any("session" in s and "launches" in s and "never" not in s.lower() for s in sentences), (
             "guard-auditor does not say the session launches the opus reader"
         )
+
+    def test_the_triager_reads_on_haiku_and_an_undecided_red_is_real(self):
+        """`UX-1352`: a cheap reader classes a red log; one it cannot decide stays real."""
+        text = (AGENTS / "triager.md").read_text(encoding="utf-8")
+        frontmatter = _FRONTMATTER.match(text)
+        head = frontmatter.group(1)
+        assert "triager" in self.REPORTERS, "triager is not on the reporting list"
+        assert re.search(r"^model:\s*haiku\s*$", head, re.M), "triager is not on haiku"
+        assert re.search(r"^effort:\s*medium\s*$", head, re.M), "triager is not at effort medium"
+        body = " ".join(text[frontmatter.end() :].split()).replace("**", "")
+        for name in ("environmental", "flake", "real"):
+            assert f"- {name} -" in body, f"triager does not define the {name} class"
+        assert "When no line decides it, the class is real" in body, "an undecided red no longer stays real"
+        assert "the `triager` reads a red" in " ".join(
+            (SKILLS / "decompose/SKILL.md").read_text(encoding="utf-8").split()
+        ), "the decompose skill does not name the triager where the session would open a log"
 
     def test_every_agent_is_an_editor_or_a_reporter(self):
         """`UX-1353`: a new or dropped name must be a decision in one of the two lists."""

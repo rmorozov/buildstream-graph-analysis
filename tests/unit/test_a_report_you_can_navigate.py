@@ -65,14 +65,6 @@ def _boot(page, tmp_path, protocol="file:"):
     module.write_text(_inline(page), encoding="utf-8")
     probe = tmp_path / "probe.mjs"
     probe.write_text(_PROBE, encoding="utf-8")
-    result = subprocess.run(
-        [node, str(probe)],
-        capture_output=True,
-        text=True,
-        cwd=os.getcwd(),
-        timeout=60,
-        env=dict(os.environ, PAGE=str(tmp_path / "page.html"), MOD=str(module), PROTOCOL=protocol),
-    )
     (tmp_path / "page.html").write_text(page, encoding="utf-8")
     result = subprocess.run(
         [node, str(probe)],

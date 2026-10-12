@@ -920,6 +920,8 @@ The model cell carries the version from then on (`sonnet-5-5`).
 | 173 | implementer | sonnet-5-5 | UX-1349 | 25k | 22 | 3.6 m | $0.12 | fix loop 2: nested cleanup fixed, merged | The nested test omitted -p no:xdist and passed under the mutation, since xdist's pytest_configure overwrote the inherited uid and the nested run deleted a different directory. |
 | 173 | implementer | sonnet-5-5 | UX-1342 | 21k | 17 | 1.8 m | $0.10 | fix loop 3: step number, merged | The worktree guard refused export and compound git commands, and dev_refresh_analysis.py silently checks the installed bga rather than the worktree unless PYTHONPATH is set. |
 | 173 | closer | haiku-5-5 | round | 172k | 58 | 36.3 m | $0.05 | haiku closer: 53 ledger rows, 3 row moves, UX-1354, round doc; no close redone | a hung sed-awk check left two shells; the brief's waiver range was wrong |
+| 174 | general-purpose | haiku-5-5 | UX-1352 acceptance: round 170's shape, two planted reds | 78k | 4 | 0.6 m | $0.01 | complete: 25 environmental, 8 real, 0 flake, matching the key | none; 4 tool calls |
+| 174 | architect | opus-5-5 | UX-1354 architect | 75k | 36 | 7.8 m | $0.70 | complete: premise falsified, shim boot slower than a warm Chrome drive | UX-1349's 559 drives figure had no command; a wrapper of Browser._drive misses tests.browser imports |
 
 Round 101's four tracks are **not** here: this session could not
 identify their transcripts with certainty after a context rebuild, and
@@ -932,7 +934,7 @@ committed cleanly once told to run in the foreground. Three of the five
 left a derived figure or a §6 context-map row behind - the same class
 the round itself was about, arriving in the tracks' own work.
 
-What the eight hundred and ninety-eight rows already say: a researcher that reads a document
+What the nine hundred rows already say: a researcher that reads a document
 whole costs 100-180k; a walker that drives every control costs 336k;
 the two cuts cost a re-run each. The `walk` and `design-review`
 skills fix the report shape so the next rows are smaller, and the

@@ -27,7 +27,7 @@ python3 -m pytest -n 2 <the files it lists>
 Measured on a one-module diff: **4s**, 7 files, 123 tests (`UX-336`).
 A *selector*, not a gate - a grep-derived set can miss a test that
 exercises a module without naming it, which is why CI on the pull
-request gates the merge (step 3), on the newest Python alone (`UX-995`).
+request gates the merge (step 3), on the floor Python alone (`UX-995`).
 `python3 tools/dev_touching.py --base <sha> --why` says what selected each file.
 
 Then the tier, when the change is wider than one module:
@@ -58,8 +58,8 @@ python3 -m pytest tests/unit/test_<file>.py -q -k <substring>
 ## 3. The push gate, and the whole suite
 
 `UX-948` (Ruslan, round 138): **CI on the pull request is the gate
-before merge**, and nothing merges red - the newest Python alone;
-push to main still runs all four (`UX-995`). The gate before a push
+before merge**, and nothing merges red - the floor Python alone;
+push to main still runs all three (`UX-995`). The gate before a push
 is the four fast checks, and they write the push hook's marker only
 when all pass:
 

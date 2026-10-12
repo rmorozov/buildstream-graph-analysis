@@ -168,8 +168,8 @@ Per item, the inner loop: `python3 tools/dev_touching.py --base <sha> --list`, t
 mutated red (falsify skill). Per batch: one PR opened *first* (verify
 §7 — a branch with no PR collects no CI), one merge, `make push-check`
 here. CI on the pull request is the gate before merge (`UX-948`,
-Ruslan's decision in round 138) — the newest Python alone; push to
-main still runs all four (`UX-995`) — so no item or batch runs the
+Ruslan's decision in round 138) — the floor Python alone; push to
+main still runs all three (`UX-995`) — so no item or batch runs the
 whole suite locally; nothing merges red.
 
 ## 5. The batch — what the orchestrator pays
@@ -181,8 +181,10 @@ whole context as fresh tokens. Measured on this session from round 46
 on, at round 94 (2026-09-05): 11 rebuilds were 3.76M of 5.16M tokens
 (73 %); every read, write and test together under a fifth. So the
 orchestrator reads reports, never diffs or logs — the `verifier` reads
-the diff, the track pastes its Outcome parts — and a tool result over
-a screen goes to a file and is read by its head. A batch is as many
+the diff, the track pastes its Outcome parts, the `triager` reads a red
+log (`make push-check`, a CI job's tail, a pull request's CI event) and
+returns its table (`UX-1352`) — and a tool result over a screen goes to
+a file and is read by its head. A batch is as many
 tracks as the merge can price (1.46-1.83 commits per item), not as
 many as the context can hold.
 

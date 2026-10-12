@@ -13,7 +13,7 @@ file is the day-one summary, and
 
 | | |
 |---|---|
-| `make test` | the whole suite, which CI's matrix runs: **CI gates the merge** — the newest Python alone on the pull request, all four on push to main — and nothing merges red (`UX-995`). Wall clock moves >2x with the machine — the guide carries the readings |
+| `make test` | the whole suite, which CI's matrix runs: **CI gates the merge** — the floor Python alone on the pull request, all three on push to main — and nothing merges red (`UX-995`). Wall clock moves >2x with the machine — the guide carries the readings |
 | `make push-check` | **the gate before a push** (`UX-948`): `lint`, the touching selector against the merge-base, `dev_sizes.py --check`, `dev_close_task.py --check`; writes the push hook's marker only when all four pass |
 | `make test-touching` | just the files naming the modules your diff touched — a spread over the tree, not a duration; the guide carries it |
 | `make test-small` \| `-medium` \| `-large` \| `-fast` | tiers, from measured duration in `tests/tiers.py` |
@@ -26,7 +26,7 @@ file is the day-one summary, and
 
 ## The pipeline
 
-`orient` → `architect` shapes each row, at most 40% of a round's rows bookkeeping (`UX-993`, `UX-994`) → `decompose` (the **shape**, derived by `dev_close_task.py --shape`) → tracks → `verifier` → `integrator` merges, `walker` on a viewer round → `closer` (row moves, derived counts, ledger rows, round document — fixing guide §7a) → `make push-check`, push; CI on the pull request gates the merge, on the newest Python alone (`UX-995`).
+`orient` → `architect` shapes each row, at most 40% of a round's rows bookkeeping (`UX-993`, `UX-994`) → `decompose` (the **shape**, derived by `dev_close_task.py --shape`) → tracks → `verifier` → `integrator` merges, `walker` on a viewer round → `closer` (row moves, derived counts, ledger rows, round document — fixing guide §7a) → `make push-check`, push; CI on the pull request gates the merge, on the floor Python alone (`UX-995`).
 Mechanical and bounded shapes are `implementer` tracks on `sonnet` in worktrees, launched with `model: opus` when the architect shaped a judgement row or its Decision writes over 150 lines of code (`UX-1039`), and with `model: haiku` when it writes 20 or fewer (`UX-1040`); a judgement shape the `architect` has not shaped is the session's own — the *judgement*, not the work: those rows ran for a 241k median against bounded's 230k (141 of 425 runs; `dev_process_bands.py --runs 232`). The architect is pulled, never a gate.
 `researcher` and `verifier` read on `sonnet`, a model apart from the writers they check, with a blind Haiku `verifier` at `high` beside each sonnet one and the `closer` on Haiku at `medium` (`UX-1040`), and every agent names its `effort` (`UX-1039`); the session judges, briefs and merges, and reads reports, never diffs or logs — its cost is the live
 context at each rebuild — the `decompose` skill carries the measured share, with its window; a result over a screen goes to the scratchpad (`UX-711`). `measure`, `falsify`, `verify`

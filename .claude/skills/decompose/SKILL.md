@@ -168,8 +168,8 @@ Per item, the inner loop: `python3 tools/dev_touching.py --base <sha> --list`, t
 mutated red (falsify skill). Per batch: one PR opened *first* (verify
 §7 — a branch with no PR collects no CI), one merge, `make push-check`
 here. CI on the pull request is the gate before merge (`UX-948`,
-Ruslan's decision in round 138) — the newest Python alone; push to
-main still runs all four (`UX-995`) — so no item or batch runs the
+Ruslan's decision in round 138) — the floor Python alone; push to
+main still runs all three (`UX-995`) — so no item or batch runs the
 whole suite locally; nothing merges red.
 
 ## 5. The batch — what the orchestrator pays

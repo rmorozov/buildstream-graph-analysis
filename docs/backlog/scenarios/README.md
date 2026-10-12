@@ -32,7 +32,6 @@ task file, which is the only place it ever lived twice.
 | UX-1281 | [the memgiant Graviton leg outlives its runner on the third repeat, and its readings die with it](UX-1281-the-memgiant-leg-loses-its-runner-on-a-later-repeat.md) | capture | Medium | R4, R5 | 🔴 Not Started |
 | UX-1352 | [a `triager` reads the red logs so the session reads a table](UX-1352-a-triager-reads-the-red-logs.md) | guards | Medium | every round's gate and every CI red on a round's pull request | 🔴 Not Started |
 | UX-1354 | [layout-free browser checks read the DOM shim instead of Chrome](UX-1354-layout-free-browser-checks-read-the-dom-shim-instead-of-chrome.md) | guards | Medium | R8 | 🔴 Not Started |
-| UX-1355 | [five sentences say push to main runs "all four" Pythons, and the matrix is three](UX-1355-five-sentences-say-all-four-pythons-and-the-matrix-is-three.md) | docs | Low | R2 | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

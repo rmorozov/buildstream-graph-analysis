@@ -22,7 +22,7 @@ dill==0.4.1
     # via pylint
 execnet==2.1.2
     # via pytest-xdist
-hypothesis==6.168.3
+hypothesis==6.169.0
     # via bga (pyproject.toml)
 iniconfig==2.3.0
     # via pytest
@@ -86,7 +86,7 @@ rpds-py==2026.6.3
     # via
     #   jsonschema
     #   referencing
-ruff==0.16.10
+ruff==0.17.0
     # via bga (pyproject.toml)
 sly==0.5
     # via py-walk
@@ -104,7 +104,6 @@ typing-extensions==4.16.0
     #   application-properties
     #   pymarkdownlnt
     #   pyright
-    #   referencing
 wcwidth==0.9.1
     # via columnar
 zstandard==0.25.0

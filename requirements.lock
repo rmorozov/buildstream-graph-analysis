@@ -104,6 +104,7 @@ typing-extensions==4.16.0
     #   application-properties
     #   pymarkdownlnt
     #   pyright
+    #   referencing
 wcwidth==0.9.1
     # via columnar
 zstandard==0.25.0

@@ -248,6 +248,13 @@ log not kept (so no timeline), or declined. One sentence pair in `bga/plane2.py`
 the terminal, published as `plane2_absence`, and shown by the page and
 the export, so the three cannot describe one absence differently.
 
+**The host's cores are stated as logical and physical** (`UX-1364`):
+`run_instance.host_manifest.physical_cores` is the capture's
+`cpu_topology` core count, `cpu_label` is the Host row's text (`4 cpu`,
+`4 logical / 2 physical`, or `4 logical / physical unknown` for a
+capture from before the field), and the pool line and `bga correlate`'s
+cores-busy judgements name both denominators where they differ.
+
 **One alias is one snapshot**, whichever of its files is being asked
 for, so `bga correlate @prev @last` means a run from one and a report
 from another *because you said so* rather than by accident.

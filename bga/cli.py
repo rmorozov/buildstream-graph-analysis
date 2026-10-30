@@ -27,7 +27,7 @@ import sys
 from pathlib import Path
 from typing import NoReturn, Optional
 
-from . import __version__, contracts, schemas
+from . import __version__, contracts, hostinfo, schemas
 from . import plane2 as plane2_shape
 from . import shown as qty
 from .analyzer import (
@@ -253,7 +253,9 @@ def _attach_plane2_capacity(args: argparse.Namespace, analyzer, result) -> None:
         plane2_shape.apply_resolved_widths(
             native_report, plane2_shape.resolved_widths(os.path.join(str(run_dir), 'graph.json'))
         )
-    result.plane2_capacity = summarize_plane2_capacity(native_report, host_cpu_count)
+    result.plane2_capacity = summarize_plane2_capacity(
+        native_report, host_cpu_count, getattr(context, 'host_physical_cores', None)
+    )
     _reread_oversubscription(analyzer, result)
     # UX-202: how much of the build Plane 2 actually saw, published
     # rather than left in the native report. The evidence header states
@@ -531,6 +533,12 @@ def _builder_pool_recommendation(analyzer, result) -> dict:
         calibrated_cores=int(calibrated_cores) if calibrated_cores else None,
         memory=_peak_rss_and_host_memory(analyzer.read_host_samples(), getattr(result, 'plane2_report', None)),
     )
+    # UX-1364: the pool reading names logical and physical cores, or says physical is unknown.
+    denominators = hostinfo.core_denominators(host_cpu_count, getattr(context, 'host_physical_cores', None), True)
+    if recommendation.get('pool_reading', '').startswith(f"host_cpu_count ({host_cpu_count})"):
+        recommendation['pool_reading'] = recommendation['pool_reading'].replace(
+            f"({host_cpu_count})", f"({denominators})", 1
+        )
     return with_own_sweep(
         recommendation, _own_sweep(scheduler, result, getattr(context, 'max_jobs', None) or 1, host_cpu_count)
     )

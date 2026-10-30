@@ -35,7 +35,7 @@ import os
 import statistics
 from typing import Optional
 
-from . import junction_rollup, sweep_curve
+from . import hostinfo, junction_rollup, sweep_curve
 from . import shown as qty
 from .cache_effectiveness import (
     HEALTHY_HIT_RATIO,
@@ -1655,7 +1655,8 @@ def _plane2_capacity_hint(result: AnalysisResult, category: str) -> Optional[str
     pinned = plane2.get('pinned_elements') or []
     cores_busy, host = plane2.get('cores_busy'), plane2.get('host_cpu_count')
     measured = (
-        f"Plane 2 measured {cores_busy:.2f} of {host} cores busy over this run"
+        f"Plane 2 measured {cores_busy:.2f} of {hostinfo.core_denominators(host, plane2.get('host_physical_cores'))} "
+        "cores busy over this run"
         if cores_busy is not None and host
         else None
     )

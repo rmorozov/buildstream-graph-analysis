@@ -858,7 +858,7 @@ export function renderEvidence(payload) {
   }
   if (host.cpu_model) {
     rows.push(["Host",
-               [host.cpu_model, host.cpu_count && `${host.cpu_count} cpu`,
+               [host.cpu_model, host.cpu_label,
                 host.memory_bytes
                   && `${Math.round(host.memory_bytes / 1024 ** 3)} GiB`]
                  .filter(Boolean).join(" · "),
@@ -925,6 +925,7 @@ export function renderEvidence(payload) {
   section.append(fold);
   return section;
 }
+
 
 /**
  * `✓ high confidence · 100% task coverage · Plane 2 available`

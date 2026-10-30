@@ -95,6 +95,7 @@ RUN_CONTEXT_ADDITIONS = {
     "native_max_jobs",
     "native_max_jobs_source",
     "host_cpu_count",
+    "host_physical_cores",
     "cpu_budget",
     "memory_budget_mb",
     "host_memory_mb",

@@ -150,6 +150,9 @@ def _run_instance(run_context, loaded_from) -> dict:
         # bytes. Measured: the committed `macro_micro` run does exactly
         # that.
         instance['host_manifest'] = hostinfo.normalised(manifest)
+        if manifest.get('cpu_count'):
+            physical = getattr(run_context, 'host_physical_cores', None) or manifest.get('physical_cores')
+            instance['host_manifest']['cpu_label'] = hostinfo.cpu_label(manifest['cpu_count'], physical)
     # UX-898/UX-903: and what build it was. Rides with the host manifest
     # for the same reason - the comparison class is the pair, so a
     # reader that loaded one and not the other holds half a class.

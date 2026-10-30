@@ -3385,6 +3385,15 @@ _RUN_INSTANCE_HINT = {
                     QUANTITY: "count",
                     "description": "Cores the host reported, which the CPU ceiling is computed against.",
                 },
+                "cpu_label": {
+                    "description": "The host's CPU count as the page's Host row says it: logical and physical "
+                    "cores when they differ, or that physical is unknown for a capture from before it was recorded.",
+                },
+                "physical_cores": {
+                    QUANTITY: "count",
+                    "description": "Physical cores behind the logical CPUs the host reported; absent in a capture from "
+                    "before they were recorded.",
+                },
                 "memory_bytes": {
                     QUANTITY: "bytes",
                     "description": "Memory the host reported, which the memory ceiling is computed against.",

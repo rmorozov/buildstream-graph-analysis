@@ -39,10 +39,11 @@ it builds"**.
 
 import collections
 import math
+import re
 from dataclasses import dataclass, field
 from typing import Optional
 
-from . import schemas, sweep_curve
+from . import hostinfo, schemas, sweep_curve
 from . import shown as qty
 from .findings import SEVERITY_HIGH, SEVERITY_INFO, SEVERITY_MEDIUM
 from .floors.capacity import compute_default_capacities
@@ -696,18 +697,20 @@ def _grouped_line(finding_id: str, entries: list[dict], text: str) -> Optional[s
     summary that quietly drops a number.
     """
     count = len(entries)
+    of_cores = re.search(r" cores busy( of \d+ logical / \d+ physical)", text)
+    host_cores = of_cores.group(1) if of_cores else ""
 
     if finding_id == 'already-compute-bound':
         cores = _collapse_range([e.get('cores_busy') for e in entries], lambda v: f"{v:.1f}")
         return (
-            f"already compute-bound at {cores} cores busy — nothing to gain from "
+            f"already compute-bound at {cores} cores busy{host_cores} — nothing to gain from "
             f"their parallelism; shortening them means less work"
         )
 
     if finding_id in ('waiting-not-computing', 'pinned-to-one-job', 'underachieved-requested-jobs'):
         cores = _collapse_range([e.get('cores_busy') for e in entries], lambda v: f"{v:.2f}")
         return (
-            f"running at only {cores} cores busy — waiting, not computing; "
+            f"running at only {cores} cores busy{host_cores} — waiting, not computing; "
             f"look at how they are built before what they build"
         )
 
@@ -717,7 +720,7 @@ def _grouped_line(finding_id: str, entries: list[dict], text: str) -> Optional[s
             f"{e['element']} {e['cores_busy']:.2f} of {e['resolved_jobs']} ({qty.duration(e['potential_saving_us'])})"
             for e in entries
         )
-        return f"kept under half their granted cores busy: {each} — look at how they are built before what they build"
+        return f"kept under half their granted cores busy{host_cores}: {each} — look at how they are built before what they build"
 
     if finding_id == 'cpu-concentration':
         binaries = {(e.get('dominant_binary') or {}).get('binary') for e in entries}
@@ -852,6 +855,22 @@ def _width_unused_step(unused: bool, ranked: list, impact, joined: ElementJoin) 
             width_unused_text(impact(), joined.cores_busy, joined.resolved_jobs),
         )
     ]
+
+
+# UX-1364: the steps whose sentence quotes a cores-busy figure, which then names the host's denominators.
+_CORES_BUSY_STEPS = (
+    'waiting-not-computing',
+    'pinned-to-one-job',
+    'underachieved-requested-jobs',
+    'already-compute-bound',
+    'below-granted-width',
+)
+
+
+def _name_host_cores(steps: list, host_cores: str) -> None:
+    for step in steps if host_cores else []:
+        if step['id'] in _CORES_BUSY_STEPS:
+            step['text'] = step['text'].replace(" cores busy", f" cores busy{host_cores}", 1)
 
 
 def _recommend(joined: ElementJoin, memory_envelope_available: bool = False) -> list[str]:
@@ -1157,6 +1176,7 @@ def compute_memory_envelope(
 def summarize_plane2_capacity(
     native_report: dict,
     host_cpu_count: Optional[int] = None,
+    host_physical_cores: Optional[int] = None,
 ) -> dict:
     """What Plane 2 knows about whether more builders would help.
 
@@ -1188,12 +1208,15 @@ def summarize_plane2_capacity(
         if "pinned_to_one_job" in (entry.get("findings") or []) and entry.get("element")
     ]
     saturated = cores_busy is not None and host_cpu_count and cores_busy >= _SATURATION_SHARE * host_cpu_count
-    return {
+    summary = {
         "cores_busy": cores_busy,
         "host_cpu_count": host_cpu_count,
         "saturated": bool(saturated),
         "pinned_elements": pinned,
     }
+    if host_physical_cores is not None:
+        summary["host_physical_cores"] = host_physical_cores
+    return summary
 
 
 def resource_profile(native_report: dict) -> dict:
@@ -1343,8 +1366,8 @@ def compute_capacity_recommendation(
             'name': 'host_cores' if clamped_from else 'CPU',
             'allows': cpu_allows,
             'reason': (
-                f"{cores_busy:.2f} of {host_cores} core{'' if host_cores == 1 else 's'} "
-                f"busy at builders={builders}, i.e. {cores_busy / builders:.2f} cores "
+                f"{cores_busy:.2f} of {hostinfo.core_denominators(host_cores, (plane2_capacity or {}).get('host_physical_cores'))} "
+                f"core{'' if host_cores == 1 else 's'} busy at builders={builders}, i.e. {cores_busy / builders:.2f} cores "
                 f"per concurrent element"
             ),
         }
@@ -2798,6 +2821,13 @@ def correlate(
     )
     memory_envelope_available = bool(memory_envelope.get('at_observed_builders'))
 
+    # UX-1364: " of 4 logical / 2 physical" only where the two differ.
+    host_logical = getattr(run_context, 'host_cpu_count', None)
+    host_physical = getattr(run_context, 'host_physical_cores', None)
+    host_cores = ""
+    if host_logical and host_physical and host_physical != host_logical:
+        host_cores = f" of {hostinfo.core_denominators(host_logical, host_physical)}"
+
     joined: list[ElementJoin] = []
     for element in sorted(set(plane1) | set(plane2)):
         p1 = plane1.get(element, {})
@@ -2839,6 +2869,7 @@ def correlate(
         # what must not be produced; the row still exists in `elements`,
         # labelled, rather than vanishing.
         entry.recommendations = _recommend(entry, memory_envelope_available) if entry.declared else []
+        _name_host_cores(entry.recommendations, host_cores)
         joined.append(entry)
 
     # Ranked by what Plane 1 says is worth fixing, since that is the

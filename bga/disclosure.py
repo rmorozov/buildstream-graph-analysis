@@ -306,9 +306,11 @@ POLICIES = {
     "run-context/v9": {
         "host": "D",
         "host_cpu_count": "C",
+        "host_physical_cores": "C",
         "host_memory_mb": "C",
         "host_manifest.schema": "B:schema",
         "host_manifest.cpu_count": "D",
+        "host_manifest.physical_cores": "D",
         "host_manifest.cpu_model": "D",
         "host_manifest.distro_id": "D",
         "host_manifest.kernel_release": "D",

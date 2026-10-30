@@ -167,6 +167,7 @@ class TestTheCensusCanBeToldAboutARunOutsideTheTree:
             "costliest-binary",
             "configure-share",
             "jobs-waiting",
+            "serial-stretch",
         }
         for name in census.UNREACHABLE:
             assert name in FINDING_READERS, name

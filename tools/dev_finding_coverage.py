@@ -61,6 +61,7 @@ UNREACHABLE = {
     "ran at 1.38 cores busy or more, over correlate's 1.25 line; core.bst at 0.90 asked for one (UX-1255)",
     "configure-share": "the one committed Plane 2 report spends 6.4% of CPU in configure, "
     "under PLANE2_CONFIGURE_SHARE (UX-1255)",
+    "serial-stretch": "the one committed Plane 2 report predates the serial-stretch measurement (UX-1358)",
 }
 
 

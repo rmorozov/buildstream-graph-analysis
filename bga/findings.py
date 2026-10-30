@@ -144,6 +144,8 @@ FINDING_READERS = {
     "costliest-binary": "recipe-author",
     "jobs-waiting": "recipe-author",
     "configure-share": "recipe-author",
+    # UX-1358: a serial stretch is the recipe's to shorten.
+    "serial-stretch": "recipe-author",
     # UX-680: R4, the task's own; R5's section needs Plane 2 and half (a) fires without it.
     "remote-execution-whatif": "ci-gatekeeper",
 }
@@ -2458,6 +2460,39 @@ def _plane2_findings(result: AnalysisResult) -> list[dict]:
                 step=_step(_waiting_step(report, waiting_by)),
             )
             | {'section': 'element_join'}
+        )
+    # UX-1358: elements over correlate's serial line, which it refuses to call compute-bound.
+    from .correlate import _SERIAL_SHARE_LINE
+
+    serial = sorted(
+        (
+            (element, row['serial_stretch'])
+            for element, row in _plane2_view(report).items()
+            if (row.get('serial_stretch', {}).get('share') or 0) > _SERIAL_SHARE_LINE
+        ),
+        key=lambda item: (-item[1]['wall_us'], item[0]),
+    )
+    if serial:
+        element, stretch = serial[0]
+        owner = (stretch.get('owners') or [{}])[0].get('signature')
+        out.append(
+            _finding(
+                'serial-stretch',
+                SEVERITY_MEDIUM,
+                f"{plural(len(serial), 'element', shown=f'{len(serial):,}')} spent over {qty.share(_SERIAL_SHARE_LINE)} of their span at one work "
+                f"process or none — {element} the longest, {qty.duration(stretch['wall_us'])}",
+                elements=[name for name, _ in serial],
+                evidence={
+                    'element_count': len(serial),
+                    'element': element,
+                    'wall_us': stretch['wall_us'],
+                    'share': round(stretch['share'], 3),
+                },
+                step=_step(
+                    f"Shorten what {element} runs one at a time"
+                    + (f", starting with `{owner[:60]}`." if owner else ".")
+                ),
+            )
         )
     phase = report.get('configure_phase') or {}
     if phase.get('available') and (phase.get('configure_share') or 0) >= PLANE2_CONFIGURE_SHARE:

@@ -180,7 +180,7 @@ the blocks a reader meets first, and `certified_headroom`, the number
 Key Findings leads with, had never been in the population at all. It was
 302 such keys when that was filed and 305 when it landed. One level and
 no further: `blast_radius_distribution.deciles` is in the population and
-its own nine buckets are not. The surface is **640 keys** today, and
+its own nine buckets are not. The surface is **642 keys** today, and
 that figure is derived from the walk rather than typed here.
 
 So the statement of coverage, which is now a statement and not a
@@ -861,7 +861,7 @@ One row per element, from both planes:
 | | |
 | --- | --- |
 | Plane 1 | `on_critical_path`, `critical_path_share`, `potential_saving_us`, `saving_share`, `blast_radius` |
-| Plane 2 | `cores_busy`, `cpu_coverage`, `requested_jobs`, `resolved_jobs` (`UX-894`: the width BuildStream resolved for the element, read from the run's graph document, where a non-parallel element is a width of one and not a missing value), `jobs_denominator` (which of the two widths the achieved ratio divided by, or absent when no ratio was computed), `peak_rss_bytes`, `dominant_binary`, `serial_binary` |
+| Plane 2 | `cores_busy`, `cpu_coverage`, `requested_jobs`, `resolved_jobs` (`UX-894`: the width BuildStream resolved for the element, read from the run's graph document, where a non-parallel element is a width of one and not a missing value), `jobs_denominator` (which of the two widths the achieved ratio divided by, or absent when no ratio was computed), `peak_rss_bytes`, `dominant_binary`, `serial_binary`, `serial_stretch` (`UX-1358`: wall-clock at one busy work process or none over the element's own process span, its share, and the three command signatures alive longest in it - absent from a report that predates it) |
 
 `bga analyze --plane2 PLANE2.json` now carries the same rows as
 `element_join`, from the same function — so the report and the command

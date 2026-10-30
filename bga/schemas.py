@@ -1375,6 +1375,25 @@ _JOIN_ITEM_PROPERTIES = {
             },
         },
     },
+    "serial_stretch": {
+        "description": "Wall-clock this element spent at one busy work process or none, and who held it.",
+        "properties": {
+            "wall_us": {QUANTITY: "duration_us", "description": "Wall-clock at one busy work process or none."},
+            "span_us": {QUANTITY: "duration_us", "description": "The element's own process span it is a part of."},
+            "share": {QUANTITY: "share", "description": "That wall-clock over the span."},
+            "owners": {
+                GROWS: False,
+                "maxItems": 3,
+                "description": "The command signatures alive longest inside those stretches, most first.",
+                "items": {
+                    "properties": {
+                        "signature": {"description": "The normalised command line."},
+                        "wall_us": {QUANTITY: "duration_us", "description": "Its wall-clock inside the stretches."},
+                    }
+                },
+            },
+        },
+    },
     "worst_redundancy": {
         "description": "The repeated work this element paid for most.",
         "properties": {

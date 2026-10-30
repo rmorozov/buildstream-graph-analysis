@@ -56,6 +56,10 @@ from .units import GIB, MIB, US_PER_S, kb_to_bytes, mb_to_bytes, s_to_us
 # and this sits in it rather than being tuned to either.
 _COMPUTE_BOUND_CORES = 1.25
 
+# UX-1358: above this share of its span at <=1 busy work process, an element is not "already
+# compute-bound" whatever its mean - on fdsdk `bootstrap/gcc.bst` spent 405.6 s of 40.2 min in one autoreconf loop.
+_SERIAL_SHARE_LINE = 0.15
+
 # How much of the *build* fixing an element must be worth before the join
 # calls it out. Below this, a native-build finding is real but is not
 # what to do next.
@@ -234,6 +238,8 @@ class ElementJoin:
     # ever reaching the command the workflow ends on.
     dominant_binary: Optional[dict] = None
     serial_binary: Optional[dict] = None
+    # UX-1358: wall time at <=1 busy work process, its share of the span, and the commands that held it.
+    serial_stretch: Optional[dict] = None
     peak_rss_bytes: Optional[int] = None
     worst_redundancy: Optional[dict] = None
     redundancy_count: int = 0
@@ -375,6 +381,17 @@ def _plane2_view(native_report: dict) -> dict[str, dict]:
                 "native_findings": list(entry.get("findings") or []),
             }
         )
+        # UX-1358: absent from a report written before the producer measured it.
+        if entry.get("serial_wall_s") is not None and entry.get("element_span_s"):
+            view[element]["serial_stretch"] = {
+                "wall_us": s_to_us(entry["serial_wall_s"]),
+                "span_us": s_to_us(entry["element_span_s"]),
+                "share": entry.get("serial_share"),
+                "owners": [
+                    {"signature": owner["signature"], "wall_us": s_to_us(owner["wall_s"])}
+                    for owner in entry.get("serial_owners") or []
+                ],
+            }
 
     cpu_time = native_report.get("cpu_time") or {}
     for element, entry in (cpu_time.get("per_element") or {}).items():
@@ -762,6 +779,25 @@ def _group_header(elements: list[str], entries: list[dict]) -> str:
     return f"{_name_elements(elements)} ({', '.join(parts)}):"
 
 
+def _serial_stretch_step(joined: ElementJoin, impact: str) -> Optional[tuple]:
+    """UX-1358: the step that replaces "already compute-bound" over `_SERIAL_SHARE_LINE`, else None."""
+    stretch = joined.serial_stretch or {}
+    share = stretch.get("share") or 0.0
+    if share <= _SERIAL_SHARE_LINE:
+        return None
+    owners = ", ".join(
+        f"`{owner['signature'][:60]}` ({qty.duration(owner['wall_us'])})" for owner in stretch.get("owners") or []
+    )
+    return (
+        _EVIDENCE_PARALLELISM,
+        'serial-stretch',
+        f"{impact} — {qty.duration(stretch['wall_us'])} of its {qty.duration(stretch['span_us'])} "
+        f"({qty.share(share)}) ran at most one work process, over the {qty.share(_SERIAL_SHARE_LINE)} line"
+        + (f", most of it in {owners}" if owners else "")
+        + ": a serial stretch no job count shortens",
+    )
+
+
 def _recommend(joined: ElementJoin, memory_envelope_available: bool = False) -> list[str]:
     """Turn one element's two-plane picture into directed next steps.
 
@@ -843,7 +879,8 @@ def _recommend(joined: ElementJoin, memory_envelope_available: bool = False) -> 
             # ruling the micro plane out, so the reader stops looking
             # there - not as a thing to go and do.
             ranked.append(
-                (
+                _serial_stretch_step(joined, _impact())
+                or (
                     _EVIDENCE_PARALLELISM,
                     'already-compute-bound',
                     f"{_impact()} — already compute-bound at "
@@ -2726,6 +2763,7 @@ def correlate(
             dependency_read_share=p2.get("dependency_read_share"),
             dominant_binary=p2.get("dominant_binary"),
             serial_binary=p2.get("serial_binary"),
+            serial_stretch=p2.get("serial_stretch"),
             peak_rss_bytes=p2.get("peak_rss_bytes"),
             worst_redundancy=p2.get("worst_redundancy"),
             redundancy_count=p2.get("redundancy_count", 0),

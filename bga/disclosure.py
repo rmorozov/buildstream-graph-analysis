@@ -582,8 +582,13 @@ POLICIES = {
                 "work_process_count",
                 "work_process_lifetime_s",
                 "work_span_s",
+                "element_span_s",
+                "serial_wall_s",
+                "serial_share",
             )
         },
+        "per_element_parallelism[].serial_owners[].signature": "F",
+        "per_element_parallelism[].serial_owners[].wall_s": "C",
         "redundant_operations[].elements[]": "A",
         "redundant_operations[].worst_element": "A",
         "redundant_operations[].example_cmd": "F",

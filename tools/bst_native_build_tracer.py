@@ -4485,6 +4485,50 @@ def _concurrency_profile(intervals: list[tuple[float, float]]) -> dict:
     }
 
 
+# UX-1358: how many command signatures a serial stretch names, and the length each is cut to.
+SERIAL_OWNERS_SHOWN = 3
+_SERIAL_SIGNATURE_CHARS = 160
+
+
+def _serial_stretches(work: list[tuple[float, float]], lo: float, hi: float) -> list[tuple[float, float]]:
+    """UX-1358: the parts of [lo, hi] during which at most one work process ran."""
+    points = sorted([(s, 1) for s, _ in work] + [(e, -1) for _, e in work], key=lambda p: (p[0], p[1]))
+    points.append((hi, 0))
+    stretches: list[tuple[float, float]] = []
+    current, at = 0, lo
+    for ts, delta in points:
+        ts = min(max(ts, lo), hi)
+        if current <= 1 and ts > at:
+            if stretches and stretches[-1][1] == at:
+                stretches[-1] = (stretches[-1][0], ts)
+            else:
+                stretches.append((at, ts))
+        at = max(at, ts)
+        current += delta
+    return stretches
+
+
+def _serial_owners(stretches, candidates) -> list[dict]:
+    """Wall seconds each command signature was alive inside the serial stretches, most first."""
+    starts = [a for a, _ in stretches]
+    before = list(itertools.accumulate((b - a for a, b in stretches), initial=0.0))
+
+    def covered(t):
+        i = bisect.bisect_right(starts, t) - 1
+        if i < 0:
+            return 0.0
+        a, b = stretches[i]
+        return before[i] + min(t, b) - a
+
+    by_signature: dict[str, float] = {}
+    for start, end, signature in candidates:
+        seconds = covered(end) - covered(start)
+        if seconds > 0:
+            by_signature[signature] = by_signature.get(signature, 0.0) + seconds
+    ranked = sorted(by_signature.items(), key=lambda kv: (-kv[1], kv[0]))[:SERIAL_OWNERS_SHOWN]
+    return [{"signature": signature, "wall_s": seconds} for signature, seconds in ranked]
+
+
 def compute_per_element_parallelism(records: list[dict]) -> list[dict]:
     """UX-32: for each BuildStream element, how much parallelism its own
     native build system actually achieved - the question Plane 2 exists
@@ -4519,6 +4563,9 @@ class _PerElementParallelism:
         self.ends: dict[str, array.array] = {}
         self.unclassified: dict[str, dict[str, int]] = {}
         self.requested: dict[str, Optional[int]] = {}
+        # UX-1358: every process's span bounds the element; a non-orchestration one can own a serial stretch.
+        self.span: dict[str, list[float]] = {}
+        self.owners: dict[str, list[tuple[float, float, str]]] = {}
 
     def add(self, r):
         if r["open"] or r["end_ts"] is None:
@@ -4529,8 +4576,15 @@ class _PerElementParallelism:
             self.ends[element] = array.array("d")
             self.unclassified[element] = {}
             self.requested[element] = None
+            self.span[element] = [r["start_ts"], r["end_ts"]]
+            self.owners[element] = []
+        span = self.span[element]
+        span[0], span[1] = min(span[0], r["start_ts"]), max(span[1], r["end_ts"])
         name = _binary_name(r["cmd"])
         kind = classify_binary(name)
+        if kind != "orchestration":
+            signature = sys.intern(normalize_cmd_signature(r["cmd"]).strip()[:_SERIAL_SIGNATURE_CHARS])
+            self.owners[element].append((r["start_ts"], r["end_ts"], signature))
         if kind == "work":
             self.starts[element].append(r["start_ts"])
             self.ends[element].append(r["end_ts"])
@@ -4554,6 +4608,9 @@ class _PerElementParallelism:
             unclassified = self.unclassified[element]
             requested_jobs = self.requested[element]
             profile = _concurrency_profile(work_intervals)
+            lo, hi = self.span[element]
+            stretches = _serial_stretches(work_intervals, lo, hi)
+            serial_s = sum(b - a for a, b in stretches)
             profiles.append(
                 {
                     "element": element,
@@ -4578,6 +4635,11 @@ class _PerElementParallelism:
                     "jobs_denominator": None,
                     "achieved_vs_requested": None,
                     "unclassified_binaries": dict(sorted(unclassified.items(), key=lambda kv: -kv[1])),
+                    # UX-1358: wall time at <=1 busy work process, over the element's own process span.
+                    "element_span_s": hi - lo,
+                    "serial_wall_s": serial_s,
+                    "serial_share": (serial_s / (hi - lo)) if hi > lo else None,
+                    "serial_owners": _serial_owners(stretches, self.owners[element]),
                 }
             )
         # Two distinct real findings, decided across the whole trace rather

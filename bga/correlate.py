@@ -534,14 +534,13 @@ def project_without_edges(
     run_context,
     edges: list[tuple],
     capacities: Optional[dict] = None,
+    pruned: frozenset = frozenset(),
 ) -> Optional[dict]:
-    """Replay the observed run with `edges` deleted from the graph.
+    """Replay the observed run with `edges` deleted from the graph, and `pruned` elements' tasks with them.
 
     Same durations, same capacity, same deterministic scheduler - only
-    the shape changes. A pure longest-path recomputation would be
-    cheaper and wrong here: removing five chain edges lets six elements
-    become ready at once, and what happens next is decided by how many
-    builders there are, not by the chain that no longer exists.
+    the shape changes. Not a longest-path recompute: removing five chain edges lets six
+    elements become ready at once, and how many builders there are decides what happens next.
 
     Returns None when there is nothing to replay, rather than a zero that
     would read as "this change saves everything".
@@ -558,14 +557,12 @@ def project_without_edges(
 
     def keep(successor_key: str, dependency_key: str) -> bool:
         pair = (element_of.get(dependency_key), element_of.get(successor_key))
-        return pair not in removed
+        return pair not in removed and pair[0] not in pruned
 
     rewired = [
-        replace(
-            task,
-            dependencies=[dep for dep in task.dependencies if keep(str(task.task_key), dep)],
-        )
+        replace(task, dependencies=[dep for dep in task.dependencies if keep(str(task.task_key), dep)])
         for task in tasks
+        if task.task_key.element_uid not in pruned
     ]
     if capacities is None:
         capacities = compute_default_capacities(run_context)

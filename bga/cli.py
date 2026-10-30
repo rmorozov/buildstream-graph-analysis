@@ -1712,15 +1712,11 @@ def cmd_compare(args: argparse.Namespace) -> int:
 
 
 def cmd_whatif(args: argparse.Namespace) -> int:
-    """Execute `bga whatif RUN --element A --element B` (UX-230).
+    """Execute `bga whatif RUN --element A --drop-edge P:S` (UX-230, UX-1357): exits 0 on a refusal too.
 
-    A question, not a gate: it exits 0 on a refusal too, because "this
-    selection cannot be projected" is the answer rather than a failure.
-    The projection itself is `bga.whatif.project`, which the viewer's
-    transport calls as well - one function, so the page and the terminal
-    cannot answer one selection two ways.
+    `bga.edge_whatif.answer` is the viewer transport's function too, so the page and terminal cannot disagree.
     """
-    from bga.whatif import project, render
+    from bga.edge_whatif import answer, render
 
     try:
         run_dir = resolve_run_alias(args.run)
@@ -1732,7 +1728,7 @@ def cmd_whatif(args: argparse.Namespace) -> int:
         return 2
     analyzer = BuildEfficiencyAnalyzer(verbose=getattr(args, 'verbose', False))
     analyzer.load(Path(run_dir))
-    document = project(analyzer.analyze(Path(run_dir)), analyzer.graph, args.element or [])
+    document = answer(analyzer, analyzer.analyze(Path(run_dir)), args.element or [], args.drop_edge or [])
     output = json.dumps(document, indent=2, default=str) if args.format == 'json' else "\n".join(render(document))
     if getattr(args, 'output', None):
         with open(args.output, 'w', encoding='utf-8') as handle:
@@ -2688,18 +2684,22 @@ def _add_whatif_subcommand(subparsers) -> None:
     whatif_parser = subparsers.add_parser(
         'whatif',
         help="What would the build drop to if I fixed these?",
-        description='Project the build for a chosen set of fixes: one '
-        'longest-path recompute with each named element zeroed, '
-        'never a sum of their individual savings (which is wrong '
-        'the moment two share a chain). "Fixed" means instant, '
-        'over this run\'s measured durations - an upper bound, '
-        'not a forecast. A question, not a gate: always exits 0.',
+        description='Project the build for chosen fixes: one longest-path recompute with each --element zeroed, '
+        'never a sum of their savings; or a replay without each --drop-edge, pruning what only it pulled in. '
+        'Over this run\'s measured durations - an upper bound, not a forecast. A question: always exits 0.',
     )
     whatif_parser.add_argument(
         'run', nargs='?', default='@last', metavar='RUN', help='The run to project over; `@last` by default.'
     )
     whatif_parser.add_argument(
         '--element', action='append', default=[], metavar='UID', help='An element to treat as fixed. Repeatable.'
+    )
+    whatif_parser.add_argument(
+        '--drop-edge',
+        action='append',
+        default=[],
+        metavar='PRED:SUCC',
+        help='Replay without this dependency edge, pruning what only it pulled in. Repeatable.',
     )
     whatif_parser.add_argument(
         '-f',

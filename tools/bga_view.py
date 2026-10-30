@@ -513,24 +513,22 @@ def store_aggregate_payload(store: Optional[dict]) -> Optional[dict]:
         return None
 
 
-def whatif_answer(run: str, elements) -> dict:
-    """`UX-230`: what the build drops to for a chosen subset.
+def whatif_answer(run: str, elements, edges=()) -> dict:
+    """`UX-230`/`UX-1357`: a chosen subset or dropped edges, which the payload cannot hold.
 
-    The blast transport, again, and for the same reason: an arbitrary
-    subset is not in the payload and a page must never compute one. The
-    projection is `bga.whatif.project` - the same function `bga whatif`
-    calls, over the same analysis - so the served answer and the
-    command-line answer are the same bytes.
+    `bga.edge_whatif.answer` is the function `bga whatif` calls, over the
+    same analysis, so the served answer and the command-line answer are
+    the same bytes.
     """
     import pathlib
 
     from bga.analyzer import BuildEfficiencyAnalyzer
-    from bga.whatif import project
+    from bga.edge_whatif import answer
 
     directory = pathlib.Path(run)
     analyzer = BuildEfficiencyAnalyzer()
     analyzer.load(directory)
-    return project(analyzer.analyze(directory), analyzer.graph, list(elements))
+    return answer(analyzer, analyzer.analyze(directory), list(elements), list(edges))
 
 
 def blast_answer(run: str, target: str) -> dict:
@@ -1776,12 +1774,12 @@ class _Handler(http.server.BaseHTTPRequestHandler):
         """UX-230's transport. Same shape as `_blast`: read-only, bounded,
         and it calls the function the CLI calls."""
         query = urllib.parse.parse_qs(urllib.parse.urlparse(raw).query)
-        raw_elements = (query.get("elements") or [""])[0]
-        if len(raw_elements) > 4096:
+        raw_elements, raw_edges = ((query.get(key) or [""])[0] for key in ("elements", "drop_edges"))
+        if len(raw_elements) + len(raw_edges) > 4096:
             return self._refuse(400, "too many elements")
-        elements = [uid for uid in raw_elements.split(",") if uid.strip()]
+        elements, edges = ([uid for uid in raw.split(",") if uid.strip()] for raw in (raw_elements, raw_edges))
         try:
-            return self._json(whatif_answer(self.run_root, elements))
+            return self._json(whatif_answer(self.run_root, elements, edges))
         except Exception as error:
             return self._refuse(422, str(error))
 

@@ -711,6 +711,19 @@ still exits 0 — which is why a consumer reads `refusals` before
 `projected` rather than after, and why `projected` being `null` is a
 statement rather than a missing field.
 
+**Dropping an edge** (`UX-1357`). `--drop-edge PRED:SUCC` adds an
+`edges` object: `dropped`, its own `convention`, `refusals` (an edge the
+graph does not hold, with the nearest names) and `projected` -
+`baseline_makespan_us` and `makespan_after_us` from one replay over the
+run's builders, `saving_us`, `elements_before`/`elements_after` (the
+target's closure) and `pruned`, the elements only the dropped edges
+pulled in. A build waits for its build deps and their runtime-only
+closure. On the freedesktop-sdk cold capture,
+`components/doxygen.bst:components/libxml2.bst` reads 3.75 h -> 2.87 h,
+126 -> 99 elements. A priced question for the recipe author, never a
+removal verdict: the tool cannot know why an edge exists. The page's chain
+card asks the same question for any edge of the chain.
+
 `bga whatif --schema` prints the whole shape without needing a run.
 
 ### N variant builds, or one junctioned invocation (`UX-904`)

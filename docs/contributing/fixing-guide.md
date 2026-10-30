@@ -242,6 +242,7 @@ bga/blast.py           what rebuilds if one resource changes
 bga/correlate.py       the two planes joined on element uid
 bga/sweep_curve.py     the builder sweep's range, its curve, a knee or the range's edge
 bga/whatif.py          the projection for a chosen set of fixes (UX-230)
+bga/edge_whatif.py     whatif --drop-edge: the replay with one dependency edge removed
 bga/junction_cost.py   N variant builds priced against one junctioned invocation
 bga/junction_rollup.py one run rolled up by junction prefix
 bga/cache_trend.py     a series of runs, not a pair

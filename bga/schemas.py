@@ -1004,25 +1004,26 @@ _WHATIF_REQUIRED = {
     "projected": "object",
 }
 
+_EU = (
+    ("baseline_makespan_us", "The run replayed over its builders, with the edges."),
+    ("makespan_after_us", "The same replay without them and what only they pulled in."),
+    ("saving_us", "The difference: the price of the edges, a question rather than a verdict."),
+)
 _WHATIF_HINTS = {
     "run_id": {"description": "The run this projection is over."},
     "selected": {"description": "The elements the caller chose, in the order they were given."},
     "total_duration_us": {
         QUANTITY: "duration_us",
-        "description": "This run's wall-clock, for scale. The projection "
-        "below is over the critical path, which is a "
-        "different quantity.",
+        "description": "This run's wall-clock, for scale. The projection below is over the critical path, "
+        "which is a different quantity.",
     },
     "convention": {
-        "description": "What \"fixed\" means, published with "
-        "every answer so a figure that travels "
-        "keeps its assumption attached."
+        "description": "What \"fixed\" means, published with every answer so a figure that travels keeps "
+        "its assumption attached."
     },
     "refusals": {
-        "description": "Why no projection is published, when none is: an "
-        "empty selection, an element the graph does not "
-        "know, or one with no measured duration. Each "
-        "names the check and the elements it fired on.",
+        "description": "Why no projection is published, when none is: an empty selection, an element the graph "
+        "does not know, or one with no measured duration. Each names the check and the elements it fired on.",
         "items": {
             "properties": {
                 "check": {"description": "The name a caller matches on, rather than the prose."},
@@ -1033,8 +1034,7 @@ _WHATIF_HINTS = {
     },
     "projected": {
         QUESTION: 'What would the build drop to?',
-        "description": "The projection, computed by the same "
-        "joint-saving recompute the report's own horizon "
+        "description": "The projection, computed by the same joint-saving recompute the report's own horizon "
         "uses. `null` when anything was refused.",
         "properties": {
             "baseline_makespan_us": {
@@ -1043,25 +1043,25 @@ _WHATIF_HINTS = {
             },
             "joint_saving_us": {
                 QUANTITY: "duration_us",
-                "description": "What the whole selection is worth "
-                "together — a longest-path recompute with "
+                "description": "What the whole selection is worth together — a longest-path recompute with "
                 "every chosen element zeroed, not a sum.",
             },
             "makespan_after_us": {
                 QUANTITY: "duration_us",
-                "description": "What the chain drops to. Published rather "
-                "than left as a subtraction, for the "
+                "description": "What the chain drops to. Published rather than left as a subtraction, for the "
                 "reason the headline's scheduling gap is.",
             },
             "sum_of_individual_us": {
                 QUANTITY: "duration_us",
-                "description": "What each element is worth *alone*, added "
-                "up — published as the wrong answer, "
-                "deliberately. On a shared chain it "
-                "differs from the joint saving, and that "
-                "difference is why a page must never add.",
+                "description": "What each element is worth *alone*, added up — published as the wrong answer, "
+                "deliberately. On a shared chain it differs from the joint saving, and that difference is why "
+                "a page must never add.",
             },
         },
+    },
+    "edges": {
+        "description": "With `--drop-edge`: one replay without the edges, pruning what only they pulled in.",
+        "properties": {"projected": {"properties": {k: {QUANTITY: "duration_us", "description": d} for k, d in _EU}}},
     },
 }
 
@@ -7067,11 +7067,10 @@ _SCHEMAS = {
         WHATIF,
         "bga whatif RUN --element A --element B",
         _WHATIF_REQUIRED,
-        "What the build would drop to if a chosen set of elements were "
-        "fixed together — one longest-path recompute with each of them "
-        "zeroed, never a sum of their individual savings. Refused, with "
-        "the reason, for an empty selection or an element this run "
-        "cannot project.",
+        "What the build would drop to if a chosen set of elements were fixed together — one longest-path "
+        "recompute with each of them zeroed, never a sum of their individual savings — or, with `--drop-edge`, "
+        "a replay without those edges. Refused, with the reason, for an empty question or one it cannot project.",
+        optional={"edges": "object"},
         hints=_WHATIF_HINTS,
     ),
 }

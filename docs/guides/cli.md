@@ -1391,6 +1391,7 @@ app.bst, lib-a.bst..lib-f.bst (7 elements, 6-9% of the critical path each, 2.0-3
 What would the build drop to if I fixed these? See [its contract and worked example](json-contracts.md#choosing-the-fixes-ux-230).
 
 - `--element UID` — an element to treat as fixed (instant); repeatable. One longest-path recompute with every named element zeroed, never a sum of their individual savings.
+- `--drop-edge PRED:SUCC` — a dependency edge to remove; repeatable, combinable with `--element`. A replay without it, every element only it pulled into the target's closure pruned: makespan, element count and the pruned set (`UX-1357`). A priced question, not a removal verdict.
 
 ## `bga variant-cost`
 

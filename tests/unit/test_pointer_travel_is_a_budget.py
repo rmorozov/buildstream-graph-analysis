@@ -70,10 +70,11 @@ DX_ONLY = ("button.copy-rows", "select.top-n")
 #: Round 155's merged tree (`UX-1154`..`UX-1160`) re-measured, 3 runs, spread 0.
 #: `UX-1191` lowers all four J4s: the header's threshold input is gone, one hop fewer; 3 runs, spread 0.
 #: `UX-1350` re-bases both_scale 390 J1 to main's DejaVu reading (844, at 9.75% of 10% headroom); Inter reads 852.
+#: `UX-1362` re-bases both_scale 1440 J3 (44120; `UX-1366` reads 44147): every chain element carries its saving, 2 runs, spread 0.
 MEASURED = {
     ("macro_micro", 1440): {"J1": (4.53, 0), "J2": (18.48, 0), "J3": (5.87, 35123), "J4": (12.31, 10794)},
     ("macro_micro", 390): {"J1": (2.34, 466), "J2": (14.81, 1487), "J3": (3.56, 56293), "J4": (7.33, 16521)},
-    ("both_scale", 1440): {"J1": (4.45, 0), "J2": (18.33, 1982), "J3": (6.49, 39669), "J4": (12.16, 7622)},
+    ("both_scale", 1440): {"J1": (4.45, 0), "J2": (18.33, 1982), "J3": (6.49, 44147), "J4": (12.16, 7622)},
     ("both_scale", 390): {"J1": (2.07, 844), "J2": (15.15, 2426), "J3": (4.14, 65240), "J4": (8.93, 12255)},
 }
 HEADROOM_BITS = 0.5

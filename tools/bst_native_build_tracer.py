@@ -1625,17 +1625,17 @@ _BST_SUBCOMMAND_OPTIONS_ONE_VALUE = {
 }
 
 
-def _cmd_target(cmd: list[str]) -> Optional[str]:
-    """UX-842/873: the first element name in the `bst` command about to
-    run, best-effort - a subcommand option's own value
-    (`_BST_SUBCOMMAND_OPTIONS_ONE_VALUE`) is skipped rather than read as
-    the target, so `bst build --deps all t.bst` reads `t.bst`, not
-    `all`. An invocation shaped unlike this project's own captures
-    degrades to `None`, which `read_project_max_jobs` turns into an
-    unknown `project_max_jobs` rather than a wrong one."""
+def _cmd_targets(cmd: list[str]) -> list[str]:
+    """UX-842/873/1356: every element name in the `bst` command about to
+    run, in argv order and spelled as typed (`j.bst:x.bst` intact) - a
+    subcommand option's own value (`_BST_SUBCOMMAND_OPTIONS_ONE_VALUE`)
+    is skipped rather than read as a target, so `bst build --deps all
+    t.bst` reads `t.bst`, not `all`. An invocation shaped unlike this
+    project's own captures degrades to `[]`."""
     for i, tok in enumerate(cmd):
         if tok in _BST_TARGET_SUBCOMMANDS:
             valued = _BST_SUBCOMMAND_OPTIONS_ONE_VALUE.get(tok, frozenset())
+            targets = []
             skip_value = False
             for later in cmd[i + 1 :]:
                 if skip_value:
@@ -1645,8 +1645,17 @@ def _cmd_target(cmd: list[str]) -> Optional[str]:
                     skip_value = True
                     continue
                 if not later.startswith("-"):
-                    return later
-    return None
+                    targets.append(later)
+            return targets
+    return []
+
+
+def _cmd_target(cmd: list[str]) -> Optional[str]:
+    """UX-842: the first of `_cmd_targets`, or `None`, which
+    `read_project_max_jobs` turns into an unknown `project_max_jobs`
+    rather than a wrong one."""
+    targets = _cmd_targets(cmd)
+    return targets[0] if targets else None
 
 
 def _parse_max_jobs_from_vars(vars_raw: str) -> Optional[int]:
@@ -9583,6 +9592,7 @@ def main(argv: Optional[list[str]] = None) -> int:
                             jobserver=_jobserver_block(report),
                             cache_key_set=cache_key_set,
                             bst_global_options=_bst_global_options(cmd)[0],
+                            command_targets=_cmd_targets(cmd),
                             baseline_run_dir=os.environ.get("BGA_BASELINE_RUN_DIR"),
                         )
                     except Exception as exc:

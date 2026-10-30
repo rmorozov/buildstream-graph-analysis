@@ -242,8 +242,9 @@ happen. `--plane2` still names a different report; `--no-plane2`
 declines the sibling and the report says it declined.
 
 **When Plane 2 is not in a report, the report says which absence it
-is** — never captured, captured with its raw log not kept (so no
-timeline), or declined. One sentence pair in `bga/plane2.py`, printed by
+is** — never captured, a native report beside the run but not attached
+(`bga correlate RUN REPORT` is named, `UX-1365`), captured with its raw
+log not kept (so no timeline), or declined. One sentence pair in `bga/plane2.py`, printed by
 the terminal, published as `plane2_absence`, and shown by the page and
 the export, so the three cannot describe one absence differently.
 

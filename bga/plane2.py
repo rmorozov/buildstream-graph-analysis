@@ -323,6 +323,9 @@ NOT_CAPTURED = (
     "per-process detail. `bga snapshot -- bst build TARGET` "
     "captures both planes."
 )
+NATIVE_REPORT_NOT_ATTACHED = (
+    "Plane 2 not attached to this run: a report exists at {report}; `bga correlate {run} {report}` joins them."
+)
 CAPTURED_NO_RAW_LOG = (
     "Plane 2 was captured — its report is beside this run "
     "— but the raw trace log it was built from was not "
@@ -369,6 +372,9 @@ def absence(run_dir: str, declined: bool = False):
 
     run_dir = os.path.abspath(run_dir)
     if run_store.sibling_plane2(run_dir) is None:
+        nearby = run_store.nearby_native_report(run_dir)
+        if nearby:
+            return NATIVE_REPORT_NOT_ATTACHED.format(report=nearby, run=run_dir)
         return NOT_CAPTURED
     if declined:
         return DECLINED

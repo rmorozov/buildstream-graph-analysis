@@ -4996,8 +4996,8 @@ _ANALYZE_HINTS = {
     "plane2_absence": {
         QUESTION: 'Why is Plane 2 not in this report?',
         RAIL: 'prove',
-        "description": "One of three sentences (bga/plane2.py): the plane "
-        "was never captured, or it was captured and its raw "
+        "description": "One of four sentences (bga/plane2.py): the plane "
+        "was never captured, or a native report sits beside the run unattached, or it was captured and its raw "
         "log was not kept, or this analysis was told to "
         "ignore it. Absent when Plane 2 is here.",
     },

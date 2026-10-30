@@ -1,6 +1,6 @@
 # UX-1361: the weekly real-project capture cannot go dark without someone hearing
 
-**Priority:** High | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the freedesktop-sdk field test (2026-10-30), capture `captures/fdsdk-cold-latest` (run 36850726112) | **Serves:** R4 | **Topic:** capture | **Area:** tools | **Shape:** judgement | **Reading:** container
+**Priority:** High | **Status:** 🟡 In Progress | **Depends on:** — | **Found by:** the freedesktop-sdk field test (2026-10-30), capture `captures/fdsdk-cold-latest` (run 36850726112) | **Serves:** R4 | **Topic:** capture | **Area:** tools | **Shape:** judgement | **Reading:** container
 
 **Guard:** `tests/unit/test_a_dark_scheduled_capture_is_reported.py`
 

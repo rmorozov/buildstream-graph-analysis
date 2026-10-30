@@ -1,6 +1,6 @@
 # UX-1366: shared-source findings separate build tools, and a flag on every element is not printed
 
-**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** the freedesktop-sdk field test (2026-10-30), capture `captures/fdsdk-cold-latest` (run 36850726112) | **Serves:** R3 | **Topic:** analysis | **Area:** bga | **Shape:** judgement | **Reading:** container
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the freedesktop-sdk field test (2026-10-30), capture `captures/fdsdk-cold-latest` (run 36850726112) | **Serves:** R3 | **Topic:** analysis | **Area:** bga | **Shape:** judgement | **Reading:** container
 
 **Guard:** tests/unit/test_a_build_tool_source_reach_is_expected.py, tests/unit/test_a_flag_on_every_element_is_said_once.py
 

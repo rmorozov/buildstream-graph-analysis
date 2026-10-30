@@ -22,4 +22,4 @@ Splitting configure from build phases (UX-102 owns that).
 
 ## Acceptance Test
 
-On the fdsdk capture, `bootstrap/gcc.bst` reports >=400 s serial, `autoreconf2.69` first, and no "nothing to gain" sentence. Mutation: compute the stretch from mean concurrency; the guard reds.
+On the fdsdk capture, `bootstrap/gcc.bst` reports >=400 s serial, `autoreconf2.69` first, and no "nothing to gain" sentence. Mutation: compute the stretch from mean concurrency; the guard reds. The page's element card shows the serial seconds and the owning commands; on this capture's page `bootstrap/gcc.bst`'s card names `autoreconf2.69` and no "compute-bound" sentence, read by the walker.

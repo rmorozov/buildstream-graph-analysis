@@ -22,4 +22,4 @@ Changing the whatif model.
 
 ## Acceptance Test
 
-On the fdsdk capture the three readings agree for the 23 chain elements. Mutation: restore the structural ceiling's own figure; the guard reds.
+On the fdsdk capture the three readings agree for the 23 chain elements. Mutation: restore the structural ceiling's own figure; the guard reds. The page's element cards print the same savings, read by the walker on this capture.

@@ -18,8 +18,8 @@ Input classes: the fdsdk cold capture (`git fetch --depth 1 origin captures/fdsd
 
 ## Out of Scope
 
-Ranking candidate edges automatically; the page's chain card.
+Ranking candidate edges automatically.
 
 ## Acceptance Test
 
-On the fdsdk capture, `--drop-edge components/doxygen.bst:components/libxml2.bst` reads 126 -> 99 elements and a makespan within 2% of 2.95 h. Mutation: stop pruning the closure and it reads ~3.7 h; the guard reds.
+On the fdsdk capture, `--drop-edge components/doxygen.bst:components/libxml2.bst` reads 126 -> 99 elements and a makespan within 2% of 2.95 h. Mutation: stop pruning the closure and it reads ~3.7 h; the guard reds. The page's chain card offers the same what-if for a chain edge and shows the pruned elements; the walker reads 3.82 -> ~2.95 h on this capture's page.

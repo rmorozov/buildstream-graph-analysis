@@ -22,4 +22,4 @@ The spine; static binaries (UX-11).
 
 ## Acceptance Test
 
-A fixture element that only executes a dependency's binary is not a candidate; on the fdsdk capture, gcc-stage1 <- binutils-stage1 is not printed. Mutation: count opens only; the guard reds.
+A fixture element that only executes a dependency's binary is not a candidate; on the fdsdk capture, gcc-stage1 <- binutils-stage1 is not printed. Mutation: count opens only; the guard reds. The page's element card for gcc-stage1 lists no unused dependency, read by the walker on this capture.

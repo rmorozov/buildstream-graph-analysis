@@ -22,4 +22,4 @@ Diagnosing why (install `-j1`, docs): that is UX-1358's serial stretch.
 
 ## Acceptance Test
 
-On the fdsdk capture, openssl appears in "What to do next" with 1.49 cores and ~10 min. Mutation: drop the rule; the guard reds.
+On the fdsdk capture, openssl appears in "What to do next" with 1.49 cores and ~10 min. Mutation: drop the rule; the guard reds. The page's decision panel and openssl's element card carry the same line, read by the walker on this capture.

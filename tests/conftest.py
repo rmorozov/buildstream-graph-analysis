@@ -285,9 +285,10 @@ KNOWN_SKIP_REASONS = {
     # jobs exist so these arms run somewhere. Counts measured on the
     # `test (3.11)` job of PR #137.
     "bst not found on PATH": ("the bst-dependent arm; the bst-* CI jobs install it and run it", 2),
+    # `UX-1356`'s real junctioned build: 12 -> 13.
     "bst not found on PATH - see docs/spec/ingestion-pipeline.md": (
         "the bst-dependent arm; the bst-* CI jobs install it and run it",
-        12,
+        13,
     ),
     "bst and/or buildstream-plugins not available - see docs/spec/ingestion-pipeline.md": (
         "the bst-dependent arm; the bst-* CI jobs install it and run it",

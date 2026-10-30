@@ -455,6 +455,24 @@ OVERLAP_FINDING = "overlap_exceeds_granted_width"
 PINNED_FINDING = "pinned_to_one_job"
 
 
+def run_wide_findings(rows) -> dict[str, int]:
+    """Finding id -> traced elements, for each id every traced element carries (UX-1366).
+
+    `rows` is `per_element_parallelism`. Traced is an element that ran work processes and was scored
+    against a graph width; fewer than two say nothing about the run."""
+    traced = [row for row in rows or [] if (row.get("peak_work_concurrency") or 0) > 0 and row.get("jobs_denominator")]
+    if len(traced) < 2:
+        return {}
+    shared = set.intersection(*(set(row.get("findings") or []) for row in traced))
+    return {finding: len(traced) for finding in sorted(shared)}
+
+
+def drop_run_wide(rows, wide) -> None:
+    """Remove the ids in `wide` from each join row's `native_findings`: the run-wide finding says them once."""
+    for row in rows:
+        row["native_findings"] = [f for f in row.get("native_findings") or [] if f not in wide]
+
+
 def resolved_widths(graph_path: str) -> dict[str, int]:
     """Element uid -> the native width BuildStream resolved for it.
 
@@ -507,6 +525,9 @@ def apply_resolved_widths(native_report: dict, widths: dict[str, int]) -> int:
             entry["achieved_vs_requested"] = None
             continue
         filled += 1
+        # UX-1366: a lone `-j1` is a step (autotools' `make -j1 install`); a make without `-j` inherits the granted width.
+        if width > 1 and entry.get("requested_jobs") == 1:
+            entry["requested_jobs"] = width
         entry["jobs_denominator"] = GRAPH_DENOMINATOR
         peak = entry.get("peak_work_concurrency") or 0
         findings = [f for f in (entry.get("findings") or []) if f not in (OVERLAP_FINDING, PINNED_FINDING)]

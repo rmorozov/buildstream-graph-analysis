@@ -134,6 +134,7 @@ def _attach_resource_blast(run_dir, analyzer, result) -> None:
 
     durations = compute_element_durations(getattr(analyzer, 'normalized_tasks', []) or [])
     rows = sources_module.resource_blast(inventory, downstream, element_kinds, durations)
+    sources_module.mark_build_tools(rows, sources_module.build_only_elements(graph.dependencies))
     result.resource_blast = {
         'rows': rows,
         'element_count': len(graph.elements),

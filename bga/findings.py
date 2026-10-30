@@ -144,6 +144,7 @@ FINDING_READERS = {
     "costliest-binary": "recipe-author",
     "jobs-waiting": "recipe-author",
     "below-granted-width": "recipe-author",
+    "native-finding-on-every-element": "recipe-author",
     "configure-share": "recipe-author",
     # UX-1358: a serial stretch is the recipe's to shorten.
     "serial-stretch": "recipe-author",
@@ -1182,12 +1183,15 @@ def _shared_source_findings(result: AnalysisResult) -> list[dict]:
         return []
     top = (blast.get('rows') or [{}])[0]
     reach, of = top.get('blast_count'), blast.get('element_count')
+    tool = bool(top.get('build_tool'))
     return [
         _finding(
             'shared-source-blast',
-            SEVERITY_MEDIUM,
+            # UX-1366: a build tool's bump rebuilding its consumers is by design, not a defect.
+            SEVERITY_INFO if tool else SEVERITY_MEDIUM,
             # The repository URL and the because-clause are the detail line (UX-1248).
             f"{reach:,} of {of:,} elements rebuild on any commit to one shared source"
+            + (", as expected of a build tool" if tool else "")
             if reach is not None and of
             else "One shared source decides most of this build's rebuilds",
             detail=[f"    {headline}"],
@@ -1196,13 +1200,18 @@ def _shared_source_findings(result: AnalysisResult) -> list[dict]:
                 'kind': top.get('kind'),
                 'keying': top.get('keying'),
                 'direct_count': top.get('direct_count'),
+                'build_tool': tool,
                 'blast_count': top.get('blast_count'),
                 'element_count': blast.get('element_count'),
                 'measured_us': top.get('measured_us'),
             },
             elements=top.get('direct_elements') or [],
-            step=_step(
-                "Narrow which elements take this source, or key it per element, so a change stops rebuilding the rest."
+            step=(
+                _none("its direct elements are build tools; their dependents take them through build dependencies only")
+                if tool
+                else _step(
+                    "Narrow which elements take this source, or key it per element, so a change stops rebuilding the rest."
+                )
             ),
         )
         # The section leads with the same sentence; the card links there rather than drawing it twice.
@@ -2432,6 +2441,24 @@ def _plane2_findings(result: AnalysisResult) -> list[dict]:
                 step=step,
             )
             | {'section': 'by_binary'}
+        )
+    # UX-1366: a flag on every traced element is the run's measurement, said once.
+    from .plane2 import run_wide_findings
+
+    run_wide = run_wide_findings(report.get('per_element_parallelism'))
+    if run_wide:
+        count = next(iter(run_wide.values()))
+        names = ', '.join(f'`{name}`' for name in run_wide)
+        out.append(
+            _finding(
+                'native-finding-on-every-element',
+                SEVERITY_INFO,
+                f"{count:,} of {count:,} traced elements carry {names}",
+                detail=["    A flag on every traced element describes this run's measurement, not any one element."],
+                evidence={'finding_ids': list(run_wide), 'traced_elements': count},
+                step=_none("it is on every traced element, so it ranks none of them"),
+            )
+            | {'section': 'element_join'}
         )
     # Each element's own CPU over its own wall (the join's `cores_busy`), on correlate's compute-bound line.
     from .correlate import _COMPUTE_BOUND_CORES, _plane2_view

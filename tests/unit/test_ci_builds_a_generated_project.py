@@ -168,6 +168,7 @@ class TestTheCensusCanBeToldAboutARunOutsideTheTree:
             "configure-share",
             "jobs-waiting",
             "serial-stretch",
+            "native-finding-on-every-element",
         }
         for name in census.UNREACHABLE:
             assert name in FINDING_READERS, name

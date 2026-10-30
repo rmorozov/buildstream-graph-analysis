@@ -2468,7 +2468,7 @@ shrink-only `UNCITED` set in the guard above. A guard that reads no page
 |---|---|---|
 | §1 | `test_the_mapping_is_law.py` | named |
 | §1a | `test_a_command_renders_as_a_command.py`, `test_a_counted_figure_is_derived.py`, `test_a_new_control_class_lands_declared.py`, `test_the_contract_names_its_vocabulary.py`, `test_the_vocabulary_has_the_shape.py` | |
-| §1b | `test_the_merge_carries_every_field.py`, `test_a_finding_says_whether_it_is_new_since_the_baseline.py`, `test_a_traced_elements_binaries_reach_the_page.py`, `test_a_low_cores_busy_chain_element_is_recommended.py` |  |
+| §1b | `test_the_merge_carries_every_field.py`, `test_a_finding_says_whether_it_is_new_since_the_baseline.py`, `test_a_traced_elements_binaries_reach_the_page.py`, `test_a_low_cores_busy_chain_element_is_recommended.py`, `test_analyze_finds_the_report_beside_a_capture.py`, `test_cores_busy_is_judged_against_physical_cores.py`, `test_a_build_tool_source_reach_is_expected.py` |  |
 | §1c | `test_the_first_finding_is_an_action.py`, `test_findings_are_listed_by_severity.py`, `test_the_binary_question_has_a_binary_total.py`, `test_the_page_checks_its_verdicts_agree.py` |  |
 | §1d | `test_a_next_step_names_the_run_by_its_snapshot.py`, `test_every_finding_publishes_its_step.py` | `UX-429`'s `test_a_command_renders_as_a_command.py` also holds it and cites §1 and §1a, not §1d |
 | §1e | `test_a_new_control_class_lands_declared.py`, `test_a_runbook_is_not_a_table.py`, `test_the_decision_is_said_once.py` | |

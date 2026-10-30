@@ -807,6 +807,14 @@ _CLAIMS = {
         ),
         (),
     ),
+    "native-finding-on-every-element": (
+        (),
+        _unconditional(
+            "Published when two or more elements have measured CPU and every one of them carries the same "
+            "Plane 2 finding id; the ids are the finding's own `evidence`."
+        ),
+        (),
+    ),
     "configure-share": (
         (),
         _rule(

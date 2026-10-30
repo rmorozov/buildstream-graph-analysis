@@ -3609,6 +3609,10 @@ _ANALYZE_HINTS = {
                     "properties": {
                         **_RESOURCE_COUNTS,
                         "by_element_kind": {"additionalProperties": {QUANTITY: "count"}},
+                        "build_tool": {
+                            "description": "True when every dependent of the direct elements takes them through "
+                            "build dependencies only: the reach is a build tool's by design, not a defect.",
+                        },
                         "direct_elements": {
                             GROWS: "elements directly sourcing that resource (subset, no cap)",
                             "items": {"type": "string", "description": "element uid"},

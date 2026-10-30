@@ -67,6 +67,23 @@ def _parse_targets(targets_str: str):
     return [t.strip() for t in targets_str.split(",") if t.strip()]
 
 
+def qualify_targets(header_targets: Sequence[str], command_targets: Sequence[str] = ()) -> list:
+    """UX-1356: the header's `Targets:` prints each target's short name
+    (`Element.name`), so `j.bst:x.bst` reads `x.bst` there and `bst show
+    x.bst` misses. Each header name takes the first unused typed target
+    whose part after the last `:` is it; the rest stand as printed."""
+    unused = [t for t in command_targets if ":" in t]
+    qualified = []
+    for name in header_targets:
+        match = next((t for t in unused if t.rsplit(":", 1)[1] == name), None)
+        if match is None:
+            qualified.append(name)
+        else:
+            unused.remove(match)
+            qualified.append(match)
+    return qualified
+
+
 def _git_consistency_note(project_dir: str):
     """Best-effort time-of-extraction consistency signal (see
     docs/spec/ingestion-pipeline.md's "time-of-extraction consistency" note):
@@ -582,6 +599,7 @@ def extract_run(
     cache_key_set: Optional[dict] = None,
     bst_global_options: Optional[Sequence[str]] = None,
     baseline_run_dir: Optional[str] = None,
+    command_targets: Optional[Sequence[str]] = None,
 ):
     """Run the full extraction pipeline. Returns a dict summary (targets,
     span/element/dependency counts, warnings) - the CLI entry point below
@@ -623,7 +641,7 @@ def extract_run(
             "(or the header was truncated before it was captured). Refusing to "
             "guess a target list from a hardcoded convention."
         )
-    targets = _parse_targets(converter.targets)
+    targets = qualify_targets(_parse_targets(converter.targets), command_targets or ())
 
     # trace.json
     spans, dropped = chrome_events_to_bga_spans(converter.trace_events)

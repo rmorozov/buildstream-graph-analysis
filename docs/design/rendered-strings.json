@@ -1477,6 +1477,11 @@
   {
     "exception": null,
     "role": "summary",
+    "text": "Below granted width \u00b7 # level, # rows"
+  },
+  {
+    "exception": null,
+    "role": "summary",
     "text": "Blast radius foundation \u00b7 # level, # row"
   },
   {

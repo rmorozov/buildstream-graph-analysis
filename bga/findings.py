@@ -143,6 +143,7 @@ FINDING_READERS = {
     # UX-1255: Plane 2's binary, job and configure findings - each a recipe's to change.
     "costliest-binary": "recipe-author",
     "jobs-waiting": "recipe-author",
+    "below-granted-width": "recipe-author",
     "configure-share": "recipe-author",
     # UX-1358: a serial stretch is the recipe's to shorten.
     "serial-stretch": "recipe-author",
@@ -2494,6 +2495,7 @@ def _plane2_findings(result: AnalysisResult) -> list[dict]:
                 ),
             )
         )
+    out.extend(_width_unused_finding(result, _plane2_view(report)))
     phase = report.get('configure_phase') or {}
     if phase.get('available') and (phase.get('configure_share') or 0) >= PLANE2_CONFIGURE_SHARE:
         out.append(
@@ -2511,6 +2513,45 @@ def _plane2_findings(result: AnalysisResult) -> list[dict]:
             | {'section': 'configure_phase'}
         )
     return out
+
+
+def _width_unused_finding(result: AnalysisResult, plane2: dict) -> list[dict]:
+    """UX-1359: chain elements worth a share of the build, busy on under half their width; correlate's line each."""
+    from .correlate import _WIDTH_UNUSED_SAVING_SHARE, _WIDTH_UNUSED_SHARE, impact_text, width_unused, width_unused_text
+
+    total = getattr(result, 'total_duration_us', None) or 0
+    rows = []
+    for d in (getattr(result, 'signals', None) or {}).get('critical_path_detail') or []:
+        uid, saving = d['element_uid'], d.get('realizable_saving_us')
+        row = plane2.get(uid) or {}
+        worth = saving / total if total and saving is not None else None
+        if width_unused(True, worth, row.get('cores_busy'), row.get('resolved_jobs')):
+            rows.append((uid, saving, worth, d.get('share_of_path'), row['cores_busy'], row['resolved_jobs']))
+    if not rows:
+        return []
+    rows.sort(key=lambda r: -r[1])
+    uid, saving, _worth, _share, cores, granted = rows[0]
+    more = f" (+{plural(len(rows) - 1, 'more chain element')})" if len(rows) > 1 else ""
+    return [
+        _finding(
+            'below-granted-width',
+            SEVERITY_MEDIUM,
+            f"{qty.duration(saving)} on {uid} at {cores:.2f} of {granted} granted cores busy{more}",
+            detail=[f"    {r[0]}: {width_unused_text(impact_text(r[3], r[1], r[2]), r[4], r[5])}" for r in rows],
+            elements=[r[0] for r in rows],
+            # The top element's readings; every element's are its detail line.
+            evidence={
+                'element_count': len(rows),
+                'saving_us': saving,
+                'cores_busy': round(cores, 2),
+                'granted_jobs': granted,
+                'saving_share_floor': _WIDTH_UNUSED_SAVING_SHARE,
+                'width_share_ceiling': _WIDTH_UNUSED_SHARE,
+            },
+            step=_step(f"Look at how {uid} is built before what it builds: it used under half its granted cores."),
+        )
+        | {'section': 'critical_path_detail'}
+    ]
 
 
 def _by_severity(findings: list[dict]) -> list[dict]:
@@ -3108,6 +3149,20 @@ def compute_next_steps(result: AnalysisResult, headline: Optional[dict] = None) 
                     'follows_from': 'plane2_coverage',
                 }
             )
+
+    # UX-1359: the decision panel's line for a chain element under half its width, correlate's own words.
+    from .correlate import _plane2_view
+
+    unused = _width_unused_finding(result, _plane2_view(getattr(result, 'plane2_report', None) or {}))
+    if unused:
+        steps.append(
+            {
+                'id': 'build-it-wider',
+                'reason': unused[0]['detail'][0].strip(),
+                'argv': ['bga', 'correlate', run],
+                'follows_from': 'below-granted-width',
+            }
+        )
 
     if headline.get('diagnosis') in (DIAGNOSIS_SCHEDULER_BOUND, DIAGNOSIS_CAPACITY_BOUND):
         gap = headline.get('scheduling_gap_us')

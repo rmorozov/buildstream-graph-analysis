@@ -185,8 +185,43 @@ _EVIDENCE_SEVERITY = {
 # rounding, not an opportunity, so that is where this stops too.
 _CHEAP_WIN_FLOOR = 0.01
 
+# UX-1359: a chain element worth this share of the build, busy on under this share of the
+# cores it was granted, gets one line naming both - fdsdk's openssl (4.4%, 1.49 of 4) was silent.
+_WIDTH_UNUSED_SAVING_SHARE = 0.005
+_WIDTH_UNUSED_SHARE = 0.5
+
 # How many elements the text report names before overflowing to JSON.
 _SHOWN_MAX = 8
+
+
+def width_unused(on_critical_path, saving_share, cores_busy, granted) -> bool:
+    """UX-1359's rule: on the chain, worth `_WIDTH_UNUSED_SAVING_SHARE`, under `_WIDTH_UNUSED_SHARE` of its width."""
+    return bool(
+        on_critical_path
+        and saving_share is not None
+        and saving_share >= _WIDTH_UNUSED_SAVING_SHARE
+        and cores_busy is not None
+        and granted
+        and cores_busy < granted * _WIDTH_UNUSED_SHARE
+    )
+
+
+def impact_text(share, saving_us, saving_share) -> str:
+    """What an element is on the chain and what fixing it is worth, as `_recommend` says it."""
+    parts = []
+    if share is not None:
+        parts.append(f"holds {qty.share(share)} of the critical path")
+    if saving_share is not None and saving_us:
+        parts.append(f"fixing it is worth {qty.duration(saving_us)} ({qty.share(saving_share)} of the build)")
+    return " and ".join(parts) if parts else "on the critical path"
+
+
+def width_unused_text(impact, cores_busy, granted) -> str:
+    """The one line, both readings named; `bga analyze`'s finding quotes it per element."""
+    return (
+        f"{impact}, but kept {cores_busy:.2f} of its {granted} granted cores busy "
+        f"({qty.share(cores_busy / granted)}) — look at how it is built before what it builds"
+    )
 
 
 @dataclass
@@ -676,6 +711,14 @@ def _grouped_line(finding_id: str, entries: list[dict], text: str) -> Optional[s
             f"look at how they are built before what they build"
         )
 
+    if finding_id == 'below-granted-width':
+        # UX-1359: each element's two readings, never a range that drops one.
+        each = ", ".join(
+            f"{e['element']} {e['cores_busy']:.2f} of {e['resolved_jobs']} ({qty.duration(e['potential_saving_us'])})"
+            for e in entries
+        )
+        return f"kept under half their granted cores busy: {each} — look at how they are built before what they build"
+
     if finding_id == 'cpu-concentration':
         binaries = {(e.get('dominant_binary') or {}).get('binary') for e in entries}
         if len(binaries) != 1 or None in binaries:
@@ -798,6 +841,19 @@ def _serial_stretch_step(joined: ElementJoin, impact: str) -> Optional[tuple]:
     )
 
 
+def _width_unused_step(unused: bool, ranked: list, impact, joined: ElementJoin) -> list[tuple]:
+    """UX-1359's line, unless a parallelism line already speaks for the element."""
+    if not unused or any(rank == _EVIDENCE_PARALLELISM for rank, _id, _text in ranked):
+        return []
+    return [
+        (
+            _EVIDENCE_PARALLELISM,
+            'below-granted-width',
+            width_unused_text(impact(), joined.cores_busy, joined.resolved_jobs),
+        )
+    ]
+
+
 def _recommend(joined: ElementJoin, memory_envelope_available: bool = False) -> list[str]:
     """Turn one element's two-plane picture into directed next steps.
 
@@ -836,14 +892,9 @@ def _recommend(joined: ElementJoin, memory_envelope_available: bool = False) -> 
     )
 
     def _impact() -> str:
-        parts = []
-        if share is not None:
-            parts.append(f"holds {qty.share(share)} of the critical path")
-        if worth is not None and joined.potential_saving_us:
-            parts.append(
-                f"fixing it is worth {qty.duration(joined.potential_saving_us)} ({qty.share(worth)} of the build)"
-            )
-        return " and ".join(parts) if parts else "on the critical path"
+        return impact_text(share, joined.potential_saving_us, worth)
+
+    unused = width_unused(joined.on_critical_path, worth, joined.cores_busy, joined.resolved_jobs)
 
     if (matters or cheap_win) and joined.cores_busy is not None:
         if joined.cores_busy < _COMPUTE_BOUND_CORES:
@@ -874,7 +925,7 @@ def _recommend(joined: ElementJoin, memory_envelope_available: bool = False) -> 
                         f"{detail}: look at how it is built before what it builds",
                     )
                 )
-        else:
+        elif not unused:
             # Deliberately phrased as a *negative* result. Its value is
             # ruling the micro plane out, so the reader stops looking
             # there - not as a thing to go and do.
@@ -888,6 +939,8 @@ def _recommend(joined: ElementJoin, memory_envelope_available: bool = False) -> 
                     f"from its parallelism; shortening it means less work",
                 )
             )
+
+    ranked.extend(_width_unused_step(unused, ranked, _impact, joined))
 
     # UX-72: the measurements the join used to read past. Gated on the
     # same "is this what to do next" question as the block above - a

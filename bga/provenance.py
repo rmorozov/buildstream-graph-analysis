@@ -767,6 +767,20 @@ _CLAIMS = {
         ),
         (),
     ),
+    "below-granted-width": (
+        (),
+        _rule(
+            "_WIDTH_UNUSED_SHARE",
+            _correlate._WIDTH_UNUSED_SHARE,
+            "<",
+            None,
+            "A critical-path element whose whatif saving is at least _WIDTH_UNUSED_SAVING_SHARE "
+            f"({_correlate._WIDTH_UNUSED_SAVING_SHARE:.1%}) of the build kept fewer cores busy than this share "
+            "of the width BuildStream granted it; each row names both readings.",
+            module="bga/correlate.py",
+        ),
+        (),
+    ),
     "jobs-waiting": (
         (),
         _rule(

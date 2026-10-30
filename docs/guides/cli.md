@@ -778,12 +778,13 @@ never silently folded into an unestimated blast.
 | `swap-observed` | high | pages were written to swap while the host's CPU was oversampled — the window span and the elements building in it, from `overcommitted_intervals`' own `swapped_out` count (`UX-676`, `UX-860`). Needs a capture with a host CPU series that recorded a rising `pswpout` |
 | `costliest-binary` | info | the binary that spent the most CPU, `by_binary[0]`, when its share of measured CPU clears the 1% opportunity floor (`UX-1255`). Needs `--plane2` with per-element binaries |
 | `jobs-waiting` | medium | elements that asked for more than one job and ran under 1.25 cores busy, each element's own CPU over its own wall — the line `bga correlate` calls waiting, not computing — counted, with their median (`UX-1255`). Needs `--plane2` |
+| `below-granted-width` | medium | critical-path elements whose whatif saving is at least 0.5% of the build and that kept under half their granted cores busy, each named with both readings — `bga correlate`'s `below-granted-width` line per element (`UX-1359`). Needs `--plane2` |
 | `configure-share` | medium | configure is at least 10% of measured CPU, from `configure_phase` (`UX-1255`). Needs `--plane2` |
 | `serial-stretch` | medium | elements that spent over 15% of their own process span at one busy work process or none — the line over which `bga correlate` refuses "already compute-bound" — counted, with the longest and the command that held most of it (`UX-1358`). Needs `--plane2` from a capture that measured it |
 | `remote-execution-whatif` | info | what remote execution would buy, priced two ways and never summed (`UX-680`): `bga sweep`'s own unbounded-builder row (BuildStream REAPI moves whole sandboxes, so it removes the builder cap) and Plane 2's compiler/linker CPU on the critical path (compiler-level RE like recc/reclient moves compiles out of the sandbox, so it removes compile seconds from the agent). `evidence.additive` is always `false` - both remove the same critical-path seconds. The compiler-offload half needs `--plane2` and a capture with `binary_cost`; without one, only the builder-cap half publishes |
 | `shared-source-blast` | medium | one repository's ref decides most of this build's rebuilds: any commit to it rebuilds N of M elements, because its direct elements key on its ref rather than on the files they stage (`UX-171`). Needs a run whose `sources.json` the extraction wrote |
 
-`bga correlate --format json` → `.actionable[].recommendations[].id` (9) and `.restructuring[].id` (1):
+`bga correlate --format json` → `.actionable[].recommendations[].id` (10) and `.restructuring[].id` (1):
 
 | id | severity | what it says |
 |---|---|---|
@@ -791,6 +792,7 @@ never silently folded into an unestimated blast.
 | `underachieved-requested-jobs` | high | waiting rather than computing despite asking for more jobs |
 | `waiting-not-computing` | high | waiting rather than computing, cause not named by Plane 2 |
 | `already-compute-bound` | high | a negative result: nothing to gain from its parallelism |
+| `below-granted-width` | high | on the chain, worth at least 0.5% of the build, and under half its granted cores busy — both readings named (`UX-1359`) |
 | `cpu-concentration` | high | one binary is most of its measured CPU |
 | `serialization-point` | high | a single process holds a material share of its wall time |
 | `peak-memory` | medium | its largest process's peak RSS, to multiply by concurrency |

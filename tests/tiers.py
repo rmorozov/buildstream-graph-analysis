@@ -1248,4 +1248,6 @@ MEDIUM = (
     "tests/unit/test_a_build_run_through_a_wrapper_script_is_captured.py",  #    1.0s
     "tests/unit/test_a_comparison_of_different_work_is_not_a_verdict.py",  #    2.2s
     "tests/unit/test_blast_answers_before_the_first_capture.py",  #    2.5s
+    # The freedesktop-sdk field-test rows, measured single-process on landing.
+    "tests/unit/test_a_low_cores_busy_chain_element_is_recommended.py",  #    1.5s
 )

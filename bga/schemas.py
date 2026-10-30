@@ -1781,6 +1781,11 @@ _EVIDENCE_FIELDS = {
         "The builder count this run's evidence supports, bounded by memory wherever memory was measured.",
     ),
     "swap_window_count": ("count", "Overcommitted windows that recorded a page written to swap."),
+    # `UX-1359`: below-granted-width's top element and its rule.
+    "saving_us": ("duration_us", "What whatif says making this element instant takes off the makespan."),
+    "granted_jobs": ("count", "The width BuildStream resolved for the element: the cores its busy figure is out of."),
+    "saving_share_floor": ("share", "The least share of the build a saving must be for the line to fire."),
+    "width_share_ceiling": ("share", "Cores busy over granted width must be under this for the line to fire."),
     "swapped_out_pages": ("count", "Pages written to swap across the named windows — `pswpout`'s delta, summed."),
     "violation_count": (
         "count",

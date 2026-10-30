@@ -1497,6 +1497,18 @@ def compute_ready_set_width(replay_scheduler) -> Optional[int]:
     return peak or None
 
 
+def with_own_sweep(recommendation: dict, sweep: Optional[tuple]) -> dict:
+    """UX-1363: builders from this run's `(walls from 1 builder up, knee)`, never under its knee.
+
+    The safe cap is a rule read on another fixture, so it never stands alone: builders is
+    `max(safe cap, knee)`, and with no sweep there is no builders figure.
+    """
+    walls, knee = sweep or (None, None)
+    safe_cap = recommendation.get('safe_builder_cap')
+    builders = max(safe_cap, knee) if safe_cap and knee else None
+    return dict(recommendation, builders=builders, sweep_knee=knee, sweep_walls_us=walls) if recommendation else {}
+
+
 def compute_builder_pool_recommendation(
     ready_set_width: Optional[int],
     host_cpu_count: Optional[int],

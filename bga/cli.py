@@ -501,7 +501,7 @@ def _builder_pool_recommendation(analyzer, result) -> dict:
     32.4's census, unit and population guards all fire on one), which
     this bounded track does not own.
     """
-    from bga.correlate import compute_builder_pool_recommendation, compute_ready_set_width
+    from bga.correlate import compute_builder_pool_recommendation, compute_ready_set_width, with_own_sweep
 
     scheduler = getattr(analyzer, 'replay_scheduler', None)
     context = getattr(analyzer, 'run_context', None)
@@ -524,13 +524,31 @@ def _builder_pool_recommendation(analyzer, result) -> dict:
         default=None,
     )
     calibrated_cores = os.environ.get(_CALIBRATED_CORES_ENV)
-    return compute_builder_pool_recommendation(
+    recommendation = compute_builder_pool_recommendation(
         ready_set_width,
         host_cpu_count,
         critical_path_max_jobs,
         calibrated_cores=int(calibrated_cores) if calibrated_cores else None,
         memory=_peak_rss_and_host_memory(analyzer.read_host_samples(), getattr(result, 'plane2_report', None)),
     )
+    return with_own_sweep(
+        recommendation, _own_sweep(scheduler, result, getattr(context, 'max_jobs', None) or 1, host_cpu_count)
+    )
+
+
+def _own_sweep(scheduler, result, builders: int, host_cpu_count: int) -> Optional[tuple]:
+    """UX-1363: `(walls from 1 builder up, knee)` from this run's own replay, `None` when it cannot sweep."""
+    from bga import sweep_curve
+
+    top = sweep_curve.sweep_top(builders, host_cpu_count, sweep_curve.graph_width(getattr(result, 'signals', None)))
+    try:
+        sweep = scheduler.capacity_sweep(resource='PROCESS', min_capacity=1, max_capacity=top, step=1)
+    except (AttributeError, ValueError) as exc:
+        logger.info("UX-1363: no capacity sweep for the builders line (%s)", exc)
+        return None
+    walls = sweep_curve.curve(sweep.sweeps)
+    knee = (sweep.knee_points or {}).get('PROCESS')
+    return (walls, knee) if walls and knee else None
 
 
 #: UX-680: compiler/linker binaries a compiler-level RE service
@@ -792,14 +810,22 @@ def _builder_pool_text_lines(recommendation: dict) -> list[str]:
     """The builder and pool lines, each with the reading it came from;
     the default is the safe cap under `--jobserver auto` (UX-1005)."""
     safe_cap = recommendation.get('safe_builder_cap')
+    builders = recommendation.get('builders')
     wide = f"{recommendation['ready_set_width']}, from {recommendation['ready_set_reading']}"
-    if safe_cap is None:
+    if builders is None:
         lines = [f"Builders (ready-set width): {wide}"]
     else:
+        # UX-1363: this run's replay is the evidence; the safe-cap rule is another fixture's, labelled so.
+        walls, knee = recommendation['sweep_walls_us'], recommendation['sweep_knee']
+        rule = (
+            f"the --jobserver auto safe cap (host cores less the critical path's max-jobs="
+            f"{recommendation['critical_path_max_jobs']}) is {safe_cap}, a rule read on another fixture "
+            "(13-mixed-graph, 16 cores: 143.6s -> 118.3s), not on this run"
+        )
         lines = [
-            f"Builders: {safe_cap} with --jobserver auto - the host's cores less "
-            f"the critical path's own max-jobs={recommendation['critical_path_max_jobs']}, "
-            "so it can widen into the rest (13-mixed-graph, 16 cores: 143.6s -> 118.3s)",
+            f"Builders: {builders} with --jobserver auto - this run's replay puts {builders} at "
+            f"{qty.duration(walls[min(builders, len(walls)) - 1])} against {qty.duration(walls[0])} at 1, "
+            f"its knee at {knee}; {rule}",
             f"  Ready-set width: {wide} - wider than the safe cap only with "
             "admission (BGA_ADMISSION=1), not yet measured faster",
         ]

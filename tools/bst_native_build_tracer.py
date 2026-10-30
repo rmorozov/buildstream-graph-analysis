@@ -5732,6 +5732,14 @@ def _list_contents(project_dir: str, group: list[str]) -> Optional[dict[str, set
 # exactly 1 file, against 128 to 9,443 for the real elements.
 _MIN_STAGED_FILES_FOR_EVIDENCE = 2
 
+# UX-1360: a staged file under one of these directories is a program the element may only have probed.
+_EXECUTABLE_DIRS = frozenset({"bin", "sbin", "libexec"})
+
+
+def _staged_executables(staged: set[str]) -> int:
+    """How many staged paths sit under a bin, sbin or libexec directory."""
+    return sum(1 for path in staged if _EXECUTABLE_DIRS.intersection(path.split("/")[:-1]))
+
 
 def compute_element_opens_coverage(records: list[dict]) -> dict[str, dict]:
     """UX-107: per element, what share of its processes the *hook* could
@@ -5814,6 +5822,9 @@ def compute_declared_vs_used(
       then nothing here changes.
     - a dependency whose artifact contents could not be read is skipped
       with a reason, never counted as unused.
+    - UX-1360: a run binary is a read (the hook records `/proc/self/exe`);
+      a dependency staging executables nobody opened or ran is skipped, as
+      a `stat`/`access` probe of one is not recorded.
     """
     unused: list[dict] = []
     used: list[dict] = []
@@ -5878,21 +5889,16 @@ def compute_declared_vs_used(
         opened = observed["paths"]
         for dep in sorted(deps):
             staged = artifact_contents.get(dep)
-            if staged is None:
-                skipped.append(
-                    {
-                        "element": element,
-                        "dependency": dep,
-                        "reason": "artifact contents unavailable (not built, or pulled without contents)",
-                    }
-                )
-                continue
             if not staged:
                 skipped.append(
                     {
                         "element": element,
                         "dependency": dep,
-                        "reason": "dependency staged no files - nothing to detect a read of",
+                        "reason": (
+                            "artifact contents unavailable (not built, or pulled without contents)"
+                            if staged is None
+                            else "dependency staged no files - nothing to detect a read of"
+                        ),
                     }
                 )
                 continue
@@ -5923,6 +5929,17 @@ def compute_declared_vs_used(
                     "opened it' is not evidence of anything"
                 )
                 aggregating.append(record)
+            elif executables := _staged_executables(staged):
+                # UX-1360: the hook records the binary a process runs, not a `stat`/`access` probe of one.
+                skipped.append(
+                    {
+                        "element": element,
+                        "dependency": dep,
+                        "reason": f"uncovered: {dep} stages {executables} executable(s), none opened or run "
+                        f"during {element}'s build, and a stat/access probe of one (a configure `test -x`) "
+                        "is not recorded",
+                    }
+                )
             else:
                 record["evidence"] = f"0 of {len(staged)} files staged by {dep} were opened during {element}'s build"
                 unused.append(record)
@@ -5968,7 +5985,9 @@ def compute_declared_vs_used(
             "dependencies needed only for a directory's existence all look the "
             "same from here. Elements with no observed opens, or with a "
             "truncated read set, are reported as uncovered rather than as "
-            "having unused dependencies. A relative open is joined "
+            "having unused dependencies. A binary a process ran counts as "
+            "read; a dependency staging executables that nobody opened or ran "
+            "is skipped, since a stat/access probe is not recorded. A relative open is joined "
             "against its opener's cwd and matched like an absolute one, but "
             "a path reached under another spelling - a symlink alias - is "
             "not matched, since the join is lexical and never resolves one."

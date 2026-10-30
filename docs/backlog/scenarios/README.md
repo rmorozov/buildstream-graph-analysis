@@ -40,6 +40,7 @@ task file, which is the only place it ever lived twice.
 | UX-1364 | [cores busy is judged against physical cores when the capture recorded them](UX-1364-cores-busy-is-judged-against-physical-cores.md) | analysis | Medium | R5, R2 | 🔴 Not Started |
 | UX-1365 | [analyze finds the Plane 2 report beside a published capture](UX-1365-analyze-finds-the-plane-2-report-beside-a-capture.md) | analysis | Medium | R1 | 🔴 Not Started |
 | UX-1366 | [shared-source findings separate build tools, and a flag on every element is not printed](UX-1366-build-tool-sources-and-universal-flags.md) | analysis | Low | R3 | 🔴 Not Started |
+| UX-1367 | [an analysis written by an older bga is not served as the current one](UX-1367-a-stale-analysis-is-not-served-as-current.md) | analysis | Medium | R1 | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

@@ -1183,15 +1183,13 @@ def _shared_source_findings(result: AnalysisResult) -> list[dict]:
         return []
     top = (blast.get('rows') or [{}])[0]
     reach, of = top.get('blast_count'), blast.get('element_count')
-    tool = bool(top.get('build_tool'))
     return [
         _finding(
             'shared-source-blast',
-            # UX-1366: a build tool's bump rebuilding its consumers is by design, not a defect.
-            SEVERITY_INFO if tool else SEVERITY_MEDIUM,
+            # UX-1366: build-only reach is no tool role (a static library has it too); severity and step stay.
+            SEVERITY_MEDIUM,
             # The repository URL and the because-clause are the detail line (UX-1248).
             f"{reach:,} of {of:,} elements rebuild on any commit to one shared source"
-            + (", as expected of a build tool" if tool else "")
             if reach is not None and of
             else "One shared source decides most of this build's rebuilds",
             detail=[f"    {headline}"],
@@ -1200,18 +1198,14 @@ def _shared_source_findings(result: AnalysisResult) -> list[dict]:
                 'kind': top.get('kind'),
                 'keying': top.get('keying'),
                 'direct_count': top.get('direct_count'),
-                'build_tool': tool,
+                'build_only_reach': bool(top.get('build_only_reach')),
                 'blast_count': top.get('blast_count'),
                 'element_count': blast.get('element_count'),
                 'measured_us': top.get('measured_us'),
             },
             elements=top.get('direct_elements') or [],
-            step=(
-                _none("its direct elements are build tools; their dependents take them through build dependencies only")
-                if tool
-                else _step(
-                    "Narrow which elements take this source, or key it per element, so a change stops rebuilding the rest."
-                )
+            step=_step(
+                "Narrow which elements take this source, or key it per element, so a change stops rebuilding the rest."
             ),
         )
         # The section leads with the same sentence; the card links there rather than drawing it twice.

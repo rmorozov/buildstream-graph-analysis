@@ -452,18 +452,21 @@ def build_only_elements(dependencies) -> set:
     return {uid for uid, types in kinds.items() if types == {"build"}}
 
 
-def mark_build_tools(rows: list[dict], build_only: set) -> list[dict]:
-    """Set each row's `build_tool` (`UX-1366`): all its direct elements are in `build_only`."""
+def mark_build_only_reach(rows: list[dict], build_only: set) -> list[dict]:
+    """Set each row's `build_only_reach` (`UX-1366`): all its direct elements are in `build_only`.
+
+    An observed edge type, never a tool role: a static library has build-only dependents too.
+    """
     for row in rows:
-        row["build_tool"] = bool(build_only) and all(uid in build_only for uid in row["direct_elements"])
+        row["build_only_reach"] = bool(build_only) and all(uid in build_only for uid in row["direct_elements"])
     return rows
 
 
-BUILD_TOOL_CLAUSE = "build tool: its dependents use it through build dependencies only, so this reach is expected"
+BUILD_ONLY_NOTE = "every dependent of its direct elements takes them through build dependencies only"
 
 
 def keying_clause(row: dict) -> str:
-    """The sentence that turns a count into a decision, then `BUILD_TOOL_CLAUSE` for a build tool.
+    """The sentence that turns a count into a decision, then `BUILD_ONLY_NOTE` when it holds.
 
     `UX-181`: the wording comes from the *kind*, because "any commit to
     this" is the right sentence about a repository and the wrong one
@@ -479,7 +482,7 @@ def keying_clause(row: dict) -> str:
         clause = "keys on content: only the elements whose files changed rebuild"
     else:
         return f"keying unknown for `{row['kind']}` sources - blast not estimated"
-    return f"{clause}; {BUILD_TOOL_CLAUSE}" if row.get("build_tool") else clause
+    return f"{clause}; {BUILD_ONLY_NOTE}" if row.get("build_only_reach") else clause
 
 
 # When one ref-keyed resource's blast covers this much of the graph, the
@@ -514,19 +517,13 @@ def monorepo_headline(rows: list[dict], element_count: int, share: float = MONOR
         cost = ""
         if row["measured_us"]:
             cost = f", {format_work(row['measured_us'] / US_PER_S)} of measured build work"
-        if row.get("build_tool"):
-            return (
-                f"A change to {row['identity']} rebuilds {row['blast_count']:,} of "
-                f"{element_count:,} elements ({covered:.0%}{cost}), as expected: its "
-                f"{row['direct_count']:,} direct elements are build tools, and their dependents "
-                f"use them through build dependencies only."
-            )
+        note = f" {BUILD_ONLY_NOTE[0].upper()}{BUILD_ONLY_NOTE[1:]}." if row.get("build_only_reach") else ""
         return (
             f"One repository decides most of this build: any commit to "
             f"{row['identity']} rebuilds {row['blast_count']:,} of "
             f"{element_count:,} elements ({covered:.0%}{cost}), because its "
             f"{row['direct_count']:,} direct elements key on its ref rather "
-            f"than on the files they stage."
+            f"than on the files they stage.{note}"
         )
     return None
 

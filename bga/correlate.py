@@ -881,8 +881,18 @@ def _compute_bound_step(joined: ElementJoin, impact: str) -> tuple:
         f"{qty.share(_SERIAL_SHARE_LINE)} line"
         + (f", with {alive:.1f} processes alive on average" if alive is not None else "")
         + (f", most of it in {owners}" if owners else "")
-        + ": a serial stretch no job count shortens",
+        + _serial_cause(joined.requested_jobs),
     )
+
+
+def _serial_cause(requested_jobs: Optional[int]) -> str:
+    """UX-1358 review 2: low sampled CPU cannot tell a dependency chain from a narrow job setting."""
+    if requested_jobs == 1:
+        return (
+            ": its make/ninja asked for -j1, so this may be a narrow job setting a wider -j could shorten "
+            "rather than a dependency chain"
+        )
+    return ": the sampling shows low parallelism here, and cannot tell a dependency chain from a narrow job setting"
 
 
 def _width_unused_step(unused: bool, ranked: list, impact, joined: ElementJoin) -> list[tuple]:

@@ -87,3 +87,18 @@ Same capture, after: `grep -c "nothing to gain"` -> 0, and the gcc group reads "
 Reverted: 11 passed. M1 and M2 each redden the other counterexample's neighbours because both run through the same window test; each guard also has a mutation that reddens it alone or with its own consumers.
 
 **Beyond the brief** (for the orchestrator's deviation line): the brief named the sampled rate; measurement added two corrections it did not name - children reaped between ticks (`cutime`) and a host-idle gate for contention - and the sampler now follows the invocation log, so the capture workflow samples without a workflow edit. `make test-touching`: 18 failed, 6608 passed; 14 of the 18 fail identically at `50120b532`, the other 4 (doc key names, schema dashes) were this change's and are fixed.
+
+**Review correction 2** (owner, PR #336 head `217550fb1`): low sampled CPU shows low observed parallelism, not that no job count shortens the stretch - a `make -j1` over independent compiles reads exactly like a dependency chain. The categorical clause is gone: an element whose make/ninja asked for `-j1` (`requested_jobs` 1; `make` itself is orchestration, so never an owner) reads as a possible narrow setting, anything else as sampling that cannot tell the two apart. Gap: every `serial-stretch` line ended ": a serial stretch no job count shortens". Close, `make -j1` over five 20 s `cc1` at 1.0 core:
+
+```text
+... 1.7 min of its 1.7 min sampled with a core free (100.0%) ran at or under 1.25 cores busy, ..., most of it in `cc1 -quiet unit0.c -o unit0.o` (20.0 s), ...: its make/ninja asked for -j1, so this may be a narrow job setting a wider -j could shorten rather than a dependency chain
+```
+
+`python3 -m pytest -q -p no:xdist tests/unit/test_a_serial_stretch_is_measured_not_averaged.py`:
+
+| mutation | reddened | count |
+|---|---|---|
+| R1 the categorical clause restored | make-j1, no-j1 | 2 failed, 11 passed |
+| R2 `requested_jobs` ignored | make-j1 | 1 failed, 12 passed |
+| R3 an unknown request read as `-j1` | no-j1 | 1 failed, 12 passed |
+| reverted | — | 13 passed |

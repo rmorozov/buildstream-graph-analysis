@@ -4,7 +4,8 @@ holds: a linker driver waiting on its linker (two processes, one core) is serial
 (one process, four cores) is not; an autoreconf loop with no classified work binary is serial and named;
 a low window on a saturated host is contention, not serial; children reaped between ticks still count; the
 invocation log alone starts the sampler; and an element with no samples is unknown - correlate then says so
-instead of "already compute-bound".
+instead of "already compute-bound". Low sampled CPU never says no job count shortens a stretch: a `make -j1`
+over independent compiles is named as a possible narrow setting (review 2).
 """
 
 import json
@@ -53,6 +54,28 @@ def test_a_parent_waiting_on_its_child_is_two_processes_and_one_core():
     assert row["observed_process_concurrency"] == pytest.approx(2.0), row
     assert row["serial_wall_s"] == pytest.approx(100.0) and row["serial_share"] == pytest.approx(1.0), row
     assert row["observed_process_concurrency_in_serial"] == pytest.approx(2.0), row
+
+
+def _make_j1_records():
+    rows = [_record(0.0, 100.0, "sh -c -e build", 1), _record(0.0, 100.0, "make -j1", 2)]
+    # Five independent translation units, one after another only because make was given -j1.
+    rows += [_record(20.0 * i, 20.0 * i + 20.0, f"cc1 -quiet unit{i}.c -o unit{i}.o", 10 + i) for i in range(5)]
+    return rows
+
+
+def test_a_make_j1_over_five_independent_compiles_is_named_as_a_possible_narrow_setting():
+    row = _profile(_make_j1_records(), _flat(1.0))
+    assert row["requested_jobs"] == 1 and row["serial_wall_s"] == pytest.approx(100.0), row
+    text = {step["id"]: step["text"] for step in _recommend(_joined(row))}["serial-stretch"]
+    assert "no job count" not in text, text
+    assert "asked for -j1, so this may be a narrow job setting a wider -j could shorten" in text, text
+
+
+def test_a_serial_stretch_without_a_j1_names_no_cause():
+    records = [_record(0.0, 100.0, "/usr/bin/collect2 -o cc1", 1), _record(0.0, 100.0, "/usr/bin/ld -o cc1", 2)]
+    text = {step["id"]: step["text"] for step in _recommend(_joined(_profile(records, _flat(1.0))))}["serial-stretch"]
+    assert "no job count" not in text and "-j1" not in text, text
+    assert text.endswith("cannot tell a dependency chain from a narrow job setting"), text
 
 
 def test_one_four_thread_process_is_one_process_and_not_serial():
@@ -162,6 +185,7 @@ def test_the_invocation_log_alone_names_the_roots(tmp_path):
 
 
 def _joined(profile):
+    view = _plane2_view({"per_element_parallelism": [profile]})[ELEMENT]
     return ElementJoin(
         element=ELEMENT,
         on_critical_path=True,
@@ -169,7 +193,8 @@ def _joined(profile):
         potential_saving_us=1_837_400_000,
         saving_share=0.13,
         cores_busy=2.57,
-        serial_stretch=_plane2_view({"per_element_parallelism": [profile]})[ELEMENT].get("serial_stretch"),
+        requested_jobs=view.get("requested_jobs"),
+        serial_stretch=view.get("serial_stretch"),
     )
 
 

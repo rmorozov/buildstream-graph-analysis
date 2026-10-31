@@ -1,4 +1,4 @@
-"""UX-1366 (b): requested_jobs reads the granted width, and a flag on every traced element is one finding."""
+"""UX-1366 (b): a flag on every traced element is one finding; requested_jobs stays the observed request."""
 
 import contextlib
 import io
@@ -34,14 +34,14 @@ def _applied(entries, widths):
     return report
 
 
-def test_a_lone_j1_step_does_not_stand_for_the_granted_width():
-    """`make -j1 install` beside a `make` that inherits `--max-jobs 4`."""
+def test_the_granted_width_is_resolved_jobs_and_never_rewrites_the_request():
+    """`make -j1 install` beside a `make` that inherits `--max-jobs 4`: 1 requested, 4 resolved."""
     report = _applied(
         [_entry("a.bst", 1), _entry("pinned.bst", 1), _entry("wide.bst", 2), _entry("none.bst", None)],
         {"a.bst": 4, "pinned.bst": 1, "wide.bst": 8, "none.bst": 4},
     )
-    got = {e["element"]: e["requested_jobs"] for e in report["per_element_parallelism"]}
-    assert got == {"a.bst": 4, "pinned.bst": 1, "wide.bst": 2, "none.bst": None}
+    got = {e["element"]: (e["requested_jobs"], e["resolved_jobs"]) for e in report["per_element_parallelism"]}
+    assert got == {"a.bst": (1, 4), "pinned.bst": (1, 1), "wide.bst": (2, 8), "none.bst": (None, 4)}
 
 
 def test_a_finding_every_traced_element_carries_is_summarised():

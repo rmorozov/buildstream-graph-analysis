@@ -268,7 +268,9 @@ VOCABULARIES = {
     "mem_bound_by": Vocabulary(frozenset({"meminfo", "cgroup"}), None),
     "coverage": Vocabulary(frozenset({"spine+hook", "spine-only", "hook-only"}), None),
     "spine_policy": Vocabulary(frozenset({"off", "auto", "on", "always"}), None),
-    "parallelism_finding": Vocabulary(frozenset({"pinned_to_one_job", "underachieved_requested_jobs"}), None),
+    "parallelism_finding": Vocabulary(
+        frozenset({"pinned_to_one_job", "underachieved_requested_jobs", "granted_width_unknown"}), None
+    ),
     "jobserver_auth": Vocabulary(frozenset({"fd", "fifo"}), None),
     "jobserver_mode": Vocabulary(frozenset({"off", "auto", "n"}), None),
     "jobserver_seed_bound": Vocabulary(frozenset({"max_jobs", "cores", "typed", "cgroup"}), None),

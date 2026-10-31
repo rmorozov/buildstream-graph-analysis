@@ -54,15 +54,15 @@ def test_without_this_runs_sweep_no_builder_count_is_recommended():
     assert not any("13-mixed-graph" in line for line in lines)
 
 
-def _four_wide():
-    """A base and four equal dependents: the replay's knee is 4 builders; 4 cores less max-jobs 4 is a cap of 1."""
+def _four_wide(host_cpu_count=6):
+    """A base and four equal dependents: the replay's knee is 4 builders; 6 cores less max-jobs 4 is a cap of 2."""
     leaves = [f"leaf{i}.bst" for i in range(4)]
     elements = [dict(_element("base.bst"), max_jobs=4)]
     elements += [dict(_element(uid, requested_target=True), max_jobs=4) for uid in leaves]
     dependencies = [_dependency("base.bst", uid) for uid in leaves]
     spans = [_span("base.bst", 0, 10 * S)] + [_span(uid, 10 * S, 60 * S) for uid in leaves]
     run_context, graph, trace = _build(elements, dependencies, spans, wall_end_us=70 * S, max_jobs=4)
-    return dict(run_context, host_cpu_count=4, native_max_jobs=4), graph, trace
+    return dict(run_context, host_cpu_count=host_cpu_count, native_max_jobs=4), graph, trace
 
 
 def test_analyze_on_a_run_keeps_the_safe_cap_and_names_its_knee_as_a_what_if(tmp_path):
@@ -71,6 +71,7 @@ def test_analyze_on_a_run_keeps_the_safe_cap_and_names_its_knee_as_a_what_if(tmp
         [sys.executable, "-m", "bga.cli", "analyze", str(run_dir)], capture_output=True, text=True, check=True
     ).stdout.splitlines()
     at = next(index for index, line in enumerate(out) if line.startswith("Builders"))
-    assert int(re.match(r"Builders: (\d+) ", out[at]).group(1)) == 1, out[at]
-    assert "this run's replay puts 1 at 4.2 min;" in out[at]
+    # UX-1368: 6 cores over a chain of 4 is a fat host, where the cap stands under auto.
+    assert int(re.match(r"Builders: (\d+) ", out[at]).group(1)) == 2, out[at]
+    assert "with --jobserver auto - this run's replay puts 2 at 2.2 min against 4.2 min at 1;" in out[at]
     assert out[at + 1].startswith(f"{WHAT_IF} 4 builders (70.0 s)")

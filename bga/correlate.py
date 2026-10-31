@@ -1580,6 +1580,68 @@ def with_own_sweep(recommendation: dict, sweep: Optional[tuple]) -> dict:
     )
 
 
+#: BuildStream's `userconfig.yaml` `builders`, and `max-jobs: 0`'s `min(cores, 8)` ceiling (UX-09).
+BST_DEFAULT_BUILDERS = 4
+BST_MAX_JOBS_CEILING = 8
+
+
+def host_regime(host_cpu_count: Optional[int], chain_max_jobs: Optional[int]) -> Optional[str]:
+    """UX-1368: `small` when the chain's own width fills the host, `serial` for a `-j1` chain, else `fat`."""
+    if not host_cpu_count or not chain_max_jobs:
+        return None
+    if chain_max_jobs >= host_cpu_count:
+        return 'small'
+    return 'serial' if chain_max_jobs == 1 else 'fat'
+
+
+def size_by_regime(
+    recommendation: dict,
+    regime: Optional[str],
+    configured: tuple,
+    capacity_builders: Optional[int] = None,
+) -> dict:
+    """UX-1368: every approach sized for this host, and the one proposed.
+
+    `configured` is `(builders, max-jobs)` as run. Only a fat host (cores above a wide chain's
+    max-jobs) has idle cores for `--jobserver auto` to lend; elsewhere builders come from this
+    run's capacity recommendation, else its replay knee, with the jobserver off.
+    """
+    walls, knee, host = (
+        recommendation.get('sweep_walls_us'),
+        recommendation.get('sweep_knee'),
+        recommendation.get('host_cpu_count'),
+    )
+    if not regime or not walls or not knee or not host:
+        return recommendation
+    builders, max_jobs = configured
+    cap = recommendation['safe_builder_cap']
+    sized_off = min(capacity_builders or knee, host)
+    default_jobs = min(host, BST_MAX_JOBS_CEILING)
+    off_jobs = min(max_jobs or default_jobs, host) if regime == 'small' else (max_jobs or default_jobs)
+    approaches = [
+        {'name': 'off', 'builders': sized_off, 'max_jobs': off_jobs, 'jobserver': 'off'},
+        {'name': 'auto', 'builders': cap, 'max_jobs': max_jobs or default_jobs, 'jobserver': 'auto'},
+        {'name': 'defaults', 'builders': BST_DEFAULT_BUILDERS, 'max_jobs': default_jobs, 'jobserver': 'off'},
+        {'name': 'admission', 'builders': None, 'max_jobs': None, 'jobserver': 'auto'},
+    ]
+    if builders and max_jobs and (builders, max_jobs) not in {(a['builders'], a['max_jobs']) for a in approaches[:3]}:
+        approaches.insert(2, {'name': 'configured', 'builders': builders, 'max_jobs': max_jobs, 'jobserver': 'off'})
+    proposed = 'auto' if regime == 'fat' else 'off'
+    for approach in approaches:
+        count = approach['builders']
+        approach['replay_wall_us'] = walls[min(count, len(walls)) - 1] if count else None
+        approach['proposed'] = approach['name'] == proposed
+    chosen = next(a for a in approaches if a['proposed'])
+    sized: dict = dict(
+        recommendation, regime=regime, approaches=approaches, jobserver=proposed, builders=chosen['builders']
+    )
+    sized['configured'] = configured
+    sized['max_jobs'] = chosen['max_jobs']
+    if proposed == 'off':
+        sized['graph_only_knee'] = None
+    return sized
+
+
 def compute_builder_pool_recommendation(
     ready_set_width: Optional[int],
     host_cpu_count: Optional[int],
@@ -1646,6 +1708,7 @@ def compute_builder_pool_recommendation(
         'ready_set_reading': "the replay's ready-set width",
         'safe_builder_cap': safe_cap,
         'critical_path_max_jobs': critical_path_max_jobs,
+        'host_cpu_count': host_cpu_count,
         'pool_size': pool_size,
         'pool_reading': pool_reading,
         'caveat': (

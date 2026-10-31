@@ -1004,25 +1004,26 @@ _WHATIF_REQUIRED = {
     "projected": "object",
 }
 
+_EU = (
+    ("baseline_makespan_us", "The run replayed over its builders, with the edges."),
+    ("makespan_after_us", "The same replay without them and what only they pulled in."),
+    ("saving_us", "The difference: the price of the edges, a question rather than a verdict."),
+)
 _WHATIF_HINTS = {
     "run_id": {"description": "The run this projection is over."},
     "selected": {"description": "The elements the caller chose, in the order they were given."},
     "total_duration_us": {
         QUANTITY: "duration_us",
-        "description": "This run's wall-clock, for scale. The projection "
-        "below is over the critical path, which is a "
-        "different quantity.",
+        "description": "This run's wall-clock, for scale. The projection below is over the critical path, "
+        "which is a different quantity.",
     },
     "convention": {
-        "description": "What \"fixed\" means, published with "
-        "every answer so a figure that travels "
-        "keeps its assumption attached."
+        "description": "What \"fixed\" means, published with every answer so a figure that travels keeps "
+        "its assumption attached."
     },
     "refusals": {
-        "description": "Why no projection is published, when none is: an "
-        "empty selection, an element the graph does not "
-        "know, or one with no measured duration. Each "
-        "names the check and the elements it fired on.",
+        "description": "Why no projection is published, when none is: an empty selection, an element the graph "
+        "does not know, or one with no measured duration. Each names the check and the elements it fired on.",
         "items": {
             "properties": {
                 "check": {"description": "The name a caller matches on, rather than the prose."},
@@ -1033,8 +1034,7 @@ _WHATIF_HINTS = {
     },
     "projected": {
         QUESTION: 'What would the build drop to?',
-        "description": "The projection, computed by the same "
-        "joint-saving recompute the report's own horizon "
+        "description": "The projection, computed by the same joint-saving recompute the report's own horizon "
         "uses. `null` when anything was refused.",
         "properties": {
             "baseline_makespan_us": {
@@ -1043,25 +1043,25 @@ _WHATIF_HINTS = {
             },
             "joint_saving_us": {
                 QUANTITY: "duration_us",
-                "description": "What the whole selection is worth "
-                "together — a longest-path recompute with "
+                "description": "What the whole selection is worth together — a longest-path recompute with "
                 "every chosen element zeroed, not a sum.",
             },
             "makespan_after_us": {
                 QUANTITY: "duration_us",
-                "description": "What the chain drops to. Published rather "
-                "than left as a subtraction, for the "
+                "description": "What the chain drops to. Published rather than left as a subtraction, for the "
                 "reason the headline's scheduling gap is.",
             },
             "sum_of_individual_us": {
                 QUANTITY: "duration_us",
-                "description": "What each element is worth *alone*, added "
-                "up — published as the wrong answer, "
-                "deliberately. On a shared chain it "
-                "differs from the joint saving, and that "
-                "difference is why a page must never add.",
+                "description": "What each element is worth *alone*, added up — published as the wrong answer, "
+                "deliberately. On a shared chain it differs from the joint saving, and that difference is why "
+                "a page must never add.",
             },
         },
+    },
+    "edges": {
+        "description": "With `--drop-edge`: one replay without the edges, pruning what only they pulled in.",
+        "properties": {"projected": {"properties": {k: {QUANTITY: "duration_us", "description": d} for k, d in _EU}}},
     },
 }
 
@@ -1372,6 +1372,44 @@ _JOIN_ITEM_PROPERTIES = {
             "wall_us": {
                 QUANTITY: "duration_us",
                 "description": "Wall-clock it spanned doing so — close to its CPU time is the tell.",
+            },
+        },
+    },
+    "serial_stretch": {
+        "description": "Sampled wall-clock this element spent at or under one core busy, and who held it; or not "
+        "known, and why. Absent when the native report predates the sampled measurement.",
+        "properties": {
+            "known": {"description": "Whether the CPU samples covered enough of the span to measure it."},
+            "reason": {"description": "Why it is unknown: no CPU samples, or too little of the span sampled."},
+            "wall_us": {
+                QUANTITY: "duration_us",
+                "description": "Wall-clock of sampled windows at or under the serial line's cores busy.",
+            },
+            "sampled_us": {QUANTITY: "duration_us", "description": "Wall-clock the CPU sampler's windows covered."},
+            "contended_us": {
+                QUANTITY: "duration_us",
+                "description": "Of that, low windows beside under one idle host core: contention, neither serial nor not.",
+            },
+            "span_us": {QUANTITY: "duration_us", "description": "The element's own process span it is a part of."},
+            "share": {QUANTITY: "share", "description": "That wall-clock over the sampled, uncontended wall-clock."},
+            "cores_line": {
+                QUANTITY: "ratio",
+                "description": "Cores busy (utime+stime per wall second) at or under which a window is serial.",
+            },
+            "observed_process_concurrency": {
+                QUANTITY: "ratio",
+                "description": "Processes alive on average inside those windows: alive, not running on a CPU.",
+            },
+            "owners": {
+                GROWS: False,
+                "maxItems": 3,
+                "description": "The command signatures alive longest inside those stretches, most first.",
+                "items": {
+                    "properties": {
+                        "signature": {"description": "The normalised command line."},
+                        "wall_us": {QUANTITY: "duration_us", "description": "Its wall-clock inside the stretches."},
+                    }
+                },
             },
         },
     },
@@ -1762,6 +1800,11 @@ _EVIDENCE_FIELDS = {
         "The builder count this run's evidence supports, bounded by memory wherever memory was measured.",
     ),
     "swap_window_count": ("count", "Overcommitted windows that recorded a page written to swap."),
+    # `UX-1359`: below-granted-width's top element and its rule.
+    "saving_us": ("duration_us", "What whatif says making this element instant takes off the makespan."),
+    "granted_jobs": ("count", "The width BuildStream resolved for the element: the cores its busy figure is out of."),
+    "saving_share_floor": ("share", "The least share of the build a saving must be for the line to fire."),
+    "width_share_ceiling": ("share", "Cores busy over granted width must be under this for the line to fire."),
     "swapped_out_pages": ("count", "Pages written to swap across the named windows — `pswpout`'s delta, summed."),
     "violation_count": (
         "count",
@@ -3361,6 +3404,15 @@ _RUN_INSTANCE_HINT = {
                     QUANTITY: "count",
                     "description": "Cores the host reported, which the CPU ceiling is computed against.",
                 },
+                "cpu_label": {
+                    "description": "The host's CPU count as the page's Host row says it: logical and physical "
+                    "cores when they differ, or that physical is unknown for a capture from before it was recorded.",
+                },
+                "physical_cores": {
+                    QUANTITY: "count",
+                    "description": "Physical cores behind the logical CPUs the host reported; absent in a capture from "
+                    "before they were recorded.",
+                },
                 "memory_bytes": {
                     QUANTITY: "bytes",
                     "description": "Memory the host reported, which the memory ceiling is computed against.",
@@ -3576,6 +3628,10 @@ _ANALYZE_HINTS = {
                     "properties": {
                         **_RESOURCE_COUNTS,
                         "by_element_kind": {"additionalProperties": {QUANTITY: "count"}},
+                        "build_only_reach": {
+                            "description": "True when every dependent of the direct elements takes them through "
+                            "build dependencies only. An edge type, not a tool role: the finding keeps its severity.",
+                        },
                         "direct_elements": {
                             GROWS: "elements directly sourcing that resource (subset, no cap)",
                             "items": {"type": "string", "description": "element uid"},
@@ -4972,8 +5028,8 @@ _ANALYZE_HINTS = {
     "plane2_absence": {
         QUESTION: 'Why is Plane 2 not in this report?',
         RAIL: 'prove',
-        "description": "One of three sentences (bga/plane2.py): the plane "
-        "was never captured, or it was captured and its raw "
+        "description": "One of four sentences (bga/plane2.py): the plane "
+        "was never captured, or a native report sits beside the run unattached, or it was captured and its raw "
         "log was not kept, or this analysis was told to "
         "ignore it. Absent when Plane 2 is here.",
     },
@@ -5123,9 +5179,9 @@ _ANALYZE_HINTS = {
                 "tick is in the total and absent from "
                 "the curve, and a `/proc` read that "
                 "failed ends a series rather than "
-                "reading zero. Present only under "
-                "`--jobserver`: the shim's decision "
-                "rows name each sandbox's host root."
+                "reading zero. The shim's invocation "
+                "log names each sandbox's host root, "
+                "so every traced capture samples it."
             },
             "note": {"description": "What a CPU figure here means, in a sentence."},
         },
@@ -7067,11 +7123,10 @@ _SCHEMAS = {
         WHATIF,
         "bga whatif RUN --element A --element B",
         _WHATIF_REQUIRED,
-        "What the build would drop to if a chosen set of elements were "
-        "fixed together — one longest-path recompute with each of them "
-        "zeroed, never a sum of their individual savings. Refused, with "
-        "the reason, for an empty selection or an element this run "
-        "cannot project.",
+        "What the build would drop to if a chosen set of elements were fixed together — one longest-path "
+        "recompute with each of them zeroed, never a sum of their individual savings — or, with `--drop-edge`, "
+        "a replay without those edges. Refused, with the reason, for an empty question or one it cannot project.",
+        optional={"edges": "object"},
         hints=_WHATIF_HINTS,
     ),
 }

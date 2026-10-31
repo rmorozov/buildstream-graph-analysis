@@ -59,8 +59,11 @@ UNREACHABLE = {
     "a generated --workload binaries run reaches it (UX-1255)",
     "jobs-waiting": "in the one committed Plane 2 report every element that asked for more than one job "
     "ran at 1.38 cores busy or more, over correlate's 1.25 line; core.bst at 0.90 asked for one (UX-1255)",
+    "native-finding-on-every-element": "the one committed Plane 2 report has elements with and without "
+    "overlap_exceeds_granted_width, so no id is on every traced one (UX-1366)",
     "configure-share": "the one committed Plane 2 report spends 6.4% of CPU in configure, "
     "under PLANE2_CONFIGURE_SHARE (UX-1255)",
+    "serial-stretch": "the one committed Plane 2 report predates the serial-stretch measurement (UX-1358)",
 }
 
 

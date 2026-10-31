@@ -150,6 +150,9 @@ def _run_instance(run_context, loaded_from) -> dict:
         # bytes. Measured: the committed `macro_micro` run does exactly
         # that.
         instance['host_manifest'] = hostinfo.normalised(manifest)
+        if manifest.get('cpu_count'):
+            physical = getattr(run_context, 'host_physical_cores', None) or manifest.get('physical_cores')
+            instance['host_manifest']['cpu_label'] = hostinfo.cpu_label(manifest['cpu_count'], physical)
     # UX-898/UX-903: and what build it was. Rides with the host manifest
     # for the same reason - the comparison class is the pair, so a
     # reader that loaded one and not the other holds half a class.
@@ -258,6 +261,17 @@ UNDISTRIBUTED_QUANTITIES = {
     'wall_clock': 'one number per run; the store aggregate is where its distribution across runs already lives',
     'optimization_horizon': 'one number per run, same as wall-clock — and it is\n                             already a projection, so a percentile of it would rank\n                             guesses against each other',
 }
+
+
+def _rank_by_realizable_saving(savings, critical_path_us: int, durations: dict) -> Optional[list[tuple]]:
+    """`(uid, share of the finish, saving_us)` from whatif's per-element savings, best first; None when not computed."""
+    if savings is None:
+        return None
+    ranked = sorted(
+        ((uid, saving) for uid, saving in savings.items() if saving > 0),
+        key=lambda item: (-item[1], -durations.get(item[0], 0)),
+    )
+    return [(uid, (saving / critical_path_us if critical_path_us else 0.0), saving) for uid, saving in ranked[:10]]
 
 
 def distribution(values):
@@ -1910,12 +1924,14 @@ class BuildEfficiencyAnalyzer:
         # each costs one longest-path recomputation.
         savings: dict[str, int] = {}
         if self.graph:
-            candidates = [
-                uid
-                for uid in sorted(critical_path, key=lambda u: -duration_by_uid.get(u, 0))
-                if duration_by_uid.get(uid) and kind_by_uid.get(uid) not in STRUCTURAL_ELEMENT_KINDS
-            ]
-            savings = compute_realizable_savings(self.graph, dict(duration_by_uid), candidates)
+            # UX-1362: whatif's own durations, over every measured chain element, so one figure travels.
+            whatif_durations = compute_element_durations(self.normalized_tasks)
+            candidates = sorted(
+                (uid for uid in critical_path if whatif_durations.get(uid)),
+                key=lambda u: (kind_by_uid.get(u) in STRUCTURAL_ELEMENT_KINDS, -whatif_durations[u]),
+            )
+            savings = compute_realizable_savings(self.graph, whatif_durations, candidates)
+        self._realizable_savings = savings
         return [
             {
                 'element_uid': uid,
@@ -2565,7 +2581,15 @@ class BuildEfficiencyAnalyzer:
         kind_by_uid = self._element_kind_lookup()
         actionable_opportunities = []
         omitted_structural_opportunities = []
-        for entry in result.sensitivity.top_opportunities:
+        # UX-1362: the ceiling capped every element at the graph's smallest positive slack (1.0 s on
+        # fdsdk, held by components/diffutils.bst); the ranking is whatif's realizable saving instead.
+        cp_us = result.sensitivity.critical_path_us
+        ranked = _rank_by_realizable_saving(
+            getattr(self, '_realizable_savings', None), cp_us, compute_element_durations(self.normalized_tasks)
+        )
+        if ranked is None:
+            ranked = [(key, score, int(score * cp_us)) for key, score, _pct in result.sensitivity.top_opportunities]
+        for entry in ranked:
             uid = entry[0]
             if kind_by_uid.get(uid) in STRUCTURAL_ELEMENT_KINDS:
                 omitted_structural_opportunities.append(
@@ -2588,7 +2612,7 @@ class BuildEfficiencyAnalyzer:
                     {
                         'element_uid': entry[0],
                         'sensitivity': entry[1],
-                        'saving_us': int(entry[1] * result.sensitivity.critical_path_us),
+                        'saving_us': entry[2],
                     }
                 )
 
@@ -2615,7 +2639,13 @@ class BuildEfficiencyAnalyzer:
             # *concurrently* is this module's graph-independence result,
             # which is a fact about people, not about the schedule.
             realizable = getattr(self, '_realizable_candidates', None) or []
-            candidates = realizable[:5] or [row['element_uid'] for row in actionable_opportunities]
+            # UX-1362: zero-slack elements worth nothing alone may still batch, so the fallback stays slack's.
+            zero_slack = [
+                e[0]
+                for e in result.sensitivity.top_opportunities
+                if kind_by_uid.get(e[0]) not in STRUCTURAL_ELEMENT_KINDS
+            ]
+            candidates = realizable[:5] or zero_slack[:5]
             element_to_task_key = {t.task_key.element_uid: str(t.task_key) for t in self.normalized_tasks}
             batch_result = compute_batch_opportunities(
                 candidates=candidates,

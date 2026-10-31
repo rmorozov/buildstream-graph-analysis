@@ -799,14 +799,14 @@ async function boot() {
     // widths rather than a graph layout problem.
     // UX-1357: the chain card prices dropping one of its edges.
     const ask = (query) => async (value) => {
-      const response = await fetch(`whatif.json?${query}=${encodeURIComponent(value)}`);
+      const response = await fetch(`whatif.json?${query}=${[value].flat().map(encodeURIComponent).join(`&${query}=`)}`);
       const answer = await response.json();
       if (!response.ok) throw new Error(answer.error ?? response.status);
       return answer;
     };
     const chain = contained(document, "critical_path", "report.json", () => {
       const card = renderCriticalPath(payload);
-      const edge = card && renderEdgeWhatIf(payload, served() ? ask("drop_edges") : null, { run: run.name });
+      const edge = card && renderEdgeWhatIf(payload, served() ? ask("drop_edge") : null, { run: run.name });
       if (edge) card.append(edge);
       return card;
     });

@@ -1747,7 +1747,7 @@ def cmd_compare(args: argparse.Namespace) -> int:
 
 
 def cmd_whatif(args: argparse.Namespace) -> int:
-    """Execute `bga whatif RUN --element A --drop-edge P:S` (UX-230, UX-1357): exits 0 on a refusal too.
+    """Execute `bga whatif RUN --element A --drop-edge PRED SUCC` (UX-230, UX-1357): exits 0 on a refusal too.
 
     `bga.edge_whatif.answer` is the viewer transport's function too, so the page and terminal cannot disagree.
     """
@@ -2732,8 +2732,8 @@ def _add_whatif_subcommand(subparsers) -> None:
     whatif_parser.add_argument(
         '--drop-edge',
         action='append',
-        default=[],
-        metavar='PRED:SUCC',
+        nargs=2,
+        metavar=('PRED', 'SUCC'),
         help='Replay without this dependency edge, pruning what only it pulled in. Repeatable.',
     )
     whatif_parser.add_argument(

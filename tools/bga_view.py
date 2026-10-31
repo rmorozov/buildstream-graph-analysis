@@ -1775,12 +1775,12 @@ class _Handler(http.server.BaseHTTPRequestHandler):
         """UX-230's transport. Same shape as `_blast`: read-only, bounded,
         and it calls the function the CLI calls."""
         query = urllib.parse.parse_qs(urllib.parse.urlparse(raw).query)
-        raw_elements, raw_edges = ((query.get(key) or [""])[0] for key in ("elements", "drop_edges"))
-        if len(raw_elements) + len(raw_edges) > 4096:
-            return self._refuse(400, "too many elements")
-        elements, edges = ([uid for uid in raw.split(",") if uid.strip()] for raw in (raw_elements, raw_edges))
+        raw_elements, names = (query.get("elements") or [""])[0], query.get("drop_edge", [])
+        if len(raw_elements) + sum(map(len, names)) > 4096 or len(names) % 2:
+            return self._refuse(400, "too many elements, or a drop_edge without its SUCC")
+        elements = [uid for uid in raw_elements.split(",") if uid.strip()]
         try:
-            return self._json(whatif_answer(self.run_root, elements, edges))
+            return self._json(whatif_answer(self.run_root, elements, list(zip(names[::2], names[1::2]))))
         except Exception as error:
             return self._refuse(422, str(error))
 

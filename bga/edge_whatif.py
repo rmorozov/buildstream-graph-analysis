@@ -1,4 +1,4 @@
-"""UX-1357: what if this dependency edge were not there - `bga whatif --drop-edge PRED:SUCC`.
+"""UX-1357: what if this dependency edge were not there - `bga whatif --drop-edge PRED SUCC`.
 
 Replays the run through `correlate.project_without_edges` with the edges
 removed and every element only they pulled into the target's closure
@@ -20,18 +20,6 @@ CONVENTION = (
     "only it pulled into the target's closure pruned. A priced question for the recipe author, not a "
     "removal verdict: bga cannot know why the edge exists."
 )
-
-
-def parse_edge(text: str, graph) -> tuple[str, str]:
-    """`PRED:SUCC`, split at the `:` that names a real edge - a junction uid carries `:` of its own."""
-    splits = [(text[:i], text[i + 1 :]) for i, c in enumerate(text) if c == ":"]
-    edges = _edge_set(graph)
-    known = _known(graph)
-    for wanted in (lambda p: p in edges, lambda p: p[0] in known and p[1] in known):
-        hit = next((pair for pair in splits if wanted(pair)), None)
-        if hit:
-            return hit
-    return splits[0] if splits else (text, "")
 
 
 def _known(graph) -> set[str]:
@@ -165,7 +153,7 @@ def answer(analyzer, result, elements, raw_edges) -> dict:
     document = project_elements(result, graph, list(elements))
     if not raw_edges:
         return document
-    edges = [parse_edge(text, graph) for text in raw_edges]
+    edges = [tuple(edge) for edge in raw_edges]
     document["refusals"] = [r for r in document["refusals"] if r["check"] != "empty_selection"]
     edge_refusals = refusals(graph, edges)
     scheduler = getattr(analyzer, "replay_scheduler", None)

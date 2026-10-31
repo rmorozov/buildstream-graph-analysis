@@ -14,7 +14,7 @@ Input classes: the fdsdk cold capture (`git fetch --depth 1 origin captures/fdsd
 
 ## Required Fix
 
-`bga whatif --drop-edge PRED:SUCC` (repeatable): replay with the edge removed and every element only that edge brought into the target's closure pruned; print makespan, element count and the pruned set. Reuse `correlate.project_without_edges`. The output is a priced question, never a removal verdict: bga cannot know why an edge exists.
+`bga whatif --drop-edge PRED SUCC` (repeatable; two arguments, review correction below): replay with the edge removed and every element only that edge brought into the target's closure pruned; print makespan, element count and the pruned set. Reuse `correlate.project_without_edges`. The output is a priced question, never a removal verdict: bga cannot know why an edge exists.
 
 ## Out of Scope
 
@@ -22,15 +22,15 @@ Ranking candidate edges automatically.
 
 ## Acceptance Test
 
-On the fdsdk capture, `--drop-edge components/doxygen.bst:components/libxml2.bst` reads 126 -> 99 elements and a makespan within 2% of 2.95 h. Mutation: stop pruning the closure and it reads ~3.7 h; the guard reds. The page's chain card offers the same what-if for a chain edge and shows the pruned elements; the walker reads 3.82 -> ~2.95 h on this capture's page.
+On the fdsdk capture, `--drop-edge components/doxygen.bst components/libxml2.bst` reads 126 -> 99 elements and a makespan within 2% of 2.95 h. Mutation: stop pruning the closure and it reads ~3.7 h; the guard reds. The page's chain card offers the same what-if for a chain edge and shows the pruned elements; the walker reads 3.82 -> ~2.95 h on this capture's page.
 
 ## Decision
 
-- `bga/edge_whatif.py` (new): `--drop-edge PRED:SUCC`, split at the `:` that names a real edge (a junction uid carries its own). One `correlate.project_without_edges` replay, which gains `pruned=`: its tasks, and dependencies on them, leave the after-replay. The target's closure (build and runtime edges, from `requested_target`, else the sinks) is read before and after; the difference is pruned.
+- `bga/edge_whatif.py` (new): `--drop-edge PRED SUCC`, two arguments (review: a junction uid carries `:`, so any single-string split guesses wrong when both splits are real edges). One `correlate.project_without_edges` replay, which gains `pruned=`: its tasks, and dependencies on them, leave the after-replay. The target's closure (build and runtime edges, from `requested_target`, else the sinks) is read before and after; the difference is pruned.
 - Gating is BuildStream's: a build waits for its build deps plus their runtime-only closure; its own runtime-only deps do not gate it. The normalised tasks carry direct build edges only, so the closure pairs are added to both replays here, and the pairs an edge alone produced are the ones removed. The rest of bga's replay still omits the runtime-only closure (3.69 h baseline on fdsdk, against 3.75 h here): not widened, a row for the session.
 - `--element` combines: those builds become instant in both replays, and the text says the edge's price is "with the fixes above". An edge the graph does not hold is refused (`unknown_edge`) with the nearest names; edges alone are a question, so `empty_selection` is dropped.
 - `whatif/v1` gains the optional `edges` object (`dropped`, `convention`, `refusals`, `projected`); no `required` key moved, so no bump. Text and JSON say it is a priced question, never a removal verdict.
-- Page: the chain card (`critical-path-drawn`) gains a select of its consecutive edges, the target's edge first chosen, and a button. Served, it asks `whatif.json?drop_edges=P:S` - the same `edge_whatif.answer` the CLI calls - and shows before -> after, the element counts and the pruned set; offline, the command. Smallest design: no payload precompute, no replay in the page.
+- Page: the chain card (`critical-path-drawn`) gains a select of its consecutive edges, the target's edge first chosen, and a button. Served, it asks `whatif.json?drop_edge=P&drop_edge=S` (one name per parameter, taken in pairs; 4096-byte bound kept; an odd count is a 400) - the same `edge_whatif.answer` the CLI calls - and shows before -> after, the element counts and the pruned set; offline, the command. Smallest design: no payload precompute, no replay in the page.
 - Guard: the test above, on an 8-element fixture where `doc.bst -> app.bst` alone pulls a 30 s chain and a 40 s runtime-only dep. Mutations: skip the pruning; drop the runtime-only closure from gating; skip the refusal; the page omits the pruned set.
 
 ## Outcome (2026-10-30)
@@ -75,3 +75,23 @@ Pruned 27 elements: components/_private/buildsystem-cmake.bst, components/_priva
 | restored | 7 passed | 3.75 h -> 2.87 h |
 
 The page half of the golden export grows 166,695 -> 167,539 B (+844 B), over `PAGE_BUDGET_B`'s 166,750: three size guards red (`test_the_viewer_js_ships_compressed.py`, two in `test_the_report_you_can_attach.py`). The budget is an owner call (UX-1350), not moved here.
+
+## Review correction (2026-10-31)
+
+Owner review: `PRED:SUCC` cannot tell `a.bst:b.bst` -> `c.bst` from `a.bst` -> `b.bst:c.bst`, and the colon-that-names-an-edge guess fails when both are real edges; retain every requested target when pruning.
+
+- `parse_edge` deleted. `--drop-edge PRED SUCC` (`nargs=2`, `append`); the server reads repeated `drop_edge` parameters, each one name, taken in pairs (no JSON, so no `JSON.stringify` outside the allowlist); the page's select values are chain indexes.
+- Fixture: `a.bst:b.bst` -> `c.bst` and `a.bst` -> `b.bst:c.bst` in one graph, through the CLI and the server; each drops only its own endpoint (`pruned == ["a.bst:b.bst"]`, `["a.bst"]`), and a lone `drop_edge` is a 400.
+- `targets()` already returned every `requested_target`; a guard with `t1`, `t2` where dropping `x -> t1` prunes `x`, `u` and keeps `s` (still `t2`'s).
+
+```text
+$ python -m pytest tests/unit/test_an_edge_what_if_prunes_the_closure_it_alone_pulled.py -q -p no:xdist
+11 passed
+```
+
+| mutation | reddened |
+|---|---|
+| answer re-guesses the pair by splitting the joined string at the first `:` | 2 failed (junction CLI, junction server) |
+| `targets()` keeps one requested target | 1 failed (two-target keep) |
+| server ignores `drop_edge` (no edges) | 1 failed (junction server) |
+| page asks with the select string, not the pair | 1 failed (chain card, served) |

@@ -1042,8 +1042,8 @@ export function renderEdgeWhatIf(payload, ask = null, options = {}) {
   const chain = (payload?.critical_path_detail ?? []).map((entry) => entry.element_uid);
   if (chain.length < 2) return null;
   const select = el("select", { "data-role": "edge-whatif-edge" }, chain.slice(1).map((succ, i) =>
-    el("option", { value: `${chain[i]}:${succ}` }, `${chain[i]} → ${succ}`)));
-  select.value = `${chain.at(-2)}:${chain.at(-1)}`;
+    el("option", { value: String(i) }, `${chain[i]} → ${succ}`)));
+  select.value = String(chain.length - 2);
   const label = el("label", {}, "Price dropping the chain edge ");
   labelFor(label, select, "edge-whatif");
   const answer = el("p", { "data-role": "edge-whatif-answer", "data-source": "none", "aria-live": "polite" });
@@ -1054,12 +1054,12 @@ export function renderEdgeWhatIf(payload, ask = null, options = {}) {
     pruned.textContent = names;
   };
   const show = () => {
-    if (!ask) return settle("command", `bga whatif ${options.run ?? "RUN"} --drop-edge ${select.value}`);
+    if (!ask) return settle("command", `bga whatif ${options.run ?? "RUN"} --drop-edge ${chain[select.value]} ${chain[+select.value + 1]}`);
     settle("asking", "Asking bga…");
-    Promise.resolve(ask(select.value)).then(({ edges } = {}) => {
+    Promise.resolve(ask([chain[select.value], chain[+select.value + 1]])).then(({ edges } = {}) => {
       const p = edges?.projected;
       if (!p) return settle("refused", (edges?.refusals ?? []).map((r) => r.sentence).join(" "));
-      const at = chain.findIndex((uid, i) => `${uid}:${chain[i + 1]}` === select.value);
+      const at = +select.value;
       settle("server", `Without ${chain[at]} → ${chain[at + 1]} the replay reads ${duration(p.baseline_makespan_us)} → `
         + `${duration(p.makespan_after_us)} (observed ${duration(payload.total_duration_us)}), `
         + `${p.elements_before} → ${p.elements_after} elements. A priced question for the recipe `

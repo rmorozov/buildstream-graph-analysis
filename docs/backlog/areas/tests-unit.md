@@ -4,6 +4,6 @@ Printed by `dev_area_pages.py --areas` (`UX-688`, `UX-1000`) from each task's `*
 
 | Task | Topic | Guard |
 |---|---|---|
-| [UX-945](https://github.com/rmorozov/buildstream-graph-analysis/blob/fd3f8e9209cd295f6f2a0e2c66354443a6225554/docs/backlog/scenarios/UX-0945-the-context-map-existence-check-reads-five-typed-top-level-names.md) | guards | `test_the_context_map_is_the_tree.py` |
+| [UX-945](https://github.com/rmorozov/buildstream-graph-analysis/blob/d9b25851a22e0dc3054c63242ffd668f6f4cbd80/docs/backlog/scenarios/UX-0945-the-context-map-existence-check-reads-five-typed-top-level-names.md) | guards | `test_the_context_map_is_the_tree.py` |
 
 covered 1 / 1 (none 0, inferred r149 0, no line 0)

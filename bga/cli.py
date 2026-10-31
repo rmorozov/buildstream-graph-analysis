@@ -508,6 +508,7 @@ def _builder_pool_recommendation(analyzer, result) -> dict:
         compute_builder_pool_recommendation,
         compute_ready_set_width,
         host_regime,
+        jobserver_label,
         size_by_regime,
         with_own_sweep,
     )
@@ -548,8 +549,13 @@ def _builder_pool_recommendation(analyzer, result) -> dict:
     recommendation = with_own_sweep(recommendation, _own_sweep(scheduler, result, builders, host_cpu_count))
     # UX-1368: a chain whose width was never read has no regime, rather than a -j1 one.
     known = critical_path_max_jobs if chain_widths and all(chain_widths) else None
-    capacity = (getattr(result, 'capacity_recommendation', None) or {}).get('recommended_builders')
-    return size_by_regime(recommendation, host_regime(host_cpu_count, known), (builders, native_max_jobs), capacity)
+    mode = jobserver_label(getattr(context, 'jobserver', None))
+    return size_by_regime(
+        recommendation,
+        host_regime(host_cpu_count, known),
+        (builders, native_max_jobs, mode),
+        getattr(result, 'capacity_recommendation', None),
+    )
 
 
 def _own_sweep(scheduler, result, builders: int, host_cpu_count: int) -> Optional[tuple]:
@@ -828,7 +834,9 @@ def _builder_pool_text_lines(recommendation: dict) -> list[str]:
     safe_cap = recommendation.get('safe_builder_cap')
     builders = recommendation.get('builders')
     wide = f"{recommendation['ready_set_width']}, from {recommendation['ready_set_reading']}"
-    if builders is None:
+    if recommendation.get('refused'):
+        lines = [f"Builders: none proposed - {recommendation['refused']}"]
+    elif builders is None:
         lines = [f"Builders (ready-set width): {wide}"]
     elif recommendation.get('jobserver') == 'off':
         lines = _builders_off_lines(recommendation)
@@ -897,6 +905,8 @@ def _builders_off_lines(recommendation: dict) -> list[str]:
         host=recommendation['host_cpu_count'], chain=recommendation['critical_path_max_jobs']
     )
     tail = f"; more builders buy {gain:.1%} on the replay, which does not model their contention" if gain else ""
+    if recommendation['builders_source'] != 'capacity':
+        tail += f"; builders from the {recommendation['builders_source']}"
     return [
         f"Builders: {builders} with --jobserver off, max-jobs {recommendation['max_jobs']} - {why}; this run's "
         f"replay puts {builders} at {qty.duration(at)}"
@@ -920,9 +930,11 @@ def _approach_lines(recommendation: dict) -> list[str]:
                 "16 cores (202-217 s against 182 s)"
             )
             continue
-        flags = f"--builders {count} --max-jobs {jobs}" + (
-            " --jobserver auto" if approach['jobserver'] == 'auto' else ""
-        )
+        mode = approach['jobserver']
+        if not count:
+            lines.append(f"    {name}: none - {recommendation.get('refused')}")
+            continue
+        flags = f"--builders {count} --max-jobs {jobs}" + ("" if mode in ('off', None) else f" --jobserver {mode}")
         if name == 'off':
             note = "proposed" if approach['proposed'] else f"the chain stays at {jobs} of {host} cores"
         elif name == 'auto':
@@ -930,11 +942,14 @@ def _approach_lines(recommendation: dict) -> list[str]:
                 "" if regime == 'fat' else f"; builders = {host} cores less the chain's {chain}"
             )
         elif name == 'configured':
-            note = "as this run was configured"
+            note = "as this run was configured" + ("" if mode else ", its jobserver mode not recorded")
         else:
             note = f"BuildStream's own (max-jobs = min({host} cores, 8)): {count * jobs} jobs on {host} cores"
-            note += ", as this run was configured" if tuple(recommendation['configured']) == (count, jobs) else ""
-        lines.append(f"    {name}: {flags} - {qty.duration(approach['replay_wall_us'])}; {note}")
+            note += ", as this run was configured" if tuple(recommendation['configured']) == (count, jobs, mode) else ""
+        wall = approach['replay_wall_us']
+        swept = len(recommendation['sweep_walls_us'])
+        shown = qty.duration(wall) if wall is not None else f"not swept (the replay stops at {swept})"
+        lines.append(f"    {name}: {flags} - {shown}; {note}")
     return lines
 
 

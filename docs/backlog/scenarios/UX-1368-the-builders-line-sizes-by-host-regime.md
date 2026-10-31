@@ -62,3 +62,20 @@ Builders: 3 with --jobserver off, max-jobs 4 - a small host: 4 cores, no more th
 | reverted | — | 14 passed |
 
 **Deviation**: the evidence is thin at both ends, two small-host readings (UX-09, UX-1004) and no fat x86 reading (UX-1280); every row says which reading it stands on.
+
+**Review 1** (owner, PR #337 at `a185d5df`), four findings, each a guard case:
+
+- A capacity of 0 (`_memory_allows`: nothing fits) was read as absent (`capacity or knee`) and proposed the knee; it now proposes nothing, `Builders: none proposed - <the capacity verdict>`, in every regime. A withheld recommendation falls back to the knee and says so.
+- The serial regime proposed max-jobs 8 on 4 cores; the off row clamps max-jobs to the cores in every regime.
+- A count past the sweep (`SWEEP_CAP` 32) took the last swept wall: auto at 120 builders on 128 cores now reads `not swept (the replay stops at 32)`.
+- The configured row hardcoded `off`; it carries `run_context.jobserver` (`off`, `auto`, a pinned ceiling) and dedupes on the triple. The fdsdk capture predates the field, so its row reads `as this run was configured, its jobserver mode not recorded` and no longer folds into the defaults.
+
+| mutation | reddened | count |
+|---|---|---|
+| R1 `fits or knee` (zero read as absent) | zero capacity x2 | 2 failed, 23 passed |
+| R1b zero capacity still proposes | zero capacity x2 | 2 failed, 23 passed |
+| R2 max-jobs clamped for small only | serial clamp | 1 failed, 24 passed |
+| R3 an unswept count takes the last wall | past the sweep | 1 failed, 24 passed |
+| R4 configured row hardcodes off | configured mode, unrecorded mode | 2 failed, 23 passed |
+| R4b dedupe on the pair alone | configured mode, unrecorded mode | 2 failed, 23 passed |
+| reverted (M1-M5 re-run, all red) | — | 25 passed |

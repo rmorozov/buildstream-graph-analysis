@@ -11,7 +11,13 @@ import sys
 import pytest
 
 from bga.cli import _builder_pool_text_lines
-from bga.correlate import compute_builder_pool_recommendation, host_regime, size_by_regime, with_own_sweep
+from bga.correlate import (
+    compute_builder_pool_recommendation,
+    host_regime,
+    jobserver_label,
+    size_by_regime,
+    with_own_sweep,
+)
 from tests.fixtures.topologies import write_run_dir
 from tests.unit.test_the_builders_line_reads_this_runs_sweep import _four_wide
 
@@ -20,9 +26,11 @@ FDSDK_SWEEP = ([17_273_800_000, 11_852_850_000, 11_150_550_000, 10_884_550_000] 
 FAT_WALLS = [400_000_000 - i * 10_000_000 for i in range(32)] + [80_000_000] * 4
 
 
-def _sized(ready, host, chain, sweep, configured, capacity=None):
+def _sized(ready, host, chain, sweep, configured, capacity=None, mode="off"):
     recommendation = with_own_sweep(compute_builder_pool_recommendation(ready, host, chain), sweep)
-    return size_by_regime(recommendation, host_regime(host, chain), configured, capacity)
+    if isinstance(capacity, int):
+        capacity = {"recommended_builders": capacity}
+    return size_by_regime(recommendation, host_regime(host, chain), (*configured, mode), capacity)
 
 
 def _row(recommendation, name):
@@ -92,7 +100,7 @@ def test_a_serial_chain_on_a_fat_host_keeps_the_jobserver_off():
 
 def test_an_unknown_chain_width_sizes_no_approaches():
     recommendation = with_own_sweep(compute_builder_pool_recommendation(17, 4, 4), FDSDK_SWEEP)
-    sized = size_by_regime(recommendation, None, (4, None), 3)
+    sized = size_by_regime(recommendation, None, (4, None, None), {"recommended_builders": 3})
     assert "approaches" not in sized and sized["builders"] == 1
 
 
@@ -104,3 +112,63 @@ def test_analyze_on_a_small_host_proposes_the_knee_with_the_jobserver_off(tmp_pa
     at = next(index for index, line in enumerate(out) if line.startswith("Builders"))
     assert re.match(r"Builders: 4 with --jobserver off, max-jobs 4 - a small host", out[at]), out[at]
     assert out[at + 1] == "  Approaches sized for 4 cores (replay wall, durations held fixed):"
+
+
+# Review of a185d5df: zero capacity, withheld capacity, serial clamp, unswept counts, the configured mode.
+ZERO = {"recommended_builders": 0, "verdict": "no builders value fits: even one element peaks at ~20 GB"}
+
+
+@pytest.mark.parametrize(("host", "chain"), [(4, 4), (16, 8)])
+def test_a_zero_capacity_proposes_nothing(host, chain):
+    sized = _sized(17, host, chain, FDSDK_SWEEP, (4, chain), capacity=ZERO)
+    lines = _builder_pool_text_lines(sized)
+    assert (sized["builders"], sized["jobserver"]) == (None, None)
+    assert lines[0] == f"Builders: none proposed - {ZERO['verdict']}"
+    assert not any(a["proposed"] for a in sized["approaches"])
+    assert f"    off: none - {ZERO['verdict']}" in lines
+
+
+def test_a_withheld_capacity_falls_back_to_the_knee_and_says_so():
+    sized = _sized(17, 4, 4, FDSDK_SWEEP, (4, 4), capacity={"recommended_builders": None, "withheld": {}})
+    assert sized["builders"] == 3
+    assert _builder_pool_text_lines(sized)[0].endswith("; builders from the knee, capacity withheld")
+
+
+def test_a_serial_chain_clamps_max_jobs_to_its_cores():
+    assert _sized(17, 4, 1, FDSDK_SWEEP, (4, 8), capacity=3)["max_jobs"] == 4
+
+
+def test_a_count_past_the_sweep_has_no_replay_wall():
+    walls = FAT_WALLS[:32]
+    sized = _sized(400, 128, 8, (walls, 32), (64, 8), capacity=32)
+    lines = _builder_pool_text_lines(sized)
+    assert (_row(sized, "auto")["builders"], _row(sized, "auto")["replay_wall_us"]) == (120, None)
+    assert _row(sized, "configured")["replay_wall_us"] is None
+    assert any(
+        line.startswith("    auto: --builders 120 --max-jobs 8 --jobserver auto - not swept (the replay stops at 32);")
+        for line in lines
+    )
+
+
+def test_the_configured_row_keeps_its_jobserver_mode():
+    sized = _sized(17, 4, 4, FDSDK_SWEEP, (4, 4), capacity=3, mode="auto")
+    lines = _builder_pool_text_lines(sized)
+    assert _row(sized, "configured")["jobserver"] == "auto"
+    assert any(line.startswith("    configured: --builders 4 --max-jobs 4 --jobserver auto - 3.0 h;") for line in lines)
+    assert not any(line.startswith("    defaults:") and "as this run was configured" in line for line in lines)
+
+
+def test_an_unrecorded_mode_is_said_and_never_called_off():
+    lines = _builder_pool_text_lines(_sized(17, 4, 4, FDSDK_SWEEP, (4, 4), capacity=3, mode=None))
+    assert any(
+        line.startswith("    configured: --builders 4 --max-jobs 4 - 3.0 h;") and "not recorded" in line
+        for line in lines
+    )
+
+
+@pytest.mark.parametrize(
+    ("jobserver", "label"),
+    [(None, None), ({"mode": "off"}, "off"), ({"mode": "auto"}, "auto"), ({"mode": "n", "ceiling": 6}, "6")],
+)
+def test_the_capture_mode_is_labelled(jobserver, label):
+    assert jobserver_label(jobserver) == label

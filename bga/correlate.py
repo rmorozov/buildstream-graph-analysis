@@ -1594,17 +1594,26 @@ def host_regime(host_cpu_count: Optional[int], chain_max_jobs: Optional[int]) ->
     return 'serial' if chain_max_jobs == 1 else 'fat'
 
 
+def jobserver_label(jobserver: Optional[dict]) -> Optional[str]:
+    """UX-1368: `off`, `auto` or the pinned ceiling a capture ran under; `None` when the capture predates the field."""
+    if not jobserver:
+        return None
+    mode = jobserver.get('mode')
+    return str(jobserver.get('ceiling') or 'n') if mode == 'n' else mode
+
+
 def size_by_regime(
     recommendation: dict,
     regime: Optional[str],
     configured: tuple,
-    capacity_builders: Optional[int] = None,
+    capacity: Optional[dict] = None,
 ) -> dict:
     """UX-1368: every approach sized for this host, and the one proposed.
 
-    `configured` is `(builders, max-jobs)` as run. Only a fat host (cores above a wide chain's
-    max-jobs) has idle cores for `--jobserver auto` to lend; elsewhere builders come from this
-    run's capacity recommendation, else its replay knee, with the jobserver off.
+    `configured` is `(builders, max-jobs, jobserver label)` as run. Only a fat host (cores above a
+    wide chain's max-jobs) has idle cores for `--jobserver auto` to lend; elsewhere builders come
+    from `capacity` (the capacity recommendation), else the replay knee, with the jobserver off. A
+    capacity of 0 (nothing fits) proposes nothing; a count past the sweep has no replay wall.
     """
     walls, knee, host = (
         recommendation.get('sweep_walls_us'),
@@ -1613,32 +1622,44 @@ def size_by_regime(
     )
     if not regime or not walls or not knee or not host:
         return recommendation
-    builders, max_jobs = configured
-    cap = recommendation['safe_builder_cap']
-    sized_off = min(capacity_builders or knee, host)
+    builders, max_jobs, mode = configured
+    capacity = capacity or {}
+    fits = capacity.get('recommended_builders')
+    source = 'capacity' if fits is not None else ('knee, capacity withheld' if 'withheld' in capacity else 'knee')
     default_jobs = min(host, BST_MAX_JOBS_CEILING)
-    off_jobs = min(max_jobs or default_jobs, host) if regime == 'small' else (max_jobs or default_jobs)
     approaches = [
-        {'name': 'off', 'builders': sized_off, 'max_jobs': off_jobs, 'jobserver': 'off'},
-        {'name': 'auto', 'builders': cap, 'max_jobs': max_jobs or default_jobs, 'jobserver': 'auto'},
+        {
+            'name': 'off',
+            'builders': min(knee if fits is None else fits, host),
+            'max_jobs': min(max_jobs or default_jobs, host),
+            'jobserver': 'off',
+        },
+        {
+            'name': 'auto',
+            'builders': recommendation['safe_builder_cap'],
+            'max_jobs': max_jobs or default_jobs,
+            'jobserver': 'auto',
+        },
         {'name': 'defaults', 'builders': BST_DEFAULT_BUILDERS, 'max_jobs': default_jobs, 'jobserver': 'off'},
         {'name': 'admission', 'builders': None, 'max_jobs': None, 'jobserver': 'auto'},
     ]
-    if builders and max_jobs and (builders, max_jobs) not in {(a['builders'], a['max_jobs']) for a in approaches[:3]}:
-        approaches.insert(2, {'name': 'configured', 'builders': builders, 'max_jobs': max_jobs, 'jobserver': 'off'})
-    proposed = 'auto' if regime == 'fat' else 'off'
+    seen = {(a['builders'], a['max_jobs'], a['jobserver']) for a in approaches[:3]}
+    if builders and max_jobs and (builders, max_jobs, mode) not in seen:
+        approaches.insert(2, {'name': 'configured', 'builders': builders, 'max_jobs': max_jobs, 'jobserver': mode})
+    proposed = None if fits == 0 else ('auto' if regime == 'fat' else 'off')
     for approach in approaches:
         count = approach['builders']
-        approach['replay_wall_us'] = walls[min(count, len(walls)) - 1] if count else None
+        approach['replay_wall_us'] = walls[count - 1] if count and count <= len(walls) else None
         approach['proposed'] = approach['name'] == proposed
-    chosen = next(a for a in approaches if a['proposed'])
-    sized: dict = dict(
-        recommendation, regime=regime, approaches=approaches, jobserver=proposed, builders=chosen['builders']
+    chosen = next((a for a in approaches if a['proposed']), {'builders': None, 'max_jobs': None})
+    sized: dict = dict(recommendation, regime=regime, approaches=approaches, jobserver=proposed)
+    sized.update(
+        builders=chosen['builders'], max_jobs=chosen['max_jobs'], configured=configured, builders_source=source
     )
-    sized['configured'] = configured
-    sized['max_jobs'] = chosen['max_jobs']
-    if proposed == 'off':
+    if proposed != 'auto':
         sized['graph_only_knee'] = None
+    if fits == 0:
+        sized['refused'] = capacity.get('verdict') or "the capacity recommendation finds no builders count that fits"
     return sized
 
 

@@ -180,7 +180,7 @@ the blocks a reader meets first, and `certified_headroom`, the number
 Key Findings leads with, had never been in the population at all. It was
 302 such keys when that was filed and 305 when it landed. One level and
 no further: `blast_radius_distribution.deciles` is in the population and
-its own nine buckets are not. The surface is **640 keys** today, and
+its own nine buckets are not. The surface is **645 keys** today, and
 that figure is derived from the walk rather than typed here.
 
 So the statement of coverage, which is now a statement and not a
@@ -511,7 +511,7 @@ and `parallelism`:
 | `open_records_note`, `static_binary_disclaimer` | Why a process may be missing from `max_concurrency`, and what `LD_PRELOAD` cannot see in the capture's own words. The census above bounds it; this says what is being bounded. |
 | `configure_cpu_us`, `configure_share` | In `configure_phase`: CPU spent in configure work across the run, summed over processes so it exceeds wall-clock where they ran in parallel, and that as a share of all CPU Plane 2 saw. A floor, for the reason its `note` gives. |
 | `unmeasured_processes`, `spine_sourced_processes` | In `cpu_time`: processes no CPU could be read from — a signal death or an exec replacement leaves no rusage behind — and how many of the measured came from the spine rather than the hook. |
-| `per_element_series` | Each element's CPU rate over time, as `[t_us, cores]` points on the host sampler's tick. The totals beside it are unchanged: this says what shape a total had. A process shorter than one tick is in the total and absent from the curve, and a failed `/proc` read ends a series rather than reading zero. Present only under `--jobserver`: the shim's decision rows name each sandbox's host root. |
+| `per_element_series` | Each element's CPU rate over time, as `[t_us, cores]` points on the host sampler's tick. The totals beside it are unchanged: this says what shape a total had. A process shorter than one tick is in the total and absent from the curve, and a failed `/proc` read ends a series rather than reading zero. The shim's invocation log names each sandbox's host root, so every traced capture samples it (`UX-1358`; under `UX-1314` it needed `--jobserver`'s decision rows). |
 
 The distributions — `element_duration_distribution`,
 `blast_radius_distribution`, `fan_in_distribution`, and `correlate/v2`'s
@@ -711,6 +711,21 @@ still exits 0 — which is why a consumer reads `refusals` before
 `projected` rather than after, and why `projected` being `null` is a
 statement rather than a missing field.
 
+**Dropping an edge** (`UX-1357`). `--drop-edge PRED SUCC` (two arguments; the page asks
+`whatif.json?drop_edge=PRED&drop_edge=SUCC`, one name per parameter, in
+pairs) adds an
+`edges` object: `dropped`, its own `convention`, `refusals` (an edge the
+graph does not hold, with the nearest names) and `projected` -
+`baseline_makespan_us` and `makespan_after_us` from one replay over the
+run's builders, `saving_us`, `elements_before`/`elements_after` (the
+target's closure) and `pruned`, the elements only the dropped edges
+pulled in. A build waits for its build deps and their runtime-only
+closure. On the freedesktop-sdk cold capture,
+`components/doxygen.bst components/libxml2.bst` reads 3.75 h -> 2.87 h,
+126 -> 99 elements. A priced question for the recipe author, never a
+removal verdict: the tool cannot know why an edge exists. The page's chain
+card asks the same question for any edge of the chain.
+
 `bga whatif --schema` prints the whole shape without needing a run.
 
 ### N variant builds, or one junctioned invocation (`UX-904`)
@@ -848,7 +863,7 @@ One row per element, from both planes:
 | | |
 | --- | --- |
 | Plane 1 | `on_critical_path`, `critical_path_share`, `potential_saving_us`, `saving_share`, `blast_radius` |
-| Plane 2 | `cores_busy`, `cpu_coverage`, `requested_jobs`, `resolved_jobs` (`UX-894`: the width BuildStream resolved for the element, read from the run's graph document, where a non-parallel element is a width of one and not a missing value), `jobs_denominator` (which of the two widths the achieved ratio divided by, or absent when no ratio was computed), `peak_rss_bytes`, `dominant_binary`, `serial_binary` |
+| Plane 2 | `cores_busy`, `cpu_coverage`, `requested_jobs` (the highest `-jN` the element's make or ninja argv carried, as observed: autotools' `make -j1 install` keeps it 1 at a granted 4 - `UX-1366`), `resolved_jobs` (`UX-894`: the width BuildStream resolved for the element, read from the run's graph document, where a non-parallel element is a width of one and not a missing value; a Plane 2 row named by its build root's last segment takes the width of the one uid whose basename it is, and an argv `-j1` no uid answers for reads "granted width unknown" in `native_findings`, not "pinned to one job" - `UX-1366`), `jobs_denominator` (which of the two widths the achieved ratio divided by, or absent when no ratio was computed), `peak_rss_bytes`, `dominant_binary`, `serial_binary`, `serial_stretch` (`UX-1358`: from the per-element CPU sampler, never a process count - the wall-clock of tick windows at or under 1.25 cores busy, a window's rate being the rise in its sandbox tree's utime+stime plus its reaped children's; a low window beside under one idle host core is contended, neither serial nor not, and the share is over the uncontended sampled time; the processes alive in those windows are named apart, because alive is not running; the three command signatures alive longest in them. Not known, with the reason, when there are no samples or under half the span is sampled or uncontended; absent from a report that predates it) |
 
 `bga analyze --plane2 PLANE2.json` now carries the same rows as
 `element_join`, from the same function — so the report and the command

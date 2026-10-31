@@ -345,7 +345,7 @@ export const READER_LABELS = {
   wasted_rebuild: "Wasted on rebuilds",
   "governing core count (host_cpu_count/cpu_budget)": "Governing core count",
   pinned_to_one_job: "Pinned to one job", underachieved_requested_jobs: "Fewer jobs than requested",
-  overlap_exceeds_granted_width: "More processes than granted",
+  overlap_exceeds_granted_width: "More processes than granted", granted_width_unknown: "Granted width unknown",
   ordering_violations_zero: "Ordering: no violations",
   critical_path_coverage_full: "Critical path: fully covered",
   dominator_coverage_full: "Dominators: fully covered",

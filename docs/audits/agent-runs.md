@@ -922,6 +922,12 @@ The model cell carries the version from then on (`sonnet-5-5`).
 | 173 | closer | haiku-5-5 | round | 172k | 58 | 36.3 m | $0.05 | haiku closer: 53 ledger rows, 3 row moves, UX-1354, round doc; no close redone | a hung sed-awk check left two shells; the brief's waiver range was wrong |
 | 174 | general-purpose | haiku-5-5 | UX-1352 acceptance: round 170's shape, two planted reds | 78k | 4 | 0.6 m | $0.01 | complete: 25 environmental, 8 real, 0 flake, matching the key | none; 4 tool calls |
 | 174 | architect | opus-5-5 | UX-1354 architect | 75k | 36 | 7.8 m | $0.70 | complete: premise falsified, shim boot slower than a warm Chrome drive | UX-1349's 559 drives figure had no command; a wrapper of Browser._drive misses tests.browser imports |
+| 175 | general-purpose | opus-5-5 | implementer T2: UX-1357 edge what-if prices removing a dependency | 424k | 156 | 43.8 m | $8.52 | complete; page-budget guards red at +844 B (55 B headroom) | page budget left 55 B; worktree shell guard refused compound commands and variables |
+| 175 | general-purpose | opus-5-5 | implementer T1: UX-1358 serial stretches, UX-1360 exec reads | 662k | 151 | 66 m | $9.98 | complete; both rows, mutations red; fdsdk rerun not possible | worktree shell guard refused compound commands and variables; page budget 55-60 B headroom |
+| 175 | general-purpose | opus-5-5 | implementer T3: UX-1362, UX-1359, UX-1363 | 1586k | 287 | 109.6 m | $21.81 | complete; builders line reads this run's sweep; 2 budget reds | shell guard refused variables and compound commands, about 10 retries; fixup needed rebase --autosquash; page budget 55-60 B headroom |
+| 175 | general-purpose | sonnet-5-5 | implementer T4: UX-1365, UX-1364, UX-1366 | 1715k | 303 | 112.6 m | $11.90 | complete; 1366 brief premise fixed in apply_resolved_widths; 3 browser tests need tiers | shell guard refused variables and heredocs; page budget 55-60 B headroom forced Host-row logic into Python |
+| 175 | general-purpose | opus-5-5 | integrator: merged 10 rows, sizes adopted | 332k | 130 | 53.6 m | $5.88 | complete; 4 budgets held for owner, 2 pre-existing red | 6 environmental reds came from a shallow clone |
+| 175 | general-purpose | sonnet-5-5 | walker: fdsdk edge what-if page after merge | 131k | 51 | 10.3 m | $1.00 | complete; 2 defects, print and a11y; no repo edits | plain bga view serves stale stored analysis without --reanalyse (UX-1367) |
 
 Round 101's four tracks are **not** here: this session could not
 identify their transcripts with certainty after a context rebuild, and
@@ -934,7 +940,7 @@ committed cleanly once told to run in the foreground. Three of the five
 left a derived figure or a §6 context-map row behind - the same class
 the round itself was about, arriving in the tracks' own work.
 
-What the nine hundred rows already say: a researcher that reads a document
+What the nine hundred and six rows already say: a researcher that reads a document
 whole costs 100-180k; a walker that drives every control costs 336k;
 the two cuts cost a re-run each. The `walk` and `design-review`
 skills fix the report shape so the next rows are smaller, and the

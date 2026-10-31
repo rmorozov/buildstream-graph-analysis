@@ -322,8 +322,9 @@ class TestThePaletteReachesARow:
 
     def test_an_element_name_resolves_to_a_row_first(self, tmp_path_factory):
         look = """(() => {
+          // A link naming the element (a finding's list, UX-1359) points at it; it is not a place.
           const nodes = [...document.querySelectorAll(
-            '[data-element="lib-c.bst"]')];
+            '[data-element="lib-c.bst"]')].filter((n) => n.tagName !== "A");
           return { tags: nodes.map((n) => n.tagName),
                    firstIsRow: nodes[0]?.tagName === "TR",
                    inATable: Boolean(nodes[0]?.closest?.("table")) };

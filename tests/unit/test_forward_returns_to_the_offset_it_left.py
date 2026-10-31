@@ -2,8 +2,8 @@
 
 Styleguide §4c: a traversal returns the reader to the place they read.
 Walk seed 4 read `scrollY` 8218 vs 7952; measured on `macro_micro`, the
-anchor holds to 0.4 px while `scrollY` moves 337 px (1440) and
-260 px (390): a later entry opened content above it. No drift.
+anchor holds to 0.9 px while `scrollY` moves 645 px (1440) and
+233 px (390): a later entry opened content above it. No drift.
 """
 
 import pytest
@@ -53,9 +53,10 @@ def browser():
         yield opened
 
 
-#: Measured fresh: scrollY moved 337 px (1440) and 260 px (390); the anchor held to 0.4 px.
+#: Measured fresh: scrollY moved 645 px (1440) and 233 px (390); the anchor held to 0.9 px.
+#: From UX-1357 on nothing above `#latent_heavies` reflows before Forward, so 1440 reads `#binary_cost`.
 CASES = {
-    "1440": ("#latent_heavies", "#elements", 1440, 900),
+    "1440": ("#binary_cost", "#restructuring--edges", 1440, 900),
     "390": ("#element_join_coverage", "#restructuring--edges", 390, 844),
 }
 

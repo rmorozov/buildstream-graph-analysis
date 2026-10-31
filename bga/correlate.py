@@ -39,10 +39,11 @@ it builds"**.
 
 import collections
 import math
+import re
 from dataclasses import dataclass, field
 from typing import Optional
 
-from . import schemas, sweep_curve
+from . import hostinfo, schemas, sweep_curve
 from . import shown as qty
 from .findings import SEVERITY_HIGH, SEVERITY_INFO, SEVERITY_MEDIUM
 from .floors.capacity import compute_default_capacities
@@ -55,6 +56,12 @@ from .units import GIB, MIB, US_PER_S, kb_to_bytes, mb_to_bytes, s_to_us
 # capture sit at 1.6-2.1, so the gap between the two populations is wide
 # and this sits in it rather than being tuned to either.
 _COMPUTE_BOUND_CORES = 1.25
+
+# UX-1358: above this share of its sampled time at or under one core busy, an element is not "already
+# compute-bound" whatever its mean - on fdsdk `bootstrap/gcc.bst` spent 405.6 s of 40.2 min in one autoreconf loop.
+_SERIAL_SHARE_LINE = 0.15
+# UX-1358: why a join row has no serial share, when its native report has no sampled serial fields at all.
+_SERIAL_NOT_MEASURED = "the native report has no sampled serial time"
 
 # How much of the *build* fixing an element must be worth before the join
 # calls it out. Below this, a native-build finding is real but is not
@@ -181,8 +188,43 @@ _EVIDENCE_SEVERITY = {
 # rounding, not an opportunity, so that is where this stops too.
 _CHEAP_WIN_FLOOR = 0.01
 
+# UX-1359: a chain element worth this share of the build, busy on under this share of the
+# cores it was granted, gets one line naming both - fdsdk's openssl (4.4%, 1.49 of 4) was silent.
+_WIDTH_UNUSED_SAVING_SHARE = 0.005
+_WIDTH_UNUSED_SHARE = 0.5
+
 # How many elements the text report names before overflowing to JSON.
 _SHOWN_MAX = 8
+
+
+def width_unused(on_critical_path, saving_share, cores_busy, granted) -> bool:
+    """UX-1359's rule: on the chain, worth `_WIDTH_UNUSED_SAVING_SHARE`, under `_WIDTH_UNUSED_SHARE` of its width."""
+    return bool(
+        on_critical_path
+        and saving_share is not None
+        and saving_share >= _WIDTH_UNUSED_SAVING_SHARE
+        and cores_busy is not None
+        and granted
+        and cores_busy < granted * _WIDTH_UNUSED_SHARE
+    )
+
+
+def impact_text(share, saving_us, saving_share) -> str:
+    """What an element is on the chain and what fixing it is worth, as `_recommend` says it."""
+    parts = []
+    if share is not None:
+        parts.append(f"holds {qty.share(share)} of the critical path")
+    if saving_share is not None and saving_us:
+        parts.append(f"fixing it is worth {qty.duration(saving_us)} ({qty.share(saving_share)} of the build)")
+    return " and ".join(parts) if parts else "on the critical path"
+
+
+def width_unused_text(impact, cores_busy, granted) -> str:
+    """The one line, both readings named; `bga analyze`'s finding quotes it per element."""
+    return (
+        f"{impact}, but kept {cores_busy:.2f} of its {granted} granted cores busy "
+        f"({qty.share(cores_busy / granted)}) — look at how it is built before what it builds"
+    )
 
 
 @dataclass
@@ -234,6 +276,8 @@ class ElementJoin:
     # ever reaching the command the workflow ends on.
     dominant_binary: Optional[dict] = None
     serial_binary: Optional[dict] = None
+    # UX-1358: sampled wall time at or under one core busy, its share, and who held it - or `known` false and why.
+    serial_stretch: Optional[dict] = None
     peak_rss_bytes: Optional[int] = None
     worst_redundancy: Optional[dict] = None
     redundancy_count: int = 0
@@ -357,6 +401,29 @@ def _declared_elements(analysis: dict) -> set:
 _MIN_RATIO_SPAN_S = 0.001
 
 
+def _serial_stretch_view(entry: dict) -> dict:
+    """UX-1358: one `per_element_parallelism` row's sampled serial fields, as the join carries them."""
+    stretch = {
+        "known": False,
+        "sampled_us": s_to_us(entry.get("cpu_sampled_s") or 0.0),
+        "contended_us": s_to_us(entry.get("cpu_contended_s") or 0.0),
+        "span_us": s_to_us(entry.get("element_span_s") or 0.0),
+        "cores_line": entry.get("serial_cores_line"),
+        "observed_process_concurrency": entry.get("observed_process_concurrency_in_serial"),
+    }
+    if entry.get("serial_unknown") or entry.get("serial_wall_s") is None:
+        return stretch | {"reason": entry.get("serial_unknown") or "no CPU samples for this element"}
+    return stretch | {
+        "known": True,
+        "wall_us": s_to_us(entry["serial_wall_s"]),
+        "share": entry.get("serial_share"),
+        "owners": [
+            {"signature": owner["signature"], "wall_us": s_to_us(owner["wall_s"])}
+            for owner in entry.get("serial_owners") or []
+        ],
+    }
+
+
 def _plane2_view(native_report: dict) -> dict[str, dict]:
     """Per-element Plane 2 facts, keyed by the same element UID."""
     view: dict[str, dict] = {}
@@ -375,6 +442,9 @@ def _plane2_view(native_report: dict) -> dict[str, dict]:
                 "native_findings": list(entry.get("findings") or []),
             }
         )
+        # UX-1358: absent from a report written before the producer sampled it.
+        if "cpu_sampled_s" in entry:
+            view[element]["serial_stretch"] = _serial_stretch_view(entry)
 
     cpu_time = native_report.get("cpu_time") or {}
     for element, entry in (cpu_time.get("per_element") or {}).items():
@@ -534,14 +604,13 @@ def project_without_edges(
     run_context,
     edges: list[tuple],
     capacities: Optional[dict] = None,
+    pruned: frozenset = frozenset(),
 ) -> Optional[dict]:
-    """Replay the observed run with `edges` deleted from the graph.
+    """Replay the observed run with `edges` deleted from the graph, and `pruned` elements' tasks with them.
 
     Same durations, same capacity, same deterministic scheduler - only
-    the shape changes. A pure longest-path recomputation would be
-    cheaper and wrong here: removing five chain edges lets six elements
-    become ready at once, and what happens next is decided by how many
-    builders there are, not by the chain that no longer exists.
+    the shape changes. Not a longest-path recompute: removing five chain edges lets six
+    elements become ready at once, and how many builders there are decides what happens next.
 
     Returns None when there is nothing to replay, rather than a zero that
     would read as "this change saves everything".
@@ -558,14 +627,12 @@ def project_without_edges(
 
     def keep(successor_key: str, dependency_key: str) -> bool:
         pair = (element_of.get(dependency_key), element_of.get(successor_key))
-        return pair not in removed
+        return pair not in removed and pair[0] not in pruned
 
     rewired = [
-        replace(
-            task,
-            dependencies=[dep for dep in task.dependencies if keep(str(task.task_key), dep)],
-        )
+        replace(task, dependencies=[dep for dep in task.dependencies if keep(str(task.task_key), dep)])
         for task in tasks
+        if task.task_key.element_uid not in pruned
     ]
     if capacities is None:
         capacities = compute_default_capacities(run_context)
@@ -647,20 +714,38 @@ def _grouped_line(finding_id: str, entries: list[dict], text: str) -> Optional[s
     summary that quietly drops a number.
     """
     count = len(entries)
+    of_cores = re.search(r" cores busy( of \d+ logical / \d+ physical)", text)
+    host_cores = of_cores.group(1) if of_cores else ""
 
     if finding_id == 'already-compute-bound':
         cores = _collapse_range([e.get('cores_busy') for e in entries], lambda v: f"{v:.1f}")
         return (
-            f"already compute-bound at {cores} cores busy — nothing to gain from "
+            f"already compute-bound at {cores} cores busy{host_cores} — nothing to gain from "
             f"their parallelism; shortening them means less work"
+        )
+
+    if finding_id == 'serial-share-unknown':
+        cores = _collapse_range([e['cores_busy'] for e in entries if e.get('cores_busy') is not None], "{:.1f}".format)
+        reasons = sorted({(e.get('serial_stretch') or {}).get('reason') or _SERIAL_NOT_MEASURED for e in entries})
+        return (
+            f"{cores} cores busy{host_cores} on average, but their serial share is unknown "
+            f"({'; '.join(reasons)}), so this does not call them compute-bound"
         )
 
     if finding_id in ('waiting-not-computing', 'pinned-to-one-job', 'underachieved-requested-jobs'):
         cores = _collapse_range([e.get('cores_busy') for e in entries], lambda v: f"{v:.2f}")
         return (
-            f"running at only {cores} cores busy — waiting, not computing; "
+            f"running at only {cores} cores busy{host_cores} — waiting, not computing; "
             f"look at how they are built before what they build"
         )
+
+    if finding_id == 'below-granted-width':
+        # UX-1359: each element's two readings, never a range that drops one.
+        each = ", ".join(
+            f"{e['element']} {e['cores_busy']:.2f} of {e['resolved_jobs']} ({qty.duration(e['potential_saving_us'])})"
+            for e in entries
+        )
+        return f"kept under half their granted cores busy{host_cores}: {each} — look at how they are built before what they build"
 
     if finding_id == 'cpu-concentration':
         binaries = {(e.get('dominant_binary') or {}).get('binary') for e in entries}
@@ -765,6 +850,81 @@ def _group_header(elements: list[str], entries: list[dict]) -> str:
     return f"{_name_elements(elements)} ({', '.join(parts)}):"
 
 
+def _compute_bound_step(joined: ElementJoin, impact: str) -> tuple:
+    """UX-1358: compute-bound only under `_SERIAL_SHARE_LINE` of sampled serial time; over it, the stretch; unsampled, unknown."""
+    stretch = joined.serial_stretch or {"known": False, "reason": _SERIAL_NOT_MEASURED}
+    if not stretch.get("known"):
+        return (
+            _EVIDENCE_PARALLELISM,
+            'serial-share-unknown',
+            f"{impact} — {joined.cores_busy:.2f} cores busy on average, but its serial share is unknown "
+            f"({stretch.get('reason') or _SERIAL_NOT_MEASURED}), so this does not call it compute-bound",
+        )
+    share = stretch.get("share") or 0.0
+    if share <= _SERIAL_SHARE_LINE:
+        return (
+            _EVIDENCE_PARALLELISM,
+            'already-compute-bound',
+            f"{impact} — already compute-bound at {joined.cores_busy:.2f} cores busy, so there is nothing to gain "
+            f"from its parallelism; shortening it means less work",
+        )
+    owners = ", ".join(
+        f"`{owner['signature'][:60]}` ({qty.duration(owner['wall_us'])})" for owner in stretch.get("owners") or []
+    )
+    alive = stretch.get("observed_process_concurrency")
+    decided_us = stretch['sampled_us'] - stretch.get('contended_us', 0)
+    return (
+        _EVIDENCE_PARALLELISM,
+        'serial-stretch',
+        f"{impact} — {qty.duration(stretch['wall_us'])} of its {qty.duration(decided_us)} sampled with a core free "
+        f"({qty.share(share)}) ran at or under {stretch.get('cores_line') or 1.25:.2f} cores busy, over the "
+        f"{qty.share(_SERIAL_SHARE_LINE)} line"
+        + (f", with {alive:.1f} processes alive on average" if alive is not None else "")
+        + (f", most of it in {owners}" if owners else "")
+        + _serial_cause(joined.requested_jobs),
+    )
+
+
+def _serial_cause(requested_jobs: Optional[int]) -> str:
+    """UX-1358 review 2: low sampled CPU cannot tell a dependency chain from a narrow job setting."""
+    if requested_jobs == 1:
+        return (
+            ": its make/ninja asked for -j1, so this may be a narrow job setting a wider -j could shorten "
+            "rather than a dependency chain"
+        )
+    return ": the sampling shows low parallelism here, and cannot tell a dependency chain from a narrow job setting"
+
+
+def _width_unused_step(unused: bool, ranked: list, impact, joined: ElementJoin) -> list[tuple]:
+    """UX-1359's line, unless a parallelism line already speaks for the element."""
+    if not unused or any(rank == _EVIDENCE_PARALLELISM for rank, _id, _text in ranked):
+        return []
+    return [
+        (
+            _EVIDENCE_PARALLELISM,
+            'below-granted-width',
+            width_unused_text(impact(), joined.cores_busy, joined.resolved_jobs),
+        )
+    ]
+
+
+# UX-1364: the steps whose sentence quotes a cores-busy figure, which then names the host's denominators.
+_CORES_BUSY_STEPS = (
+    'waiting-not-computing',
+    'pinned-to-one-job',
+    'underachieved-requested-jobs',
+    'already-compute-bound',
+    'serial-share-unknown',
+    'below-granted-width',
+)
+
+
+def _name_host_cores(steps: list, host_cores: str) -> None:
+    for step in steps if host_cores else []:
+        if step['id'] in _CORES_BUSY_STEPS:
+            step['text'] = step['text'].replace(" cores busy", f" cores busy{host_cores}", 1)
+
+
 def _recommend(joined: ElementJoin, memory_envelope_available: bool = False) -> list[str]:
     """Turn one element's two-plane picture into directed next steps.
 
@@ -803,14 +963,9 @@ def _recommend(joined: ElementJoin, memory_envelope_available: bool = False) -> 
     )
 
     def _impact() -> str:
-        parts = []
-        if share is not None:
-            parts.append(f"holds {qty.share(share)} of the critical path")
-        if worth is not None and joined.potential_saving_us:
-            parts.append(
-                f"fixing it is worth {qty.duration(joined.potential_saving_us)} ({qty.share(worth)} of the build)"
-            )
-        return " and ".join(parts) if parts else "on the critical path"
+        return impact_text(share, joined.potential_saving_us, worth)
+
+    unused = width_unused(joined.on_critical_path, worth, joined.cores_busy, joined.resolved_jobs)
 
     if (matters or cheap_win) and joined.cores_busy is not None:
         if joined.cores_busy < _COMPUTE_BOUND_CORES:
@@ -841,19 +996,13 @@ def _recommend(joined: ElementJoin, memory_envelope_available: bool = False) -> 
                         f"{detail}: look at how it is built before what it builds",
                     )
                 )
-        else:
+        elif not unused:
             # Deliberately phrased as a *negative* result. Its value is
             # ruling the micro plane out, so the reader stops looking
             # there - not as a thing to go and do.
-            ranked.append(
-                (
-                    _EVIDENCE_PARALLELISM,
-                    'already-compute-bound',
-                    f"{_impact()} — already compute-bound at "
-                    f"{joined.cores_busy:.2f} cores busy, so there is nothing to gain "
-                    f"from its parallelism; shortening it means less work",
-                )
-            )
+            ranked.append(_compute_bound_step(joined, _impact()))
+
+    ranked.extend(_width_unused_step(unused, ranked, _impact, joined))
 
     # UX-72: the measurements the join used to read past. Gated on the
     # same "is this what to do next" question as the block above - a
@@ -1070,6 +1219,7 @@ def compute_memory_envelope(
 def summarize_plane2_capacity(
     native_report: dict,
     host_cpu_count: Optional[int] = None,
+    host_physical_cores: Optional[int] = None,
 ) -> dict:
     """What Plane 2 knows about whether more builders would help.
 
@@ -1101,12 +1251,15 @@ def summarize_plane2_capacity(
         if "pinned_to_one_job" in (entry.get("findings") or []) and entry.get("element")
     ]
     saturated = cores_busy is not None and host_cpu_count and cores_busy >= _SATURATION_SHARE * host_cpu_count
-    return {
+    summary = {
         "cores_busy": cores_busy,
         "host_cpu_count": host_cpu_count,
         "saturated": bool(saturated),
         "pinned_elements": pinned,
     }
+    if host_physical_cores is not None:
+        summary["host_physical_cores"] = host_physical_cores
+    return summary
 
 
 def resource_profile(native_report: dict) -> dict:
@@ -1256,8 +1409,8 @@ def compute_capacity_recommendation(
             'name': 'host_cores' if clamped_from else 'CPU',
             'allows': cpu_allows,
             'reason': (
-                f"{cores_busy:.2f} of {host_cores} core{'' if host_cores == 1 else 's'} "
-                f"busy at builders={builders}, i.e. {cores_busy / builders:.2f} cores "
+                f"{cores_busy:.2f} of {hostinfo.core_denominators(host_cores, (plane2_capacity or {}).get('host_physical_cores'))} "
+                f"core{'' if host_cores == 1 else 's'} busy at builders={builders}, i.e. {cores_busy / builders:.2f} cores "
                 f"per concurrent element"
             ),
         }
@@ -1408,6 +1561,23 @@ def compute_ready_set_width(replay_scheduler) -> Optional[int]:
         running += delta[instant]
         peak = max(peak, running)
     return peak or None
+
+
+def with_own_sweep(recommendation: dict, sweep: Optional[tuple]) -> dict:
+    """UX-1363: builders from the safe cap beside this run's `(walls from 1 builder up, knee)`.
+
+    The safe cap never stands alone (no sweep, no builders figure), and the replay holds durations
+    fixed, so a knee above the cap is a graph-only what-if, never the recommendation without admission.
+    """
+    walls, knee = sweep or (None, None)
+    safe_cap = recommendation.get('safe_builder_cap')
+    builders = safe_cap if safe_cap and knee else None
+    what_if = knee if builders and knee > builders else None
+    return (
+        dict(recommendation, builders=builders, sweep_knee=knee, sweep_walls_us=walls, graph_only_knee=what_if)
+        if recommendation
+        else {}
+    )
 
 
 def compute_builder_pool_recommendation(
@@ -2699,6 +2869,13 @@ def correlate(
     )
     memory_envelope_available = bool(memory_envelope.get('at_observed_builders'))
 
+    # UX-1364: " of 4 logical / 2 physical" only where the two differ.
+    host_logical = getattr(run_context, 'host_cpu_count', None)
+    host_physical = getattr(run_context, 'host_physical_cores', None)
+    host_cores = ""
+    if host_logical and host_physical and host_physical != host_logical:
+        host_cores = f" of {hostinfo.core_denominators(host_logical, host_physical)}"
+
     joined: list[ElementJoin] = []
     for element in sorted(set(plane1) | set(plane2)):
         p1 = plane1.get(element, {})
@@ -2729,6 +2906,7 @@ def correlate(
             dependency_read_share=p2.get("dependency_read_share"),
             dominant_binary=p2.get("dominant_binary"),
             serial_binary=p2.get("serial_binary"),
+            serial_stretch=p2.get("serial_stretch"),
             peak_rss_bytes=p2.get("peak_rss_bytes"),
             worst_redundancy=p2.get("worst_redundancy"),
             redundancy_count=p2.get("redundancy_count", 0),
@@ -2739,6 +2917,7 @@ def correlate(
         # what must not be produced; the row still exists in `elements`,
         # labelled, rather than vanishing.
         entry.recommendations = _recommend(entry, memory_envelope_available) if entry.declared else []
+        _name_host_cores(entry.recommendations, host_cores)
         joined.append(entry)
 
     # Ranked by what Plane 1 says is worth fixing, since that is the

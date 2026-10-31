@@ -27,7 +27,7 @@ import sys
 from pathlib import Path
 from typing import NoReturn, Optional
 
-from . import __version__, contracts, schemas
+from . import __version__, contracts, hostinfo, schemas
 from . import plane2 as plane2_shape
 from . import shown as qty
 from .analyzer import (
@@ -134,6 +134,7 @@ def _attach_resource_blast(run_dir, analyzer, result) -> None:
 
     durations = compute_element_durations(getattr(analyzer, 'normalized_tasks', []) or [])
     rows = sources_module.resource_blast(inventory, downstream, element_kinds, durations)
+    sources_module.mark_build_only_reach(rows, sources_module.build_only_elements(graph.dependencies))
     result.resource_blast = {
         'rows': rows,
         'element_count': len(graph.elements),
@@ -253,7 +254,9 @@ def _attach_plane2_capacity(args: argparse.Namespace, analyzer, result) -> None:
         plane2_shape.apply_resolved_widths(
             native_report, plane2_shape.resolved_widths(os.path.join(str(run_dir), 'graph.json'))
         )
-    result.plane2_capacity = summarize_plane2_capacity(native_report, host_cpu_count)
+    result.plane2_capacity = summarize_plane2_capacity(
+        native_report, host_cpu_count, getattr(context, 'host_physical_cores', None)
+    )
     _reread_oversubscription(analyzer, result)
     # UX-202: how much of the build Plane 2 actually saw, published
     # rather than left in the native report. The evidence header states
@@ -501,7 +504,7 @@ def _builder_pool_recommendation(analyzer, result) -> dict:
     32.4's census, unit and population guards all fire on one), which
     this bounded track does not own.
     """
-    from bga.correlate import compute_builder_pool_recommendation, compute_ready_set_width
+    from bga.correlate import compute_builder_pool_recommendation, compute_ready_set_width, with_own_sweep
 
     scheduler = getattr(analyzer, 'replay_scheduler', None)
     context = getattr(analyzer, 'run_context', None)
@@ -524,13 +527,37 @@ def _builder_pool_recommendation(analyzer, result) -> dict:
         default=None,
     )
     calibrated_cores = os.environ.get(_CALIBRATED_CORES_ENV)
-    return compute_builder_pool_recommendation(
+    recommendation = compute_builder_pool_recommendation(
         ready_set_width,
         host_cpu_count,
         critical_path_max_jobs,
         calibrated_cores=int(calibrated_cores) if calibrated_cores else None,
         memory=_peak_rss_and_host_memory(analyzer.read_host_samples(), getattr(result, 'plane2_report', None)),
     )
+    # UX-1364: the pool reading names logical and physical cores, or says physical is unknown.
+    denominators = hostinfo.core_denominators(host_cpu_count, getattr(context, 'host_physical_cores', None), True)
+    if recommendation.get('pool_reading', '').startswith(f"host_cpu_count ({host_cpu_count})"):
+        recommendation['pool_reading'] = recommendation['pool_reading'].replace(
+            f"({host_cpu_count})", f"({denominators})", 1
+        )
+    return with_own_sweep(
+        recommendation, _own_sweep(scheduler, result, getattr(context, 'max_jobs', None) or 1, host_cpu_count)
+    )
+
+
+def _own_sweep(scheduler, result, builders: int, host_cpu_count: int) -> Optional[tuple]:
+    """UX-1363: `(walls from 1 builder up, knee)` from this run's own replay, `None` when it cannot sweep."""
+    from bga import sweep_curve
+
+    top = sweep_curve.sweep_top(builders, host_cpu_count, sweep_curve.graph_width(getattr(result, 'signals', None)))
+    try:
+        sweep = scheduler.capacity_sweep(resource='PROCESS', min_capacity=1, max_capacity=top, step=1)
+    except (AttributeError, ValueError) as exc:
+        logger.info("UX-1363: no capacity sweep for the builders line (%s)", exc)
+        return None
+    walls = sweep_curve.curve(sweep.sweeps)
+    knee = (sweep.knee_points or {}).get('PROCESS')
+    return (walls, knee) if walls and knee else None
 
 
 #: UX-680: compiler/linker binaries a compiler-level RE service
@@ -792,17 +819,35 @@ def _builder_pool_text_lines(recommendation: dict) -> list[str]:
     """The builder and pool lines, each with the reading it came from;
     the default is the safe cap under `--jobserver auto` (UX-1005)."""
     safe_cap = recommendation.get('safe_builder_cap')
+    builders = recommendation.get('builders')
     wide = f"{recommendation['ready_set_width']}, from {recommendation['ready_set_reading']}"
-    if safe_cap is None:
+    if builders is None:
         lines = [f"Builders (ready-set width): {wide}"]
     else:
+        # UX-1363: this run's replay is the evidence; the safe-cap rule is another fixture's, labelled so.
+        walls, knee = recommendation['sweep_walls_us'], recommendation['sweep_knee']
+        rule = (
+            f"the --jobserver auto safe cap (host cores less the critical path's max-jobs="
+            f"{recommendation['critical_path_max_jobs']}) is {safe_cap}, a rule read on another fixture "
+            "(13-mixed-graph, 16 cores: 143.6s -> 118.3s), not on this run"
+        )
+        what_if = recommendation.get('graph_only_knee')
         lines = [
-            f"Builders: {safe_cap} with --jobserver auto - the host's cores less "
-            f"the critical path's own max-jobs={recommendation['critical_path_max_jobs']}, "
-            "so it can widen into the rest (13-mixed-graph, 16 cores: 143.6s -> 118.3s)",
+            f"Builders: {builders} with --jobserver auto - this run's replay puts {builders} at "
+            f"{qty.duration(walls[min(builders, len(walls)) - 1])}"
+            f"{'' if builders == 1 else f' against {qty.duration(walls[0])} at 1'}"
+            f"{'' if what_if else f', its knee at {knee}'}; {rule}",
             f"  Ready-set width: {wide} - wider than the safe cap only with "
             "admission (BGA_ADMISSION=1), not yet measured faster",
         ]
+        if what_if:
+            # UX-1363 review 2: the replay holds durations fixed, so its knee is no evidence auto can widen.
+            lines.insert(
+                1,
+                f"  Graph-only what-if (not a recommendation): the replay, which does not model contention, "
+                f"keeps shortening to {what_if} builders ({qty.duration(walls[min(what_if, len(walls)) - 1])}); "
+                "above the safe cap needs admission or a contention-aware measurement",
+            )
     bound = recommendation.get('memory_bound')
     if bound:
         gb = 1e9
@@ -1712,15 +1757,11 @@ def cmd_compare(args: argparse.Namespace) -> int:
 
 
 def cmd_whatif(args: argparse.Namespace) -> int:
-    """Execute `bga whatif RUN --element A --element B` (UX-230).
+    """Execute `bga whatif RUN --element A --drop-edge PRED SUCC` (UX-230, UX-1357): exits 0 on a refusal too.
 
-    A question, not a gate: it exits 0 on a refusal too, because "this
-    selection cannot be projected" is the answer rather than a failure.
-    The projection itself is `bga.whatif.project`, which the viewer's
-    transport calls as well - one function, so the page and the terminal
-    cannot answer one selection two ways.
+    `bga.edge_whatif.answer` is the viewer transport's function too, so the page and terminal cannot disagree.
     """
-    from bga.whatif import project, render
+    from bga.edge_whatif import answer, render
 
     try:
         run_dir = resolve_run_alias(args.run)
@@ -1732,7 +1773,7 @@ def cmd_whatif(args: argparse.Namespace) -> int:
         return 2
     analyzer = BuildEfficiencyAnalyzer(verbose=getattr(args, 'verbose', False))
     analyzer.load(Path(run_dir))
-    document = project(analyzer.analyze(Path(run_dir)), analyzer.graph, args.element or [])
+    document = answer(analyzer, analyzer.analyze(Path(run_dir)), args.element or [], args.drop_edge or [])
     output = json.dumps(document, indent=2, default=str) if args.format == 'json' else "\n".join(render(document))
     if getattr(args, 'output', None):
         with open(args.output, 'w', encoding='utf-8') as handle:
@@ -2688,18 +2729,22 @@ def _add_whatif_subcommand(subparsers) -> None:
     whatif_parser = subparsers.add_parser(
         'whatif',
         help="What would the build drop to if I fixed these?",
-        description='Project the build for a chosen set of fixes: one '
-        'longest-path recompute with each named element zeroed, '
-        'never a sum of their individual savings (which is wrong '
-        'the moment two share a chain). "Fixed" means instant, '
-        'over this run\'s measured durations - an upper bound, '
-        'not a forecast. A question, not a gate: always exits 0.',
+        description='Project the build for chosen fixes: one longest-path recompute with each --element zeroed, '
+        'never a sum of their savings; or a replay without each --drop-edge, pruning what only it pulled in. '
+        'Over this run\'s measured durations - an upper bound, not a forecast. A question: always exits 0.',
     )
     whatif_parser.add_argument(
         'run', nargs='?', default='@last', metavar='RUN', help='The run to project over; `@last` by default.'
     )
     whatif_parser.add_argument(
         '--element', action='append', default=[], metavar='UID', help='An element to treat as fixed. Repeatable.'
+    )
+    whatif_parser.add_argument(
+        '--drop-edge',
+        action='append',
+        nargs=2,
+        metavar=('PRED', 'SUCC'),
+        help='Replay without this dependency edge, pruning what only it pulled in. Repeatable.',
     )
     whatif_parser.add_argument(
         '-f',

@@ -1,4 +1,4 @@
-"""UX-1364: the run context carries physical cores; pool size and cores-busy name both denominators.
+"""UX-1364: physical cores are printed as context; the judgement keeps the logical denominator.
 
 Page: styleguide §1b, a published field reaches a reader.
 """
@@ -95,6 +95,26 @@ def test_correlate_states_both_where_the_cores_busy_is_judged(tmp_path):
     assert f"0.90 cores busy of {BOTH} — it is waiting" in out
     assert f"kept under half their granted cores busy of {BOTH}: lib-b.bst 1.86 of 4" in out
     assert " cores busy of " not in _cli("correlate", str(_run(tmp_path / "old", None)))
+
+
+def _without_context(text):
+    """The output with every topology string reduced to the bare logical count."""
+    for said in (BOTH, "4 logical / physical unknown"):
+        text = text.replace(said, "4")
+    return text.replace(" cores busy of 4", " cores busy")
+
+
+@pytest.mark.parametrize("command", ["analyze", "correlate"])
+@pytest.mark.parametrize("physical", [2, None])
+def test_the_same_cpu_time_gets_the_same_verdict_on_smt_and_non_smt(tmp_path, command, physical):
+    """4 logical / `physical` vs 4 logical / 4 physical: only the context string differs."""
+    flat = _cli(command, str(_run(tmp_path / "flat", 4))).replace(str(tmp_path / "flat"), "HOST")
+    topo = _cli(command, str(_run(tmp_path / "topo", physical))).replace(str(tmp_path / "topo"), "HOST")
+    assert "cores busy" in flat and "Pool size: 4" in _cli("analyze", str(_run(tmp_path / "pool", physical)))
+    assert _without_context(topo) == flat
+    if command == "analyze":
+        assert "Pool size: 4, from host_cpu_count (4)" in flat
+        assert "1.60 of 4 cores busy" in flat
 
 
 def test_equal_denominators_are_one_number(tmp_path):

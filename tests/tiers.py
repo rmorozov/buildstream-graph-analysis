@@ -1251,6 +1251,6 @@ MEDIUM = (
     # The freedesktop-sdk field-test rows, measured single-process on landing.
     "tests/unit/test_a_low_cores_busy_chain_element_is_recommended.py",  #    1.5s
     "tests/unit/test_analyze_finds_the_report_beside_a_capture.py",  #    2.3s
-    "tests/unit/test_cores_busy_is_judged_against_physical_cores.py",  #    3.5s
+    "tests/unit/test_physical_cores_are_context_beside_the_logical_denominator.py",  #    3.5s
     "tests/unit/test_a_build_tool_source_reach_is_expected.py",  #    1.6s
 )

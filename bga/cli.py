@@ -831,13 +831,23 @@ def _builder_pool_text_lines(recommendation: dict) -> list[str]:
             f"{recommendation['critical_path_max_jobs']}) is {safe_cap}, a rule read on another fixture "
             "(13-mixed-graph, 16 cores: 143.6s -> 118.3s), not on this run"
         )
+        what_if = recommendation.get('graph_only_knee')
         lines = [
             f"Builders: {builders} with --jobserver auto - this run's replay puts {builders} at "
-            f"{qty.duration(walls[min(builders, len(walls)) - 1])} against {qty.duration(walls[0])} at 1, "
-            f"its knee at {knee}; {rule}",
+            f"{qty.duration(walls[min(builders, len(walls)) - 1])}"
+            f"{'' if builders == 1 else f' against {qty.duration(walls[0])} at 1'}"
+            f"{'' if what_if else f', its knee at {knee}'}; {rule}",
             f"  Ready-set width: {wide} - wider than the safe cap only with "
             "admission (BGA_ADMISSION=1), not yet measured faster",
         ]
+        if what_if:
+            # UX-1363 review 2: the replay holds durations fixed, so its knee is no evidence auto can widen.
+            lines.insert(
+                1,
+                f"  Graph-only what-if (not a recommendation): the replay, which does not model contention, "
+                f"keeps shortening to {what_if} builders ({qty.duration(walls[min(what_if, len(walls)) - 1])}); "
+                "above the safe cap needs admission or a contention-aware measurement",
+            )
     bound = recommendation.get('memory_bound')
     if bound:
         gb = 1e9

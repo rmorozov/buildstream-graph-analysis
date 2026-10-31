@@ -1554,15 +1554,20 @@ def compute_ready_set_width(replay_scheduler) -> Optional[int]:
 
 
 def with_own_sweep(recommendation: dict, sweep: Optional[tuple]) -> dict:
-    """UX-1363: builders from this run's `(walls from 1 builder up, knee)`, never under its knee.
+    """UX-1363: builders from the safe cap beside this run's `(walls from 1 builder up, knee)`.
 
-    The safe cap is a rule read on another fixture, so it never stands alone: builders is
-    `max(safe cap, knee)`, and with no sweep there is no builders figure.
+    The safe cap never stands alone (no sweep, no builders figure), and the replay holds durations
+    fixed, so a knee above the cap is a graph-only what-if, never the recommendation without admission.
     """
     walls, knee = sweep or (None, None)
     safe_cap = recommendation.get('safe_builder_cap')
-    builders = max(safe_cap, knee) if safe_cap and knee else None
-    return dict(recommendation, builders=builders, sweep_knee=knee, sweep_walls_us=walls) if recommendation else {}
+    builders = safe_cap if safe_cap and knee else None
+    what_if = knee if builders and knee > builders else None
+    return (
+        dict(recommendation, builders=builders, sweep_knee=knee, sweep_walls_us=walls, graph_only_knee=what_if)
+        if recommendation
+        else {}
+    )
 
 
 def compute_builder_pool_recommendation(

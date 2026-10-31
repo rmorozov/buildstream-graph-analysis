@@ -1253,4 +1253,5 @@ MEDIUM = (
     "tests/unit/test_analyze_finds_the_report_beside_a_capture.py",  #    2.3s
     "tests/unit/test_physical_cores_are_context_beside_the_logical_denominator.py",  #    3.5s
     "tests/unit/test_a_build_tool_source_reach_is_expected.py",  #    1.6s
+    "tests/unit/test_an_edge_what_if_prunes_the_closure_it_alone_pulled.py",  #    6.6s
 )

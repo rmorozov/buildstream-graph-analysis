@@ -386,7 +386,8 @@ BUDGETS = (
     # 13,162 -> 13,338 measured); px fell 39,522 -> 37,847 with the Info fold.
     # Round 165's merge (owner-call default): words 13,500 -> 13,700, controls 872 -> 874 - UX-1267/1270 +210 words,
     # UX-1269/1273 +99, UX-1272/1274/1276 +102, UX-1261/1275 and UX-1274 +1 control each; macro_micro 13,697 words, 874.
-    (50, 39_188, 14_200, 874, 7_900),
+    # Round 175 (owner card, ~2% over the reading): words 13,700 -> 14,200; review rework, same rule: controls 874 -> 908 (macro_micro 890).
+    (50, 39_188, 14_200, 908, 7_900),
     # `UX-1050`: px 36,500 -> 43,500, words 9,600 -> 13,200, nodes
     # 6,000 -> 7,500 on the 4,100 class: `xl_both` (Plane 2 and a store)
     # reads 42,982 px, 12,872 words, 7,209 nodes; Plane 2's cost is flat
@@ -401,7 +402,8 @@ BUDGETS = (
     # nodes; each track alone under (UX-1267/1270 13,540/7,799, UX-1272/1274/1276 13,367/7,486). With UX-1271's step
     # copy controls: nodes 8,070 -> 8,080, controls 1,192 -> 1,195 (xl_both 8,079, 1,195). The walk's sweep
     # knee and configured-builders dots: nodes 8,080 -> 8,085 (xl_both 8,082).
-    (4_100, 46_822, 14_100, 1_195, 8_450),
+    # Round 175 (owner card, ~2% over the reading): nodes 8,085 -> 8,450; review rework, same rule: words 14,100 -> 14,550, controls 1,195 -> 1,220 (xl_both 14,265, 1,197).
+    (4_100, 46_822, 14_550, 1_220, 8_450),
 )
 
 

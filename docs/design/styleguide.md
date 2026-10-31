@@ -770,7 +770,7 @@ column re-read in round 73:
                  elements   landed   opened    words   controls    nodes
 golden                  4    3,800   15,618    7,144        427    2,498
 macro_micro            11    5,965   31,804   12,002        750    5,686
-budget, to 50 elts             7,600   39,188   13,700        874    7,900
+budget, to 50 elts             7,600   39,188   14,200        908    7,900
 
 scale               1,202    4,763   26,242   36,542      1,941   24,294
 budget, to 4,000 elts          7,000   32,000   41,000      2,300   27,500
@@ -797,7 +797,7 @@ in it hidden, and the class is bounded at both ends:
                  elements   landed   opened    words   controls    nodes
 scale               1,202    5,007   26,584    8,259        787    4,732
 xl                  4,002    4,937   27,230    8,275        812    4,960
-budget, to 4,100 elts          7,600   46,822   14,100      1,195    8,085
+budget, to 4,100 elts          7,600   46,822   14,550      1,220    8,450
 ```
 
 Height does not move at all — a bounded row costs no pixels, which is
@@ -945,6 +945,14 @@ Round 165's merge, five tracks each under alone: the small class's words
 `UX-1271`'s step copy controls) - the owner-call default, reversible. The
 walk's sweep dots (knee, configured builders) take nodes to 8,085
 (`xl_both` 8,082).
+
+Round 175, the freedesktop-sdk field-test rows (owner card, ~2% over
+each reading): the small class's words 13,700 -> 14,200 (`macro_micro`
+13,922) and the 4,100 class's nodes 8,085 -> 8,450 (`xl_both` 8,295).
+Their review rework, by the same rule: the small class's controls 874 ->
+908 (`macro_micro` 890) and the 4,100 class's words 14,100 -> 14,550
+and controls 1,195 -> 1,220 (`xl_both` 14,265, 1,197) - the owner-call
+default, reversible.
 
 `UX-1152`'s card links read section titles, not ids; alone they took
 `macro_micro` to 38,201 px and 13,441 words. Round 154's merged tree,

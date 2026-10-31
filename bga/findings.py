@@ -2497,7 +2497,8 @@ def _plane2_findings(result: AnalysisResult) -> list[dict]:
         (
             (element, row['serial_stretch'])
             for element, row in _plane2_view(report).items()
-            if (row.get('serial_stretch', {}).get('share') or 0) > _SERIAL_SHARE_LINE
+            if (row.get('serial_stretch') or {}).get('known')
+            and (row['serial_stretch'].get('share') or 0) > _SERIAL_SHARE_LINE
         ),
         key=lambda item: (-item[1]['wall_us'], item[0]),
     )
@@ -2508,8 +2509,8 @@ def _plane2_findings(result: AnalysisResult) -> list[dict]:
             _finding(
                 'serial-stretch',
                 SEVERITY_MEDIUM,
-                f"{plural(len(serial), 'element', shown=f'{len(serial):,}')} spent over {qty.share(_SERIAL_SHARE_LINE)} of their span at one work "
-                f"process or none — {element} the longest, {qty.duration(stretch['wall_us'])}",
+                f"{plural(len(serial), 'element', shown=f'{len(serial):,}')} spent over {qty.share(_SERIAL_SHARE_LINE)} of their sampled time at "
+                f"one core busy or less — {element} the longest, {qty.duration(stretch['wall_us'])}",
                 elements=[name for name, _ in serial],
                 evidence={
                     'element_count': len(serial),

@@ -1376,11 +1376,30 @@ _JOIN_ITEM_PROPERTIES = {
         },
     },
     "serial_stretch": {
-        "description": "Wall-clock this element spent at one busy work process or none, and who held it.",
+        "description": "Sampled wall-clock this element spent at or under one core busy, and who held it; or not "
+        "known, and why. Absent when the native report predates the sampled measurement.",
         "properties": {
-            "wall_us": {QUANTITY: "duration_us", "description": "Wall-clock at one busy work process or none."},
+            "known": {"description": "Whether the CPU samples covered enough of the span to measure it."},
+            "reason": {"description": "Why it is unknown: no CPU samples, or too little of the span sampled."},
+            "wall_us": {
+                QUANTITY: "duration_us",
+                "description": "Wall-clock of sampled windows at or under the serial line's cores busy.",
+            },
+            "sampled_us": {QUANTITY: "duration_us", "description": "Wall-clock the CPU sampler's windows covered."},
+            "contended_us": {
+                QUANTITY: "duration_us",
+                "description": "Of that, low windows beside under one idle host core: contention, neither serial nor not.",
+            },
             "span_us": {QUANTITY: "duration_us", "description": "The element's own process span it is a part of."},
-            "share": {QUANTITY: "share", "description": "That wall-clock over the span."},
+            "share": {QUANTITY: "share", "description": "That wall-clock over the sampled, uncontended wall-clock."},
+            "cores_line": {
+                QUANTITY: "ratio",
+                "description": "Cores busy (utime+stime per wall second) at or under which a window is serial.",
+            },
+            "observed_process_concurrency": {
+                QUANTITY: "ratio",
+                "description": "Processes alive on average inside those windows: alive, not running on a CPU.",
+            },
             "owners": {
                 GROWS: False,
                 "maxItems": 3,
@@ -5160,9 +5179,9 @@ _ANALYZE_HINTS = {
                 "tick is in the total and absent from "
                 "the curve, and a `/proc` read that "
                 "failed ends a series rather than "
-                "reading zero. Present only under "
-                "`--jobserver`: the shim's decision "
-                "rows name each sandbox's host root."
+                "reading zero. The shim's invocation "
+                "log names each sandbox's host root, "
+                "so every traced capture samples it."
             },
             "note": {"description": "What a CPU figure here means, in a sentence."},
         },

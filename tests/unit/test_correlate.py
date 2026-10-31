@@ -76,11 +76,12 @@ def test_critical_path_element_that_is_waiting_is_told_to_fix_its_parallelism():
 def test_critical_path_element_that_is_busy_is_told_the_opposite():
     """The negative result is the other half of the value: it stops a
     reader looking at the micro plane for an element that has nothing to
-    give there."""
+    give there. UX-1358: only with its CPU sampled and no serial stretch in it."""
+    sampled = {"cpu_sampled_s": 100.0, "cpu_contended_s": 0.0, "element_span_s": 100.0, "serial_wall_s": 0.0}
     result = correlate(
         _analysis(critical_path=["heavy.bst"], opportunities=[("heavy.bst", 0.4, 40.0)]),
         _native(
-            parallelism=[{"element": "heavy.bst", "requested_jobs": 4, "findings": []}],
+            parallelism=[{"element": "heavy.bst", "requested_jobs": 4, "findings": [], **sampled, "serial_share": 0.0}],
             cpu={"heavy.bst": _cpu(3.8)},
         ),
     )
@@ -286,7 +287,8 @@ def test_the_headline_verdict_fires_on_the_real_capture():
     result = correlate(_real_analysis(), _real_native())
 
     assert any("waiting, not computing" in step for step in _steps(result, "components/bison.bst"))
-    assert any("already compute-bound" in step for step in _steps(result, "components/_private/cmake-stage1.bst"))
+    # UX-1358: the capture predates sampled serial time, so cmake-stage1's 3.40 cores is not called compute-bound.
+    assert any("serial share is unknown" in step for step in _steps(result, "components/_private/cmake-stage1.bst"))
 
 
 def test_a_cheap_win_below_the_gate_is_still_reported():

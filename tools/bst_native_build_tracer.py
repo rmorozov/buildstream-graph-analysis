@@ -862,7 +862,7 @@ def network_bytes(read: dict) -> dict:
     }
 
 
-def read_cpu_sample() -> dict:
+def read_cpu_sample(path: str = "/proc/stat") -> dict:
     """Busy jiffies since boot, the core count, and the 1-minute load.
 
     `UX-675`. `traced processes running` is not cores busy - a process
@@ -877,7 +877,7 @@ def read_cpu_sample() -> dict:
     """
     sample = {}
     try:
-        with open("/proc/stat") as handle:
+        with open(path) as handle:
             for line in handle:
                 if line.startswith("cpu "):
                     fields = [int(value) for value in line.split()[1:]]
@@ -1070,6 +1070,16 @@ def read_pid_cpu_us(pid: int, proc_root: str = "/proc") -> Optional[int]:
     Self only, not the `c`-prefixed children's totals: every child is
     sampled in its own right.
     """
+    pair = read_pid_cpu_pair_us(pid, proc_root)
+    return None if pair is None else pair[0]
+
+
+def read_pid_cpu_pair_us(pid: int, proc_root: str = "/proc") -> Optional[tuple[int, int]]:
+    """UX-1358: `(utime + stime, cutime + cstime)` in microseconds, one read; `None` where `stat` is unreadable.
+
+    The second is what the pid's reaped children spent, so a tree's sum over both holds a child that lived
+    and was reaped between two ticks - which `read_pid_cpu_us` alone never sees.
+    """
     try:
         with open(f"{proc_root}/{int(pid)}/stat", encoding="utf-8") as handle:
             raw = handle.read()
@@ -1078,14 +1088,15 @@ def read_pid_cpu_us(pid: int, proc_root: str = "/proc") -> Optional[int]:
     tail = raw.rpartition(")")[2]
     fields = tail.split()
     # After the comm's closing paren: state ppid pgrp session tty_nr
-    # tpgid flags minflt cminflt majflt cmajflt utime stime.
+    # tpgid flags minflt cminflt majflt cmajflt utime stime cutime cstime.
     if len(fields) < 13:
         return None
     try:
         jiffies = int(fields[11]) + int(fields[12])
+        reaped = int(fields[13]) + int(fields[14]) if len(fields) >= 15 else 0
     except ValueError:
         return None
-    return int(jiffies * 1_000_000 / _TICKS_PER_S)
+    return int(jiffies * 1_000_000 / _TICKS_PER_S), int(reaped * 1_000_000 / _TICKS_PER_S)
 
 
 def element_cpu_series(rows: list, cap: int = ELEMENT_CPU_SERIES_CAP) -> dict:
@@ -1140,16 +1151,24 @@ class ElementCpuSampler:
     """
 
     def __init__(
-        self, path: str, decisions_path: str, interval_s: float = HOST_SAMPLE_INTERVAL_S, proc_root: str = "/proc"
+        self,
+        path: str,
+        decisions_path: str,
+        interval_s: float = HOST_SAMPLE_INTERVAL_S,
+        proc_root: str = "/proc",
+        invocations_path: Optional[str] = None,
     ):
         self.path = path
         self.decisions_path = decisions_path
+        # UX-1358: the shim's invocation log names the same host roots on every capture, `--jobserver` or not.
+        self.invocations_path = invocations_path
         self.interval_s = interval_s
         self.proc_root = proc_root
         self._stop = threading.Event()
         self._thread = None
         self._handle = None
         self._offset = 0
+        self._invocations_offset = 0
         self._live: dict = {}
         self.samples = 0
 
@@ -1193,9 +1212,27 @@ class ElementCpuSampler:
     def _follow(self) -> None:
         roots, self._offset = follow_sandbox_roots(self.decisions_path, self._offset)
         self._live.update(roots)
+        if self.invocations_path:
+            named, self._invocations_offset = follow_sandbox_roots(
+                self.invocations_path, self._invocations_offset, "invocation_id", "dir_tag", unnamed="unknown"
+            )
+            for root, element in named.items():
+                self._live.setdefault(root, element)
 
     def tick(self, at: float) -> None:
         self._follow()
+        if self._live:
+            # UX-1358: the host's own busy jiffies on the same tick - a low rate on a saturated host is contention.
+            host = read_cpu_sample(f"{self.proc_root}/stat")
+            if "cpu_total_jiffies" in host:
+                self._write(
+                    {
+                        "t": at,
+                        "host_busy_jiffies": host["cpu_busy_jiffies"],
+                        "host_total_jiffies": host["cpu_total_jiffies"],
+                        "host_cores": host.get("cores"),
+                    }
+                )
         children = None
         for root, element in list(self._live.items()):
             if read_pid_cpu_us(root, self.proc_root) is None:
@@ -1204,10 +1241,12 @@ class ElementCpuSampler:
             if children is None:
                 children = sandbox_children(root, self.proc_root)
             for pid in sandbox_tree(root, children):
-                cpu_us = read_pid_cpu_us(pid, self.proc_root)
-                if cpu_us is None:
+                pair = read_pid_cpu_pair_us(pid, self.proc_root)
+                if pair is None:
                     continue  # absent, not zero: the series ends where the readings do
-                self._write({"t": at, "pid": pid, "root": root, "element": element, "cpu_us": cpu_us})
+                self._write(
+                    {"t": at, "pid": pid, "root": root, "element": element, "cpu_us": pair[0], "reaped_us": pair[1]}
+                )
                 self.samples += 1
 
     def _run(self) -> None:
@@ -1230,7 +1269,7 @@ def read_element_cpu_samples(path: str) -> list:
                     row = json.loads(line)
                 except ValueError:
                     continue
-                if isinstance(row, dict) and "pid" in row:
+                if isinstance(row, dict) and ("pid" in row or "host_total_jiffies" in row):
                     rows.append(row)
     except OSError:
         return []
@@ -1249,6 +1288,76 @@ def attach_element_cpu_series(report: dict, path: Optional[str]) -> None:
     series = element_cpu_series(read_element_cpu_samples(path or ""))
     if series:
         report.setdefault("cpu_time", {})["per_element_series"] = series
+
+
+def _host_idle_windows(rows: list) -> list[tuple[float, float, float]]:
+    """UX-1358: `[(t0, t1, idle cores)]` from the sampler's host rows, tick to tick."""
+    ticks = sorted(
+        (float(row["t"]), row["host_busy_jiffies"], row["host_total_jiffies"], row.get("host_cores") or 0)
+        for row in rows or []
+        if isinstance(row, dict) and row.get("t") is not None and "host_total_jiffies" in row
+    )
+    out = []
+    for (t0, busy0, total0, _), (t1, busy1, total1, cores) in zip(ticks, ticks[1:]):
+        if t1 > t0 and total1 > total0:
+            out.append((t0, t1, cores * (1.0 - (busy1 - busy0) / (total1 - total0))))
+    return out
+
+
+def _idle_over(host: list[tuple[float, float, float]], ends: list[float], a: float, b: float) -> Optional[float]:
+    """Time-weighted idle cores of `host` (window ends `ends`) over [a, b]; `None` where none overlaps it."""
+    seconds = weighted = 0.0
+    for start in range(bisect.bisect_right(ends, a), len(host)):
+        h0, h1, idle = host[start]
+        if h0 >= b:
+            break
+        overlap = min(b, h1) - max(a, h0)
+        if overlap > 0:
+            seconds += overlap
+            weighted += overlap * idle
+    return (weighted / seconds) if seconds > 0 else None
+
+
+def element_cpu_windows(rows: list, resolved: Optional[dict] = None) -> dict[str, list[tuple]]:
+    """UX-1358: `{element: [(t0_s, t1_s, cores, host idle cores)]}`, disjoint and sorted, from the sampler's rows.
+
+    A root's level at a tick is its tree's `cpu_us + reaped_us`, so a child reaped between ticks stays in it;
+    the rate is the level's rise over the window, never a count of live processes. A root is keyed by
+    `resolved` (its invocation id) before the row's own name. Roots of one element are summed on the union
+    of their ticks; a window no root spans is unsampled, not idle. Host idle is `None` where unsampled.
+    """
+    resolved = resolved or {}
+    host = _host_idle_windows(rows)
+    ends = [window[1] for window in host]
+    levels: dict = {}
+    for row in rows or []:
+        if not isinstance(row, dict):
+            continue
+        root, at, cpu_us = row.get("root"), row.get("t"), row.get("cpu_us")
+        if root is None or at is None or cpu_us is None:
+            continue
+        key = (resolved.get(str(root)) or row.get("element") or "unknown", root)
+        ticks = levels.setdefault(key, {})
+        ticks[float(at)] = ticks.get(float(at), 0) + int(cpu_us) + int(row.get("reaped_us") or 0)
+    spans: dict[str, list[tuple[float, float, float]]] = {}
+    for (element, _root), ticks in levels.items():
+        points = sorted(ticks.items())
+        for (t0, l0), (t1, l1) in zip(points, points[1:]):
+            if t1 > t0:
+                spans.setdefault(element, []).append((t0, t1, max(0, l1 - l0) / 1e6 / (t1 - t0)))
+    windows: dict[str, list[tuple]] = {}
+    for element, parts in sorted(spans.items()):
+        events = sorted([(a, 1, rate) for a, _b, rate in parts] + [(b, -1, rate) for _a, b, rate in parts])
+        out: list[tuple] = []
+        active, rate, at = 0, 0.0, None
+        for ts, delta, part_rate in events:
+            if active > 0 and at is not None and ts > at:
+                out.append((at, ts, rate, _idle_over(host, ends, at, ts)))
+            active += delta
+            rate = rate + delta * part_rate if active else 0.0
+            at = ts
+        windows[element] = out
+    return windows
 
 
 def read_host_samples(path: str) -> dict:
@@ -2767,7 +2876,9 @@ def run_traced_build(
         sampler = HostSampler(host_samples_path) if host_samples_path else contextlib.nullcontext()
         # `UX-893`/`UX-1314`: the per-element half, on the same tick, rooted at the shim's decision rows' host pids.
         cpu_sampler = (
-            ElementCpuSampler(cpu_samples_path, captured_decisions) if cpu_samples_path else contextlib.nullcontext()
+            ElementCpuSampler(cpu_samples_path, captured_decisions, invocations_path=captured_invocations)
+            if cpu_samples_path
+            else contextlib.nullcontext()
         )
         try:
             with sampler, cpu_sampler, progress.timed_build():
@@ -4488,28 +4599,17 @@ def _concurrency_profile(intervals: list[tuple[float, float]]) -> dict:
 # UX-1358: how many command signatures a serial stretch names, and the length each is cut to.
 SERIAL_OWNERS_SHOWN = 3
 _SERIAL_SIGNATURE_CHARS = 160
+# UX-1358: a sampled window at or under this many cores busy is serial - one core plus correlate's own
+# `_COMPUTE_BOUND_CORES` margin; a waiting parent reads ~0 and a second busy core lifts a whole window past it.
+SERIAL_CORES_LINE = 1.25
+# UX-1358: under this share of its process span sampled, an element's serial share is unknown, not small.
+SERIAL_MIN_COVERAGE = 0.5
+# UX-1358: a low window is serial only with at least this many host cores idle beside it - else contended.
+SERIAL_IDLE_CORES = 1.0
 
 
-def _serial_stretches(work: list[tuple[float, float]], lo: float, hi: float) -> list[tuple[float, float]]:
-    """UX-1358: the parts of [lo, hi] during which at most one work process ran."""
-    points = sorted([(s, 1) for s, _ in work] + [(e, -1) for _, e in work], key=lambda p: (p[0], p[1]))
-    points.append((hi, 0))
-    stretches: list[tuple[float, float]] = []
-    current, at = 0, lo
-    for ts, delta in points:
-        ts = min(max(ts, lo), hi)
-        if current <= 1 and ts > at:
-            if stretches and stretches[-1][1] == at:
-                stretches[-1] = (stretches[-1][0], ts)
-            else:
-                stretches.append((at, ts))
-        at = max(at, ts)
-        current += delta
-    return stretches
-
-
-def _serial_owners(stretches, candidates) -> list[dict]:
-    """Wall seconds each command signature was alive inside the serial stretches, most first."""
+def _covered(stretches: list[tuple[float, float]]):
+    """`t -> seconds of the sorted, disjoint stretches before t`."""
     starts = [a for a, _ in stretches]
     before = list(itertools.accumulate((b - a for a, b in stretches), initial=0.0))
 
@@ -4520,6 +4620,12 @@ def _serial_owners(stretches, candidates) -> list[dict]:
         a, b = stretches[i]
         return before[i] + min(t, b) - a
 
+    return covered
+
+
+def _serial_owners(stretches, candidates) -> list[dict]:
+    """Wall seconds each command signature was alive inside the serial stretches, most first."""
+    covered = _covered(stretches)
     by_signature: dict[str, float] = {}
     for start, end, signature in candidates:
         seconds = covered(end) - covered(start)
@@ -4529,7 +4635,71 @@ def _serial_owners(stretches, candidates) -> list[dict]:
     return [{"signature": signature, "wall_s": seconds} for signature, seconds in ranked]
 
 
-def compute_per_element_parallelism(records: list[dict]) -> list[dict]:
+def _sampled_serial(windows, lo: float, hi: float) -> tuple[float, float, list[tuple[float, float]]]:
+    """UX-1358: `(sampled s, contended s, merged serial stretches)` of `windows` clipped to the span [lo, hi].
+
+    A window at or under the line beside fewer than `SERIAL_IDLE_CORES` idle host cores (or an unsampled host)
+    is contended: the element may have been runnable on more cores than it got, so it is neither serial nor not.
+    """
+    sampled, contended, stretches = 0.0, 0.0, []
+    for a, b, cores, idle in windows or ():
+        a, b = max(a, lo), min(b, hi)
+        if b <= a:
+            continue
+        sampled += b - a
+        if cores > SERIAL_CORES_LINE:
+            continue
+        if idle is None or idle < SERIAL_IDLE_CORES:
+            contended += b - a
+            continue
+        if stretches and stretches[-1][1] >= a:
+            stretches[-1] = (stretches[-1][0], max(stretches[-1][1], b))
+        else:
+            stretches.append((a, b))
+    return sampled, contended, stretches
+
+
+def _serial_fields(windows, span: tuple[float, float], processes, owners) -> dict:
+    """UX-1358: sampled serial time, its coverage, and observed process concurrency named apart from it."""
+    lo, hi = span
+    width = hi - lo
+    lifetime = sum(end - start for start, end in processes)
+    sampled, contended, stretches = _sampled_serial(windows, lo, hi)
+    fields = {
+        "element_span_s": width,
+        # Processes alive, not CPUs busy: a waiting parent counts, a multithreaded process counts once.
+        "observed_process_concurrency": (lifetime / width) if width > 0 else None,
+        "cpu_sampled_s": sampled,
+        "cpu_contended_s": contended,
+        "serial_cores_line": SERIAL_CORES_LINE,
+        "serial_wall_s": None,
+        "serial_share": None,
+        "serial_unknown": None,
+        "serial_owners": [],
+        "observed_process_concurrency_in_serial": None,
+    }
+    if sampled <= 0:
+        fields["serial_unknown"] = "no CPU samples for this element"
+        return fields
+    if width > 0 and sampled < SERIAL_MIN_COVERAGE * width:
+        fields["serial_unknown"] = f"CPU samples cover {sampled / width:.0%} of its span"
+        return fields
+    if width > 0 and sampled - contended < SERIAL_MIN_COVERAGE * width:
+        fields["serial_unknown"] = f"the host had under one idle core for {contended / sampled:.0%} of its sampled time"
+        return fields
+    serial_s = sum(b - a for a, b in stretches)
+    covered = _covered(stretches)
+    in_serial = sum(covered(end) - covered(start) for start, end in processes)
+    fields.update(
+        serial_wall_s=serial_s,
+        serial_share=serial_s / (sampled - contended),
+        serial_owners=_serial_owners(stretches, owners),
+        observed_process_concurrency_in_serial=(in_serial / serial_s) if serial_s > 0 else None,
+    )
+    return fields
+
+
+def compute_per_element_parallelism(records: list[dict], cpu_windows: Optional[dict] = None) -> list[dict]:
     """UX-32: for each BuildStream element, how much parallelism its own
     native build system actually achieved - the question Plane 2 exists
     to answer, and the one its report did not have a number for.
@@ -4540,8 +4710,9 @@ def compute_per_element_parallelism(records: list[dict]) -> list[dict]:
 
     Only matched records (real start *and* end observed) participate, for
     the same reason `compute_max_concurrency` excludes open ones.
+    `cpu_windows` is `element_cpu_windows`' output, the serial fields' input.
     """
-    state = _PerElementParallelism()
+    state = _PerElementParallelism(cpu_windows)
     for record in records:
         state.add(record)
     return state.finish()
@@ -4558,7 +4729,7 @@ class _PerElementParallelism:
     which is what the list-based version did with its `defaultdict`.
     """
 
-    def __init__(self):
+    def __init__(self, cpu_windows: Optional[dict] = None):
         self.starts: dict[str, array.array] = {}
         self.ends: dict[str, array.array] = {}
         self.unclassified: dict[str, dict[str, int]] = {}
@@ -4566,6 +4737,8 @@ class _PerElementParallelism:
         # UX-1358: every process's span bounds the element; a non-orchestration one can own a serial stretch.
         self.span: dict[str, list[float]] = {}
         self.owners: dict[str, list[tuple[float, float, str]]] = {}
+        self.processes: dict[str, tuple[array.array, array.array]] = {}
+        self.cpu_windows = cpu_windows or {}
 
     def add(self, r):
         if r["open"] or r["end_ts"] is None:
@@ -4578,8 +4751,11 @@ class _PerElementParallelism:
             self.requested[element] = None
             self.span[element] = [r["start_ts"], r["end_ts"]]
             self.owners[element] = []
+            self.processes[element] = (array.array("d"), array.array("d"))
         span = self.span[element]
         span[0], span[1] = min(span[0], r["start_ts"]), max(span[1], r["end_ts"])
+        self.processes[element][0].append(r["start_ts"])
+        self.processes[element][1].append(r["end_ts"])
         name = _binary_name(r["cmd"])
         kind = classify_binary(name)
         if kind != "orchestration":
@@ -4608,9 +4784,12 @@ class _PerElementParallelism:
             unclassified = self.unclassified[element]
             requested_jobs = self.requested[element]
             profile = _concurrency_profile(work_intervals)
-            lo, hi = self.span[element]
-            stretches = _serial_stretches(work_intervals, lo, hi)
-            serial_s = sum(b - a for a, b in stretches)
+            serial = _serial_fields(
+                self.cpu_windows.get(element),
+                (self.span[element][0], self.span[element][1]),
+                list(zip(*self.processes[element])),
+                self.owners[element],
+            )
             profiles.append(
                 {
                     "element": element,
@@ -4635,11 +4814,8 @@ class _PerElementParallelism:
                     "jobs_denominator": None,
                     "achieved_vs_requested": None,
                     "unclassified_binaries": dict(sorted(unclassified.items(), key=lambda kv: -kv[1])),
-                    # UX-1358: wall time at <=1 busy work process, over the element's own process span.
-                    "element_span_s": hi - lo,
-                    "serial_wall_s": serial_s,
-                    "serial_share": (serial_s / (hi - lo)) if hi > lo else None,
-                    "serial_owners": _serial_owners(stretches, self.owners[element]),
+                    # UX-1358: sampled wall time at <= SERIAL_CORES_LINE cores busy, or unknown and why.
+                    **serial,
                 }
             )
         # Two distinct real findings, decided across the whole trace rather
@@ -7304,7 +7480,7 @@ class Plane2Fold:
     sandbox is complete.
     """
 
-    def __init__(self, resolved: Optional[dict[str, str]] = None):
+    def __init__(self, resolved: Optional[dict[str, str]] = None, cpu_windows: Optional[dict] = None):
         # `UX-56`'s correction, applied as each record arrives rather
         # than by a second pass that rewrites the list in place - there
         # is no list to rewrite. Every aggregate is keyed on the element
@@ -7327,7 +7503,7 @@ class Plane2Fold:
         self.outcomes = _ProcessOutcomes()
         self.binary_cost = _BinaryCost()
         self.blocked = _BlockedTime(self.configure)
-        self.parallelism = _PerElementParallelism()
+        self.parallelism = _PerElementParallelism(cpu_windows)
         self.redundancy = _RedundantOperations()
         self.coverage = _StreamCoverage()
         self.opens_coverage = _ElementOpensCoverage()
@@ -7666,7 +7842,9 @@ def load_and_summarize(
     # and `by_signature` maps those functions built beside it.
     # `UX-56`'s relabelling happens on the way in for the same reason:
     # there is no list left to rewrite afterwards.
-    fold = Plane2Fold(resolved=resolved)
+    # UX-1358: the sampled CPU windows, keyed by the same correction, before the fold drops the records.
+    cpu_windows = element_cpu_windows(read_element_cpu_samples(cpu_samples_path or ""), resolved)
+    fold = Plane2Fold(resolved=resolved, cpu_windows=cpu_windows)
     for record in records.merged():
         fold.add(record)
     del records

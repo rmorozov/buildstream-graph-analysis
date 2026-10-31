@@ -57,9 +57,11 @@ from .units import GIB, MIB, US_PER_S, kb_to_bytes, mb_to_bytes, s_to_us
 # and this sits in it rather than being tuned to either.
 _COMPUTE_BOUND_CORES = 1.25
 
-# UX-1358: above this share of its span at <=1 busy work process, an element is not "already
+# UX-1358: above this share of its sampled time at or under one core busy, an element is not "already
 # compute-bound" whatever its mean - on fdsdk `bootstrap/gcc.bst` spent 405.6 s of 40.2 min in one autoreconf loop.
 _SERIAL_SHARE_LINE = 0.15
+# UX-1358: why a join row has no serial share, when its native report has no sampled serial fields at all.
+_SERIAL_NOT_MEASURED = "the native report has no sampled serial time"
 
 # How much of the *build* fixing an element must be worth before the join
 # calls it out. Below this, a native-build finding is real but is not
@@ -274,7 +276,7 @@ class ElementJoin:
     # ever reaching the command the workflow ends on.
     dominant_binary: Optional[dict] = None
     serial_binary: Optional[dict] = None
-    # UX-1358: wall time at <=1 busy work process, its share of the span, and the commands that held it.
+    # UX-1358: sampled wall time at or under one core busy, its share, and who held it - or `known` false and why.
     serial_stretch: Optional[dict] = None
     peak_rss_bytes: Optional[int] = None
     worst_redundancy: Optional[dict] = None
@@ -399,6 +401,29 @@ def _declared_elements(analysis: dict) -> set:
 _MIN_RATIO_SPAN_S = 0.001
 
 
+def _serial_stretch_view(entry: dict) -> dict:
+    """UX-1358: one `per_element_parallelism` row's sampled serial fields, as the join carries them."""
+    stretch = {
+        "known": False,
+        "sampled_us": s_to_us(entry.get("cpu_sampled_s") or 0.0),
+        "contended_us": s_to_us(entry.get("cpu_contended_s") or 0.0),
+        "span_us": s_to_us(entry.get("element_span_s") or 0.0),
+        "cores_line": entry.get("serial_cores_line"),
+        "observed_process_concurrency": entry.get("observed_process_concurrency_in_serial"),
+    }
+    if entry.get("serial_unknown") or entry.get("serial_wall_s") is None:
+        return stretch | {"reason": entry.get("serial_unknown") or "no CPU samples for this element"}
+    return stretch | {
+        "known": True,
+        "wall_us": s_to_us(entry["serial_wall_s"]),
+        "share": entry.get("serial_share"),
+        "owners": [
+            {"signature": owner["signature"], "wall_us": s_to_us(owner["wall_s"])}
+            for owner in entry.get("serial_owners") or []
+        ],
+    }
+
+
 def _plane2_view(native_report: dict) -> dict[str, dict]:
     """Per-element Plane 2 facts, keyed by the same element UID."""
     view: dict[str, dict] = {}
@@ -417,17 +442,9 @@ def _plane2_view(native_report: dict) -> dict[str, dict]:
                 "native_findings": list(entry.get("findings") or []),
             }
         )
-        # UX-1358: absent from a report written before the producer measured it.
-        if entry.get("serial_wall_s") is not None and entry.get("element_span_s"):
-            view[element]["serial_stretch"] = {
-                "wall_us": s_to_us(entry["serial_wall_s"]),
-                "span_us": s_to_us(entry["element_span_s"]),
-                "share": entry.get("serial_share"),
-                "owners": [
-                    {"signature": owner["signature"], "wall_us": s_to_us(owner["wall_s"])}
-                    for owner in entry.get("serial_owners") or []
-                ],
-            }
+        # UX-1358: absent from a report written before the producer sampled it.
+        if "cpu_sampled_s" in entry:
+            view[element]["serial_stretch"] = _serial_stretch_view(entry)
 
     cpu_time = native_report.get("cpu_time") or {}
     for element, entry in (cpu_time.get("per_element") or {}).items():
@@ -707,6 +724,14 @@ def _grouped_line(finding_id: str, entries: list[dict], text: str) -> Optional[s
             f"their parallelism; shortening them means less work"
         )
 
+    if finding_id == 'serial-share-unknown':
+        cores = _collapse_range([e['cores_busy'] for e in entries if e.get('cores_busy') is not None], "{:.1f}".format)
+        reasons = sorted({(e.get('serial_stretch') or {}).get('reason') or _SERIAL_NOT_MEASURED for e in entries})
+        return (
+            f"{cores} cores busy{host_cores} on average, but their serial share is unknown "
+            f"({'; '.join(reasons)}), so this does not call them compute-bound"
+        )
+
     if finding_id in ('waiting-not-computing', 'pinned-to-one-job', 'underachieved-requested-jobs'):
         cores = _collapse_range([e.get('cores_busy') for e in entries], lambda v: f"{v:.2f}")
         return (
@@ -825,20 +850,36 @@ def _group_header(elements: list[str], entries: list[dict]) -> str:
     return f"{_name_elements(elements)} ({', '.join(parts)}):"
 
 
-def _serial_stretch_step(joined: ElementJoin, impact: str) -> Optional[tuple]:
-    """UX-1358: the step that replaces "already compute-bound" over `_SERIAL_SHARE_LINE`, else None."""
-    stretch = joined.serial_stretch or {}
+def _compute_bound_step(joined: ElementJoin, impact: str) -> tuple:
+    """UX-1358: compute-bound only under `_SERIAL_SHARE_LINE` of sampled serial time; over it, the stretch; unsampled, unknown."""
+    stretch = joined.serial_stretch or {"known": False, "reason": _SERIAL_NOT_MEASURED}
+    if not stretch.get("known"):
+        return (
+            _EVIDENCE_PARALLELISM,
+            'serial-share-unknown',
+            f"{impact} — {joined.cores_busy:.2f} cores busy on average, but its serial share is unknown "
+            f"({stretch.get('reason') or _SERIAL_NOT_MEASURED}), so this does not call it compute-bound",
+        )
     share = stretch.get("share") or 0.0
     if share <= _SERIAL_SHARE_LINE:
-        return None
+        return (
+            _EVIDENCE_PARALLELISM,
+            'already-compute-bound',
+            f"{impact} — already compute-bound at {joined.cores_busy:.2f} cores busy, so there is nothing to gain "
+            f"from its parallelism; shortening it means less work",
+        )
     owners = ", ".join(
         f"`{owner['signature'][:60]}` ({qty.duration(owner['wall_us'])})" for owner in stretch.get("owners") or []
     )
+    alive = stretch.get("observed_process_concurrency")
+    decided_us = stretch['sampled_us'] - stretch.get('contended_us', 0)
     return (
         _EVIDENCE_PARALLELISM,
         'serial-stretch',
-        f"{impact} — {qty.duration(stretch['wall_us'])} of its {qty.duration(stretch['span_us'])} "
-        f"({qty.share(share)}) ran at most one work process, over the {qty.share(_SERIAL_SHARE_LINE)} line"
+        f"{impact} — {qty.duration(stretch['wall_us'])} of its {qty.duration(decided_us)} sampled with a core free "
+        f"({qty.share(share)}) ran at or under {stretch.get('cores_line') or 1.25:.2f} cores busy, over the "
+        f"{qty.share(_SERIAL_SHARE_LINE)} line"
+        + (f", with {alive:.1f} processes alive on average" if alive is not None else "")
         + (f", most of it in {owners}" if owners else "")
         + ": a serial stretch no job count shortens",
     )
@@ -863,6 +904,7 @@ _CORES_BUSY_STEPS = (
     'pinned-to-one-job',
     'underachieved-requested-jobs',
     'already-compute-bound',
+    'serial-share-unknown',
     'below-granted-width',
 )
 
@@ -948,16 +990,7 @@ def _recommend(joined: ElementJoin, memory_envelope_available: bool = False) -> 
             # Deliberately phrased as a *negative* result. Its value is
             # ruling the micro plane out, so the reader stops looking
             # there - not as a thing to go and do.
-            ranked.append(
-                _serial_stretch_step(joined, _impact())
-                or (
-                    _EVIDENCE_PARALLELISM,
-                    'already-compute-bound',
-                    f"{_impact()} — already compute-bound at "
-                    f"{joined.cores_busy:.2f} cores busy, so there is nothing to gain "
-                    f"from its parallelism; shortening it means less work",
-                )
-            )
+            ranked.append(_compute_bound_step(joined, _impact()))
 
     ranked.extend(_width_unused_step(unused, ranked, _impact, joined))
 

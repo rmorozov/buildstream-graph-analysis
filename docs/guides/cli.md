@@ -789,18 +789,20 @@ never silently folded into an unestimated blast.
 | `below-granted-width` | medium | critical-path elements whose whatif saving is at least 0.5% of the build and that kept under half their granted cores busy, each named with both readings — `bga correlate`'s `below-granted-width` line per element (`UX-1359`). Needs `--plane2` |
 | `native-finding-on-every-element` | info | a Plane 2 finding id that every traced element carries (work processes, scored against a graph width), said once and dropped from each `element_join` row; `evidence.finding_ids` names them (`UX-1366`). Needs `--plane2` |
 | `configure-share` | medium | configure is at least 10% of measured CPU, from `configure_phase` (`UX-1255`). Needs `--plane2` |
-| `serial-stretch` | medium | elements that spent over 15% of their own process span at one busy work process or none — the line over which `bga correlate` refuses "already compute-bound" — counted, with the longest and the command that held most of it (`UX-1358`). Needs `--plane2` from a capture that measured it |
+| `serial-stretch` | medium | elements that spent over 15% of their uncontended sampled time at or under 1.25 cores busy — the line over which `bga correlate` refuses "already compute-bound" — counted, with the longest and the command that held most of it (`UX-1358`). Needs `--plane2` from a capture whose per-element CPU sampler ran |
 | `remote-execution-whatif` | info | what remote execution would buy, priced two ways and never summed (`UX-680`): `bga sweep`'s own unbounded-builder row (BuildStream REAPI moves whole sandboxes, so it removes the builder cap) and Plane 2's compiler/linker CPU on the critical path (compiler-level RE like recc/reclient moves compiles out of the sandbox, so it removes compile seconds from the agent). `evidence.additive` is always `false` - both remove the same critical-path seconds. The compiler-offload half needs `--plane2` and a capture with `binary_cost`; without one, only the builder-cap half publishes |
 | `shared-source-blast` | medium, info for a build tool | one repository's ref decides most of this build's rebuilds: any commit to it rebuilds N of M elements, because its direct elements key on its ref rather than on the files they stage (`UX-171`). `info`, "as expected", when every dependent takes the direct elements through build dependencies only (`UX-1366`; row key `resource_blast.rows[].build_tool`). Needs a run whose `sources.json` the extraction wrote |
 
-`bga correlate --format json` → `.actionable[].recommendations[].id` (10) and `.restructuring[].id` (1):
+`bga correlate --format json` → `.actionable[].recommendations[].id` (12) and `.restructuring[].id` (1):
 
 | id | severity | what it says |
 |---|---|---|
 | `pinned-to-one-job` | high | waiting rather than computing, and its native build asked for `-j1` |
 | `underachieved-requested-jobs` | high | waiting rather than computing despite asking for more jobs |
 | `waiting-not-computing` | high | waiting rather than computing, cause not named by Plane 2 |
-| `already-compute-bound` | high | a negative result: nothing to gain from its parallelism |
+| `already-compute-bound` | high | a negative result: nothing to gain from its parallelism — only when its CPU was sampled and at most 15% of the uncontended sampled time ran at or under 1.25 cores busy (`UX-1358`) |
+| `serial-stretch` | high | over 15% of that time ran at or under 1.25 cores busy (utime+stime of the sandbox's processes per tick, reaped children included): the seconds, the processes alive in it, and the commands that held it (`UX-1358`) |
+| `serial-share-unknown` | high | the mean says busy but no serial share was measured — no CPU samples, under half the span sampled, or the host had no idle core beside the low windows — so it is not called compute-bound (`UX-1358`) |
 | `below-granted-width` | high | on the chain, worth at least 0.5% of the build, and under half its granted cores busy — both readings named (`UX-1359`) |
 | `cpu-concentration` | high | one binary is most of its measured CPU |
 | `serialization-point` | high | a single process holds a material share of its wall time |

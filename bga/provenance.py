@@ -801,8 +801,9 @@ _CLAIMS = {
             _correlate._SERIAL_SHARE_LINE,
             ">",
             None,
-            "An element spent over this share of its own process span at one busy work process or none — "
-            "the line over which `bga correlate` refuses to call it already compute-bound.",
+            "An element spent over this share of its sampled wall time at or under 1.25 cores busy (utime+stime "
+            "of its sandbox's processes per tick) — the line over which `bga correlate` refuses to call it "
+            "already compute-bound.",
             module="bga/correlate.py",
         ),
         (),

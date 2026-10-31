@@ -55,3 +55,7 @@ stored analysis without `--reanalyse` (`UX-1367`).
 Held for the owner, not raised here: the page budget (about 167,600 B
 needed), the exports data-half budget, the macro_micro volume-words
 budget and the xl_both DOM budget (8,295 against 8,085).
+
+## Owner call
+
+Ruslan chose "Raise all four, ~2% headroom" (2026-10-31): `PAGE_BUDGET_B` 166,750 -> 170,000 B (read 167,576), the macro_micro data half 100,000 -> 105,000 B (read 103,389), macro_micro words 13,700 -> 14,200 (read 13,922), xl_both DOM nodes 8,085 -> 8,450 (read 8,295).

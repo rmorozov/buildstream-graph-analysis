@@ -786,7 +786,8 @@ EXPORT_BUDGET_B = 8 * 1024 * 1024
 #: loader. The procedure and every earlier value are
 #: `test_the_report_you_can_attach.py`'s note on this name.
 #: UX-1350: 166,250 -> 166,750, owner-call default: main 166,248 B, font-proof place keeping 166,695 B.
-PAGE_BUDGET_B = 166_750
+#: UX-1357..1366: 166,750 -> 170,000, owner card 2026-10-31 - the field-test findings on the page read 167,576 B.
+PAGE_BUDGET_B = 170_000
 # The trace is the one part that can be dropped without losing the
 # report, so it is the one part with its own ceiling.
 #

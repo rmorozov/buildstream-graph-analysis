@@ -58,6 +58,13 @@ reads `3 passed`. Mutations, `PYTHONDONTWRITEBYTECODE=1`:
 | a refusing hook is not passed on | 1 failed, 2 passed |
 | skills are not linked | 1 failed, 2 passed |
 | a rerun adds a second hook | 1 failed, 2 passed |
+| a checkout outside the allowlist runs its hooks | 1 failed, 3 passed |
+
+Review (GitHub code scanning on #339): with no allowlist the dispatcher
+ran the hooks of any checkout a call entered, so a cloned capture source
+could run commands. Tool hooks now run only for the repositories the
+setup script names, or their worktrees (a worktree of this checkout
+still refuses `git add -A`: exit 2).
 
 Deviation: running the script against this session's own `~/.claude`
 was refused by the session's permission classifier as self-modification,

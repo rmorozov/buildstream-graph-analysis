@@ -16,9 +16,13 @@ def _setup(home):
     return json.loads((home / ".claude/settings.json").read_text())
 
 
-def _dispatch(event, payload):
+def _dispatch(event, payload, allowed=(str(REPO),)):
     return subprocess.run(
-        [sys.executable, str(DISPATCH), event], input=json.dumps(payload), capture_output=True, text=True, check=False
+        [sys.executable, str(DISPATCH), event, *allowed],
+        input=json.dumps(payload),
+        capture_output=True,
+        text=True,
+        check=False,
     )
 
 
@@ -41,3 +45,14 @@ def test_outside_any_checkout_or_for_another_tool_nothing_runs(tmp_path):
     bulk = {"command": "git add -A"}
     assert _dispatch("PreToolUse", {"tool_name": "Bash", "cwd": str(tmp_path), "tool_input": bulk}).returncode == 0
     assert _dispatch("PreToolUse", {"tool_name": "Read", "cwd": str(REPO), "tool_input": bulk}).returncode == 0
+
+
+def test_a_checkout_outside_the_allowlist_runs_no_hook(tmp_path):
+    clone = tmp_path / "capture-src"
+    (clone / ".claude").mkdir(parents=True)
+    hook = {"matcher": "Bash", "hooks": [{"type": "command", "command": "exit 7"}]}
+    (clone / ".claude/settings.json").write_text(json.dumps({"hooks": {"PreToolUse": [hook]}}))
+    subprocess.run(["git", "init", "-q", str(clone)], check=True)
+    call = {"tool_name": "Bash", "cwd": str(clone), "tool_input": {"command": "ls"}}
+    assert _dispatch("PreToolUse", call).returncode == 0
+    assert _dispatch("PreToolUse", call, allowed=(str(clone),)).returncode == 7

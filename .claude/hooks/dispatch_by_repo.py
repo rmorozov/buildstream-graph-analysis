@@ -8,7 +8,7 @@ settings per event; it finds the checkout from the payload's `cwd`
 for the event and tool, with `CLAUDE_PROJECT_DIR` set to it. The first
 hook that exits non-zero decides, as Claude Code does with several.
 
-    dispatch_by_repo.py PreToolUse            # payload on stdin
+    dispatch_by_repo.py PreToolUse REPO...    # payload on stdin; REPO allowlists
     dispatch_by_repo.py SessionStart REPO...  # cwd is no checkout
 """
 
@@ -21,8 +21,13 @@ import sys
 
 
 def checkout(cwd):
-    done = subprocess.run(["git", "rev-parse", "--show-toplevel"], cwd=cwd, capture_output=True, text=True, check=False)
-    return pathlib.Path(done.stdout.strip()) if done.returncode == 0 else None
+    """`(toplevel, main checkout)` of the repository at `cwd`, or None."""
+    argv = ["git", "rev-parse", "--show-toplevel", "--path-format=absolute", "--git-common-dir"]
+    done = subprocess.run(argv, cwd=cwd, capture_output=True, text=True, check=False)
+    if done.returncode != 0:
+        return None
+    top, common = done.stdout.splitlines()[:2]
+    return pathlib.Path(top), pathlib.Path(common).parent
 
 
 def commands(root, event, tool):
@@ -46,11 +51,16 @@ def run(root, command, payload):
 
 
 def main(argv):
-    event, repos = argv[0], argv[1:]
+    event, repos = argv[0], [pathlib.Path(r).resolve() for r in argv[1:]]
     payload = sys.stdin.read()
     data = json.loads(payload or "{}")
-    roots = [pathlib.Path(r) for r in repos] if repos else [checkout(data.get("cwd") or os.getcwd())]
-    for root in filter(None, roots):
+    if event == "SessionStart":
+        roots = repos
+    else:
+        # Only an allowed checkout or one of its worktrees: a cloned capture's hooks never run.
+        found = checkout(data.get("cwd") or os.getcwd())
+        roots = [found[0]] if found and {found[0].resolve(), found[1].resolve()} & set(repos) else []
+    for root in roots:
         for command in commands(root, event, data.get("tool_name")):
             done = run(root, command, payload)
             if done.returncode != 0:

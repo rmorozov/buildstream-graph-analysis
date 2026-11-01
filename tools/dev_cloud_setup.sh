@@ -37,8 +37,8 @@ def entry(event, extra=()):
     command = " ".join(shlex.quote(a) for a in ["python3", dispatcher, event, *extra])
     return {"hooks": [{"type": "command", "command": command}]}
 wanted = {
-    "PreToolUse": entry("PreToolUse"),
-    "PostToolUse": entry("PostToolUse"),
+    "PreToolUse": entry("PreToolUse", repos),
+    "PostToolUse": entry("PostToolUse", repos),
     "SessionStart": dict(entry("SessionStart", repos[:1]), matcher="startup"),
 }
 for event, group in wanted.items():

@@ -1,0 +1,4520 @@
+{
+  "elements": [
+    {
+      "uid": "bootstrap/base-sdk/binary-seed-x86_64.bst",
+      "cache_key": "f59399d8",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "import"
+    },
+    {
+      "uid": "bootstrap/base-sdk/binary-seed.bst",
+      "cache_key": "ebf4b1c2",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "compose"
+    },
+    {
+      "uid": "bootstrap/gnu-config.bst",
+      "cache_key": "8073ab64",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "manual"
+    },
+    {
+      "uid": "bootstrap/base-sdk/m4.bst",
+      "cache_key": "442b208f",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "autotools"
+    },
+    {
+      "uid": "bootstrap/base-sdk/perl.bst",
+      "cache_key": "cd9cd66d",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "make"
+    },
+    {
+      "uid": "bootstrap/base-sdk/autoconf.bst",
+      "cache_key": "282b7e0e",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "autotools"
+    },
+    {
+      "uid": "bootstrap/base-sdk/automake.bst",
+      "cache_key": "193d4a3b",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "autotools"
+    },
+    {
+      "uid": "bootstrap/base-sdk/tar.bst",
+      "cache_key": "6dcf3bb6",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "autotools"
+    },
+    {
+      "uid": "bootstrap/base-sdk/gettext.bst",
+      "cache_key": "8a4ccb40",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "autotools"
+    },
+    {
+      "uid": "bootstrap/base-sdk/libtool.bst",
+      "cache_key": "738f2362",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "autotools"
+    },
+    {
+      "uid": "bootstrap/base-sdk/pkg-config.bst",
+      "cache_key": "5a68b910",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "autotools"
+    },
+    {
+      "uid": "bootstrap/base-sdk/xxhash.bst",
+      "cache_key": "7d75a5a6",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "make"
+    },
+    {
+      "uid": "bootstrap/base-sdk/zstd.bst",
+      "cache_key": "f314afca",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "make"
+    },
+    {
+      "uid": "bootstrap/build/elfutils-build.bst",
+      "cache_key": "67d3068a",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "autotools"
+    },
+    {
+      "uid": "bootstrap/build/file-stage1.bst",
+      "cache_key": "c47b21f9",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "autotools"
+    },
+    {
+      "uid": "bootstrap/build/debugedit-build.bst",
+      "cache_key": "9ec173f8",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "autotools"
+    },
+    {
+      "uid": "bootstrap/build/dwz-build.bst",
+      "cache_key": "0bc30eda",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "make"
+    },
+    {
+      "uid": "bootstrap/build/stripper.bst",
+      "cache_key": "b22b88bb",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "make"
+    },
+    {
+      "uid": "bootstrap/build/debug-utils.bst",
+      "cache_key": "9bfdb606",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "stack"
+    },
+    {
+      "uid": "bootstrap/base-sdk/flex.bst",
+      "cache_key": "11719a5c",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "autotools"
+    },
+    {
+      "uid": "bootstrap/base-sdk/bison.bst",
+      "cache_key": "58315273",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "autotools"
+    },
+    {
+      "uid": "bootstrap/base-sdk/texinfo.bst",
+      "cache_key": "cde3b19a",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "autotools"
+    },
+    {
+      "uid": "bootstrap/build/python3.bst",
+      "cache_key": "ffa3c94d",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "autotools"
+    },
+    {
+      "uid": "bootstrap/base-sdk/autoconf2.69.bst",
+      "cache_key": "eb2b78a1",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "autotools"
+    },
+    {
+      "uid": "bootstrap/build/binutils-stage1.bst",
+      "cache_key": "717893f9",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "autotools"
+    },
+    {
+      "uid": "bootstrap/build/gcc-stage1.bst",
+      "cache_key": "6b2688cb",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "autotools"
+    },
+    {
+      "uid": "bootstrap/build/rsync.bst",
+      "cache_key": "89e82297",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "autotools"
+    },
+    {
+      "uid": "bootstrap/linux-headers.bst",
+      "cache_key": "71b95268",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "manual"
+    },
+    {
+      "uid": "bootstrap/symlinks.bst",
+      "cache_key": "bbd9ac44",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "import"
+    },
+    {
+      "uid": "bootstrap/glibc.bst",
+      "cache_key": "851f5d65",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "autotools"
+    },
+    {
+      "uid": "bootstrap/libxcrypt.bst",
+      "cache_key": "90a2567c",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "autotools"
+    },
+    {
+      "uid": "bootstrap/build/gcc-stage2.bst",
+      "cache_key": "8d56fd51",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "autotools"
+    },
+    {
+      "uid": "bootstrap/xz.bst",
+      "cache_key": "5d1b2ea5",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "autotools"
+    },
+    {
+      "uid": "bootstrap/zlib-ng.bst",
+      "cache_key": "31421588",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "autotools"
+    },
+    {
+      "uid": "bootstrap/build/ncurses-stage1.bst",
+      "cache_key": "77bdf1b3",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "autotools"
+    },
+    {
+      "uid": "bootstrap/ncurses-pkgconfig-dir.bst",
+      "cache_key": "24c92d1c",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "script"
+    },
+    {
+      "uid": "bootstrap/ncurses.bst",
+      "cache_key": "f8b153c2",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "autotools"
+    },
+    {
+      "uid": "bootstrap/readline.bst",
+      "cache_key": "5658158b",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "autotools"
+    },
+    {
+      "uid": "bootstrap/bash.bst",
+      "cache_key": "f3fe77d2",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "autotools"
+    },
+    {
+      "uid": "bootstrap/bzip2.bst",
+      "cache_key": "f6b7f1f9",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "manual"
+    },
+    {
+      "uid": "bootstrap/build/coreutils-manpages.bst",
+      "cache_key": "f4efcbfa",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "autotools"
+    },
+    {
+      "uid": "bootstrap/attr.bst",
+      "cache_key": "c89c0643",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "autotools"
+    },
+    {
+      "uid": "bootstrap/acl.bst",
+      "cache_key": "65ccd900",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "autotools"
+    },
+    {
+      "uid": "bootstrap/pcre2.bst",
+      "cache_key": "b30927b2",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "autotools"
+    },
+    {
+      "uid": "bootstrap/libsepol.bst",
+      "cache_key": "d95ddea0",
+      "requested_target": false,
+      "max_jobs": 1,
+      "notparallel": true,
+      "element_kind": "make"
+    },
+    {
+      "uid": "bootstrap/libselinux.bst",
+      "cache_key": "2577244d",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "make"
+    },
+    {
+      "uid": "bootstrap/coreutils.bst",
+      "cache_key": "c5a2749d",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "autotools"
+    },
+    {
+      "uid": "bootstrap/gawk.bst",
+      "cache_key": "de529c27",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "autotools"
+    },
+    {
+      "uid": "bootstrap/build/libgcc_s.bst",
+      "cache_key": "1921c889",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "script"
+    },
+    {
+      "uid": "bootstrap/zstd.bst",
+      "cache_key": "fdd9520e",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "make"
+    },
+    {
+      "uid": "bootstrap/elfutils.bst",
+      "cache_key": "3b74bdcd",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "autotools"
+    },
+    {
+      "uid": "bootstrap/binutils.bst",
+      "cache_key": "7d83ef40",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "autotools"
+    },
+    {
+      "uid": "bootstrap/gcc.bst",
+      "cache_key": "c63090be",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "autotools"
+    },
+    {
+      "uid": "bootstrap/grep.bst",
+      "cache_key": "cd7adac2",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "autotools"
+    },
+    {
+      "uid": "bootstrap/make.bst",
+      "cache_key": "c3329b57",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "autotools"
+    },
+    {
+      "uid": "bootstrap/sed.bst",
+      "cache_key": "73021b88",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "autotools"
+    },
+    {
+      "uid": "bootstrap/xxhash.bst",
+      "cache_key": "45fec957",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "make"
+    },
+    {
+      "uid": "bootstrap/debugedit.bst",
+      "cache_key": "b2c799e8",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "autotools"
+    },
+    {
+      "uid": "bootstrap/dwz.bst",
+      "cache_key": "94ada982",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "make"
+    },
+    {
+      "uid": "bootstrap/stripper.bst",
+      "cache_key": "0beb3900",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "make"
+    },
+    {
+      "uid": "bootstrap/gzip.bst",
+      "cache_key": "04901fe6",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "autotools"
+    },
+    {
+      "uid": "components/utf-locale.bst",
+      "cache_key": "a8472738",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "script"
+    },
+    {
+      "uid": "components/m4.bst",
+      "cache_key": "d5118c29",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "autotools"
+    },
+    {
+      "uid": "components/perl.bst",
+      "cache_key": "e4b9a357",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "make"
+    },
+    {
+      "uid": "bootstrap/diffutils.bst",
+      "cache_key": "af19d1e1",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "autotools"
+    },
+    {
+      "uid": "bootstrap/findutils.bst",
+      "cache_key": "f53210b7",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "autotools"
+    },
+    {
+      "uid": "components/gzip.bst",
+      "cache_key": "9b014b5f",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "stack"
+    },
+    {
+      "uid": "components/tar.bst",
+      "cache_key": "b7e7552b",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "autotools"
+    },
+    {
+      "uid": "components/gettext.bst",
+      "cache_key": "0b880900",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "autotools"
+    },
+    {
+      "uid": "components/autoconf.bst",
+      "cache_key": "d3544bf0",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "autotools"
+    },
+    {
+      "uid": "components/_private/python3-minimal.bst",
+      "cache_key": "b71b9e56",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "autotools"
+    },
+    {
+      "uid": "components/autoconf2.69.bst",
+      "cache_key": "45a55b94",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "autotools"
+    },
+    {
+      "uid": "components/automake.bst",
+      "cache_key": "919dcf0d",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "autotools"
+    },
+    {
+      "uid": "bootstrap/file.bst",
+      "cache_key": "28271dda",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "autotools"
+    },
+    {
+      "uid": "components/libtool.bst",
+      "cache_key": "8244aa34",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "autotools"
+    },
+    {
+      "uid": "components/texinfo.bst",
+      "cache_key": "5c1c8260",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "autotools"
+    },
+    {
+      "uid": "components/_private/flex-base.bst",
+      "cache_key": "40d92af7",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "autotools"
+    },
+    {
+      "uid": "components/libfl.bst",
+      "cache_key": "a4b29958",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "filter"
+    },
+    {
+      "uid": "components/flex.bst",
+      "cache_key": "d125f891",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "filter"
+    },
+    {
+      "uid": "components/pkg-config.bst",
+      "cache_key": "1f8173f9",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "autotools"
+    },
+    {
+      "uid": "components/_private/gcc-base.bst",
+      "cache_key": "d25c5c65",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "autotools"
+    },
+    {
+      "uid": "components/gcc-manifest.bst",
+      "cache_key": "eb97bc2b",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "collect_manifest"
+    },
+    {
+      "uid": "components/gcc-libs.bst",
+      "cache_key": "772d9ff7",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "filter"
+    },
+    {
+      "uid": "public-stacks/runtime-minimal.bst",
+      "cache_key": "c8c3833d",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "stack"
+    },
+    {
+      "uid": "components/diffutils.bst",
+      "cache_key": "739494ed",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "stack"
+    },
+    {
+      "uid": "components/findutils.bst",
+      "cache_key": "599b3ce0",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "stack"
+    },
+    {
+      "uid": "components/gawk.bst",
+      "cache_key": "114e8872",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "stack"
+    },
+    {
+      "uid": "components/gcc.bst",
+      "cache_key": "eecd334f",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "filter"
+    },
+    {
+      "uid": "components/grep.bst",
+      "cache_key": "8a31bbf1",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "stack"
+    },
+    {
+      "uid": "components/make.bst",
+      "cache_key": "4a9d04c2",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "stack"
+    },
+    {
+      "uid": "components/sed.bst",
+      "cache_key": "28c3c4d0",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "stack"
+    },
+    {
+      "uid": "components/stripper.bst",
+      "cache_key": "7d4f4f4c",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "stack"
+    },
+    {
+      "uid": "public-stacks/runtime-gnu.bst",
+      "cache_key": "b9303c28",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "stack"
+    },
+    {
+      "uid": "public-stacks/buildsystem-make.bst",
+      "cache_key": "e3603477",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "stack"
+    },
+    {
+      "uid": "components/autoconf-archive.bst",
+      "cache_key": "f2b4adbd",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "autotools"
+    },
+    {
+      "uid": "components/which.bst",
+      "cache_key": "49a4152f",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "autotools"
+    },
+    {
+      "uid": "public-stacks/buildsystem-autotools.bst",
+      "cache_key": "e22a44d3",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "stack"
+    },
+    {
+      "uid": "components/ninja.bst",
+      "cache_key": "d0ab3d7d",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "manual"
+    },
+    {
+      "uid": "components/_private/cmake-stage1.bst",
+      "cache_key": "3884b827",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "manual"
+    },
+    {
+      "uid": "components/_private/buildsystem-cmake.bst",
+      "cache_key": "4483feca",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "stack"
+    },
+    {
+      "uid": "components/bluez-headers.bst",
+      "cache_key": "71ab8d3d",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "manual"
+    },
+    {
+      "uid": "components/expat.bst",
+      "cache_key": "0f35e3d7",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "cmake"
+    },
+    {
+      "uid": "components/openssl.bst",
+      "cache_key": "66adfcd1",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "autotools"
+    },
+    {
+      "uid": "components/gdbm.bst",
+      "cache_key": "916b22a7",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "autotools"
+    },
+    {
+      "uid": "components/libffi.bst",
+      "cache_key": "af138b02",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "autotools"
+    },
+    {
+      "uid": "components/zlib.bst",
+      "cache_key": "4a7ed0cb",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "stack"
+    },
+    {
+      "uid": "components/sqlite.bst",
+      "cache_key": "b5f2e71b",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "autotools"
+    },
+    {
+      "uid": "components/zstd.bst",
+      "cache_key": "f87e5e1a",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "stack"
+    },
+    {
+      "uid": "components/python3.bst",
+      "cache_key": "18b5456b",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "autotools"
+    },
+    {
+      "uid": "components/_private/python3-build-bootstrap.bst",
+      "cache_key": "39e6bc53",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "manual"
+    },
+    {
+      "uid": "components/_private/python3-installer-bootstrap.bst",
+      "cache_key": "3c74b2ef",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "manual"
+    },
+    {
+      "uid": "components/_private/python3-flit-core.bst",
+      "cache_key": "c02a7600",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "pyproject"
+    },
+    {
+      "uid": "components/_private/python3-installer.bst",
+      "cache_key": "d3a3285f",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "pyproject"
+    },
+    {
+      "uid": "components/_private/python3-packaging.bst",
+      "cache_key": "186458dc",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "pyproject"
+    },
+    {
+      "uid": "components/_private/python3-pyproject-hooks.bst",
+      "cache_key": "da3d97d4",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "pyproject"
+    },
+    {
+      "uid": "components/_private/python3-build.bst",
+      "cache_key": "855fa39a",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "pyproject"
+    },
+    {
+      "uid": "components/_private/python3-setuptools.bst",
+      "cache_key": "fc702a0a",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "pyproject"
+    },
+    {
+      "uid": "components/_private/python3-wheel.bst",
+      "cache_key": "03f12129",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "pyproject"
+    },
+    {
+      "uid": "components/_private/meson.bst",
+      "cache_key": "27b94ae8",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "pyproject"
+    },
+    {
+      "uid": "components/_private/git-minimal.bst",
+      "cache_key": "ee750f5c",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "meson"
+    },
+    {
+      "uid": "components/gperf.bst",
+      "cache_key": "9deabd33",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "autotools"
+    },
+    {
+      "uid": "components/help2man.bst",
+      "cache_key": "bec3b5f2",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "autotools"
+    },
+    {
+      "uid": "components/bison.bst",
+      "cache_key": "c495cecb",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "autotools"
+    },
+    {
+      "uid": "components/doxygen.bst",
+      "cache_key": "5c502ddc",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "cmake"
+    },
+    {
+      "uid": "components/icu.bst",
+      "cache_key": "0be01be2",
+      "requested_target": false,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "autotools"
+    },
+    {
+      "uid": "components/libxml2.bst",
+      "cache_key": "5ba8cb45",
+      "requested_target": true,
+      "max_jobs": 4,
+      "notparallel": null,
+      "element_kind": "autotools"
+    }
+  ],
+  "dependencies": [
+    {
+      "predecessor": "bootstrap/base-sdk/binary-seed-x86_64.bst",
+      "successor": "bootstrap/base-sdk/binary-seed.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/binary-seed.bst",
+      "successor": "bootstrap/gnu-config.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/binary-seed.bst",
+      "successor": "bootstrap/base-sdk/m4.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/gnu-config.bst",
+      "successor": "bootstrap/base-sdk/m4.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/binary-seed.bst",
+      "successor": "bootstrap/base-sdk/perl.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/m4.bst",
+      "successor": "bootstrap/base-sdk/autoconf.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/perl.bst",
+      "successor": "bootstrap/base-sdk/autoconf.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/gnu-config.bst",
+      "successor": "bootstrap/base-sdk/autoconf.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/autoconf.bst",
+      "successor": "bootstrap/base-sdk/automake.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/gnu-config.bst",
+      "successor": "bootstrap/base-sdk/automake.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/binary-seed.bst",
+      "successor": "bootstrap/base-sdk/tar.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/gnu-config.bst",
+      "successor": "bootstrap/base-sdk/tar.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/binary-seed.bst",
+      "successor": "bootstrap/base-sdk/gettext.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/gnu-config.bst",
+      "successor": "bootstrap/base-sdk/gettext.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/tar.bst",
+      "successor": "bootstrap/base-sdk/gettext.bst",
+      "dependency_type": "runtime"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/binary-seed.bst",
+      "successor": "bootstrap/base-sdk/libtool.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/m4.bst",
+      "successor": "bootstrap/base-sdk/libtool.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/gnu-config.bst",
+      "successor": "bootstrap/base-sdk/libtool.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/automake.bst",
+      "successor": "bootstrap/base-sdk/pkg-config.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/binary-seed.bst",
+      "successor": "bootstrap/base-sdk/pkg-config.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/libtool.bst",
+      "successor": "bootstrap/base-sdk/pkg-config.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/gnu-config.bst",
+      "successor": "bootstrap/base-sdk/pkg-config.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/binary-seed.bst",
+      "successor": "bootstrap/base-sdk/xxhash.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/gnu-config.bst",
+      "successor": "bootstrap/base-sdk/xxhash.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/binary-seed.bst",
+      "successor": "bootstrap/base-sdk/zstd.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/m4.bst",
+      "successor": "bootstrap/build/elfutils-build.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/pkg-config.bst",
+      "successor": "bootstrap/build/elfutils-build.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/zstd.bst",
+      "successor": "bootstrap/build/elfutils-build.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/gnu-config.bst",
+      "successor": "bootstrap/build/elfutils-build.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/automake.bst",
+      "successor": "bootstrap/build/file-stage1.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/libtool.bst",
+      "successor": "bootstrap/build/file-stage1.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/gnu-config.bst",
+      "successor": "bootstrap/build/file-stage1.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/pkg-config.bst",
+      "successor": "bootstrap/build/debugedit-build.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/xxhash.bst",
+      "successor": "bootstrap/build/debugedit-build.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/build/elfutils-build.bst",
+      "successor": "bootstrap/build/debugedit-build.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/build/file-stage1.bst",
+      "successor": "bootstrap/build/debugedit-build.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/gnu-config.bst",
+      "successor": "bootstrap/build/debugedit-build.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/binary-seed.bst",
+      "successor": "bootstrap/build/dwz-build.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/xxhash.bst",
+      "successor": "bootstrap/build/dwz-build.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/gnu-config.bst",
+      "successor": "bootstrap/build/dwz-build.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/binary-seed.bst",
+      "successor": "bootstrap/build/stripper.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/gnu-config.bst",
+      "successor": "bootstrap/build/stripper.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/build/debugedit-build.bst",
+      "successor": "bootstrap/build/stripper.bst",
+      "dependency_type": "runtime"
+    },
+    {
+      "predecessor": "bootstrap/build/dwz-build.bst",
+      "successor": "bootstrap/build/stripper.bst",
+      "dependency_type": "runtime"
+    },
+    {
+      "predecessor": "bootstrap/build/debugedit-build.bst",
+      "successor": "bootstrap/build/debug-utils.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/build/dwz-build.bst",
+      "successor": "bootstrap/build/debug-utils.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/build/elfutils-build.bst",
+      "successor": "bootstrap/build/debug-utils.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/build/stripper.bst",
+      "successor": "bootstrap/build/debug-utils.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/automake.bst",
+      "successor": "bootstrap/base-sdk/flex.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/libtool.bst",
+      "successor": "bootstrap/base-sdk/flex.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/m4.bst",
+      "successor": "bootstrap/base-sdk/flex.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/gnu-config.bst",
+      "successor": "bootstrap/base-sdk/flex.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/automake.bst",
+      "successor": "bootstrap/base-sdk/bison.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/flex.bst",
+      "successor": "bootstrap/base-sdk/bison.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/m4.bst",
+      "successor": "bootstrap/base-sdk/bison.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/perl.bst",
+      "successor": "bootstrap/base-sdk/bison.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/gnu-config.bst",
+      "successor": "bootstrap/base-sdk/bison.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/perl.bst",
+      "successor": "bootstrap/base-sdk/texinfo.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/gnu-config.bst",
+      "successor": "bootstrap/base-sdk/texinfo.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/binary-seed.bst",
+      "successor": "bootstrap/build/python3.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/gnu-config.bst",
+      "successor": "bootstrap/build/python3.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/m4.bst",
+      "successor": "bootstrap/base-sdk/autoconf2.69.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/perl.bst",
+      "successor": "bootstrap/base-sdk/autoconf2.69.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/gnu-config.bst",
+      "successor": "bootstrap/base-sdk/autoconf2.69.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/automake.bst",
+      "successor": "bootstrap/build/binutils-stage1.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/binary-seed.bst",
+      "successor": "bootstrap/build/binutils-stage1.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/bison.bst",
+      "successor": "bootstrap/build/binutils-stage1.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/flex.bst",
+      "successor": "bootstrap/build/binutils-stage1.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/pkg-config.bst",
+      "successor": "bootstrap/build/binutils-stage1.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/zstd.bst",
+      "successor": "bootstrap/build/binutils-stage1.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/gnu-config.bst",
+      "successor": "bootstrap/build/binutils-stage1.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/autoconf2.69.bst",
+      "successor": "bootstrap/build/gcc-stage1.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/automake.bst",
+      "successor": "bootstrap/build/gcc-stage1.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/flex.bst",
+      "successor": "bootstrap/build/gcc-stage1.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/gettext.bst",
+      "successor": "bootstrap/build/gcc-stage1.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/libtool.bst",
+      "successor": "bootstrap/build/gcc-stage1.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/tar.bst",
+      "successor": "bootstrap/build/gcc-stage1.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/build/binutils-stage1.bst",
+      "successor": "bootstrap/build/gcc-stage1.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/build/python3.bst",
+      "successor": "bootstrap/build/gcc-stage1.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/gnu-config.bst",
+      "successor": "bootstrap/build/gcc-stage1.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/automake.bst",
+      "successor": "bootstrap/build/rsync.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/binary-seed.bst",
+      "successor": "bootstrap/build/rsync.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/build/rsync.bst",
+      "successor": "bootstrap/linux-headers.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/bison.bst",
+      "successor": "bootstrap/glibc.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/gettext.bst",
+      "successor": "bootstrap/glibc.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/texinfo.bst",
+      "successor": "bootstrap/glibc.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/build/debug-utils.bst",
+      "successor": "bootstrap/glibc.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/build/gcc-stage1.bst",
+      "successor": "bootstrap/glibc.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/build/python3.bst",
+      "successor": "bootstrap/glibc.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/gnu-config.bst",
+      "successor": "bootstrap/glibc.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/linux-headers.bst",
+      "successor": "bootstrap/glibc.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/symlinks.bst",
+      "successor": "bootstrap/glibc.bst",
+      "dependency_type": "runtime"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/autoconf.bst",
+      "successor": "bootstrap/libxcrypt.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/automake.bst",
+      "successor": "bootstrap/libxcrypt.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/libtool.bst",
+      "successor": "bootstrap/libxcrypt.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/build/debug-utils.bst",
+      "successor": "bootstrap/libxcrypt.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/build/gcc-stage1.bst",
+      "successor": "bootstrap/libxcrypt.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/glibc.bst",
+      "successor": "bootstrap/libxcrypt.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/gnu-config.bst",
+      "successor": "bootstrap/libxcrypt.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/autoconf2.69.bst",
+      "successor": "bootstrap/build/gcc-stage2.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/automake.bst",
+      "successor": "bootstrap/build/gcc-stage2.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/flex.bst",
+      "successor": "bootstrap/build/gcc-stage2.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/gettext.bst",
+      "successor": "bootstrap/build/gcc-stage2.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/libtool.bst",
+      "successor": "bootstrap/build/gcc-stage2.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/tar.bst",
+      "successor": "bootstrap/build/gcc-stage2.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/build/binutils-stage1.bst",
+      "successor": "bootstrap/build/gcc-stage2.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/build/python3.bst",
+      "successor": "bootstrap/build/gcc-stage2.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/glibc.bst",
+      "successor": "bootstrap/build/gcc-stage2.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/gnu-config.bst",
+      "successor": "bootstrap/build/gcc-stage2.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/libxcrypt.bst",
+      "successor": "bootstrap/build/gcc-stage2.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/automake.bst",
+      "successor": "bootstrap/xz.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/gettext.bst",
+      "successor": "bootstrap/xz.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/libtool.bst",
+      "successor": "bootstrap/xz.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/build/debug-utils.bst",
+      "successor": "bootstrap/xz.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/build/gcc-stage2.bst",
+      "successor": "bootstrap/xz.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/glibc.bst",
+      "successor": "bootstrap/xz.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/gnu-config.bst",
+      "successor": "bootstrap/xz.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/build/debug-utils.bst",
+      "successor": "bootstrap/zlib-ng.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/build/gcc-stage2.bst",
+      "successor": "bootstrap/zlib-ng.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/glibc.bst",
+      "successor": "bootstrap/zlib-ng.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/gnu-config.bst",
+      "successor": "bootstrap/zlib-ng.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/binary-seed.bst",
+      "successor": "bootstrap/build/ncurses-stage1.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/gnu-config.bst",
+      "successor": "bootstrap/build/ncurses-stage1.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/binary-seed.bst",
+      "successor": "bootstrap/ncurses-pkgconfig-dir.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/build/debug-utils.bst",
+      "successor": "bootstrap/ncurses.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/build/gcc-stage2.bst",
+      "successor": "bootstrap/ncurses.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/build/ncurses-stage1.bst",
+      "successor": "bootstrap/ncurses.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/glibc.bst",
+      "successor": "bootstrap/ncurses.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/gnu-config.bst",
+      "successor": "bootstrap/ncurses.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/ncurses-pkgconfig-dir.bst",
+      "successor": "bootstrap/ncurses.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/texinfo.bst",
+      "successor": "bootstrap/readline.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/build/debug-utils.bst",
+      "successor": "bootstrap/readline.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/build/gcc-stage2.bst",
+      "successor": "bootstrap/readline.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/gnu-config.bst",
+      "successor": "bootstrap/readline.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/ncurses.bst",
+      "successor": "bootstrap/readline.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/texinfo.bst",
+      "successor": "bootstrap/bash.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/build/debug-utils.bst",
+      "successor": "bootstrap/bash.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/build/gcc-stage2.bst",
+      "successor": "bootstrap/bash.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/gnu-config.bst",
+      "successor": "bootstrap/bash.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/readline.bst",
+      "successor": "bootstrap/bash.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/build/debug-utils.bst",
+      "successor": "bootstrap/bzip2.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/build/gcc-stage2.bst",
+      "successor": "bootstrap/bzip2.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/glibc.bst",
+      "successor": "bootstrap/bzip2.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/gnu-config.bst",
+      "successor": "bootstrap/bzip2.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/binary-seed.bst",
+      "successor": "bootstrap/build/coreutils-manpages.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/automake.bst",
+      "successor": "bootstrap/attr.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/gettext.bst",
+      "successor": "bootstrap/attr.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/libtool.bst",
+      "successor": "bootstrap/attr.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/build/debug-utils.bst",
+      "successor": "bootstrap/attr.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/build/gcc-stage2.bst",
+      "successor": "bootstrap/attr.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/glibc.bst",
+      "successor": "bootstrap/attr.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/gnu-config.bst",
+      "successor": "bootstrap/attr.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/attr.bst",
+      "successor": "bootstrap/acl.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/automake.bst",
+      "successor": "bootstrap/acl.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/gettext.bst",
+      "successor": "bootstrap/acl.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/libtool.bst",
+      "successor": "bootstrap/acl.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/build/debug-utils.bst",
+      "successor": "bootstrap/acl.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/build/gcc-stage2.bst",
+      "successor": "bootstrap/acl.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/gnu-config.bst",
+      "successor": "bootstrap/acl.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/automake.bst",
+      "successor": "bootstrap/pcre2.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/gettext.bst",
+      "successor": "bootstrap/pcre2.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/libtool.bst",
+      "successor": "bootstrap/pcre2.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/m4.bst",
+      "successor": "bootstrap/pcre2.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/build/debug-utils.bst",
+      "successor": "bootstrap/pcre2.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/build/gcc-stage2.bst",
+      "successor": "bootstrap/pcre2.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/glibc.bst",
+      "successor": "bootstrap/pcre2.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/gnu-config.bst",
+      "successor": "bootstrap/pcre2.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/flex.bst",
+      "successor": "bootstrap/libsepol.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/build/debug-utils.bst",
+      "successor": "bootstrap/libsepol.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/build/gcc-stage2.bst",
+      "successor": "bootstrap/libsepol.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/gnu-config.bst",
+      "successor": "bootstrap/libsepol.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/pcre2.bst",
+      "successor": "bootstrap/libsepol.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/pkg-config.bst",
+      "successor": "bootstrap/libselinux.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/build/debug-utils.bst",
+      "successor": "bootstrap/libselinux.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/build/gcc-stage2.bst",
+      "successor": "bootstrap/libselinux.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/gnu-config.bst",
+      "successor": "bootstrap/libselinux.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/libsepol.bst",
+      "successor": "bootstrap/libselinux.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/pcre2.bst",
+      "successor": "bootstrap/libselinux.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/acl.bst",
+      "successor": "bootstrap/coreutils.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/texinfo.bst",
+      "successor": "bootstrap/coreutils.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/build/coreutils-manpages.bst",
+      "successor": "bootstrap/coreutils.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/build/debug-utils.bst",
+      "successor": "bootstrap/coreutils.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/build/gcc-stage2.bst",
+      "successor": "bootstrap/coreutils.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/gnu-config.bst",
+      "successor": "bootstrap/coreutils.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/libselinux.bst",
+      "successor": "bootstrap/coreutils.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/texinfo.bst",
+      "successor": "bootstrap/gawk.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/build/debug-utils.bst",
+      "successor": "bootstrap/gawk.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/build/gcc-stage2.bst",
+      "successor": "bootstrap/gawk.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/glibc.bst",
+      "successor": "bootstrap/gawk.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/gnu-config.bst",
+      "successor": "bootstrap/gawk.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/binary-seed.bst",
+      "successor": "bootstrap/build/libgcc_s.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/build/gcc-stage2.bst",
+      "successor": "bootstrap/build/libgcc_s.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/build/debug-utils.bst",
+      "successor": "bootstrap/zstd.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/build/gcc-stage2.bst",
+      "successor": "bootstrap/zstd.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/glibc.bst",
+      "successor": "bootstrap/zstd.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/automake.bst",
+      "successor": "bootstrap/elfutils.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/gettext.bst",
+      "successor": "bootstrap/elfutils.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/pkg-config.bst",
+      "successor": "bootstrap/elfutils.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/build/debug-utils.bst",
+      "successor": "bootstrap/elfutils.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/build/gcc-stage2.bst",
+      "successor": "bootstrap/elfutils.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/bzip2.bst",
+      "successor": "bootstrap/elfutils.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/gnu-config.bst",
+      "successor": "bootstrap/elfutils.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/xz.bst",
+      "successor": "bootstrap/elfutils.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/zlib-ng.bst",
+      "successor": "bootstrap/elfutils.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/zstd.bst",
+      "successor": "bootstrap/elfutils.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/automake.bst",
+      "successor": "bootstrap/binutils.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/bison.bst",
+      "successor": "bootstrap/binutils.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/flex.bst",
+      "successor": "bootstrap/binutils.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/gettext.bst",
+      "successor": "bootstrap/binutils.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/pkg-config.bst",
+      "successor": "bootstrap/binutils.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/texinfo.bst",
+      "successor": "bootstrap/binutils.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/build/debug-utils.bst",
+      "successor": "bootstrap/binutils.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/build/gcc-stage2.bst",
+      "successor": "bootstrap/binutils.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/build/libgcc_s.bst",
+      "successor": "bootstrap/binutils.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/elfutils.bst",
+      "successor": "bootstrap/binutils.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/glibc.bst",
+      "successor": "bootstrap/binutils.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/gnu-config.bst",
+      "successor": "bootstrap/binutils.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/zlib-ng.bst",
+      "successor": "bootstrap/binutils.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/zstd.bst",
+      "successor": "bootstrap/binutils.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/autoconf2.69.bst",
+      "successor": "bootstrap/gcc.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/automake.bst",
+      "successor": "bootstrap/gcc.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/flex.bst",
+      "successor": "bootstrap/gcc.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/gettext.bst",
+      "successor": "bootstrap/gcc.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/libtool.bst",
+      "successor": "bootstrap/gcc.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/tar.bst",
+      "successor": "bootstrap/gcc.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/texinfo.bst",
+      "successor": "bootstrap/gcc.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/build/debug-utils.bst",
+      "successor": "bootstrap/gcc.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/build/gcc-stage2.bst",
+      "successor": "bootstrap/gcc.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/build/python3.bst",
+      "successor": "bootstrap/gcc.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/glibc.bst",
+      "successor": "bootstrap/gcc.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/gnu-config.bst",
+      "successor": "bootstrap/gcc.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/libxcrypt.bst",
+      "successor": "bootstrap/gcc.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/binutils.bst",
+      "successor": "bootstrap/gcc.bst",
+      "dependency_type": "runtime"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/texinfo.bst",
+      "successor": "bootstrap/grep.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/build/debug-utils.bst",
+      "successor": "bootstrap/grep.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/build/gcc-stage2.bst",
+      "successor": "bootstrap/grep.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/glibc.bst",
+      "successor": "bootstrap/grep.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/gnu-config.bst",
+      "successor": "bootstrap/grep.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/pcre2.bst",
+      "successor": "bootstrap/grep.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/automake.bst",
+      "successor": "bootstrap/make.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/gettext.bst",
+      "successor": "bootstrap/make.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/pkg-config.bst",
+      "successor": "bootstrap/make.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/texinfo.bst",
+      "successor": "bootstrap/make.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/build/debug-utils.bst",
+      "successor": "bootstrap/make.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/build/gcc-stage2.bst",
+      "successor": "bootstrap/make.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/glibc.bst",
+      "successor": "bootstrap/make.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/gnu-config.bst",
+      "successor": "bootstrap/make.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/texinfo.bst",
+      "successor": "bootstrap/sed.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/build/debug-utils.bst",
+      "successor": "bootstrap/sed.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/build/gcc-stage2.bst",
+      "successor": "bootstrap/sed.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/glibc.bst",
+      "successor": "bootstrap/sed.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/gnu-config.bst",
+      "successor": "bootstrap/sed.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/build/debug-utils.bst",
+      "successor": "bootstrap/xxhash.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/build/gcc-stage2.bst",
+      "successor": "bootstrap/xxhash.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/glibc.bst",
+      "successor": "bootstrap/xxhash.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/gnu-config.bst",
+      "successor": "bootstrap/xxhash.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/pkg-config.bst",
+      "successor": "bootstrap/debugedit.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/build/debug-utils.bst",
+      "successor": "bootstrap/debugedit.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/build/gcc-stage2.bst",
+      "successor": "bootstrap/debugedit.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/elfutils.bst",
+      "successor": "bootstrap/debugedit.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/gnu-config.bst",
+      "successor": "bootstrap/debugedit.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/xxhash.bst",
+      "successor": "bootstrap/debugedit.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/build/debug-utils.bst",
+      "successor": "bootstrap/dwz.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/build/gcc-stage2.bst",
+      "successor": "bootstrap/dwz.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/elfutils.bst",
+      "successor": "bootstrap/dwz.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/glibc.bst",
+      "successor": "bootstrap/dwz.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/gnu-config.bst",
+      "successor": "bootstrap/dwz.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/xxhash.bst",
+      "successor": "bootstrap/dwz.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/build/debug-utils.bst",
+      "successor": "bootstrap/stripper.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/build/gcc-stage2.bst",
+      "successor": "bootstrap/stripper.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/glibc.bst",
+      "successor": "bootstrap/stripper.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/gnu-config.bst",
+      "successor": "bootstrap/stripper.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/debugedit.bst",
+      "successor": "bootstrap/stripper.bst",
+      "dependency_type": "runtime"
+    },
+    {
+      "predecessor": "bootstrap/dwz.bst",
+      "successor": "bootstrap/stripper.bst",
+      "dependency_type": "runtime"
+    },
+    {
+      "predecessor": "bootstrap/xz.bst",
+      "successor": "bootstrap/stripper.bst",
+      "dependency_type": "runtime"
+    },
+    {
+      "predecessor": "bootstrap/build/debug-utils.bst",
+      "successor": "bootstrap/gzip.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/build/gcc-stage2.bst",
+      "successor": "bootstrap/gzip.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/glibc.bst",
+      "successor": "bootstrap/gzip.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/gnu-config.bst",
+      "successor": "bootstrap/gzip.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/bash.bst",
+      "successor": "components/utf-locale.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/coreutils.bst",
+      "successor": "components/utf-locale.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/gcc.bst",
+      "successor": "components/utf-locale.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/glibc.bst",
+      "successor": "components/utf-locale.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/gzip.bst",
+      "successor": "components/utf-locale.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/bash.bst",
+      "successor": "components/m4.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/coreutils.bst",
+      "successor": "components/m4.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/gawk.bst",
+      "successor": "components/m4.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/gcc.bst",
+      "successor": "components/m4.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/glibc.bst",
+      "successor": "components/m4.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/grep.bst",
+      "successor": "components/m4.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/make.bst",
+      "successor": "components/m4.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/sed.bst",
+      "successor": "components/m4.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/stripper.bst",
+      "successor": "components/m4.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/symlinks.bst",
+      "successor": "components/m4.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/utf-locale.bst",
+      "successor": "components/m4.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/bash.bst",
+      "successor": "components/perl.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/coreutils.bst",
+      "successor": "components/perl.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/gawk.bst",
+      "successor": "components/perl.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/gcc.bst",
+      "successor": "components/perl.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/glibc.bst",
+      "successor": "components/perl.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/grep.bst",
+      "successor": "components/perl.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/libxcrypt.bst",
+      "successor": "components/perl.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/make.bst",
+      "successor": "components/perl.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/sed.bst",
+      "successor": "components/perl.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/stripper.bst",
+      "successor": "components/perl.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/symlinks.bst",
+      "successor": "components/perl.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/utf-locale.bst",
+      "successor": "components/perl.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/texinfo.bst",
+      "successor": "bootstrap/diffutils.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/build/debug-utils.bst",
+      "successor": "bootstrap/diffutils.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/build/gcc-stage2.bst",
+      "successor": "bootstrap/diffutils.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/glibc.bst",
+      "successor": "bootstrap/diffutils.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/gnu-config.bst",
+      "successor": "bootstrap/diffutils.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/texinfo.bst",
+      "successor": "bootstrap/findutils.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/build/debug-utils.bst",
+      "successor": "bootstrap/findutils.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/build/gcc-stage2.bst",
+      "successor": "bootstrap/findutils.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/glibc.bst",
+      "successor": "bootstrap/findutils.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/gnu-config.bst",
+      "successor": "bootstrap/findutils.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/bash.bst",
+      "successor": "components/gzip.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/glibc.bst",
+      "successor": "components/gzip.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/gzip.bst",
+      "successor": "components/gzip.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/symlinks.bst",
+      "successor": "components/gzip.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/utf-locale.bst",
+      "successor": "components/gzip.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/bash.bst",
+      "successor": "components/tar.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/coreutils.bst",
+      "successor": "components/tar.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/findutils.bst",
+      "successor": "components/tar.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/gawk.bst",
+      "successor": "components/tar.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/gcc.bst",
+      "successor": "components/tar.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/glibc.bst",
+      "successor": "components/tar.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/grep.bst",
+      "successor": "components/tar.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/make.bst",
+      "successor": "components/tar.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/sed.bst",
+      "successor": "components/tar.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/stripper.bst",
+      "successor": "components/tar.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/symlinks.bst",
+      "successor": "components/tar.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/utf-locale.bst",
+      "successor": "components/tar.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/bash.bst",
+      "successor": "components/gettext.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/coreutils.bst",
+      "successor": "components/gettext.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/gawk.bst",
+      "successor": "components/gettext.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/gcc.bst",
+      "successor": "components/gettext.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/glibc.bst",
+      "successor": "components/gettext.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/grep.bst",
+      "successor": "components/gettext.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/make.bst",
+      "successor": "components/gettext.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/sed.bst",
+      "successor": "components/gettext.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/stripper.bst",
+      "successor": "components/gettext.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/symlinks.bst",
+      "successor": "components/gettext.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/utf-locale.bst",
+      "successor": "components/gettext.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/diffutils.bst",
+      "successor": "components/gettext.bst",
+      "dependency_type": "runtime"
+    },
+    {
+      "predecessor": "bootstrap/findutils.bst",
+      "successor": "components/gettext.bst",
+      "dependency_type": "runtime"
+    },
+    {
+      "predecessor": "components/gzip.bst",
+      "successor": "components/gettext.bst",
+      "dependency_type": "runtime"
+    },
+    {
+      "predecessor": "components/tar.bst",
+      "successor": "components/gettext.bst",
+      "dependency_type": "runtime"
+    },
+    {
+      "predecessor": "bootstrap/bash.bst",
+      "successor": "components/autoconf.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/coreutils.bst",
+      "successor": "components/autoconf.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/gawk.bst",
+      "successor": "components/autoconf.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/gcc.bst",
+      "successor": "components/autoconf.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/glibc.bst",
+      "successor": "components/autoconf.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/grep.bst",
+      "successor": "components/autoconf.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/make.bst",
+      "successor": "components/autoconf.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/sed.bst",
+      "successor": "components/autoconf.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/stripper.bst",
+      "successor": "components/autoconf.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/symlinks.bst",
+      "successor": "components/autoconf.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/m4.bst",
+      "successor": "components/autoconf.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/perl.bst",
+      "successor": "components/autoconf.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/utf-locale.bst",
+      "successor": "components/autoconf.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/gettext.bst",
+      "successor": "components/autoconf.bst",
+      "dependency_type": "runtime"
+    },
+    {
+      "predecessor": "bootstrap/bash.bst",
+      "successor": "components/_private/python3-minimal.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/bzip2.bst",
+      "successor": "components/_private/python3-minimal.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/coreutils.bst",
+      "successor": "components/_private/python3-minimal.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/gawk.bst",
+      "successor": "components/_private/python3-minimal.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/gcc.bst",
+      "successor": "components/_private/python3-minimal.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/glibc.bst",
+      "successor": "components/_private/python3-minimal.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/grep.bst",
+      "successor": "components/_private/python3-minimal.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/make.bst",
+      "successor": "components/_private/python3-minimal.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/sed.bst",
+      "successor": "components/_private/python3-minimal.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/stripper.bst",
+      "successor": "components/_private/python3-minimal.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/symlinks.bst",
+      "successor": "components/_private/python3-minimal.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/zlib-ng.bst",
+      "successor": "components/_private/python3-minimal.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/zstd.bst",
+      "successor": "components/_private/python3-minimal.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/autoconf.bst",
+      "successor": "components/_private/python3-minimal.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/utf-locale.bst",
+      "successor": "components/_private/python3-minimal.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/bash.bst",
+      "successor": "components/autoconf2.69.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/coreutils.bst",
+      "successor": "components/autoconf2.69.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/gawk.bst",
+      "successor": "components/autoconf2.69.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/gcc.bst",
+      "successor": "components/autoconf2.69.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/glibc.bst",
+      "successor": "components/autoconf2.69.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/grep.bst",
+      "successor": "components/autoconf2.69.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/make.bst",
+      "successor": "components/autoconf2.69.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/sed.bst",
+      "successor": "components/autoconf2.69.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/stripper.bst",
+      "successor": "components/autoconf2.69.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/symlinks.bst",
+      "successor": "components/autoconf2.69.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/m4.bst",
+      "successor": "components/autoconf2.69.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/perl.bst",
+      "successor": "components/autoconf2.69.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/utf-locale.bst",
+      "successor": "components/autoconf2.69.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/gettext.bst",
+      "successor": "components/autoconf2.69.bst",
+      "dependency_type": "runtime"
+    },
+    {
+      "predecessor": "bootstrap/bash.bst",
+      "successor": "components/automake.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/coreutils.bst",
+      "successor": "components/automake.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/gcc.bst",
+      "successor": "components/automake.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/glibc.bst",
+      "successor": "components/automake.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/make.bst",
+      "successor": "components/automake.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/sed.bst",
+      "successor": "components/automake.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/stripper.bst",
+      "successor": "components/automake.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/symlinks.bst",
+      "successor": "components/automake.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/autoconf.bst",
+      "successor": "components/automake.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/m4.bst",
+      "successor": "components/automake.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/perl.bst",
+      "successor": "components/automake.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/utf-locale.bst",
+      "successor": "components/automake.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/automake.bst",
+      "successor": "bootstrap/file.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/base-sdk/libtool.bst",
+      "successor": "bootstrap/file.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/build/debug-utils.bst",
+      "successor": "bootstrap/file.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/build/file-stage1.bst",
+      "successor": "bootstrap/file.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/build/gcc-stage2.bst",
+      "successor": "bootstrap/file.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/gnu-config.bst",
+      "successor": "bootstrap/file.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/zlib-ng.bst",
+      "successor": "bootstrap/file.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/zstd.bst",
+      "successor": "bootstrap/file.bst",
+      "dependency_type": "runtime"
+    },
+    {
+      "predecessor": "bootstrap/bash.bst",
+      "successor": "components/libtool.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/coreutils.bst",
+      "successor": "components/libtool.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/file.bst",
+      "successor": "components/libtool.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/gawk.bst",
+      "successor": "components/libtool.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/gcc.bst",
+      "successor": "components/libtool.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/glibc.bst",
+      "successor": "components/libtool.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/grep.bst",
+      "successor": "components/libtool.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/make.bst",
+      "successor": "components/libtool.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/sed.bst",
+      "successor": "components/libtool.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/stripper.bst",
+      "successor": "components/libtool.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/symlinks.bst",
+      "successor": "components/libtool.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/autoconf.bst",
+      "successor": "components/libtool.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/automake.bst",
+      "successor": "components/libtool.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/m4.bst",
+      "successor": "components/libtool.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/utf-locale.bst",
+      "successor": "components/libtool.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/bash.bst",
+      "successor": "components/texinfo.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/coreutils.bst",
+      "successor": "components/texinfo.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/gawk.bst",
+      "successor": "components/texinfo.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/gcc.bst",
+      "successor": "components/texinfo.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/glibc.bst",
+      "successor": "components/texinfo.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/grep.bst",
+      "successor": "components/texinfo.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/make.bst",
+      "successor": "components/texinfo.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/ncurses.bst",
+      "successor": "components/texinfo.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/sed.bst",
+      "successor": "components/texinfo.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/stripper.bst",
+      "successor": "components/texinfo.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/symlinks.bst",
+      "successor": "components/texinfo.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/perl.bst",
+      "successor": "components/texinfo.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/utf-locale.bst",
+      "successor": "components/texinfo.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/bash.bst",
+      "successor": "components/_private/flex-base.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/coreutils.bst",
+      "successor": "components/_private/flex-base.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/gcc.bst",
+      "successor": "components/_private/flex-base.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/glibc.bst",
+      "successor": "components/_private/flex-base.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/make.bst",
+      "successor": "components/_private/flex-base.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/stripper.bst",
+      "successor": "components/_private/flex-base.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/symlinks.bst",
+      "successor": "components/_private/flex-base.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/autoconf.bst",
+      "successor": "components/_private/flex-base.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/automake.bst",
+      "successor": "components/_private/flex-base.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/libtool.bst",
+      "successor": "components/_private/flex-base.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/m4.bst",
+      "successor": "components/_private/flex-base.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/tar.bst",
+      "successor": "components/_private/flex-base.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/texinfo.bst",
+      "successor": "components/_private/flex-base.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/utf-locale.bst",
+      "successor": "components/_private/flex-base.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/_private/flex-base.bst",
+      "successor": "components/libfl.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/glibc.bst",
+      "successor": "components/libfl.bst",
+      "dependency_type": "runtime"
+    },
+    {
+      "predecessor": "bootstrap/symlinks.bst",
+      "successor": "components/libfl.bst",
+      "dependency_type": "runtime"
+    },
+    {
+      "predecessor": "components/utf-locale.bst",
+      "successor": "components/libfl.bst",
+      "dependency_type": "runtime"
+    },
+    {
+      "predecessor": "components/_private/flex-base.bst",
+      "successor": "components/flex.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/bash.bst",
+      "successor": "components/flex.bst",
+      "dependency_type": "runtime"
+    },
+    {
+      "predecessor": "bootstrap/coreutils.bst",
+      "successor": "components/flex.bst",
+      "dependency_type": "runtime"
+    },
+    {
+      "predecessor": "bootstrap/glibc.bst",
+      "successor": "components/flex.bst",
+      "dependency_type": "runtime"
+    },
+    {
+      "predecessor": "bootstrap/symlinks.bst",
+      "successor": "components/flex.bst",
+      "dependency_type": "runtime"
+    },
+    {
+      "predecessor": "components/libfl.bst",
+      "successor": "components/flex.bst",
+      "dependency_type": "runtime"
+    },
+    {
+      "predecessor": "components/m4.bst",
+      "successor": "components/flex.bst",
+      "dependency_type": "runtime"
+    },
+    {
+      "predecessor": "components/utf-locale.bst",
+      "successor": "components/flex.bst",
+      "dependency_type": "runtime"
+    },
+    {
+      "predecessor": "bootstrap/bash.bst",
+      "successor": "components/pkg-config.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/coreutils.bst",
+      "successor": "components/pkg-config.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/gcc.bst",
+      "successor": "components/pkg-config.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/glibc.bst",
+      "successor": "components/pkg-config.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/make.bst",
+      "successor": "components/pkg-config.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/stripper.bst",
+      "successor": "components/pkg-config.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/symlinks.bst",
+      "successor": "components/pkg-config.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/autoconf.bst",
+      "successor": "components/pkg-config.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/automake.bst",
+      "successor": "components/pkg-config.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/libtool.bst",
+      "successor": "components/pkg-config.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/m4.bst",
+      "successor": "components/pkg-config.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/utf-locale.bst",
+      "successor": "components/pkg-config.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/diffutils.bst",
+      "successor": "components/_private/gcc-base.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/gcc.bst",
+      "successor": "components/_private/gcc-base.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/make.bst",
+      "successor": "components/_private/gcc-base.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/stripper.bst",
+      "successor": "components/_private/gcc-base.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/zstd.bst",
+      "successor": "components/_private/gcc-base.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/_private/python3-minimal.bst",
+      "successor": "components/_private/gcc-base.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/autoconf2.69.bst",
+      "successor": "components/_private/gcc-base.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/automake.bst",
+      "successor": "components/_private/gcc-base.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/flex.bst",
+      "successor": "components/_private/gcc-base.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/gettext.bst",
+      "successor": "components/_private/gcc-base.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/libtool.bst",
+      "successor": "components/_private/gcc-base.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/pkg-config.bst",
+      "successor": "components/_private/gcc-base.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/tar.bst",
+      "successor": "components/_private/gcc-base.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/texinfo.bst",
+      "successor": "components/_private/gcc-base.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/_private/gcc-base.bst",
+      "successor": "components/gcc-manifest.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/_private/gcc-base.bst",
+      "successor": "components/gcc-libs.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/glibc.bst",
+      "successor": "components/gcc-libs.bst",
+      "dependency_type": "runtime"
+    },
+    {
+      "predecessor": "components/gcc-manifest.bst",
+      "successor": "components/gcc-libs.bst",
+      "dependency_type": "runtime"
+    },
+    {
+      "predecessor": "bootstrap/glibc.bst",
+      "successor": "public-stacks/runtime-minimal.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/symlinks.bst",
+      "successor": "public-stacks/runtime-minimal.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/gcc-libs.bst",
+      "successor": "public-stacks/runtime-minimal.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/utf-locale.bst",
+      "successor": "public-stacks/runtime-minimal.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/diffutils.bst",
+      "successor": "components/diffutils.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "public-stacks/runtime-minimal.bst",
+      "successor": "components/diffutils.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/findutils.bst",
+      "successor": "components/findutils.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "public-stacks/runtime-minimal.bst",
+      "successor": "components/findutils.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/gawk.bst",
+      "successor": "components/gawk.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "public-stacks/runtime-minimal.bst",
+      "successor": "components/gawk.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/_private/gcc-base.bst",
+      "successor": "components/gcc.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/binutils.bst",
+      "successor": "components/gcc.bst",
+      "dependency_type": "runtime"
+    },
+    {
+      "predecessor": "bootstrap/libxcrypt.bst",
+      "successor": "components/gcc.bst",
+      "dependency_type": "runtime"
+    },
+    {
+      "predecessor": "bootstrap/zstd.bst",
+      "successor": "components/gcc.bst",
+      "dependency_type": "runtime"
+    },
+    {
+      "predecessor": "components/gcc-libs.bst",
+      "successor": "components/gcc.bst",
+      "dependency_type": "runtime"
+    },
+    {
+      "predecessor": "components/gcc-manifest.bst",
+      "successor": "components/gcc.bst",
+      "dependency_type": "runtime"
+    },
+    {
+      "predecessor": "public-stacks/runtime-minimal.bst",
+      "successor": "components/gcc.bst",
+      "dependency_type": "runtime"
+    },
+    {
+      "predecessor": "bootstrap/grep.bst",
+      "successor": "components/grep.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "public-stacks/runtime-minimal.bst",
+      "successor": "components/grep.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/make.bst",
+      "successor": "components/make.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "public-stacks/runtime-minimal.bst",
+      "successor": "components/make.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/sed.bst",
+      "successor": "components/sed.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "public-stacks/runtime-minimal.bst",
+      "successor": "components/sed.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/binutils.bst",
+      "successor": "components/stripper.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/stripper.bst",
+      "successor": "components/stripper.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/gcc-libs.bst",
+      "successor": "components/stripper.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/bash.bst",
+      "successor": "public-stacks/runtime-gnu.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/coreutils.bst",
+      "successor": "public-stacks/runtime-gnu.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "public-stacks/runtime-minimal.bst",
+      "successor": "public-stacks/runtime-gnu.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/diffutils.bst",
+      "successor": "public-stacks/buildsystem-make.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/findutils.bst",
+      "successor": "public-stacks/buildsystem-make.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/gawk.bst",
+      "successor": "public-stacks/buildsystem-make.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/gcc.bst",
+      "successor": "public-stacks/buildsystem-make.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/grep.bst",
+      "successor": "public-stacks/buildsystem-make.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/make.bst",
+      "successor": "public-stacks/buildsystem-make.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/sed.bst",
+      "successor": "public-stacks/buildsystem-make.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/stripper.bst",
+      "successor": "public-stacks/buildsystem-make.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "public-stacks/runtime-gnu.bst",
+      "successor": "public-stacks/buildsystem-make.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "public-stacks/buildsystem-make.bst",
+      "successor": "components/autoconf-archive.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "public-stacks/runtime-minimal.bst",
+      "successor": "components/autoconf-archive.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "public-stacks/buildsystem-make.bst",
+      "successor": "components/which.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "public-stacks/runtime-minimal.bst",
+      "successor": "components/which.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/autoconf-archive.bst",
+      "successor": "public-stacks/buildsystem-autotools.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/autoconf.bst",
+      "successor": "public-stacks/buildsystem-autotools.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/automake.bst",
+      "successor": "public-stacks/buildsystem-autotools.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/gettext.bst",
+      "successor": "public-stacks/buildsystem-autotools.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/libtool.bst",
+      "successor": "public-stacks/buildsystem-autotools.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/pkg-config.bst",
+      "successor": "public-stacks/buildsystem-autotools.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/which.bst",
+      "successor": "public-stacks/buildsystem-autotools.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "public-stacks/buildsystem-make.bst",
+      "successor": "public-stacks/buildsystem-autotools.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/sed.bst",
+      "successor": "components/ninja.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/_private/python3-minimal.bst",
+      "successor": "components/ninja.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/gcc.bst",
+      "successor": "components/ninja.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/stripper.bst",
+      "successor": "components/ninja.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "public-stacks/runtime-gnu.bst",
+      "successor": "components/ninja.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "public-stacks/runtime-minimal.bst",
+      "successor": "components/ninja.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/grep.bst",
+      "successor": "components/_private/cmake-stage1.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/sed.bst",
+      "successor": "components/_private/cmake-stage1.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/gcc.bst",
+      "successor": "components/_private/cmake-stage1.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/ninja.bst",
+      "successor": "components/_private/cmake-stage1.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/stripper.bst",
+      "successor": "components/_private/cmake-stage1.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "public-stacks/runtime-gnu.bst",
+      "successor": "components/_private/cmake-stage1.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "public-stacks/runtime-minimal.bst",
+      "successor": "components/_private/cmake-stage1.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/_private/cmake-stage1.bst",
+      "successor": "components/_private/buildsystem-cmake.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/gcc.bst",
+      "successor": "components/_private/buildsystem-cmake.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/gettext.bst",
+      "successor": "components/_private/buildsystem-cmake.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/ninja.bst",
+      "successor": "components/_private/buildsystem-cmake.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/pkg-config.bst",
+      "successor": "components/_private/buildsystem-cmake.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/stripper.bst",
+      "successor": "components/_private/buildsystem-cmake.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "public-stacks/runtime-gnu.bst",
+      "successor": "components/_private/buildsystem-cmake.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "public-stacks/runtime-gnu.bst",
+      "successor": "components/bluez-headers.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/_private/buildsystem-cmake.bst",
+      "successor": "components/expat.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "public-stacks/runtime-minimal.bst",
+      "successor": "components/expat.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/perl.bst",
+      "successor": "components/openssl.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "public-stacks/buildsystem-make.bst",
+      "successor": "components/openssl.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "public-stacks/runtime-minimal.bst",
+      "successor": "components/openssl.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "public-stacks/buildsystem-autotools.bst",
+      "successor": "components/gdbm.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "public-stacks/runtime-minimal.bst",
+      "successor": "components/gdbm.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/texinfo.bst",
+      "successor": "components/libffi.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "public-stacks/buildsystem-autotools.bst",
+      "successor": "components/libffi.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "public-stacks/runtime-minimal.bst",
+      "successor": "components/libffi.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/zlib-ng.bst",
+      "successor": "components/zlib.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "public-stacks/runtime-minimal.bst",
+      "successor": "components/zlib.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/zlib.bst",
+      "successor": "components/sqlite.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "public-stacks/buildsystem-make.bst",
+      "successor": "components/sqlite.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "public-stacks/runtime-minimal.bst",
+      "successor": "components/sqlite.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/zstd.bst",
+      "successor": "components/zstd.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "public-stacks/runtime-minimal.bst",
+      "successor": "components/zstd.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/bzip2.bst",
+      "successor": "components/python3.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/xz.bst",
+      "successor": "components/python3.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/zlib-ng.bst",
+      "successor": "components/python3.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/bluez-headers.bst",
+      "successor": "components/python3.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/expat.bst",
+      "successor": "components/python3.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/gdbm.bst",
+      "successor": "components/python3.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/libffi.bst",
+      "successor": "components/python3.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/openssl.bst",
+      "successor": "components/python3.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/sqlite.bst",
+      "successor": "components/python3.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/zstd.bst",
+      "successor": "components/python3.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "public-stacks/buildsystem-autotools.bst",
+      "successor": "components/python3.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "public-stacks/runtime-minimal.bst",
+      "successor": "components/python3.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/_private/python3-minimal.bst",
+      "successor": "components/_private/python3-build-bootstrap.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "public-stacks/runtime-gnu.bst",
+      "successor": "components/_private/python3-build-bootstrap.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "public-stacks/runtime-minimal.bst",
+      "successor": "components/_private/python3-build-bootstrap.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/_private/python3-minimal.bst",
+      "successor": "components/_private/python3-installer-bootstrap.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "public-stacks/runtime-gnu.bst",
+      "successor": "components/_private/python3-installer-bootstrap.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "public-stacks/runtime-minimal.bst",
+      "successor": "components/_private/python3-installer-bootstrap.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/_private/python3-build-bootstrap.bst",
+      "successor": "components/_private/python3-flit-core.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/_private/python3-installer-bootstrap.bst",
+      "successor": "components/_private/python3-flit-core.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/_private/python3-minimal.bst",
+      "successor": "components/_private/python3-flit-core.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "public-stacks/runtime-gnu.bst",
+      "successor": "components/_private/python3-flit-core.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "public-stacks/runtime-minimal.bst",
+      "successor": "components/_private/python3-flit-core.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/_private/python3-build-bootstrap.bst",
+      "successor": "components/_private/python3-installer.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/_private/python3-flit-core.bst",
+      "successor": "components/_private/python3-installer.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/_private/python3-installer-bootstrap.bst",
+      "successor": "components/_private/python3-installer.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/_private/python3-minimal.bst",
+      "successor": "components/_private/python3-installer.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "public-stacks/runtime-gnu.bst",
+      "successor": "components/_private/python3-installer.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "public-stacks/runtime-minimal.bst",
+      "successor": "components/_private/python3-installer.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/_private/python3-build-bootstrap.bst",
+      "successor": "components/_private/python3-packaging.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/_private/python3-flit-core.bst",
+      "successor": "components/_private/python3-packaging.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/_private/python3-installer.bst",
+      "successor": "components/_private/python3-packaging.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/_private/python3-minimal.bst",
+      "successor": "components/_private/python3-packaging.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "public-stacks/runtime-gnu.bst",
+      "successor": "components/_private/python3-packaging.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "public-stacks/runtime-minimal.bst",
+      "successor": "components/_private/python3-packaging.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/_private/python3-build-bootstrap.bst",
+      "successor": "components/_private/python3-pyproject-hooks.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/_private/python3-flit-core.bst",
+      "successor": "components/_private/python3-pyproject-hooks.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/_private/python3-installer.bst",
+      "successor": "components/_private/python3-pyproject-hooks.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/_private/python3-minimal.bst",
+      "successor": "components/_private/python3-pyproject-hooks.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "public-stacks/runtime-gnu.bst",
+      "successor": "components/_private/python3-pyproject-hooks.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "public-stacks/runtime-minimal.bst",
+      "successor": "components/_private/python3-pyproject-hooks.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/_private/python3-build-bootstrap.bst",
+      "successor": "components/_private/python3-build.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/_private/python3-flit-core.bst",
+      "successor": "components/_private/python3-build.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/_private/python3-installer.bst",
+      "successor": "components/_private/python3-build.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/_private/python3-minimal.bst",
+      "successor": "components/_private/python3-build.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "public-stacks/runtime-gnu.bst",
+      "successor": "components/_private/python3-build.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/_private/python3-packaging.bst",
+      "successor": "components/_private/python3-build.bst",
+      "dependency_type": "runtime"
+    },
+    {
+      "predecessor": "components/_private/python3-pyproject-hooks.bst",
+      "successor": "components/_private/python3-build.bst",
+      "dependency_type": "runtime"
+    },
+    {
+      "predecessor": "public-stacks/runtime-minimal.bst",
+      "successor": "components/_private/python3-build.bst",
+      "dependency_type": "runtime"
+    },
+    {
+      "predecessor": "components/_private/python3-build.bst",
+      "successor": "components/_private/python3-setuptools.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/_private/python3-installer.bst",
+      "successor": "components/_private/python3-setuptools.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/_private/python3-minimal.bst",
+      "successor": "components/_private/python3-setuptools.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "public-stacks/runtime-gnu.bst",
+      "successor": "components/_private/python3-setuptools.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "public-stacks/runtime-minimal.bst",
+      "successor": "components/_private/python3-setuptools.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/_private/python3-build.bst",
+      "successor": "components/_private/python3-wheel.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/_private/python3-flit-core.bst",
+      "successor": "components/_private/python3-wheel.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/_private/python3-installer.bst",
+      "successor": "components/_private/python3-wheel.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/_private/python3-minimal.bst",
+      "successor": "components/_private/python3-wheel.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "public-stacks/runtime-gnu.bst",
+      "successor": "components/_private/python3-wheel.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/_private/python3-packaging.bst",
+      "successor": "components/_private/python3-wheel.bst",
+      "dependency_type": "runtime"
+    },
+    {
+      "predecessor": "public-stacks/runtime-minimal.bst",
+      "successor": "components/_private/python3-wheel.bst",
+      "dependency_type": "runtime"
+    },
+    {
+      "predecessor": "components/_private/python3-build.bst",
+      "successor": "components/_private/meson.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/_private/python3-installer.bst",
+      "successor": "components/_private/meson.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/_private/python3-minimal.bst",
+      "successor": "components/_private/meson.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/_private/python3-setuptools.bst",
+      "successor": "components/_private/meson.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/_private/python3-wheel.bst",
+      "successor": "components/_private/meson.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/ninja.bst",
+      "successor": "components/_private/meson.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "public-stacks/runtime-gnu.bst",
+      "successor": "components/_private/meson.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/zlib-ng.bst",
+      "successor": "components/_private/git-minimal.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/_private/meson.bst",
+      "successor": "components/_private/git-minimal.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/_private/python3-minimal.bst",
+      "successor": "components/_private/git-minimal.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/expat.bst",
+      "successor": "components/_private/git-minimal.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/gcc.bst",
+      "successor": "components/_private/git-minimal.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/gettext.bst",
+      "successor": "components/_private/git-minimal.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/grep.bst",
+      "successor": "components/_private/git-minimal.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/ninja.bst",
+      "successor": "components/_private/git-minimal.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/openssl.bst",
+      "successor": "components/_private/git-minimal.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/pkg-config.bst",
+      "successor": "components/_private/git-minimal.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/sed.bst",
+      "successor": "components/_private/git-minimal.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/stripper.bst",
+      "successor": "components/_private/git-minimal.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/tar.bst",
+      "successor": "components/_private/git-minimal.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "public-stacks/runtime-gnu.bst",
+      "successor": "components/_private/git-minimal.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "public-stacks/runtime-minimal.bst",
+      "successor": "components/_private/git-minimal.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/python3.bst",
+      "successor": "components/gperf.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "public-stacks/buildsystem-autotools.bst",
+      "successor": "components/gperf.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "public-stacks/runtime-minimal.bst",
+      "successor": "components/gperf.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/gettext.bst",
+      "successor": "components/help2man.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/perl.bst",
+      "successor": "components/help2man.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "public-stacks/buildsystem-autotools.bst",
+      "successor": "components/help2man.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "public-stacks/runtime-minimal.bst",
+      "successor": "components/help2man.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/_private/git-minimal.bst",
+      "successor": "components/bison.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/flex.bst",
+      "successor": "components/bison.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/gettext.bst",
+      "successor": "components/bison.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/gperf.bst",
+      "successor": "components/bison.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/help2man.bst",
+      "successor": "components/bison.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/m4.bst",
+      "successor": "components/bison.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/perl.bst",
+      "successor": "components/bison.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/texinfo.bst",
+      "successor": "components/bison.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "public-stacks/buildsystem-autotools.bst",
+      "successor": "components/bison.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "public-stacks/runtime-minimal.bst",
+      "successor": "components/bison.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/_private/buildsystem-cmake.bst",
+      "successor": "components/doxygen.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/bison.bst",
+      "successor": "components/doxygen.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/flex.bst",
+      "successor": "components/doxygen.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/python3.bst",
+      "successor": "components/doxygen.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "public-stacks/runtime-minimal.bst",
+      "successor": "components/doxygen.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/_private/python3-minimal.bst",
+      "successor": "components/icu.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "public-stacks/buildsystem-autotools.bst",
+      "successor": "components/icu.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "public-stacks/runtime-minimal.bst",
+      "successor": "components/icu.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/xz.bst",
+      "successor": "components/libxml2.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "bootstrap/zlib-ng.bst",
+      "successor": "components/libxml2.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/_private/python3-minimal.bst",
+      "successor": "components/libxml2.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/doxygen.bst",
+      "successor": "components/libxml2.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "components/icu.bst",
+      "successor": "components/libxml2.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "public-stacks/buildsystem-autotools.bst",
+      "successor": "components/libxml2.bst",
+      "dependency_type": "build"
+    },
+    {
+      "predecessor": "public-stacks/runtime-minimal.bst",
+      "successor": "components/libxml2.bst",
+      "dependency_type": "build"
+    }
+  ],
+  "foundation": [],
+  "cache_fingerprint": {
+    "cache_key_set": null,
+    "targets": [
+      "components/libxml2.bst"
+    ],
+    "bst_global_options": [],
+    "resolved_max_jobs": 4,
+    "bga_foundation": []
+  },
+  "run_identity_hash": "0ccebb4abe0f237fb743068f40d4d0631d45ce84fe14deb348014c9ac0ca5041"
+}

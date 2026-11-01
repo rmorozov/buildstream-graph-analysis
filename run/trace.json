@@ -1,0 +1,1266 @@
+{
+  "spans": [
+    {
+      "task_key": "bootstrap/base-sdk/binary-seed-x86_64.bst|BUILD|BUILD|0",
+      "ts_us": 1793531111280000,
+      "dur_us": 0,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "bootstrap/base-sdk/binary-seed.bst|BUILD|BUILD|0",
+      "ts_us": 1793531111280000,
+      "dur_us": 5004000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "bootstrap/symlinks.bst|BUILD|BUILD|0",
+      "ts_us": 1793531111280000,
+      "dur_us": 0,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "bootstrap/base-sdk/perl.bst|BUILD|BUILD|0",
+      "ts_us": 1793531116285000,
+      "dur_us": 469108000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "bootstrap/base-sdk/zstd.bst|BUILD|BUILD|0",
+      "ts_us": 1793531116285000,
+      "dur_us": 78374000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "bootstrap/gnu-config.bst|BUILD|BUILD|0",
+      "ts_us": 1793531116285000,
+      "dur_us": 2004000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "bootstrap/ncurses-pkgconfig-dir.bst|BUILD|BUILD|0",
+      "ts_us": 1793531116285000,
+      "dur_us": 5240000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "bootstrap/base-sdk/m4.bst|BUILD|BUILD|0",
+      "ts_us": 1793531118289000,
+      "dur_us": 141454000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "bootstrap/base-sdk/xxhash.bst|BUILD|BUILD|0",
+      "ts_us": 1793531121525000,
+      "dur_us": 10016000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "bootstrap/base-sdk/tar.bst|BUILD|BUILD|0",
+      "ts_us": 1793531131541000,
+      "dur_us": 120189000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "bootstrap/base-sdk/gettext.bst|BUILD|BUILD|0",
+      "ts_us": 1793531194659000,
+      "dur_us": 1043924000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "bootstrap/build/dwz-build.bst|BUILD|BUILD|0",
+      "ts_us": 1793531251730000,
+      "dur_us": 21028000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "bootstrap/base-sdk/libtool.bst|BUILD|BUILD|0",
+      "ts_us": 1793531259743000,
+      "dur_us": 34061000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "bootstrap/build/stripper.bst|BUILD|BUILD|0",
+      "ts_us": 1793531272758000,
+      "dur_us": 14022000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "bootstrap/build/python3.bst|BUILD|BUILD|0",
+      "ts_us": 1793531286780000,
+      "dur_us": 388756000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "bootstrap/build/ncurses-stage1.bst|BUILD|BUILD|0",
+      "ts_us": 1793531293804000,
+      "dur_us": 247313000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "bootstrap/build/coreutils-manpages.bst|BUILD|BUILD|0",
+      "ts_us": 1793531541117000,
+      "dur_us": 311683000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "bootstrap/base-sdk/autoconf.bst|BUILD|BUILD|0",
+      "ts_us": 1793531585393000,
+      "dur_us": 6043000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "bootstrap/base-sdk/automake.bst|BUILD|BUILD|0",
+      "ts_us": 1793531591436000,
+      "dur_us": 11016000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "bootstrap/base-sdk/flex.bst|BUILD|BUILD|0",
+      "ts_us": 1793531602452000,
+      "dur_us": 34041000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "bootstrap/base-sdk/pkg-config.bst|BUILD|BUILD|0",
+      "ts_us": 1793531636493000,
+      "dur_us": 34036000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "bootstrap/base-sdk/bison.bst|BUILD|BUILD|0",
+      "ts_us": 1793531670529000,
+      "dur_us": 133188000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "bootstrap/build/elfutils-build.bst|BUILD|BUILD|0",
+      "ts_us": 1793531675536000,
+      "dur_us": 174258000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "bootstrap/build/file-stage1.bst|BUILD|BUILD|0",
+      "ts_us": 1793531803717000,
+      "dur_us": 67106000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "bootstrap/build/rsync.bst|BUILD|BUILD|0",
+      "ts_us": 1793531849794000,
+      "dur_us": 76444000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "bootstrap/build/binutils-stage1.bst|BUILD|BUILD|0",
+      "ts_us": 1793531852800000,
+      "dur_us": 227625000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "bootstrap/build/debugedit-build.bst|BUILD|BUILD|0",
+      "ts_us": 1793531870823000,
+      "dur_us": 23371000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "bootstrap/base-sdk/autoconf2.69.bst|BUILD|BUILD|0",
+      "ts_us": 1793531894194000,
+      "dur_us": 8016000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "bootstrap/base-sdk/texinfo.bst|BUILD|BUILD|0",
+      "ts_us": 1793531902210000,
+      "dur_us": 181218000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "bootstrap/linux-headers.bst|BUILD|BUILD|0",
+      "ts_us": 1793531926238000,
+      "dur_us": 74089000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "bootstrap/build/debug-utils.bst|BUILD|BUILD|0",
+      "ts_us": 1793532000327000,
+      "dur_us": 0,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "bootstrap/build/gcc-stage1.bst|BUILD|BUILD|0",
+      "ts_us": 1793532238583000,
+      "dur_us": 1465590000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "bootstrap/glibc.bst|BUILD|BUILD|0",
+      "ts_us": 1793533704173000,
+      "dur_us": 485538000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "bootstrap/libxcrypt.bst|BUILD|BUILD|0",
+      "ts_us": 1793534189711000,
+      "dur_us": 17018000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "bootstrap/build/gcc-stage2.bst|BUILD|BUILD|0",
+      "ts_us": 1793534206729000,
+      "dur_us": 1869034000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "bootstrap/ncurses.bst|BUILD|BUILD|0",
+      "ts_us": 1793536075764000,
+      "dur_us": 415725000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "bootstrap/pcre2.bst|BUILD|BUILD|0",
+      "ts_us": 1793536075764000,
+      "dur_us": 110278000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "bootstrap/xz.bst|BUILD|BUILD|0",
+      "ts_us": 1793536075764000,
+      "dur_us": 98258000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "bootstrap/zlib-ng.bst|BUILD|BUILD|0",
+      "ts_us": 1793536075764000,
+      "dur_us": 57076000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "bootstrap/attr.bst|BUILD|BUILD|0",
+      "ts_us": 1793536132840000,
+      "dur_us": 70223000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "bootstrap/zstd.bst|BUILD|BUILD|0",
+      "ts_us": 1793536174022000,
+      "dur_us": 130864000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "bootstrap/libsepol.bst|BUILD|BUILD|0",
+      "ts_us": 1793536186042000,
+      "dur_us": 194145000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "bootstrap/bzip2.bst|BUILD|BUILD|0",
+      "ts_us": 1793536203063000,
+      "dur_us": 22727000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "bootstrap/acl.bst|BUILD|BUILD|0",
+      "ts_us": 1793536225790000,
+      "dur_us": 90115000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "bootstrap/elfutils.bst|BUILD|BUILD|0",
+      "ts_us": 1793536304886000,
+      "dur_us": 187775000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "bootstrap/build/libgcc_s.bst|BUILD|BUILD|0",
+      "ts_us": 1793536315906000,
+      "dur_us": 6200000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "bootstrap/gcc.bst|BUILD|BUILD|0",
+      "ts_us": 1793536322106000,
+      "dur_us": 2586947000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "bootstrap/libselinux.bst|BUILD|BUILD|0",
+      "ts_us": 1793536380187000,
+      "dur_us": 36207000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "bootstrap/coreutils.bst|BUILD|BUILD|0",
+      "ts_us": 1793536416394000,
+      "dur_us": 286552000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "bootstrap/readline.bst|BUILD|BUILD|0",
+      "ts_us": 1793536491489000,
+      "dur_us": 26208000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "bootstrap/binutils.bst|BUILD|BUILD|0",
+      "ts_us": 1793536492661000,
+      "dur_us": 356516000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "bootstrap/bash.bst|BUILD|BUILD|0",
+      "ts_us": 1793536517697000,
+      "dur_us": 172230000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "bootstrap/gzip.bst|BUILD|BUILD|0",
+      "ts_us": 1793536689927000,
+      "dur_us": 58227000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "bootstrap/xxhash.bst|BUILD|BUILD|0",
+      "ts_us": 1793536702946000,
+      "dur_us": 14012000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "bootstrap/make.bst|BUILD|BUILD|0",
+      "ts_us": 1793536716958000,
+      "dur_us": 71240000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "bootstrap/debugedit.bst|BUILD|BUILD|0",
+      "ts_us": 1793536748154000,
+      "dur_us": 21021000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "bootstrap/dwz.bst|BUILD|BUILD|0",
+      "ts_us": 1793536769175000,
+      "dur_us": 38671000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "bootstrap/stripper.bst|BUILD|BUILD|0",
+      "ts_us": 1793536788198000,
+      "dur_us": 19648000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "bootstrap/gawk.bst|BUILD|BUILD|0",
+      "ts_us": 1793536807846000,
+      "dur_us": 104745000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "bootstrap/grep.bst|BUILD|BUILD|0",
+      "ts_us": 1793536807846000,
+      "dur_us": 116824000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "bootstrap/sed.bst|BUILD|BUILD|0",
+      "ts_us": 1793536849177000,
+      "dur_us": 118758000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "bootstrap/findutils.bst|BUILD|BUILD|0",
+      "ts_us": 1793536912592000,
+      "dur_us": 142456000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "bootstrap/diffutils.bst|BUILD|BUILD|0",
+      "ts_us": 1793536924670000,
+      "dur_us": 101342000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "bootstrap/file.bst|BUILD|BUILD|0",
+      "ts_us": 1793536967935000,
+      "dur_us": 43054000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "components/utf-locale.bst|BUILD|BUILD|0",
+      "ts_us": 1793538909053000,
+      "dur_us": 3971000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "components/gzip.bst|BUILD|BUILD|0",
+      "ts_us": 1793538913024000,
+      "dur_us": 1003000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "components/m4.bst|BUILD|BUILD|0",
+      "ts_us": 1793538913024000,
+      "dur_us": 93113000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "components/perl.bst|BUILD|BUILD|0",
+      "ts_us": 1793538913024000,
+      "dur_us": 276315000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "components/tar.bst|BUILD|BUILD|0",
+      "ts_us": 1793538913024000,
+      "dur_us": 83102000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "components/gettext.bst|BUILD|BUILD|0",
+      "ts_us": 1793538914027000,
+      "dur_us": 569796000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "components/autoconf.bst|BUILD|BUILD|0",
+      "ts_us": 1793539189339000,
+      "dur_us": 6011000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "components/autoconf2.69.bst|BUILD|BUILD|0",
+      "ts_us": 1793539189339000,
+      "dur_us": 10011000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "components/texinfo.bst|BUILD|BUILD|0",
+      "ts_us": 1793539189339000,
+      "dur_us": 143167000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "components/_private/python3-minimal.bst|BUILD|BUILD|0",
+      "ts_us": 1793539483823000,
+      "dur_us": 235323000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "components/automake.bst|BUILD|BUILD|0",
+      "ts_us": 1793539483823000,
+      "dur_us": 6007000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "components/libtool.bst|BUILD|BUILD|0",
+      "ts_us": 1793539489830000,
+      "dur_us": 13089000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "components/_private/flex-base.bst|BUILD|BUILD|0",
+      "ts_us": 1793539502919000,
+      "dur_us": 51059000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "components/pkg-config.bst|BUILD|BUILD|0",
+      "ts_us": 1793539502919000,
+      "dur_us": 22025000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "components/flex.bst|BUILD|BUILD|0",
+      "ts_us": 1793539553978000,
+      "dur_us": 0,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "components/libfl.bst|BUILD|BUILD|0",
+      "ts_us": 1793539553978000,
+      "dur_us": 0,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "components/_private/gcc-base.bst|BUILD|BUILD|0",
+      "ts_us": 1793539719146000,
+      "dur_us": 2272457000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "components/gcc-libs.bst|BUILD|BUILD|0",
+      "ts_us": 1793541991603000,
+      "dur_us": 1000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "components/gcc-manifest.bst|BUILD|BUILD|0",
+      "ts_us": 1793541991603000,
+      "dur_us": 1000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "components/gcc.bst|BUILD|BUILD|0",
+      "ts_us": 1793541991603000,
+      "dur_us": 1143000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "components/_private/python3-build-bootstrap.bst|BUILD|BUILD|0",
+      "ts_us": 1793541991604000,
+      "dur_us": 5197000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "components/_private/python3-installer-bootstrap.bst|BUILD|BUILD|0",
+      "ts_us": 1793541991604000,
+      "dur_us": 5198000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "components/diffutils.bst|BUILD|BUILD|0",
+      "ts_us": 1793541991604000,
+      "dur_us": 0,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "components/findutils.bst|BUILD|BUILD|0",
+      "ts_us": 1793541991604000,
+      "dur_us": 0,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "components/gawk.bst|BUILD|BUILD|0",
+      "ts_us": 1793541991604000,
+      "dur_us": 0,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "components/grep.bst|BUILD|BUILD|0",
+      "ts_us": 1793541991604000,
+      "dur_us": 0,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "components/make.bst|BUILD|BUILD|0",
+      "ts_us": 1793541991604000,
+      "dur_us": 0,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "components/sed.bst|BUILD|BUILD|0",
+      "ts_us": 1793541991604000,
+      "dur_us": 1141000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "components/stripper.bst|BUILD|BUILD|0",
+      "ts_us": 1793541991604000,
+      "dur_us": 0,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "public-stacks/runtime-gnu.bst|BUILD|BUILD|0",
+      "ts_us": 1793541991604000,
+      "dur_us": 0,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "public-stacks/runtime-minimal.bst|BUILD|BUILD|0",
+      "ts_us": 1793541991604000,
+      "dur_us": 0,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "components/zlib.bst|BUILD|BUILD|0",
+      "ts_us": 1793541992745000,
+      "dur_us": 0,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "components/zstd.bst|BUILD|BUILD|0",
+      "ts_us": 1793541992745000,
+      "dur_us": 1000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "components/bluez-headers.bst|BUILD|BUILD|0",
+      "ts_us": 1793541992746000,
+      "dur_us": 4055000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "components/ninja.bst|BUILD|BUILD|0",
+      "ts_us": 1793541992746000,
+      "dur_us": 164247000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "public-stacks/buildsystem-make.bst|BUILD|BUILD|0",
+      "ts_us": 1793541992746000,
+      "dur_us": 0,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "components/autoconf-archive.bst|BUILD|BUILD|0",
+      "ts_us": 1793541996801000,
+      "dur_us": 5012000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "components/which.bst|BUILD|BUILD|0",
+      "ts_us": 1793541996801000,
+      "dur_us": 8023000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "components/_private/python3-flit-core.bst|BUILD|BUILD|0",
+      "ts_us": 1793541996802000,
+      "dur_us": 3006000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "components/_private/python3-installer.bst|BUILD|BUILD|0",
+      "ts_us": 1793541999808000,
+      "dur_us": 2005000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "components/_private/python3-packaging.bst|BUILD|BUILD|0",
+      "ts_us": 1793542001813000,
+      "dur_us": 2009000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "components/_private/python3-pyproject-hooks.bst|BUILD|BUILD|0",
+      "ts_us": 1793542001813000,
+      "dur_us": 2009000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "components/_private/python3-build.bst|BUILD|BUILD|0",
+      "ts_us": 1793542003822000,
+      "dur_us": 2005000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "components/openssl.bst|BUILD|BUILD|0",
+      "ts_us": 1793542003822000,
+      "dur_us": 1435832000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "components/gdbm.bst|BUILD|BUILD|0",
+      "ts_us": 1793542004824000,
+      "dur_us": 21025000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "public-stacks/buildsystem-autotools.bst|BUILD|BUILD|0",
+      "ts_us": 1793542004824000,
+      "dur_us": 0,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "components/libffi.bst|BUILD|BUILD|0",
+      "ts_us": 1793542005827000,
+      "dur_us": 57070000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "components/sqlite.bst|BUILD|BUILD|0",
+      "ts_us": 1793542025849000,
+      "dur_us": 416529000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "components/_private/python3-setuptools.bst|BUILD|BUILD|0",
+      "ts_us": 1793542062897000,
+      "dur_us": 20043000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "components/_private/python3-wheel.bst|BUILD|BUILD|0",
+      "ts_us": 1793542082940000,
+      "dur_us": 6020000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "components/help2man.bst|BUILD|BUILD|0",
+      "ts_us": 1793542088960000,
+      "dur_us": 7576000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "components/icu.bst|BUILD|BUILD|0",
+      "ts_us": 1793542096536000,
+      "dur_us": 869532000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "components/_private/cmake-stage1.bst|BUILD|BUILD|0",
+      "ts_us": 1793542156993000,
+      "dur_us": 2161606000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "components/_private/meson.bst|BUILD|BUILD|0",
+      "ts_us": 1793542442378000,
+      "dur_us": 43055000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "components/_private/buildsystem-cmake.bst|BUILD|BUILD|0",
+      "ts_us": 1793544318599000,
+      "dur_us": 0,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "components/expat.bst|BUILD|BUILD|0",
+      "ts_us": 1793544318599000,
+      "dur_us": 8007000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "components/_private/git-minimal.bst|BUILD|BUILD|0",
+      "ts_us": 1793544326606000,
+      "dur_us": 541627000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "components/python3.bst|BUILD|BUILD|0",
+      "ts_us": 1793544326606000,
+      "dur_us": 646728000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "components/gperf.bst|BUILD|BUILD|0",
+      "ts_us": 1793544973334000,
+      "dur_us": 24025000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "components/bison.bst|BUILD|BUILD|0",
+      "ts_us": 1793544997359000,
+      "dur_us": 154155000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "components/doxygen.bst|BUILD|BUILD|0",
+      "ts_us": 1793545151514000,
+      "dur_us": 519552000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    },
+    {
+      "task_key": "components/libxml2.bst|BUILD|BUILD|0",
+      "ts_us": 1793545671066000,
+      "dur_us": 42545000,
+      "resources": [
+        "PROCESS"
+      ],
+      "primary_resource": "PROCESS",
+      "status": "SUCCESS"
+    }
+  ],
+  "phases": [],
+  "run_identity_hash": "0ccebb4abe0f237fb743068f40d4d0631d45ce84fe14deb348014c9ac0ca5041"
+}

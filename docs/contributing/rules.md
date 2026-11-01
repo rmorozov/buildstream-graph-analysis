@@ -25,6 +25,7 @@ the incident that produced it, and the incidents are why the rules are trusted (
 |---|---|
 | 🟢 only after *you* ran the Acceptance Test, output pasted | — judgement: nothing can see who ran it |
 | A merged `implementer` row is read by a `verifier` first; a hold isn't lifted until answered or declined in the task file | `test_a_merged_track_names_its_verifier.py` |
+| Request both Codex reviews for the current PR head and record completion or blockers; follow [the procedure](codex-reviews.md) | — human integrator checks external results; no automated gate |
 | Some claims have no local instrument — open the PR first (§7) | — |
 | A history figure from a shallow clone is worth nothing — ask `--is-shallow-repository` first | `test_a_guard_that_reads_history_declares_its_depth.py` |
 | `make test-touching` while you work; the tier when it is wider | `test_the_loop_stays_fast.py` — the selector, not that you ran it |

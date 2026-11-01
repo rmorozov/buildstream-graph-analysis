@@ -6,6 +6,10 @@ What a review of this repository checks, and what it leaves alone.
 is the rule; this file is neither. It is the review policy, and it is
 read by whoever — or whatever — reviews a pull request here.
 
+External review requests and completion are governed by
+[the Codex review procedure](docs/contributing/codex-reviews.md).
+Security reviewers also read [the threat model](docs/design/threat-model.md).
+
 ## Passes
 
 Run four passes and tag every finding with the pass it came from.
@@ -60,11 +64,11 @@ nobody finishes reading is a review that did not happen.
 
 ## Do not report
 
-- Generated files, committed fixtures under `tests/fixtures/`, and the
-  golden snapshot — those change by regeneration, not by hand.
-- Anything `make lint`, `make check-clean` or the suite already
-  enforces. If CI can catch it, CI should, and a finding about it is a
-  finding about the wrong layer.
+- Hand-editing advice for generated files, fixtures and golden snapshots.
+  Report generator defects, unsafe payloads, leaked data and incorrect
+  expectations; fixes belong in the source or regeneration path.
+- Duplicate mechanical findings already demonstrated by CI. Tests existing
+  for a surface do not exclude correctness or security review of it.
 - Prose style in a task file's Outcome. It is a record, not an essay.
 - Docstring layout: the Google convention (`Args:`, `Returns:`) is held by `dev_baseline.py`, not by review.
 

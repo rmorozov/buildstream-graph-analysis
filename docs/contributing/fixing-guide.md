@@ -466,6 +466,8 @@ tools/dev_finding_coverage.py  which findings a committed capture really
                              produces, read off analyze (UX-460)
 tools/dev_track_cost.py      where an implementer track's tokens went,
                              by phase, from the agent transcript (UX-525)
+tools/dev_codex_status.py    what Codex reviewed on a PR, from the bot's
+                             own review, never its marker (UX-1369)
 tools/dev_symbols.py         def, callers, importers, fan-in and dead names,
                              read off the AST, never the text (UX-700)
 tools/dev_baseline.py       every current ruff and pyright finding

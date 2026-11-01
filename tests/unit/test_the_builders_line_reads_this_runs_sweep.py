@@ -42,7 +42,10 @@ def test_a_replay_knee_of_32_never_lifts_a_safe_cap_of_8_without_admission():
 
 
 def test_a_safe_cap_above_the_knee_still_cites_this_run():
-    lines = _builder_pool_text_lines(with_own_sweep(compute_builder_pool_recommendation(17, 16, 4), FDSDK_SWEEP))
+    # UX-1368 review 2: swept to 16, as `sweep_top` would on 16 cores; a count past the sweep has no wall.
+    walls, knee = FDSDK_SWEEP
+    swept = (walls + [walls[-1]] * 12, knee)
+    lines = _builder_pool_text_lines(with_own_sweep(compute_builder_pool_recommendation(17, 16, 4), swept))
     assert lines[0].startswith("Builders: 12 with --jobserver auto - this run's replay puts 12 at 3.7 h")
     assert ", its knee at 3;" in lines[0]
     assert not any("what-if" in line for line in lines)

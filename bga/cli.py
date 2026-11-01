@@ -850,9 +850,7 @@ def _builder_pool_text_lines(recommendation: dict) -> list[str]:
         )
         what_if = recommendation.get('graph_only_knee')
         lines = [
-            f"Builders: {builders} with --jobserver auto - this run's replay puts {builders} at "
-            f"{qty.duration(walls[min(builders, len(walls)) - 1])}"
-            f"{'' if builders == 1 else f' against {qty.duration(walls[0])} at 1'}"
+            f"Builders: {builders} with --jobserver auto - {_replay_reading(walls, builders)}"
             f"{'' if what_if else f', its knee at {knee}'}; {rule}",
             f"  Ready-set width: {wide} - wider than the safe cap only with "
             "admission (BGA_ADMISSION=1), not yet measured faster",
@@ -862,7 +860,7 @@ def _builder_pool_text_lines(recommendation: dict) -> list[str]:
             lines.insert(
                 1,
                 f"  Graph-only what-if (not a recommendation): the replay, which does not model contention, "
-                f"keeps shortening to {what_if} builders ({qty.duration(walls[min(what_if, len(walls)) - 1])}); "
+                f"keeps shortening to {what_if} builders ({qty.duration(walls[what_if - 1])}); "
                 "above the safe cap needs admission or a contention-aware measurement",
             )
     if recommendation.get('approaches'):
@@ -892,14 +890,29 @@ _OFF_BECAUSE = {
 _AUTO_READ = {
     'small': "a 4-vCPU (2-core SMT) auto pair read 235 s -> 233 s, -1%, inside noise (UX-1004)",
     'serial': "a serial chain of -j1 elements read 30.25 s off, 30.46 s auto (UX-679)",
-    'fat': "proposed; read on 13-mixed-graph, 16 Graviton cores: 143.6 s -> 118.3 s (UX-1005), not on this run",
+    'fat': "read on 13-mixed-graph, 16 Graviton cores: 143.6 s -> 118.3 s (UX-1005), not on this run",
 }
+
+
+def _replay_wall(walls: list, count: int) -> Optional[int]:
+    """UX-1368 review 2: the replay's wall at `count` builders, `None` past the sweep."""
+    return walls[count - 1] if 0 < count <= len(walls) else None
+
+
+def _replay_reading(walls: list, count: int) -> str:
+    """This run's replay at `count` builders against 1, or that the sweep stopped short of it."""
+    at = _replay_wall(walls, count)
+    if at is None:
+        return f"this run's replay stops at {len(walls)} builders, so {count} is not swept"
+    return f"this run's replay puts {count} at {qty.duration(at)}" + (
+        "" if count == 1 else f" against {qty.duration(walls[0])} at 1"
+    )
 
 
 def _builders_off_lines(recommendation: dict) -> list[str]:
     """UX-1368: builders and max-jobs with the jobserver off, from this run's replay."""
     walls, knee, builders = recommendation['sweep_walls_us'], recommendation['sweep_knee'], recommendation['builders']
-    at = walls[min(builders, len(walls)) - 1]
+    at = _replay_wall(walls, builders)
     gain = (at - min(walls)) / at if at else 0.0
     why = _OFF_BECAUSE[recommendation['regime']].format(
         host=recommendation['host_cpu_count'], chain=recommendation['critical_path_max_jobs']
@@ -908,9 +921,8 @@ def _builders_off_lines(recommendation: dict) -> list[str]:
     if recommendation['builders_source'] != 'capacity':
         tail += f"; builders from the {recommendation['builders_source']}"
     return [
-        f"Builders: {builders} with --jobserver off, max-jobs {recommendation['max_jobs']} - {why}; this run's "
-        f"replay puts {builders} at {qty.duration(at)}"
-        f"{'' if builders == 1 else f' against {qty.duration(walls[0])} at 1'}, its knee at {knee}{tail}"
+        f"Builders: {builders} with --jobserver off, max-jobs {recommendation['max_jobs']} - {why}; "
+        f"{_replay_reading(walls, builders)}, its knee at {knee}{tail}"
     ]
 
 
@@ -938,8 +950,10 @@ def _approach_lines(recommendation: dict) -> list[str]:
         if name == 'off':
             note = "proposed" if approach['proposed'] else f"the chain stays at {jobs} of {host} cores"
         elif name == 'auto':
-            note = _AUTO_READ[regime] + (
-                "" if regime == 'fat' else f"; builders = {host} cores less the chain's {chain}"
+            note = (
+                ("proposed; " if approach['proposed'] else "")
+                + _AUTO_READ[regime]
+                + ("" if regime == 'fat' else f"; builders = {host} cores less the chain's {chain}")
             )
         elif name == 'configured':
             note = "as this run was configured" + ("" if mode else ", its jobserver mode not recorded")

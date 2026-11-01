@@ -126,6 +126,8 @@ def test_a_zero_capacity_proposes_nothing(host, chain):
     assert lines[0] == f"Builders: none proposed - {ZERO['verdict']}"
     assert not any(a["proposed"] for a in sized["approaches"])
     assert f"    off: none - {ZERO['verdict']}" in lines
+    # Review 2: the rendered rows carry no proposal either, the fat auto row included.
+    assert not any("; proposed" in line for line in lines), lines
 
 
 def test_a_withheld_capacity_falls_back_to_the_knee_and_says_so():
@@ -144,6 +146,9 @@ def test_a_count_past_the_sweep_has_no_replay_wall():
     lines = _builder_pool_text_lines(sized)
     assert (_row(sized, "auto")["builders"], _row(sized, "auto")["replay_wall_us"]) == (120, None)
     assert _row(sized, "configured")["replay_wall_us"] is None
+    assert lines[0].startswith(
+        "Builders: 120 with --jobserver auto - this run's replay stops at 32 builders, so 120 is not swept, its knee at 32;"
+    ), lines[0]
     assert any(
         line.startswith("    auto: --builders 120 --max-jobs 8 --jobserver auto - not swept (the replay stops at 32);")
         for line in lines
@@ -172,3 +177,11 @@ def test_an_unrecorded_mode_is_said_and_never_called_off():
 )
 def test_the_capture_mode_is_labelled(jobserver, label):
     assert jobserver_label(jobserver) == label
+
+
+def test_an_off_headline_past_the_sweep_claims_no_wall_or_gain():
+    walls = FAT_WALLS[:32]
+    lines = _builder_pool_text_lines(_sized(400, 64, 64, (walls, 32), (64, 64), capacity=48))
+    assert lines[0].startswith("Builders: 48 with --jobserver off, max-jobs 64 - a small host"), lines[0]
+    assert "this run's replay stops at 32 builders, so 48 is not swept, its knee at 32" in lines[0]
+    assert "more builders buy" not in lines[0]

@@ -79,3 +79,11 @@ Builders: 3 with --jobserver off, max-jobs 4 - a small host: 4 cores, no more th
 | R4 configured row hardcodes off | configured mode, unrecorded mode | 2 failed, 23 passed |
 | R4b dedupe on the pair alone | configured mode, unrecorded mode | 2 failed, 23 passed |
 | reverted (M1-M5 re-run, all red) | — | 25 passed |
+
+**Review 2** (owner, at `3f4ae4b6`): the fat auto row's evidence string carried a literal `proposed;`, so a zero-capacity refusal on 16 cores still printed `auto: ...; proposed`; the label now reads the approach's own flag. Both headlines priced a count past the sweep with the last swept wall (`120 at 90 s`); `_replay_wall` returns `None` past the sweep, and the headline says `this run's replay stops at 32 builders, so 120 is not swept` with no comparison or gain. UX-1363's cap-above-knee case had a 4-point sweep under a cap of 12, read through the same lookup; it now sweeps to 16, as `sweep_top` would.
+
+| mutation | reddened | count |
+|---|---|---|
+| S1 the auto row reads proposed whatever the flag | zero capacity x2, fdsdk approaches | 3 failed, 23 passed |
+| S2 the headline takes the last swept wall | past the sweep, off headline past the sweep | 2 failed, 24 passed |
+| reverted | — | 26 passed |

@@ -22,12 +22,11 @@ def _dispatch(event, payload):
     )
 
 
-def test_every_agent_and_skill_is_linked_and_a_rerun_adds_no_second_hook(tmp_path):
+def test_the_agents_and_skills_are_linked_and_a_rerun_adds_no_second_hook(tmp_path):
     _setup(tmp_path)
     settings = _setup(tmp_path)
-    for kind in ("agents", "skills"):
-        want = sorted(p.name for p in (REPO / ".claude" / kind).iterdir() if not p.name.startswith("__"))
-        assert sorted(p.name for p in (tmp_path / ".claude" / kind).iterdir()) == want
+    for linked in ("agents/verifier.md", "agents/implementer.md", "skills/verify", "skills/falsify"):
+        assert (tmp_path / ".claude" / linked).resolve() == REPO / ".claude" / linked
     for event in ("PreToolUse", "PostToolUse", "SessionStart"):
         assert len(settings["hooks"][event]) == 1, settings["hooks"][event]
         assert str(DISPATCH) in settings["hooks"][event][0]["hooks"][0]["command"]

@@ -32,6 +32,13 @@ Mechanical and bounded shapes are `implementer` tracks on `sonnet` in worktrees,
 context at each rebuild — the `decompose` skill carries the measured share, with its window; a result over a screen goes to the scratchpad (`UX-711`). `measure`, `falsify`, `verify`
 (which calls `self-review` last) run inside a track; `derive` before moving viewer code; `walk` and `design-review` audit the page and `review` the documents and a surface diff with no page; `retro` runs weekly, grouping bookkeeping into proposals; every run is a row in `docs/audits/agent-runs.md`.
 
+## External PR reviews
+
+Before PR handoff, follow [the Codex review procedure](docs/contributing/codex-reviews.md)
+to request both code and security reviews for the current head and record their
+results or blockers. Local self-review remains required; external review does
+not replace the push gate, CI or human approval.
+
 ## Conventions
 
 - **Every claim is a pasted measurement**, with the command and fixture

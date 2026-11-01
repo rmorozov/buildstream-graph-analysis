@@ -4,6 +4,6 @@ Printed by `dev_area_pages.py --areas` (`UX-688`, `UX-1000`) from each task's `*
 
 | Task | Topic | Guard |
 |---|---|---|
-| [UX-481](https://github.com/rmorozov/buildstream-graph-analysis/blob/d9b25851a22e0dc3054c63242ffd668f6f4cbd80/docs/backlog/scenarios/UX-0481-the-replay-lets-a-build-start-before-its-dependency-is-pulled.md) | analysis | `test_a_pulled_dependency_gates_the_build.py` · inferred r149 |
+| [UX-481](https://github.com/rmorozov/buildstream-graph-analysis/blob/d9853c8b1f6c5ffe001846f235243b408cab9ad0/docs/backlog/scenarios/UX-0481-the-replay-lets-a-build-start-before-its-dependency-is-pulled.md) | analysis | `test_a_pulled_dependency_gates_the_build.py` · inferred r149 |
 
 covered 1 / 1 (none 0, inferred r149 1, no line 0)

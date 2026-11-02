@@ -87,3 +87,40 @@ class TestClangBuildsBoth:
         with zipfile.ZipFile(wheel) as zf:
             stamp = json.loads(zf.read(next(n for n in zf.namelist() if n.endswith("prebuilt/stamp.json"))))
         assert "clang" in stamp["compiler"], stamp
+
+
+FOREIGN = next(m for m in (183, 62) if m != native_prebuilt.ELF_MACHINE.get(os.uname().machine))
+
+
+def _foreign_cc(tmp_path):
+    """A `$CC` that exits 0 having written an ELF for another machine, as a cross compiler does."""
+    script = tmp_path / "cross-cc"
+    header = b"\x7fELF\x02\x01" + bytes(12) + FOREIGN.to_bytes(2, "little")
+    script.write_text(
+        f"#!{sys.executable}\nimport sys\n"
+        f"if '--version' in sys.argv: print('cross-cc 1.0'); sys.exit(0)\n"
+        f"open(sys.argv[sys.argv.index('-o') + 1], 'wb').write({header!r})\n"
+    )
+    script.chmod(0o755)
+    return str(script)
+
+
+class TestACrossCompilerCannotCertifyThisHost:
+    """Codex on ba5a112e: a cross `$CC` exits 0, so the stamp's machine must come from the binary."""
+
+    def test_the_build_refuses_a_foreign_target(self, tmp_path):
+        with pytest.raises(RuntimeError, match=f"for ELF machine {FOREIGN}, not this {os.uname().machine} host"):
+            native_prebuilt.build(str(tmp_path / "out"), [_foreign_cc(tmp_path)])
+        assert not (tmp_path / "out" / native_prebuilt.STAMP).exists()
+
+    def test_find_refuses_a_foreign_binary_under_a_host_stamp(self, tmp_path, monkeypatch):
+        dest = tmp_path / "prebuilt"
+        dest.mkdir()
+        (dest / "hook.so").write_bytes(b"\x7fELF\x02\x01" + bytes(12) + FOREIGN.to_bytes(2, "little"))
+        sources = {
+            src: native_prebuilt.sha256(os.path.join(native_prebuilt.HERE, src)) for src in ("hook.c", "spine.c")
+        }
+        stamp = {"machine": os.uname().machine, "compiler": "cross-cc 1.0", "sources": sources}
+        (dest / native_prebuilt.STAMP).write_text(json.dumps(stamp))
+        monkeypatch.setattr(native_prebuilt, "PREBUILT_DIR", str(dest))
+        assert native_prebuilt.find("hook.so") is None

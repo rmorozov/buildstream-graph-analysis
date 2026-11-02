@@ -76,3 +76,20 @@ alone `7 passed in 6.37s`.
 The clang doctor clause lives in `test_doctor.py`: a third new file
 importing `bga_doctor` widened its selection to 50, over
 `test_the_loop_stays_fast.py`'s `HANDFUL` of 49.
+
+### Codex on `ba5a112e`: a cross `$CC` certified the host
+
+Held. A `$CC` such as `aarch64-linux-gnu-gcc` exits 0 on an x86-64
+builder, and the stamp wrote `platform.machine()`, so `find()` would
+have handed AArch64 binaries to an x86-64 capture. Fixed: `build()`
+reads the ELF header's `e_machine` of each output and refuses one that
+is not this host's (`ELF_MACHINE`), before any stamp is written; `find()`
+reads it too, so a stamp alone cannot vouch for a binary. Cross wheels
+stay out of scope. Guard `TestACrossCompilerCannotCertifyThisHost`: a
+stand-in cross `$CC` that exits 0 having written an ELF for another
+machine.
+
+| mutation | reddened | run |
+|---|---|---|
+| C1 `build` trusts the compiler's exit | the build refuses a foreign target | 1 failed, 23 passed |
+| C2 `find` trusts the stamp's machine | find refuses a foreign binary under a host stamp | 1 failed, 23 passed |

@@ -21,6 +21,25 @@ STAMP = "stamp.json"
 SOURCES = {"hook.so": "hook.c", "spine": "spine.c"}
 # UX-1374: `$CC` first, then these in order; any of them builds both.
 CANDIDATES = ("cc", "gcc", "clang")
+# ELF e_machine by `platform.machine()`: a cross `$CC` exits 0 on a foreign target, so the binary is asked.
+ELF_MACHINE = {"x86_64": 62, "aarch64": 183, "i686": 3, "armv7l": 40, "riscv64": 243, "ppc64le": 21, "s390x": 22}
+
+
+def elf_machine(path: str):
+    """The ELF header's e_machine, or None when the file is not ELF."""
+    try:
+        with open(path, "rb") as fh:
+            head = fh.read(20)
+    except OSError:
+        return None
+    if len(head) < 20 or head[:4] != b"\x7fELF":
+        return None
+    return int.from_bytes(head[18:20], "little" if head[5] == 1 else "big")
+
+
+def runs_here(path: str) -> bool:
+    expected = ELF_MACHINE.get(platform.machine())
+    return expected is not None and elf_machine(path) == expected
 
 
 def compiler(environ=None):
@@ -68,7 +87,7 @@ def find(name: str, prebuilt_dir=None, source_dir=HERE):
     prebuilt_dir = prebuilt_dir or PREBUILT_DIR
     stamp = read_stamp(prebuilt_dir)
     path = os.path.join(prebuilt_dir, name)
-    if stamp is None or not os.path.isfile(path) or stamp.get("machine") != platform.machine():
+    if stamp is None or stamp.get("machine") != platform.machine() or not runs_here(path):
         return None
     source = os.path.join(source_dir, SOURCES[name])
     if not os.path.isfile(source) or stamp.get("sources", {}).get(SOURCES[name]) != sha256(source):
@@ -86,6 +105,12 @@ def build(dest: str, cc: list, source_dir: str = HERE) -> dict:
         result = subprocess.run(argv, capture_output=True, text=True)
         if result.returncode != 0:
             raise RuntimeError(f"BGA_HOOK=prebuilt: {' '.join(argv)} failed:\n{result.stderr}")
+        out = argv[argv.index("-o") + 1]
+        if not runs_here(out):
+            raise RuntimeError(
+                f"BGA_HOOK=prebuilt: {' '.join(cc)} built {os.path.basename(out)} for ELF machine "
+                f"{elf_machine(out)}, not this {platform.machine()} host; cross wheels are not supported"
+            )
     version = subprocess.run([*cc, "--version"], capture_output=True, text=True).stdout.splitlines()
     stamp = {
         "machine": platform.machine(),

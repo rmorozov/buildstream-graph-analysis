@@ -19,13 +19,19 @@ needs_cc = pytest.mark.skipif(CC is None, reason="no C compiler on PATH")
 PREBUILT_FILES = {"hook.so", "spine", "stamp.json"}
 
 
+def elf(name, machine=None):
+    """A stand-in binary: an ELF64 little-endian header for `machine` (this host's by default), then its name."""
+    machine = native_prebuilt.ELF_MACHINE[os.uname().machine] if machine is None else machine
+    return b"\x7fELF\x02\x01" + bytes(12) + machine.to_bytes(2, "little") + b"prebuilt " + name.encode()
+
+
 @pytest.fixture
 def stamped(tmp_path, monkeypatch):
     """A prebuilt directory whose stamp matches this checkout's sources, with stand-in binaries."""
     dest = tmp_path / "prebuilt"
     dest.mkdir()
     for name in ("hook.so", "spine"):
-        (dest / name).write_bytes(b"prebuilt " + name.encode())
+        (dest / name).write_bytes(elf(name))
     stamp = {
         "machine": os.uname().machine,
         "compiler": "cc (stand-in) 1.0",
@@ -74,8 +80,8 @@ class TestTheCaptureTakesThePrebuiltWithNoCompiler:
         monkeypatch.setenv("PATH", str(tmp_path / "empty"))
         build = tmp_path / "build"
         build.mkdir()
-        assert open(tracer.compile_hook(str(build)), "rb").read() == b"prebuilt hook.so"
-        assert open(tracer.compile_spine(str(build)), "rb").read() == b"prebuilt spine"
+        assert open(tracer.compile_hook(str(build)), "rb").read() == elf("hook.so")
+        assert open(tracer.compile_spine(str(build)), "rb").read() == elf("spine")
 
     def test_a_stale_hook_with_no_compiler_fails_as_before(self, stamped, tmp_path, monkeypatch):
         dest, stamp = stamped

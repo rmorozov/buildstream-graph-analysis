@@ -56,3 +56,10 @@ def test_a_checkout_outside_the_allowlist_runs_no_hook(tmp_path):
     call = {"tool_name": "Bash", "cwd": str(clone), "tool_input": {"command": "ls"}}
     assert _dispatch("PreToolUse", call).returncode == 0
     assert _dispatch("PreToolUse", call, allowed=(str(clone),)).returncode == 7
+
+
+def test_a_command_from_the_parent_that_enters_the_checkout_is_still_refused():
+    parent = str(REPO.parent)
+    for command in (f"cd {REPO.name} && git add -A", f"cd {REPO} && git status && git add -A"):
+        call = {"tool_name": "Bash", "cwd": parent, "tool_input": {"command": command}}
+        assert _dispatch("PreToolUse", call).returncode == 2, command

@@ -16,6 +16,7 @@ import json
 import os
 import pathlib
 import re
+import shlex
 import subprocess
 import sys
 
@@ -50,6 +51,29 @@ def run(root, command, payload):
     return subprocess.run(["bash", "-c", command], input=payload, text=True, env=env, cwd=root, check=False)
 
 
+def targets(cwd, command):
+    """`cwd`, then each directory a `cd DIR` or `git -C DIR` in `command` names."""
+    found = [cwd]
+    try:
+        words = shlex.split(command or "", posix=True)
+    except ValueError:
+        return found
+    for before, word in zip(words, words[1:]):
+        if before in ("cd", "-C"):
+            found.append(os.path.join(cwd, os.path.expanduser(word)))
+    return found
+
+
+def allowed_root(data, repos):
+    """The allowed checkout the call runs in, or one its command enters."""
+    cwd = data.get("cwd") or os.getcwd()
+    for place in targets(cwd, (data.get("tool_input") or {}).get("command")):
+        found = checkout(place) if os.path.isdir(place) else None
+        if found and {found[0].resolve(), found[1].resolve()} & set(repos):
+            return found[0]
+    return None
+
+
 def main(argv):
     event, repos = argv[0], [pathlib.Path(r).resolve() for r in argv[1:]]
     payload = sys.stdin.read()
@@ -58,8 +82,10 @@ def main(argv):
         roots = repos
     else:
         # Only an allowed checkout or one of its worktrees: a cloned capture's hooks never run.
-        found = checkout(data.get("cwd") or os.getcwd())
-        roots = [found[0]] if found and {found[0].resolve(), found[1].resolve()} & set(repos) else []
+        root = allowed_root(data, repos)
+        roots = [root] if root else []
+        if root and data.get("cwd") and not str(pathlib.Path(data["cwd"]).resolve()).startswith(str(root)):
+            payload = json.dumps(dict(data, cwd=str(root)))  # the hook judges the tree the command enters
     for root in roots:
         for command in commands(root, event, data.get("tool_name")):
             done = run(root, command, payload)

@@ -6,17 +6,23 @@
 # `.claude/hooks/dispatch_by_repo.py`, and (without --links-only)
 # unshallows the clone and installs the lock and the editable package.
 #
+#   bash /home/*/buildstream-graph-analysis/tools/dev_cloud_setup.sh
 #   bash tools/dev_cloud_setup.sh [--links-only] [REPO...]
 #
-# The cloud environment's setup script runs it; every REPO's hooks fire
-# for a call made inside it, the first REPO owns the agents and skills.
+# The cloud environment's setup script runs it; with no REPO it takes
+# this checkout and a sibling bga-bench. Every REPO's hooks fire for a
+# call made inside it; the first REPO owns the agents and skills.
 set -euo pipefail
 
 links_only=0
 if [[ "${1:-}" == "--links-only" ]]; then links_only=1; shift; fi
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 repos=("$@")
-[[ ${#repos[@]} -gt 0 ]] || repos=("$here")
+if [[ ${#repos[@]} -eq 0 ]]; then
+    repos=("$here")
+    # The project's second checkout clones beside this one, wherever home is.
+    [[ -d "$here/../bga-bench/.git" ]] && repos+=("$(cd "$here/../bga-bench" && pwd)")
+fi
 owner="${repos[0]}"
 user_dir="${HOME}/.claude"
 mkdir -p "$user_dir/agents" "$user_dir/skills"
@@ -53,6 +59,7 @@ for repo in "${repos[@]}"; do
         git -C "$repo" fetch --unshallow --quiet origin
     fi
 done
-python3 -m pip install --quiet -r "$owner/requirements.lock"
-python3 -m pip install --quiet -e "$owner"
+# Debian's argcomplete and PyYAML refuse an uninstall, so the lock goes in over them.
+python3 -m pip install --quiet --ignore-installed -r "$owner/requirements.lock"
+python3 -m pip install --quiet --no-deps -e "$owner"
 python3 "$owner/tools/dev_env_check.py"

@@ -70,4 +70,10 @@ Deviation: running the script against this session's own `~/.claude`
 was refused by the session's permission classifier as self-modification,
 so the live reading is the cloud environment's first session. The
 environment's setup script is one line:
-`bash /home/claude/buildstream-graph-analysis/tools/dev_cloud_setup.sh /home/claude/buildstream-graph-analysis /home/claude/bga-bench`.
+`bash /home/*/buildstream-graph-analysis/tools/dev_cloud_setup.sh`.
+
+Probe of the owner's environment (2026-11-02, a new thread in
+`env_01812Zfp`): setup exited 127, because the script was not on `main`
+and because the environment clones to `/home/user`, not `/home/claude`.
+Agents, skills and hooks were absent, the clone shallow, `bga` not
+installed. The script now finds its checkouts from its own path.

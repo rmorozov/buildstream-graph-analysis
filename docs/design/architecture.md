@@ -94,7 +94,7 @@ report/       -> text/JSON rendering (presentation only, since UX-75)
 
 - `bga wrap` -> `tools/bst_run_wrapped.py` — Plane 1's capture
 - `bga extract` -> `tools/bst_extract_run.py` — a log plus a project becomes a run directory
-- `bga capture` -> `tools/bst_native_build_tracer.py` — Plane 2's tracer, over `tools/native_trace/bwrap_shim.py` (the shim ahead of the real `bwrap`), `tools/native_trace/hook.c` (the `LD_PRELOAD` hook), `tools/native_trace/spine.c` (the ptrace spine, for static binaries), `tools/native_trace/trackevent.py` (Perfetto's own TrackEvent writer), `tools/native_trace/wrappers/` (UX-846's jobserver token-holding wrappers) and `tools/jobserver/` (`UX-901`: the token pool and its ledger, behind an import boundary — the tracer is its only caller; detail in `docs/design/areas/tools-native_trace.md`)
+- `bga capture` -> `tools/bst_native_build_tracer.py` — Plane 2's tracer, over `tools/native_trace/bwrap_shim.py` (the shim ahead of the real `bwrap`), `tools/native_trace/hook.c` (the `LD_PRELOAD` hook), `tools/native_trace/spine.c` (the ptrace spine, for static binaries), `tools/native_trace/trackevent.py` (Perfetto's own TrackEvent writer), `tools/native_trace/wrappers/` (UX-846's jobserver token-holding wrappers), `tools/native_trace/prebuilt.py` (`UX-1373`: the hook and spine a `BGA_HOOK=prebuilt` wheel ships, used while their stamp matches) and `tools/jobserver/` (`UX-901`: the token pool and its ledger, behind an import boundary — the tracer is its only caller; detail in `docs/design/areas/tools-native_trace.md`)
 - `bga cache-logs` -> `tools/bst_cache_logs.py` — Plane 3's reader
 - `bga snapshot` -> `tools/bga_snapshot.py` — the local loop as one command
 - `bga timeline` -> `tools/bga_timeline.py` — both planes on one clock
@@ -424,6 +424,13 @@ and is superseded now is what the record says, and sweeping it forward
 with the tables above destroys the one thing the entry is for
 (`UX-653`). The newest entry is the exception: every round that
 re-grounds the document rewrites it.
+
+Updated 2026-11-02 (after `UX-1373`), covering two changes to this
+document, the second this entry itself. The `bga capture` row names
+`tools/native_trace/prebuilt.py`, the sixth member of Plane 2's
+mechanism; no contract moved. The figures are re-grounded in
+`bga analyze --schema` (`analyze/v7`: **66 top-level properties**) and
+`bga.contracts.ids()`: **28 emitted ids**.
 
 Updated 2026-10-30 (after `UX-1357`), covering two changes to this
 document, the second this entry itself. The `bga whatif` row names

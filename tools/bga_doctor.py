@@ -163,7 +163,17 @@ def check_bwrap() -> dict:
 def check_compiler() -> dict:
     """A C compiler for the hook and the spine: the capture's own choice, and the hook compiled once."""
     from .bst_native_build_tracer import TraceError, c_compiler, compile_hook
+    from .native_trace import prebuilt as native_prebuilt
 
+    # UX-1373: a prebuilt wheel's hook and spine stand in for a compiler while their stamp matches.
+    if native_prebuilt.find("hook.so") and native_prebuilt.find("spine"):
+        stamp = native_prebuilt.read_stamp() or {}
+        return _check(
+            "c-compiler",
+            OK,
+            f"the wheel's prebuilt hook and spine match their sources ({stamp.get('compiler', 'unknown compiler')}); "
+            "no C compiler needed",
+        )
     remedy = "apt-get install -y build-essential (Plane 1 and Plane 3 work without it; only `bga capture` needs it)"
     # UX-1287: compile the real hook into a scratch dir, so a cc that cannot build it fails here, not at capture.
     with tempfile.TemporaryDirectory(prefix="bga-doctor-cc-") as scratch:

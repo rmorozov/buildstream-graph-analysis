@@ -685,6 +685,8 @@ LARGE = (
 )
 
 MEDIUM = (
+    # `UX-1373`: two wheel builds, network for the build backend. 15.13 / 14.69 / 14.07s single-process.
+    "tests/unit/test_a_wheel_carries_its_hook_prebuilt_or_compiles_it.py",  # 14.6s
     "tests/unit/test_a_broken_pipe_is_not_an_error.py",  # 1.6s
     # `UX-665`, tiered on landing: one Chromium, three boots (golden,
     # macro_micro, the built shared-resource fixture). 1.77/1.78/1.82s

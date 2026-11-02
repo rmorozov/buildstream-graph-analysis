@@ -1124,6 +1124,15 @@ jobs:
           print('hook.c present in the installed package')
           "
 
+      - name: Both wheel kinds build, and only the prebuilt one carries binaries
+        # UX-1373: BGA_HOOK=prebuilt is a py3-none-<platform> wheel with the hook, the spine and their stamp.
+        run: |
+          set -euo pipefail
+          BGA_HOOK=prebuilt python -m build --wheel --outdir dist-prebuilt/
+          ls dist-prebuilt/*-py3-none-linux_x86_64.whl
+          [ "$(unzip -l dist-prebuilt/*.whl | grep -cE 'native_trace/prebuilt/(hook\.so|spine|stamp\.json)$')" = 3 ]
+          [ "$(unzip -l dist/*.whl | grep -cE 'native_trace/prebuilt/')" = 0 ]
+
   installed-capture:
     # UX-150: the shape real users deploy in - a wheel built from a
     # checkout in one directory, installed into the venv of a project in
@@ -1157,7 +1166,8 @@ jobs:
         run: |
           set -euo pipefail
           python -m pip install --upgrade pip build
-          python -m build --wheel --outdir dist/
+          # UX-1373: the prebuilt kind, so the capture below runs with no compiler and must use the wheel's hook.
+          BGA_HOOK=prebuilt python -m build --wheel --outdir dist/
           python -m venv /tmp/projvenv
           /tmp/projvenv/bin/pip install "BuildStream==${BST_VERSION}" "buildstream-plugins==${BST_PLUGINS_VERSION}"
           # The wheel, by path, the way a user installs this repo into
@@ -1184,10 +1194,15 @@ jobs:
         # prior round's checkout-relative assumption stayed hidden.
         run: |
           set -euo pipefail
-          export PATH="/tmp/projvenv/bin:$PATH"
+          # UX-1373: a cc and gcc that fail, so a capture that compiled instead of using the prebuilt hook reds.
+          mkdir -p /tmp/nocc
+          printf '#!/bin/sh\necho "UX-1373: the prebuilt wheel compiled" >&2\nexit 97\n' > /tmp/nocc/cc
+          chmod +x /tmp/nocc/cc && cp /tmp/nocc/cc /tmp/nocc/gcc
+          export PATH="/tmp/nocc:/tmp/projvenv/bin:$PATH"
           cd /tmp/theirproject/proj
           unset PYTHONPATH
-          bga doctor .
+          bga doctor . | tee /tmp/doctor.txt
+          grep -q "prebuilt hook and spine match" /tmp/doctor.txt
           bga snapshot --diagnose -- bst --builders 2 build all.bst
           # UX-1347: auto binds native_trace/wrappers into the sandbox, which only package-data ships;
           # the artifacts go first, or the second build is all cache hits and no sandbox runs.

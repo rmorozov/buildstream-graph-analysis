@@ -49,7 +49,7 @@ thread session listing `verifier` among its agents, waits on the owner.
 
 Gap: listed above (agents, skills, the unrefused bulk add). Close:
 `python3 -m pytest -q tests/unit/test_a_thread_session_runs_the_repos_hooks.py`
-reads `8 passed`. Mutations, `PYTHONDONTWRITEBYTECODE=1`:
+reads `9 passed`. Mutations, `PYTHONDONTWRITEBYTECODE=1`:
 
 | mutation | red |
 |---|---|
@@ -64,6 +64,7 @@ reads `8 passed`. Mutations, `PYTHONDONTWRITEBYTECODE=1`:
 | a new file's missing directory is not walked up | 1 failed, 6 passed |
 | a relative REPO argument is kept relative | 1 failed, 6 passed |
 | a relative `file_path` is passed on unchanged | 1 failed, 15 passed |
+| a candidate's `.git` redirect is trusted | 1 failed, 16 passed |
 
 Review (GitHub code scanning on #339): with no allowlist the dispatcher
 ran the hooks of any checkout a call entered, so a cloned capture source
@@ -77,6 +78,9 @@ from the parent ran no hook, and a relative REPO linked dangling paths;
 the dispatcher now reads `file_path`, and the script makes REPO absolute.
 On `80231a31`: a relative `file_path` named the wrong file once the hook
 ran in the checkout; the dispatcher now makes it absolute first.
+On `889ed9cc` (P1): a `.git` file pointing into the checkout borrowed its
+allowlist; a worktree now counts only if the checkout's own
+`git worktree list` names it.
 
 Deviation: running the script against this session's own `~/.claude`
 was refused by the session's permission classifier as self-modification,

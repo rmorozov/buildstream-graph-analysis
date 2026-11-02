@@ -67,7 +67,7 @@ def test_no_review_fails():
 
 def test_only_code_after_the_reviewed_sha_asks_for_another_review():
     assert _verdict([OLD], changed=["docs/audits/round-176.md", "tests/quality_baseline.json"])[0] == []
-    for path in ("bga/report/json.py", "Makefile"):
+    for path in ("bga/report/json.py", "Makefile", ".claude/settings.json"):
         problems, _ = _verdict([OLD], changed=[path])
         assert problems and path in problems[0]
 

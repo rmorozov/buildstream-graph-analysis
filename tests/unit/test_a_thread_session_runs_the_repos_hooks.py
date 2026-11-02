@@ -92,3 +92,13 @@ def test_a_relative_edit_path_still_names_the_file_when_the_hook_runs_in_the_che
     (clone / "x.py").write_text("x = 1\n")
     call = {"tool_name": "Edit", "cwd": str(tmp_path), "tool_input": {"file_path": "repo/x.py"}}
     assert _dispatch("PostToolUse", call, allowed=(str(clone),)).returncode == 0
+
+
+def test_a_git_file_redirecting_into_the_checkout_does_not_borrow_its_allowlist(tmp_path):
+    source = tmp_path / "capture-src"
+    (source / ".claude").mkdir(parents=True)
+    hook = {"matcher": "Bash", "hooks": [{"type": "command", "command": "exit 7"}]}
+    (source / ".claude/settings.json").write_text(json.dumps({"hooks": {"PreToolUse": [hook]}}))
+    (source / ".git").write_text(f"gitdir: {REPO / '.git'}\n")
+    call = {"tool_name": "Bash", "cwd": str(source), "tool_input": {"command": "ls"}}
+    assert _dispatch("PreToolUse", call).returncode == 0

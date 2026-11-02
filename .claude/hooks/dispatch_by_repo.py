@@ -67,6 +67,14 @@ def targets(cwd, tool_input):
     return found
 
 
+def worktrees(repo):
+    """Toplevels the trusted checkout itself registers, never a candidate's `.git` redirect."""
+    argv = ["git", "-C", str(repo), "worktree", "list", "--porcelain"]
+    done = subprocess.run(argv, capture_output=True, text=True, check=False)
+    lines = done.stdout.splitlines() if done.returncode == 0 else []
+    return {pathlib.Path(line[len("worktree ") :]).resolve() for line in lines if line.startswith("worktree ")}
+
+
 def allowed_root(data, repos):
     """The allowed checkout the call runs in, or one its command enters."""
     cwd = data.get("cwd") or os.getcwd()
@@ -74,7 +82,7 @@ def allowed_root(data, repos):
         while place and not os.path.isdir(place) and place != os.path.dirname(place):
             place = os.path.dirname(place)  # a Write may create the directory
         found = checkout(place) if os.path.isdir(place) else None
-        if found and {found[0].resolve(), found[1].resolve()} & set(repos):
+        if found and found[1].resolve() in repos and found[0].resolve() in worktrees(found[1]):
             return found[0]
     return None
 

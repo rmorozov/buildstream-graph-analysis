@@ -42,7 +42,9 @@ BOUNDARIES = (
 
 
 def is_code(path):
-    """Source, or an extensionless file such as `Makefile`, which runs the gates."""
+    """Source, an extensionless file such as `Makefile`, or `.claude/`, which picks the gates."""
+    if path.startswith(".claude/"):
+        return True
     return not path.startswith("docs/") and (path.endswith(CODE_SUFFIXES) or "." not in path.rsplit("/", 1)[-1])
 
 

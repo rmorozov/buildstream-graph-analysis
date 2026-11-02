@@ -153,3 +153,37 @@ def test_a_prefix_sharing_sibling_is_not_inside_the_checkout(tmp_path):
         "tool_input": {"command": "cd ../repo && git push"},
     }
     assert _dispatch("PreToolUse", call, allowed=(str(tmp_path / "repo"), str(tmp_path / "repo-other"))).returncode == 0
+
+
+def test_an_unshallow_with_no_credentials_does_not_stop_the_installs(tmp_path):
+    source, clone, stub = tmp_path / "src", tmp_path / "clone", tmp_path / "bin"
+    subprocess.run(["git", "init", "-q", str(source)], check=True)
+    for n in (1, 2):
+        subprocess.run(
+            [
+                "git",
+                "-C",
+                str(source),
+                "-c",
+                "user.name=t",
+                "-c",
+                "user.email=t@t",
+                "commit",
+                "-q",
+                "--allow-empty",
+                "-m",
+                str(n),
+            ],
+            check=True,
+        )
+    subprocess.run(["git", "clone", "-q", "--depth", "1", f"file://{source}", str(clone)], check=True)
+    subprocess.run(["git", "-C", str(clone), "remote", "set-url", "origin", str(tmp_path / "gone")], check=True)
+    stub.mkdir()
+    (stub / "python3").write_text(
+        f'#!/bin/bash\n[ "$1" = - ] && exec {sys.executable} "$@"\necho "$@" >> {tmp_path}/ran\n'
+    )
+    (stub / "python3").chmod(0o755)
+    env = {"HOME": str(tmp_path / "home"), "PATH": f"{stub}:/usr/bin:/bin"}
+    subprocess.run(["bash", str(SETUP), str(clone)], env=env, capture_output=True, check=True)
+    ran = (tmp_path / "ran").read_text()
+    assert "pip install" in ran and "dev_env_check.py" in ran, ran

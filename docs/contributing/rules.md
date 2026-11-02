@@ -25,7 +25,7 @@ the incident that produced it, and the incidents are why the rules are trusted (
 |---|---|
 | 🟢 only after *you* ran the Acceptance Test, output pasted | — judgement: nothing can see who ran it |
 | A merged `implementer` row is read by a `verifier` first; a hold isn't lifted until answered or declined in the task file | `test_a_merged_track_names_its_verifier.py` |
-| Some claims have no local instrument — open the PR first (§7) | — |
+| Some claims have no local instrument — open the PR first (§7); marked ready, the round PR gets one Codex review and each finding is answered like a hold ([procedure](codex-reviews.md)) | `test_the_codex_review_is_read_from_github.py` — `tools/dev_codex_status.py` reads it (`UX-1369`) |
 | A history figure from a shallow clone is worth nothing — ask `--is-shallow-repository` first | `test_a_guard_that_reads_history_declares_its_depth.py` |
 | `make test-touching` while you work; the tier when it is wider | `test_the_loop_stays_fast.py` — the selector, not that you ran it |
 | `make push-check` before a push, CI on the pull request before a merge - the floor Python alone (`UX-995`). A tier is a selector | `.claude/hooks/gate-covers-push.sh` — covers the commit you push, not the branch you ran it on (`UX-762`); `make push-check` writes its marker only on green (`UX-948`) |

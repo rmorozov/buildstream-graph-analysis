@@ -1,0 +1,108 @@
+# UX-1371: a project-thread session loads the repository's agents, skills and hooks
+
+**Priority:** High | **Status:** 🟡 In Progress | **Depends on:** — | **Found by:** the workflow review of 2026-11-01 (project thread "Review and optimize the agentic workflow") | **Serves:** every round run from a project thread, and every rule a hook holds | **Topic:** guards | **Area:** tools | **Shape:** judgement | **Reading:** container
+
+**Guard:** `tests/unit/test_a_thread_session_runs_the_repos_hooks.py`
+
+## Motivation
+
+A project-thread session starts in `/home/claude`, above both
+checkouts. Both `CLAUDE.md` files load; no `.claude/agents`,
+`.claude/skills` or `.claude/settings.json` does. In this session
+(CLI 2.1.316) the Agent tool lists only built-in types, the skill list
+has none of `orient`, `decompose`, `verify`, `falsify`, and `git add -A
+-n` in the checkout ran unrefused while `.claude/hooks/no_bulk_add.py`
+fed the same payload exits 2. Round 175 ran its four tracks as
+`general-purpose` (three on Opus high, $8.52-$21.81 each) with no
+verifier (`UX-1370`). The project has no cloud environment, so nothing
+runs before a session starts.
+
+## Decomposition
+
+Input classes: a tool call inside a checkout, inside a linked worktree,
+outside any checkout; a tool the hook's matcher names and one it does
+not; a first setup and a rerun; the owner's checkout and `bga-bench`.
+
+## Required Fix
+
+`tools/dev_cloud_setup.sh` links the agents and skills into the user's
+`~/.claude`, adds one user hook per event that runs
+`.claude/hooks/dispatch_by_repo.py`, and (without `--links-only`)
+unshallows each clone and installs the lock and the package. The
+dispatcher runs the hooks of the checkout a call is made in.
+
+## Out of Scope
+
+Creating the cloud environment: only the owner can, in Project settings.
+Reconciling `bga-bench`'s diverged agent files with this repository's.
+`BGA_CHROME`, which a setup script cannot export into the session.
+
+## Acceptance Test
+
+With `HOME` a temp dir, setup links every agent and skill and a rerun
+leaves one dispatcher hook per event; the dispatcher refuses `git add -A`
+inside the checkout and runs nothing outside one or for an unmatched
+tool. Mutation: drop each clause; its test reds. The live reading, a new
+thread session listing `verifier` among its agents, waits on the owner.
+
+## Outcome (2026-11-01)
+
+Gap: listed above (agents, skills, the unrefused bulk add). Close:
+`python3 -m pytest -q tests/unit/test_a_thread_session_runs_the_repos_hooks.py`
+reads `10 passed`. Mutations, `PYTHONDONTWRITEBYTECODE=1`:
+
+| mutation | red |
+|---|---|
+| the dispatcher ignores the matcher | 1 failed, 2 passed |
+| the dispatcher finds no checkout | 1 failed, 2 passed |
+| a refusing hook is not passed on | 1 failed, 2 passed |
+| skills are not linked | 1 failed, 2 passed |
+| a rerun adds a second hook | 1 failed, 2 passed |
+| a checkout outside the allowlist runs its hooks | 1 failed, 3 passed |
+| commands entering the checkout are not read | 1 failed, 4 passed |
+| an edit's `file_path` is not read | 1 failed, 6 passed |
+| a new file's missing directory is not walked up | 1 failed, 6 passed |
+| a relative REPO argument is kept relative | 1 failed, 6 passed |
+| a relative `file_path` is passed on unchanged | 1 failed, 15 passed |
+| ... only when `cwd` is outside the checkout | 1 failed, 9 passed |
+| each `cd` resolves from the original `cwd` | 1 failed, 11 passed |
+| containment by string prefix | 1 failed, 11 passed |
+| `cd repo;` keeps its separator | 1 failed, 11 passed |
+| a candidate's `.git` redirect is trusted | 1 failed, 16 passed |
+| only the first allowed checkout's hooks run | 1 failed, 9 passed |
+
+Review (GitHub code scanning on #339): with no allowlist the dispatcher
+ran the hooks of any checkout a call entered, so a cloned capture source
+could run commands. Tool hooks now run only for the repositories the
+setup script names, or their worktrees (a worktree of this checkout
+still refuses `git add -A`: exit 2). Codex on `2f396d91`: a call made
+from the parent with `cd <repo> && ...` ran no hook; the dispatcher now
+also reads `cd DIR` and `git -C DIR` targets. `git -C x add -A` still
+passes `no_bulk_add` itself, its known gap (fixing guide §4a, UX-767). Codex on `c9672f04`: an Edit
+from the parent ran no hook, and a relative REPO linked dangling paths;
+the dispatcher now reads `file_path`, and the script makes REPO absolute.
+On `80231a31`: a relative `file_path` named the wrong file once the hook
+ran in the checkout; the dispatcher now makes it absolute first.
+On `889ed9cc` (P1): a `.git` file pointing into the checkout borrowed its
+allowlist; a worktree now counts only if the checkout's own
+`git worktree list` names it. On `a62645ac`: `cd B && git push` from A
+ran only A's gate; every allowed checkout the call touches now runs.
+On `ede9db04`: the same relative-path miss from a checkout subdirectory;
+edit paths are now made absolute whatever `cwd` is. On `0a682e58`:
+`cd a && cd b` resolved `b` from the start, and `repo-other` read as
+inside `repo`; `cd` now chains, and containment is by path component.
+On `952de05e`: `cd repo;` kept the `;`, now split as `no_bulk_add` does.
+Reading a shell command stays a heuristic (subshells, `pushd`), the
+same known gap as `no_bulk_add`'s.
+
+Deviation: running the script against this session's own `~/.claude`
+was refused by the session's permission classifier as self-modification,
+so the live reading is the cloud environment's first session. The
+environment's setup script is one line:
+`bash /home/*/buildstream-graph-analysis/tools/dev_cloud_setup.sh`.
+
+Probe of the owner's environment (2026-11-02, a new thread in
+`env_01812Zfp`): setup exited 127, because the script was not on `main`
+and because the environment clones to `/home/user`, not `/home/claude`.
+Agents, skills and hooks were absent, the clone shallow, `bga` not
+installed. The script now finds its checkouts from its own path.

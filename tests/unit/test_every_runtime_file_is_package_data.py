@@ -15,7 +15,7 @@ from tools.bst_native_build_tracer import JOBSERVER_WRAPPERS_DIR
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 
 # Under a packaged directory, read only from a checkout.
-DEV_ONLY = {"tools/dev_run.sh"}
+DEV_ONLY = {"tools/dev_run.sh", "tools/dev_cloud_setup.sh"}
 
 
 def _setuptools():

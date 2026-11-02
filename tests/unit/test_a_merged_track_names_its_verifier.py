@@ -8,7 +8,9 @@ indistinguishable from the rows that *were* paired, and the ledger's
 schema has no value for session-direct work, so excluding them by name
 could not be shown provably right. They are two of the "thirteen
 tracks merged unread" `round-103.md`'s opening line describes, not an
-exception to the rule it states.
+exception to the rule it states. From round 176 a track is any row whose
+task cell opens `implementer`, whatever agent ran it, and merged unless its
+outcome says otherwise; every id it names is paired (`UX-1370`).
 
 holds: rules.md#a-merged-implementer-row-is-read-by-a-verifier-first-a-hold-isnt-lifted-until-answered-or-declined-in-the-task-file
 """
@@ -31,6 +33,10 @@ LEDGER = REPO / "docs/audits/agent-runs.md"
 FIRST_PAIRED_ROUND = 104
 
 TASK_ID = re.compile(r"UX-\d+")
+#: Round 175 ran its tracks as `general-purpose` with "complete" outcomes and no verifier.
+WIDENED_FROM = 176
+TRACK_CELL = re.compile(r"implementer\b")
+NOT_MERGED = re.compile(r"revert|not merged|rejected|abandon", re.IGNORECASE)
 
 
 def _task_id(cell):
@@ -38,19 +44,24 @@ def _task_id(cell):
     return found.group(0) if found else None
 
 
+def _is_merged_track(run):
+    if int(run["round"]) >= WIDENED_FROM:
+        track = run["agent"] == "implementer" or TRACK_CELL.match(run["task"])
+        return bool(track) and not NOT_MERGED.search(run["outcome"])
+    return run["agent"] == "implementer" and "merged" in run["outcome"]
+
+
 def merged_track_rows(runs=None):
-    """`(round, task_id, task_cell)` for every `implementer` row from
-    `FIRST_PAIRED_ROUND` on whose outcome says merged."""
+    """`(round, task_id, task_cell)` for every merged track from
+    `FIRST_PAIRED_ROUND` on; from `WIDENED_FROM`, one per id it names."""
     runs = dev_process_bands.ledger_runs(LEDGER) if runs is None else runs
     found = []
     for run in runs:
-        if run["agent"] != "implementer":
+        if int(run["round"]) < FIRST_PAIRED_ROUND or not _is_merged_track(run):
             continue
-        if int(run["round"]) < FIRST_PAIRED_ROUND:
-            continue
-        if "merged" not in run["outcome"]:
-            continue
-        found.append((run["round"], _task_id(run["task"]), run["task"]))
+        widened = int(run["round"]) >= WIDENED_FROM
+        ids = (TASK_ID.findall(run["task"]) or [None]) if widened else [_task_id(run["task"])]
+        found.extend((run["round"], task_id, run["task"]) for task_id in ids)
     return found
 
 
@@ -93,3 +104,17 @@ def test_every_merged_track_from_the_floor_on_is_paired():
         "the verifier's finding is answered, or the task file records "
         "why it was declined (fixing-guide.md §3)"
     )
+
+
+def _run(round_, agent, task, outcome):
+    return {"round": str(round_), "agent": agent, "task": task, "outcome": outcome}
+
+
+def test_a_general_purpose_track_is_paired_for_every_id_it_names():
+    runs = [
+        _run(176, "general-purpose", "implementer T1: UX-9001, UX-9002", "complete"),
+        _run(176, "verifier", "UX-9001 verifier", "HOLD"),
+        _run(176, "general-purpose", "implementer T2: UX-9003", "reverted, reopened"),
+        _run(175, "general-purpose", "implementer T3: UX-9004", "complete"),
+    ]
+    assert [task_id for _, task_id, _ in unpaired(runs)] == ["UX-9002"]

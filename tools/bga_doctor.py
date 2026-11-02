@@ -28,6 +28,7 @@ project loads. Each failure carries the remedy that actually fixes it.
 import argparse
 import json
 import os
+import shlex
 import shutil
 import subprocess
 import sys
@@ -174,7 +175,7 @@ def check_compiler() -> dict:
             f"the wheel's prebuilt hook and spine match their sources ({stamp.get('compiler', 'unknown compiler')}); "
             "no C compiler needed",
         )
-    remedy = "apt-get install -y build-essential (Plane 1 and Plane 3 work without it; only `bga capture` needs it)"
+    remedy = "apt-get install -y build-essential, or point CC at any C compiler such as clang (Plane 1 and Plane 3 work without it; only `bga capture` needs it)"
     # UX-1287: compile the real hook into a scratch dir, so a cc that cannot build it fails here, not at capture.
     with tempfile.TemporaryDirectory(prefix="bga-doctor-cc-") as scratch:
         try:
@@ -185,17 +186,17 @@ def check_compiler() -> dict:
             return _check("c-compiler", FAIL, summary, remedy=remedy, detail=stderr.splitlines()[-6:] or None)
 
     # UX-153: `-static` needs a static libc that `build-essential` alone does not provide; the spine goes missing alone.
-    if not _compiles([cc, "-static", "-o", "/dev/null", "-x", "c", "-"]):
+    if not _compiles([*cc, "-static", "-o", "/dev/null", "-x", "c", "-"]):
         return _check(
             "c-compiler",
             WARN,
-            f"{cc} cannot link: -static (the ptrace spine)",
+            f"{shlex.join(cc)} cannot link: -static (the ptrace spine)",
             remedy="apt-get install -y build-essential libc6-dev "
             "(a static libc is a separate package on some distributions; "
             "without it the hook still works and `--trace-spine` does not)",
-            detail=[f"probed by compiling a trivial program with {cc}"],
+            detail=[f"probed by compiling a trivial program with {shlex.join(cc)}"],
         )
-    return _check("c-compiler", OK, f"C compiler at {cc} builds the hook and links static")
+    return _check("c-compiler", OK, f"C compiler at {shlex.join(cc)} builds the hook and links static")
 
 
 def _compiles(argv: list[str]) -> bool:

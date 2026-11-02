@@ -3,7 +3,6 @@
 
 import importlib.util
 import os
-import shutil
 
 from setuptools import setup
 from setuptools.command.bdist_wheel import bdist_wheel
@@ -32,10 +31,11 @@ class BuildPy(build_py):
         super().run()
         if MODE == "prebuilt":
             dest = os.path.join(self.build_lib, "bga", "_tools", "native_trace", "prebuilt")
-            cc = shutil.which("cc") or shutil.which("gcc")
+            prebuilt = _prebuilt_module()
+            cc, reason = prebuilt.compiler()
             if cc is None:
-                raise SystemExit("BGA_HOOK=prebuilt needs a C compiler (cc/gcc) on PATH")
-            _prebuilt_module().build(dest, cc)
+                raise SystemExit(f"BGA_HOOK=prebuilt: {reason}")
+            prebuilt.build(dest, cc)
 
 
 class Distribution(_Distribution):

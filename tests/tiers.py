@@ -685,6 +685,8 @@ LARGE = (
 )
 
 MEDIUM = (
+    # `UX-1374`: one clang wheel build. 9.76s single-process.
+    "tests/unit/test_the_hook_compiles_with_any_available_compiler.py",  # 9.8s
     # `UX-1373`: two wheel builds, network for the build backend. 15.13 / 14.69 / 14.07s single-process.
     "tests/unit/test_a_wheel_carries_its_hook_prebuilt_or_compiles_it.py",  # 14.6s
     "tests/unit/test_a_broken_pipe_is_not_an_error.py",  # 1.6s

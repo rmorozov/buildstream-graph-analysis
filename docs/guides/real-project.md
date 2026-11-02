@@ -268,7 +268,8 @@ that shape by CI. `pip install -e ".[bst]"` from inside the checkout is
 the contributor mode.
 
 That wheel compiles the `LD_PRELOAD` hook and the ptrace spine when a
-capture starts, so the capture host needs `cc` (`UX-1287`). For an agent
+capture starts, so the capture host needs a C compiler (`UX-1287`): `$CC`
+if set, else the first of `cc`, `gcc` and `clang` on `PATH` (`UX-1374`). For an agent
 image with no compiler, build the other kind once on a machine of the
 same architecture and install that instead (`UX-1373`):
 

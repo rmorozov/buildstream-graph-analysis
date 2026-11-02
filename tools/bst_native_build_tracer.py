@@ -183,11 +183,11 @@ class TraceError(RuntimeError):
     pass
 
 
-def c_compiler(purpose: str) -> str:
-    """The compiler a capture builds its hook and spine with; `bga doctor` asks the same."""
-    cc = shutil.which("cc") or shutil.which("gcc")
+def c_compiler(purpose: str) -> list:
+    """The compiler argv a capture builds its hook and spine with; `bga doctor` asks the same."""
+    cc, reason = native_prebuilt.compiler()
     if cc is None:
-        raise TraceError(f"no C compiler (cc/gcc) found on PATH - required to build the {purpose}")
+        raise TraceError(f"{reason} - required to build the {purpose}")
     return cc
 
 

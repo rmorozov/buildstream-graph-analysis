@@ -14,7 +14,6 @@ what a script would assume.
 
 import json
 import os
-import re
 import subprocess
 import sys
 import tempfile as tempfile_mod
@@ -309,13 +308,14 @@ def test_the_compiler_check_is_the_one_the_capture_performs():
 
     from tools import bst_native_build_tracer as tracer
 
-    source = inspect.getsource(tracer.c_compiler)
-    compilers = set(re.findall(r'shutil\.which\(["\'](\w+)["\']\)', source))
+    # UX-1374: the candidates live in `prebuilt.compiler`, which `c_compiler` calls.
+    assert "native_prebuilt.compiler()" in inspect.getsource(tracer.c_compiler)
+    compilers = tracer.native_prebuilt.CANDIDATES
     assert compilers, "c_compiler no longer resolves a compiler by name"
 
     import shutil
 
-    if not any(shutil.which(name) for name in compilers):
+    if not any(shutil.which(name) for name in compilers) and not os.environ.get("CC"):
         assert check_compiler()["status"] == FAIL
         return
     # UX-153: present is not the same as capable, so OK is no longer the
@@ -467,7 +467,7 @@ class TestTheCompilerCheckProbesRatherThanChecks:
 
         monkeypatch.setattr(doctor, "_compiles", lambda argv: "-static" not in argv)
         monkeypatch.setattr(tracer, "compile_hook", lambda build_dir: os.path.join(build_dir, "hook.so"))
-        monkeypatch.setattr(tracer, "c_compiler", lambda purpose: "/usr/bin/cc")
+        monkeypatch.setattr(tracer, "c_compiler", lambda purpose: ["/usr/bin/cc"])
 
         finding = doctor.check_compiler()
 
@@ -481,7 +481,7 @@ class TestTheCompilerCheckProbesRatherThanChecks:
 
         monkeypatch.setattr(doctor, "_compiles", lambda argv: True)
         monkeypatch.setattr(tracer, "compile_hook", lambda build_dir: os.path.join(build_dir, "hook.so"))
-        monkeypatch.setattr(tracer, "c_compiler", lambda purpose: "/usr/bin/cc")
+        monkeypatch.setattr(tracer, "c_compiler", lambda purpose: ["/usr/bin/cc"])
 
         assert doctor.check_compiler()["status"] == OK
 

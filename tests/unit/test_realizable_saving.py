@@ -78,11 +78,12 @@ def test_the_candidate_list_is_bounded():
     unbounded sweep would be a surprising cost inside `analyze`."""
     from bga.graph.edg import REALIZABLE_SAVING_CANDIDATES
 
-    edges = [(f"e{i}.bst", f"e{i + 1}.bst") for i in range(40)]
+    n = REALIZABLE_SAVING_CANDIDATES + 8
+    edges = [(f"e{i}.bst", f"e{i + 1}.bst") for i in range(n)]
     graph = _graph(edges)
-    durations = {f"e{i}.bst": 10 for i in range(41)}
+    durations = {f"e{i}.bst": 10 for i in range(n + 1)}
 
-    savings = compute_realizable_savings(graph, durations, [f"e{i}.bst" for i in range(41)])
+    savings = compute_realizable_savings(graph, durations, [f"e{i}.bst" for i in range(n + 1)])
 
     assert len(savings) == REALIZABLE_SAVING_CANDIDATES
 

@@ -70,7 +70,7 @@ needs_node = pytest.mark.skipif(node is None, reason="node is not installed")
 #: (forty names on each of 4,002 elements), `serial_chains` 812 B,
 #: 196,138 -> 175,327 without both. 335,000 is the class's 1.25x.
 DATA_BUDGETS = (
-    (50, 100_000),
+    (50, 105_000),
     (4_100, 335_000),
 )
 

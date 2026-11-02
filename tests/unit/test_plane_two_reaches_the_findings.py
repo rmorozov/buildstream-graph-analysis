@@ -17,7 +17,7 @@ from bga.correlate import _COMPUTE_BOUND_CORES
 from bga.findings import FINDING_READERS, PLANE2_CONFIGURE_SHARE, _plane2_findings
 from tests import pages
 
-PLANE2_IDS = {"costliest-binary", "jobs-waiting", "configure-share"}
+PLANE2_IDS = {"costliest-binary", "jobs-waiting", "configure-share", "serial-stretch"}
 
 
 def _analyze(run):

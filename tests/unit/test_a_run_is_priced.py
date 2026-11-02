@@ -187,6 +187,7 @@ NO_DOCUMENT_WAIVER = {
         "2026-10-10",
         "UX-1340, UX-1341 and UX-1344..UX-1346's Outcomes name it; the 0.6.0 release round shipped with no document",
     ),
+    "174": ("2026-10-30", "UX-1352, UX-1354 and UX-1355's Outcomes name it; shipped with no document (round-175.md)"),
 }
 
 

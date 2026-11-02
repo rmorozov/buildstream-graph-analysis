@@ -2,7 +2,7 @@
 one job's memory held free past the fit."""
 
 from bga.cli import _builder_pool_text_lines
-from bga.correlate import MEMORY_RESERVE_JOBS, compute_builder_pool_recommendation
+from bga.correlate import MEMORY_RESERVE_JOBS, compute_builder_pool_recommendation, with_own_sweep
 from tools.jobserver import memory
 
 GB = 10**9
@@ -16,7 +16,8 @@ def _recommend(peaks, host):
 
 def test_peak_times_pool_over_host_memory_names_the_bound_and_its_fit():
     recommendation = _recommend({"giant.bst": int(2.7 * GB), "small.bst": GB // 10}, 31 * GB)
-    first = _builder_pool_text_lines(recommendation)[0]
+    # UX-1363: a builder count needs this run's sweep; its knee (4) is under the safe cap (8).
+    first = _builder_pool_text_lines(with_own_sweep(recommendation, ([400 * 10**6] * 8, 4)))[0]
     assert first.startswith("Builders: 8 with --jobserver auto")
     assert (
         "memory-bound: giant.bst peaks 2.7 GB per job x (16 + 1 held free) = 45.9 GB > 31 GB; "

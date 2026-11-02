@@ -139,6 +139,24 @@ def _toolchain() -> dict[str, Optional[str]]:
     return found
 
 
+def cpu_label(logical, physical):
+    """`4 cpu`, `4 logical / 2 physical` or `4 logical / physical unknown`, for the page's Host row."""
+    if physical == logical:
+        return f"{logical} cpu"
+    return core_denominators(logical, physical, True)
+
+
+def core_denominators(logical, physical, say_unknown=False):
+    """`4` when logical and physical agree, `4 logical / 2 physical` when they differ.
+
+    A run context from before UX-1364 has no physical count: `physical unknown` if asked."""
+    if physical is None:
+        return f"{logical} logical / physical unknown" if say_unknown else str(logical)
+    if physical == logical:
+        return str(logical)
+    return f"{logical} logical / {physical} physical"
+
+
 def collect(with_toolchain: bool = True) -> dict:
     """The manifest for the machine this is running on.
 
@@ -164,6 +182,7 @@ def collect(with_toolchain: bool = True) -> dict:
         "schema": SCHEMA,
         "cpu_model": _cpu_model(),
         "cpu_count": host_cpu_count(),
+        "physical_cores": _common.host_physical_cores(),
         # UX-341: the capture reads `/proc/meminfo` in MB; the
         # manifest, which is embedded in `analyze`, publishes bytes.
         "memory_bytes": mb_to_bytes(host_memory_mb()),

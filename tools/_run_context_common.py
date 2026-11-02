@@ -45,6 +45,37 @@ def host_cpu_count():
     return os.cpu_count()
 
 
+def cpu_topology_counts(sysfs="/sys/devices/system/cpu", allowed=None):
+    """`(logical, physical cores, sockets)` from sysfs, or None where unreadable.
+
+    `allowed` restricts to those cpu numbers (the affinity mask)."""
+    cores, sockets, logical = set(), set(), 0
+    for name in sorted(os.listdir(sysfs)) if os.path.isdir(sysfs) else []:
+        topo = os.path.join(sysfs, name, "topology")
+        if not (name.startswith("cpu") and name[3:].isdigit() and os.path.isdir(topo)):
+            continue
+        if allowed is not None and int(name[3:]) not in allowed:
+            continue
+        try:
+            with open(os.path.join(topo, "physical_package_id"), encoding="ascii") as f:
+                package = f.read().strip()
+            with open(os.path.join(topo, "core_id"), encoding="ascii") as f:
+                core = f.read().strip()
+        except OSError:
+            return None
+        logical += 1
+        sockets.add(package)
+        cores.add((package, core))
+    return (logical, len(cores), len(sockets)) if logical else None
+
+
+def host_physical_cores():
+    """Physical cores among the CPUs this process may run on (UX-1364), or None."""
+    allowed = os.sched_getaffinity(0) if hasattr(os, "sched_getaffinity") else None
+    counts = cpu_topology_counts(allowed=allowed)
+    return counts[1] if counts else None
+
+
 # UX-29 provenance values for `native_max_jobs_source`. `bga`'s own
 # capacity guards certify against this number, so where it came from is
 # part of the claim - the same reasoning behind UX-17's
@@ -143,6 +174,9 @@ def add_cpu_capacity_fields(
     detected_host_cpu_count = host_cpu_count()
     if detected_host_cpu_count is not None:
         run_context["host_cpu_count"] = detected_host_cpu_count
+    physical = host_physical_cores()
+    if physical is not None:
+        run_context["host_physical_cores"] = physical
     if cpu_budget is not None:
         run_context["cpu_budget"] = cpu_budget
 

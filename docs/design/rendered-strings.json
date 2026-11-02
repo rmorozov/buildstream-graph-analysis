@@ -512,6 +512,11 @@
   {
     "exception": null,
     "role": "button",
+    "text": "Show the command"
+  },
+  {
+    "exception": null,
+    "role": "button",
     "text": "Copy # row"
   },
   {
@@ -1145,6 +1150,16 @@
     "text": "lib.bst"
   },
   {
+    "exception": "product name",
+    "role": "option",
+    "text": "base.bst \u2192 lib.bst"
+  },
+  {
+    "exception": "product name",
+    "role": "option",
+    "text": "lib.bst \u2192 app.bst"
+  },
+  {
     "exception": null,
     "role": "option",
     "text": "All elements (#)"
@@ -1458,6 +1473,11 @@
     "exception": null,
     "role": "summary",
     "text": "Capacity recommendation \u00b7 # level, # rows"
+  },
+  {
+    "exception": null,
+    "role": "summary",
+    "text": "Below granted width \u00b7 # level, # rows"
   },
   {
     "exception": null,
@@ -1810,6 +1830,51 @@
     "text": "lib-d.bst"
   },
   {
+    "exception": "product name",
+    "role": "option",
+    "text": "toolchain.bst \u2192 core.bst"
+  },
+  {
+    "exception": "product name",
+    "role": "option",
+    "text": "core.bst \u2192 lib-a.bst"
+  },
+  {
+    "exception": "product name",
+    "role": "option",
+    "text": "lib-a.bst \u2192 lib-b.bst"
+  },
+  {
+    "exception": "product name",
+    "role": "option",
+    "text": "lib-b.bst \u2192 lib-c.bst"
+  },
+  {
+    "exception": "product name",
+    "role": "option",
+    "text": "lib-c.bst \u2192 lib-d.bst"
+  },
+  {
+    "exception": "product name",
+    "role": "option",
+    "text": "lib-d.bst \u2192 lib-e.bst"
+  },
+  {
+    "exception": "product name",
+    "role": "option",
+    "text": "lib-e.bst \u2192 lib-f.bst"
+  },
+  {
+    "exception": "product name",
+    "role": "option",
+    "text": "lib-f.bst \u2192 app.bst"
+  },
+  {
+    "exception": "product name",
+    "role": "option",
+    "text": "app.bst \u2192 all.bst"
+  },
+  {
     "exception": null,
     "role": "option",
     "text": "Choke points (#)"
@@ -1938,6 +2003,21 @@
     "exception": "product name",
     "role": "option",
     "text": "layer#/mod#.bst"
+  },
+  {
+    "exception": "product name",
+    "role": "option",
+    "text": "toolchain.bst \u2192 layer#/mod#.bst"
+  },
+  {
+    "exception": "product name",
+    "role": "option",
+    "text": "layer#/mod#.bst \u2192 layer#/mod#.bst"
+  },
+  {
+    "exception": "product name",
+    "role": "option",
+    "text": "layer#/mod#.bst \u2192 all.bst"
   },
   {
     "exception": null,

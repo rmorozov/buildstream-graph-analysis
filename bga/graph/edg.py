@@ -782,8 +782,9 @@ def compute_slack(
 # recomputation, which is linear in the graph, so this is O(N * (V+E)).
 # Bounded because the question only makes sense for elements a user might
 # actually work on, and an unbounded sweep on a 10,000-element graph
-# would be a surprising cost inside `analyze`.
-REALIZABLE_SAVING_CANDIDATES = 8
+# would be a surprising cost inside `analyze`. UX-1362: 64 covers a whole
+# chain (fdsdk's is 23); at 8 the rest published 0 beside whatif's figure.
+REALIZABLE_SAVING_CANDIDATES = 64
 
 
 def compute_realizable_savings(

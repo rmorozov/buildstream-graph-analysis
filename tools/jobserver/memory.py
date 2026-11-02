@@ -288,8 +288,14 @@ def sandbox_tree(root: int, children) -> list[int]:
     return [root, *_descendants(root, children)]
 
 
-def follow_sandbox_roots(decisions: str, offset: int) -> tuple[dict[int, str], int]:
-    """UX-1314: `({host root pid: element}, offset)` from the decision rows past `offset`; a partial last line waits."""
+def follow_sandbox_roots(
+    decisions: str, offset: int, pid_key: str = "pid", element_key: str = "element", unnamed: Optional[str] = None
+) -> tuple[dict[int, str], int]:
+    """UX-1314: `({host root pid: element}, offset)` from the decision rows past `offset`; a partial last line waits.
+
+    UX-1358: the keys are parameters so the always-written invocation log (`invocation_id`, `dir_tag`) names
+    roots without `--jobserver`; `unnamed` is the element a row without one is filed under, else it is skipped.
+    """
     try:
         with open(decisions, "rb") as handle:
             handle.seek(offset)
@@ -303,6 +309,9 @@ def follow_sandbox_roots(decisions: str, offset: int) -> tuple[dict[int, str], i
             row = json.loads(line)
         except ValueError:
             continue
-        if isinstance(row, dict) and isinstance(row.get("pid"), int) and row.get("element"):
-            roots[row["pid"]] = row["element"]
+        if not isinstance(row, dict) or not isinstance(row.get(pid_key), int):
+            continue
+        element = row.get(element_key) or unnamed
+        if element:
+            roots[row[pid_key]] = element
     return roots, offset + len(complete)

@@ -323,6 +323,9 @@ NOT_CAPTURED = (
     "per-process detail. `bga snapshot -- bst build TARGET` "
     "captures both planes."
 )
+NATIVE_REPORT_NOT_ATTACHED = (
+    "Plane 2 not attached to this run: a report exists at {report}; `bga correlate {run} {report}` joins them."
+)
 CAPTURED_NO_RAW_LOG = (
     "Plane 2 was captured — its report is beside this run "
     "— but the raw trace log it was built from was not "
@@ -369,6 +372,9 @@ def absence(run_dir: str, declined: bool = False):
 
     run_dir = os.path.abspath(run_dir)
     if run_store.sibling_plane2(run_dir) is None:
+        nearby = run_store.nearby_native_report(run_dir)
+        if nearby:
+            return NATIVE_REPORT_NOT_ATTACHED.format(report=nearby, run=run_dir)
         return NOT_CAPTURED
     if declined:
         return DECLINED
@@ -447,6 +453,28 @@ GRAPH_DENOMINATOR = "graph"
 #: ratio is held at 1.0.
 OVERLAP_FINDING = "overlap_exceeds_granted_width"
 PINNED_FINDING = "pinned_to_one_job"
+#: An argv `-j1` on a row no graph element answers for: the width is unknown, so it is not called pinned.
+WIDTH_UNKNOWN_FINDING = "granted_width_unknown"
+_WIDTH_FINDINGS = (OVERLAP_FINDING, PINNED_FINDING, WIDTH_UNKNOWN_FINDING)
+_ARGV_PINS = (PINNED_FINDING, WIDTH_UNKNOWN_FINDING)
+
+
+def run_wide_findings(rows) -> dict[str, int]:
+    """Finding id -> traced elements, for each id every traced element carries (UX-1366).
+
+    `rows` is `per_element_parallelism`. Traced is an element that ran work processes and was scored
+    against a graph width; fewer than two say nothing about the run."""
+    traced = [row for row in rows or [] if (row.get("peak_work_concurrency") or 0) > 0 and row.get("jobs_denominator")]
+    if len(traced) < 2:
+        return {}
+    shared = set.intersection(*(set(row.get("findings") or []) for row in traced))
+    return {finding: len(traced) for finding in sorted(shared)}
+
+
+def drop_run_wide(rows, wide) -> None:
+    """Remove the ids in `wide` from each join row's `native_findings`: the run-wide finding says them once."""
+    for row in rows:
+        row["native_findings"] = [f for f in row.get("native_findings") or [] if f not in wide]
 
 
 def resolved_widths(graph_path: str) -> dict[str, int]:
@@ -477,6 +505,27 @@ def resolved_widths(graph_path: str) -> dict[str, int]:
     return widths
 
 
+def width_lookup(widths: dict[str, int], native_report: dict):
+    """Row name -> resolved width: by uid, else by the one uid whose basename is `<name>.bst`.
+
+    UX-1366: under a `build-root` override an uncorrelated sandbox keeps its `--dir`'s last segment
+    (`libsepol` for `bootstrap/libsepol.bst`); a basename two uids share, and the tracer's own
+    non-element buckets, answer nothing."""
+    stems: dict[str, Optional[str]] = {}
+    for uid in widths:
+        stem = uid.rsplit("/", 1)[-1].removesuffix(".bst")
+        stems[stem] = None if stem in stems else uid
+    buckets = {"unknown", (native_report.get("element_attribution") or {}).get("unresolved_bucket")}
+
+    def lookup(name: Optional[str]) -> Optional[int]:
+        if name in widths:
+            return widths[name]
+        uid = None if name in buckets else stems.get(name or "")
+        return widths[uid] if uid else None
+
+    return lookup
+
+
 def apply_resolved_widths(native_report: dict, widths: dict[str, int]) -> int:
     """Score each element against the width it was granted. Rows filled.
 
@@ -492,28 +541,30 @@ def apply_resolved_widths(native_report: dict, widths: dict[str, int]) -> int:
     """
     filled = 0
     entries = native_report.get("per_element_parallelism") or []
-    widest = max((widths.get(entry.get("element")) or 0 for entry in entries), default=0)
+    lookup = width_lookup(widths, native_report)
+    widest = max((lookup(entry.get("element")) or 0 for entry in entries), default=0)
     for entry in entries:
-        width = widths.get(entry.get("element"))
+        width = lookup(entry.get("element"))
         entry["resolved_jobs"] = width
+        was = entry.get("findings") or []
+        findings = [f for f in was if f not in _WIDTH_FINDINGS]
         if width is None:
             entry["jobs_denominator"] = None
             entry["achieved_vs_requested"] = None
+            # UX-1366: the capture's pin is an argv `-j1`; where the graph grants widths but not this row's, it is unknown.
+            if widths:
+                entry["findings"] = findings + ([WIDTH_UNKNOWN_FINDING] if set(was) & set(_ARGV_PINS) else [])
             continue
         filled += 1
         entry["jobs_denominator"] = GRAPH_DENOMINATOR
         peak = entry.get("peak_work_concurrency") or 0
-        findings = [f for f in (entry.get("findings") or []) if f not in (OVERLAP_FINDING, PINNED_FINDING)]
         # UX-1138: pinned is the resolved width, not an argv `-j1` - autotools' install step writes one.
         if width == 1 and widest > 1:
             findings.append(PINNED_FINDING)
         if width > 0 and peak > width:
             findings.append(OVERLAP_FINDING)
         entry["findings"] = findings
-        # Held at 1.0 rather than published above it: overlap the
-        # element was not granted is the finding above, and a
-        # parallelism score that reads 2.0 against a width of one is
-        # the number `UX-894` was filed for.
+        # Held at 1.0: overlap never granted is the finding above, not a score of 2.0 at width one (`UX-894`).
         entry["achieved_vs_requested"] = min(1.0, peak / width) if width > 0 else None
     return filled
 

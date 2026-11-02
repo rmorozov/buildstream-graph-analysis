@@ -1157,7 +1157,9 @@ def _render_structural_sensitivity(sensitivity: dict) -> list[str]:
             else:
                 key, score = row[0], row[1]
                 saving_us = score * critical_path_us
-            lines.append(f"    - {key}: up to {qty.duration(saving_us)} off the finish ({score * 100:.1f}%)")
+            lines.append(
+                f"    - {key}: up to {qty.duration(saving_us)} off the finish ({score * 100:.1f}% of the critical path)"
+            )
         lines.append(
             "    (graph-only upper bound, not a target: each saving is capped "
             "where the next path becomes critical, and the savings are not "

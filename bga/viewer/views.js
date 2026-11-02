@@ -858,7 +858,7 @@ export function renderEvidence(payload) {
   }
   if (host.cpu_model) {
     rows.push(["Host",
-               [host.cpu_model, host.cpu_count && `${host.cpu_count} cpu`,
+               [host.cpu_model, host.cpu_label,
                 host.memory_bytes
                   && `${Math.round(host.memory_bytes / 1024 ** 3)} GiB`]
                  .filter(Boolean).join(" · "),
@@ -926,6 +926,7 @@ export function renderEvidence(payload) {
   return section;
 }
 
+
 /**
  * `✓ high confidence · 100% task coverage · Plane 2 available`
  *
@@ -947,9 +948,9 @@ export function statusLine(payload) {
     parts.push(`${(confidence.task_coverage * 100).toFixed(0)}% task coverage`);
   }
   const plane2 = payload?.plane2_coverage;
+  const j = /Plane 2 not attached.+/.exec(payload?.plane2_absence);
   parts.push(plane2 && typeof plane2.processes === "number"
-    ? `Plane 2: ${tally(plane2.processes)} processes`
-    : PLANE2_NOT_CAPTURED);
+    ? `Plane 2: ${tally(plane2.processes)} processes` : j?.[0] ?? PLANE2_NOT_CAPTURED);
   return parts.join(" \u00b7 ");
 }
 

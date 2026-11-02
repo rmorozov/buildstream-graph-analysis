@@ -242,10 +242,18 @@ happen. `--plane2` still names a different report; `--no-plane2`
 declines the sibling and the report says it declined.
 
 **When Plane 2 is not in a report, the report says which absence it
-is** — never captured, captured with its raw log not kept (so no
-timeline), or declined. One sentence pair in `bga/plane2.py`, printed by
+is** — never captured, a native report beside the run but not attached
+(`bga correlate RUN REPORT` is named, `UX-1365`), captured with its raw
+log not kept (so no timeline), or declined. One sentence pair in `bga/plane2.py`, printed by
 the terminal, published as `plane2_absence`, and shown by the page and
 the export, so the three cannot describe one absence differently.
+
+**The host's cores are stated as logical and physical** (`UX-1364`):
+`run_instance.host_manifest.physical_cores` is the capture's
+`cpu_topology` core count, `cpu_label` is the Host row's text (`4 cpu`,
+`4 logical / 2 physical`, or `4 logical / physical unknown` for a
+capture from before the field), and the pool line and `bga correlate`'s
+cores-busy judgements name both denominators where they differ.
 
 **One alias is one snapshot**, whichever of its files is being asked
 for, so `bga correlate @prev @last` means a run from one and a report
@@ -778,18 +786,24 @@ never silently folded into an unestimated blast.
 | `swap-observed` | high | pages were written to swap while the host's CPU was oversampled — the window span and the elements building in it, from `overcommitted_intervals`' own `swapped_out` count (`UX-676`, `UX-860`). Needs a capture with a host CPU series that recorded a rising `pswpout` |
 | `costliest-binary` | info | the binary that spent the most CPU, `by_binary[0]`, when its share of measured CPU clears the 1% opportunity floor (`UX-1255`). Needs `--plane2` with per-element binaries |
 | `jobs-waiting` | medium | elements that asked for more than one job and ran under 1.25 cores busy, each element's own CPU over its own wall — the line `bga correlate` calls waiting, not computing — counted, with their median (`UX-1255`). Needs `--plane2` |
+| `below-granted-width` | medium | critical-path elements whose whatif saving is at least 0.5% of the build and that kept under half their granted cores busy, each named with both readings — `bga correlate`'s `below-granted-width` line per element (`UX-1359`). Needs `--plane2` |
+| `native-finding-on-every-element` | info | a Plane 2 finding id that every traced element carries (work processes, scored against a graph width), said once and dropped from each `element_join` row; `evidence.finding_ids` names them (`UX-1366`). Needs `--plane2` |
 | `configure-share` | medium | configure is at least 10% of measured CPU, from `configure_phase` (`UX-1255`). Needs `--plane2` |
+| `serial-stretch` | medium | elements that spent over 15% of their uncontended sampled time at or under 1.25 cores busy — the line over which `bga correlate` refuses "already compute-bound" — counted, with the longest and the command that held most of it (`UX-1358`). Needs `--plane2` from a capture whose per-element CPU sampler ran |
 | `remote-execution-whatif` | info | what remote execution would buy, priced two ways and never summed (`UX-680`): `bga sweep`'s own unbounded-builder row (BuildStream REAPI moves whole sandboxes, so it removes the builder cap) and Plane 2's compiler/linker CPU on the critical path (compiler-level RE like recc/reclient moves compiles out of the sandbox, so it removes compile seconds from the agent). `evidence.additive` is always `false` - both remove the same critical-path seconds. The compiler-offload half needs `--plane2` and a capture with `binary_cost`; without one, only the builder-cap half publishes |
-| `shared-source-blast` | medium | one repository's ref decides most of this build's rebuilds: any commit to it rebuilds N of M elements, because its direct elements key on its ref rather than on the files they stage (`UX-171`). Needs a run whose `sources.json` the extraction wrote |
+| `shared-source-blast` | medium | one repository's ref decides most of this build's rebuilds: any commit to it rebuilds N of M elements, because its direct elements key on its ref rather than on the files they stage (`UX-171`). When every dependent takes the direct elements through build dependencies only, the headline says so and nothing else changes: a static library has build-only dependents too, so it is no tool role (`UX-1366`; row key `resource_blast.rows[].build_only_reach`). Needs a run whose `sources.json` the extraction wrote |
 
-`bga correlate --format json` → `.actionable[].recommendations[].id` (9) and `.restructuring[].id` (1):
+`bga correlate --format json` → `.actionable[].recommendations[].id` (12) and `.restructuring[].id` (1):
 
 | id | severity | what it says |
 |---|---|---|
 | `pinned-to-one-job` | high | waiting rather than computing, and its native build asked for `-j1` |
 | `underachieved-requested-jobs` | high | waiting rather than computing despite asking for more jobs |
 | `waiting-not-computing` | high | waiting rather than computing, cause not named by Plane 2 |
-| `already-compute-bound` | high | a negative result: nothing to gain from its parallelism |
+| `already-compute-bound` | high | a negative result: nothing to gain from its parallelism — only when its CPU was sampled and at most 15% of the uncontended sampled time ran at or under 1.25 cores busy (`UX-1358`) |
+| `serial-stretch` | high | over 15% of that time ran at or under 1.25 cores busy (utime+stime of the sandbox's processes per tick, reaped children included): the seconds, the processes alive in it, and the commands that held it (`UX-1358`) |
+| `serial-share-unknown` | high | the mean says busy but no serial share was measured — no CPU samples, under half the span sampled, or the host had no idle core beside the low windows — so it is not called compute-bound (`UX-1358`) |
+| `below-granted-width` | high | on the chain, worth at least 0.5% of the build, and under half its granted cores busy — both readings named (`UX-1359`) |
 | `cpu-concentration` | high | one binary is most of its measured CPU |
 | `serialization-point` | high | a single process holds a material share of its wall time |
 | `peak-memory` | medium | its largest process's peak RSS, to multiply by concurrency |
@@ -1391,6 +1405,7 @@ app.bst, lib-a.bst..lib-f.bst (7 elements, 6-9% of the critical path each, 2.0-3
 What would the build drop to if I fixed these? See [its contract and worked example](json-contracts.md#choosing-the-fixes-ux-230).
 
 - `--element UID` — an element to treat as fixed (instant); repeatable. One longest-path recompute with every named element zeroed, never a sum of their individual savings.
+- `--drop-edge PRED SUCC` — a dependency edge to remove, as two arguments (a junction uid carries `:`, so one `PRED:SUCC` string cannot be split); repeatable, combinable with `--element`. A replay without it, every element only it pulled into the target's closure pruned: makespan, element count and the pruned set (`UX-1357`). A priced question, not a removal verdict.
 
 ## `bga variant-cost`
 

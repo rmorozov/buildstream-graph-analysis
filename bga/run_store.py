@@ -348,6 +348,23 @@ def sibling_plane2(run_dir: str) -> Optional[str]:
     return plane2 if os.path.isfile(plane2) else None
 
 
+NATIVE_REPORT_NAME = "native-report.json"
+
+
+def nearby_native_report(run_dir: str) -> Optional[str]:
+    """A `native-report.json` in the run dir, beside it, or one level up.
+
+    The published capture is `run/` next to `native-report.json`;
+    `sibling_plane2` only knows the store's `plane2.json`.
+    """
+    here = os.path.abspath(run_dir)
+    for folder in (here, os.path.dirname(here), os.path.dirname(os.path.dirname(here))):
+        path = os.path.join(folder, NATIVE_REPORT_NAME)
+        if os.path.isfile(path):
+            return path
+    return None
+
+
 # UX-329: the raw trace log the timeline is rendered from, named here
 # beside the report it belongs with. `tools/bga_snapshot.py` writes it;
 # the absence grammar in `bga/plane2.py` has to be able to ask whether

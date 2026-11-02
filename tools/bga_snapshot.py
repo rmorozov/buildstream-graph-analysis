@@ -49,6 +49,7 @@ from bga import build_rate, progress, run_store
 from bga.plural import plural
 
 from . import bst_run_wrapped
+from ._run_context_common import cpu_topology_counts
 
 # What a snapshot is made of. Deliberately the layout the published
 # capture refs already use (UX-81/UX-96), so nothing downstream learns a
@@ -76,24 +77,11 @@ CAPTURE_PID_NAME = "capture.pid"
 def cpu_topology(sysfs: str = "/sys/devices/system/cpu", cpuinfo: str = "/proc/cpuinfo") -> str:
     """UX-1002: logical CPUs, physical cores and sockets from sysfs - `nproc`
     counts hyperthreads, which do not double a compile's throughput."""
-    cores, sockets, logical = set(), set(), 0
-    for name in sorted(os.listdir(sysfs)) if os.path.isdir(sysfs) else []:
-        topo = os.path.join(sysfs, name, "topology")
-        if not (name.startswith("cpu") and name[3:].isdigit() and os.path.isdir(topo)):
-            continue
-        try:
-            with open(os.path.join(topo, "physical_package_id"), encoding="ascii") as f:
-                package = f.read().strip()
-            with open(os.path.join(topo, "core_id"), encoding="ascii") as f:
-                core = f.read().strip()
-        except OSError:
-            return "cpu: unreadable"
-        logical += 1
-        sockets.add(package)
-        cores.add((package, core))
-    if not logical:
+    counts = cpu_topology_counts(sysfs)
+    if counts is None:
         return "cpu: unreadable"
-    line = f"cpu: {logical} logical, {len(cores)} cores, {plural(len(sockets), 'socket')}"
+    logical, cores, sockets = counts
+    line = f"cpu: {logical} logical, {cores} cores, {plural(sockets, 'socket')}"
     return line + "".join(f", {m}" for m in _cpu_model(cpuinfo)[:1])
 
 

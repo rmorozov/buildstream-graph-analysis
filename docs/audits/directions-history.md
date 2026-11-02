@@ -361,6 +361,7 @@ lives in `agent-runs.md`'s rows, counted per round from there.
 | [170](round-170.md) | the junction-heavy onboarding walk's rows - `UX-1320`..`UX-1331` in seven tracks (Plane 2 keys a junctioned element by its full name, `blast` reads a junction, a wrapped build is captured, a comparison of different work is no verdict, `analyze` rolls up by junction, `doctor` and `--help` first-run fixes); five verifier holds closed |
 | [171](round-171.md) | the memory gate reads the cgroup - `UX-1282`, `UX-1283`, `UX-1284`, `UX-1310`, `UX-1314`, `UX-1338`, `UX-1339` in six tracks (the opening seed scales to the cgroup's share: memcap at 320000 `mem_lines` completes under a 20 GB cap, `start 4`, `oom_kill 0`; the late step is `as`, ratio 4.39) |
 | [173](round-173.md) | UX-1040's paired reading - `UX-1309`, `UX-1342`, `UX-1353` closed, each built by sonnet, opus-low and haiku arms from one brief; `UX-1354` filed (layout-free browser checks to the DOM shim); `UX-1349` held for its measurement |
+| [175](round-175.md) | the freedesktop-sdk field test's ten gaps - `UX-1357`, `UX-1359`, `UX-1362`..`UX-1366` closed; `UX-1358`, `UX-1360`, `UX-1361` implemented and held for a re-capture |
 
 ## Verification Log
 

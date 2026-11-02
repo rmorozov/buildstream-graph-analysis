@@ -93,6 +93,8 @@ class RunContext:
     # number, so where it came from is part of the claim.
     native_max_jobs_source: Optional[str] = None
     host_cpu_count: Optional[int] = None
+    # UX-1364: physical cores among the logical CPUs; None in an older run context.
+    host_physical_cores: Optional[int] = None
     # Operator-declared CPU budget (UX-15) - the number of cores this
     # build is *intended* to use, as opposed to `host_cpu_count`'s
     # detected value. Not redundant with host_cpu_count: cgroup CFS

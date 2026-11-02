@@ -69,10 +69,12 @@ REGISTRY = {
     "button.twin-toggle": (r"^As (table|drawing)$", "§2a"),
     "button[data-all]": (r".+", "§3c"),  # Collapse all / Expand all
     "button[data-step]": (r".+", "§3c"),  # the Top/Prev/Next stepper
+    "button[type=button]": (r"^(Price it|Show the command)$", "UX-1357"),  # the chain card's edge what-if
     "input.copy-markdown": (r".*", "§4c"),
     "input.table-filter": (r".+", "§3d"),
     "input[type=checkbox]": (r".*", "UX-219"),  # the what-if boxes
     "input[type=search]": (r".+", "UX-223"),  # the jump box
+    "select": (r".+", "UX-1357"),  # the chain edge the what-if drops
     "select.preset-view": (r".+", "§3d"),
     "select.top-n": (r".+", "§3d"),
 }

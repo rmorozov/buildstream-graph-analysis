@@ -35,6 +35,23 @@ bga capture run --jobserver auto . run.json -- bst --builders 8 build all.bst
 about 20% on BuildStream's defaults and up to about 55% where `max-jobs`
 is capped far below the machine.
 
+That rule is for a **fat host**, one with more cores than the critical
+path's `max-jobs`. On a **small host** (cores at or below it) the chain
+alone fills the machine and auto has nothing to lend: the rule bottoms
+out at one builder. On a **serial chain** (`max-jobs` 1) auto has no
+width to give. In both, `bga analyze` proposes `--jobserver off`,
+`max-jobs` at most the cores, and the builders its capacity
+recommendation reads off this run's replay. It prints every approach
+beside the proposed one: off, auto at the cap, BuildStream's defaults,
+the configured pair and admission (`UX-1368`). On the freedesktop-sdk
+cold capture (4 cores, chain at 4, run 41226762092):
+
+```text
+Builders: 3 with --jobserver off, max-jobs 4 - a small host: 4 cores, no more than the critical path's max-jobs=4, ...
+    off: --builders 3 --max-jobs 4 - 3.1 h; proposed
+    auto: --builders 1 --max-jobs 4 --jobserver auto - 4.8 h; a 4-vCPU (2-core SMT) auto pair read ... -1%, inside noise (UX-1004); ...
+```
+
 ## What it costs
 
 - **Host CPU +12% to +15%** for identical work (751s → 842s; 729s →

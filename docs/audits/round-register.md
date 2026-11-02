@@ -158,3 +158,5 @@ Derived by `tools/dev_round_register.py --write` from the committed union: every
 | 171 | 2026-10-07 |
 | 172 |  |
 | 173 | 2026-10-10 |
+| 174 |  |
+| 175 | 2026-10-30 |

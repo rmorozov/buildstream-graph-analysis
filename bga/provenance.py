@@ -767,6 +767,20 @@ _CLAIMS = {
         ),
         (),
     ),
+    "below-granted-width": (
+        (),
+        _rule(
+            "_WIDTH_UNUSED_SHARE",
+            _correlate._WIDTH_UNUSED_SHARE,
+            "<",
+            None,
+            "A critical-path element whose whatif saving is at least _WIDTH_UNUSED_SAVING_SHARE "
+            f"({_correlate._WIDTH_UNUSED_SAVING_SHARE:.1%}) of the build kept fewer cores busy than this share "
+            "of the width BuildStream granted it; each row names both readings.",
+            module="bga/correlate.py",
+        ),
+        (),
+    ),
     "jobs-waiting": (
         (),
         _rule(
@@ -777,6 +791,28 @@ _CLAIMS = {
             "An element that asked for more than one job ran under this many cores busy, "
             "its own CPU over its own wall - the line `bga correlate` calls waiting, not computing.",
             module="bga/correlate.py",
+        ),
+        (),
+    ),
+    "serial-stretch": (
+        (),
+        _rule(
+            "_SERIAL_SHARE_LINE",
+            _correlate._SERIAL_SHARE_LINE,
+            ">",
+            None,
+            "An element spent over this share of its sampled wall time at or under 1.25 cores busy (utime+stime "
+            "of its sandbox's processes per tick) — the line over which `bga correlate` refuses to call it "
+            "already compute-bound.",
+            module="bga/correlate.py",
+        ),
+        (),
+    ),
+    "native-finding-on-every-element": (
+        (),
+        _unconditional(
+            "Published when two or more elements have measured CPU and every one of them carries the same "
+            "Plane 2 finding id; the ids are the finding's own `evidence`."
         ),
         (),
     ),

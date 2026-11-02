@@ -53,6 +53,7 @@ def load_run_context(path: Path) -> RunContext:
         native_max_jobs=data.get('native_max_jobs'),
         native_max_jobs_source=data.get('native_max_jobs_source'),
         host_cpu_count=data.get('host_cpu_count'),
+        host_physical_cores=data.get('host_physical_cores'),
         cpu_budget=data.get('cpu_budget'),
         memory_budget_mb=data.get('memory_budget_mb'),
         host_memory_mb=data.get('host_memory_mb'),

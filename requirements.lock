@@ -22,7 +22,7 @@ dill==0.4.1
     # via pylint
 execnet==2.1.2
     # via pytest-xdist
-hypothesis==6.169.0
+hypothesis==6.170.9
     # via bga (pyproject.toml)
 iniconfig==2.3.0
     # via pytest
@@ -86,7 +86,7 @@ rpds-py==2026.6.3
     # via
     #   jsonschema
     #   referencing
-ruff==0.17.0
+ruff==0.17.2
     # via bga (pyproject.toml)
 sly==0.5
     # via py-walk

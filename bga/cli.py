@@ -27,7 +27,7 @@ import sys
 from pathlib import Path
 from typing import NoReturn, Optional
 
-from . import __version__, contracts, schemas
+from . import __version__, contracts, hostinfo, schemas
 from . import plane2 as plane2_shape
 from . import shown as qty
 from .analyzer import (
@@ -134,6 +134,7 @@ def _attach_resource_blast(run_dir, analyzer, result) -> None:
 
     durations = compute_element_durations(getattr(analyzer, 'normalized_tasks', []) or [])
     rows = sources_module.resource_blast(inventory, downstream, element_kinds, durations)
+    sources_module.mark_build_only_reach(rows, sources_module.build_only_elements(graph.dependencies))
     result.resource_blast = {
         'rows': rows,
         'element_count': len(graph.elements),
@@ -253,7 +254,9 @@ def _attach_plane2_capacity(args: argparse.Namespace, analyzer, result) -> None:
         plane2_shape.apply_resolved_widths(
             native_report, plane2_shape.resolved_widths(os.path.join(str(run_dir), 'graph.json'))
         )
-    result.plane2_capacity = summarize_plane2_capacity(native_report, host_cpu_count)
+    result.plane2_capacity = summarize_plane2_capacity(
+        native_report, host_cpu_count, getattr(context, 'host_physical_cores', None)
+    )
     _reread_oversubscription(analyzer, result)
     # UX-202: how much of the build Plane 2 actually saw, published
     # rather than left in the native report. The evidence header states
@@ -501,7 +504,14 @@ def _builder_pool_recommendation(analyzer, result) -> dict:
     32.4's census, unit and population guards all fire on one), which
     this bounded track does not own.
     """
-    from bga.correlate import compute_builder_pool_recommendation, compute_ready_set_width
+    from bga.correlate import (
+        compute_builder_pool_recommendation,
+        compute_ready_set_width,
+        host_regime,
+        jobserver_label,
+        size_by_regime,
+        with_own_sweep,
+    )
 
     scheduler = getattr(analyzer, 'replay_scheduler', None)
     context = getattr(analyzer, 'run_context', None)
@@ -519,18 +529,48 @@ def _builder_pool_recommendation(analyzer, result) -> dict:
     max_jobs_by_uid = {e.uid: e.max_jobs for e in graph.elements} if graph else {}
     native_max_jobs = getattr(context, 'native_max_jobs', None)
     critical_path = schemas.critical_path_uids(getattr(result, 'signals', None) or {})
-    critical_path_max_jobs = max(
-        (max_jobs_by_uid.get(uid) or native_max_jobs or 1 for uid in critical_path),
-        default=None,
-    )
+    chain_widths = [max_jobs_by_uid.get(uid) or native_max_jobs for uid in critical_path]
+    critical_path_max_jobs = max((width or 1 for width in chain_widths), default=None)
     calibrated_cores = os.environ.get(_CALIBRATED_CORES_ENV)
-    return compute_builder_pool_recommendation(
+    recommendation = compute_builder_pool_recommendation(
         ready_set_width,
         host_cpu_count,
         critical_path_max_jobs,
         calibrated_cores=int(calibrated_cores) if calibrated_cores else None,
         memory=_peak_rss_and_host_memory(analyzer.read_host_samples(), getattr(result, 'plane2_report', None)),
     )
+    # UX-1364: the pool reading names logical and physical cores, or says physical is unknown.
+    denominators = hostinfo.core_denominators(host_cpu_count, getattr(context, 'host_physical_cores', None), True)
+    if recommendation.get('pool_reading', '').startswith(f"host_cpu_count ({host_cpu_count})"):
+        recommendation['pool_reading'] = recommendation['pool_reading'].replace(
+            f"({host_cpu_count})", f"({denominators})", 1
+        )
+    builders = getattr(context, 'max_jobs', None) or 1
+    recommendation = with_own_sweep(recommendation, _own_sweep(scheduler, result, builders, host_cpu_count))
+    # UX-1368: a chain whose width was never read has no regime, rather than a -j1 one.
+    known = critical_path_max_jobs if chain_widths and all(chain_widths) else None
+    mode = jobserver_label(getattr(context, 'jobserver', None))
+    return size_by_regime(
+        recommendation,
+        host_regime(host_cpu_count, known),
+        (builders, native_max_jobs, mode),
+        getattr(result, 'capacity_recommendation', None),
+    )
+
+
+def _own_sweep(scheduler, result, builders: int, host_cpu_count: int) -> Optional[tuple]:
+    """UX-1363: `(walls from 1 builder up, knee)` from this run's own replay, `None` when it cannot sweep."""
+    from bga import sweep_curve
+
+    top = sweep_curve.sweep_top(builders, host_cpu_count, sweep_curve.graph_width(getattr(result, 'signals', None)))
+    try:
+        sweep = scheduler.capacity_sweep(resource='PROCESS', min_capacity=1, max_capacity=top, step=1)
+    except (AttributeError, ValueError) as exc:
+        logger.info("UX-1363: no capacity sweep for the builders line (%s)", exc)
+        return None
+    walls = sweep_curve.curve(sweep.sweeps)
+    knee = (sweep.knee_points or {}).get('PROCESS')
+    return (walls, knee) if walls and knee else None
 
 
 #: UX-680: compiler/linker binaries a compiler-level RE service
@@ -792,17 +832,39 @@ def _builder_pool_text_lines(recommendation: dict) -> list[str]:
     """The builder and pool lines, each with the reading it came from;
     the default is the safe cap under `--jobserver auto` (UX-1005)."""
     safe_cap = recommendation.get('safe_builder_cap')
+    builders = recommendation.get('builders')
     wide = f"{recommendation['ready_set_width']}, from {recommendation['ready_set_reading']}"
-    if safe_cap is None:
+    if recommendation.get('refused'):
+        lines = [f"Builders: none proposed - {recommendation['refused']}"]
+    elif builders is None:
         lines = [f"Builders (ready-set width): {wide}"]
+    elif recommendation.get('jobserver') == 'off':
+        lines = _builders_off_lines(recommendation)
     else:
+        # UX-1363: this run's replay is the evidence; the safe-cap rule is another fixture's, labelled so.
+        walls, knee = recommendation['sweep_walls_us'], recommendation['sweep_knee']
+        rule = (
+            f"the --jobserver auto safe cap (host cores less the critical path's max-jobs="
+            f"{recommendation['critical_path_max_jobs']}) is {safe_cap}, a rule read on another fixture "
+            "(13-mixed-graph, 16 cores: 143.6s -> 118.3s), not on this run"
+        )
+        what_if = recommendation.get('graph_only_knee')
         lines = [
-            f"Builders: {safe_cap} with --jobserver auto - the host's cores less "
-            f"the critical path's own max-jobs={recommendation['critical_path_max_jobs']}, "
-            "so it can widen into the rest (13-mixed-graph, 16 cores: 143.6s -> 118.3s)",
+            f"Builders: {builders} with --jobserver auto - {_replay_reading(walls, builders)}"
+            f"{'' if what_if else f', its knee at {knee}'}; {rule}",
             f"  Ready-set width: {wide} - wider than the safe cap only with "
             "admission (BGA_ADMISSION=1), not yet measured faster",
         ]
+        if what_if:
+            # UX-1363 review 2: the replay holds durations fixed, so its knee is no evidence auto can widen.
+            lines.insert(
+                1,
+                f"  Graph-only what-if (not a recommendation): the replay, which does not model contention, "
+                f"keeps shortening to {what_if} builders ({qty.duration(walls[what_if - 1])}); "
+                "above the safe cap needs admission or a contention-aware measurement",
+            )
+    if recommendation.get('approaches'):
+        lines += _approach_lines(recommendation)
     bound = recommendation.get('memory_bound')
     if bound:
         gb = 1e9
@@ -815,6 +877,93 @@ def _builder_pool_text_lines(recommendation: dict) -> list[str]:
         )
     lines.append(f"Pool size: {recommendation['pool_size']}, from {recommendation['pool_reading']}")
     lines.append("")
+    return lines
+
+
+#: UX-1368: why a regime that proposes `--jobserver off` does, by regime.
+_OFF_BECAUSE = {
+    'small': "a small host: {host} cores, no more than the critical path's max-jobs={chain}, so the chain alone "
+    "fills them and --jobserver auto has no idle cores to lend",
+    'serial': "a serial chain: the critical path builds at max-jobs=1, so --jobserver auto has no width to give it",
+}
+#: UX-1368: the reading each regime's auto row stands on, never this run's.
+_AUTO_READ = {
+    'small': "a 4-vCPU (2-core SMT) auto pair read 235 s -> 233 s, -1%, inside noise (UX-1004)",
+    'serial': "a serial chain of -j1 elements read 30.25 s off, 30.46 s auto (UX-679)",
+    'fat': "read on 13-mixed-graph, 16 Graviton cores: 143.6 s -> 118.3 s (UX-1005), not on this run",
+}
+
+
+def _replay_wall(walls: list, count: int) -> Optional[int]:
+    """UX-1368 review 2: the replay's wall at `count` builders, `None` past the sweep."""
+    return walls[count - 1] if 0 < count <= len(walls) else None
+
+
+def _replay_reading(walls: list, count: int) -> str:
+    """This run's replay at `count` builders against 1, or that the sweep stopped short of it."""
+    at = _replay_wall(walls, count)
+    if at is None:
+        return f"this run's replay stops at {len(walls)} builders, so {count} is not swept"
+    return f"this run's replay puts {count} at {qty.duration(at)}" + (
+        "" if count == 1 else f" against {qty.duration(walls[0])} at 1"
+    )
+
+
+def _builders_off_lines(recommendation: dict) -> list[str]:
+    """UX-1368: builders and max-jobs with the jobserver off, from this run's replay."""
+    walls, knee, builders = recommendation['sweep_walls_us'], recommendation['sweep_knee'], recommendation['builders']
+    at = _replay_wall(walls, builders)
+    gain = (at - min(walls)) / at if at else 0.0
+    why = _OFF_BECAUSE[recommendation['regime']].format(
+        host=recommendation['host_cpu_count'], chain=recommendation['critical_path_max_jobs']
+    )
+    tail = f"; more builders buy {gain:.1%} on the replay, which does not model their contention" if gain else ""
+    if recommendation['builders_source'] != 'capacity':
+        tail += f"; builders from the {recommendation['builders_source']}"
+    return [
+        f"Builders: {builders} with --jobserver off, max-jobs {recommendation['max_jobs']} - {why}; "
+        f"{_replay_reading(walls, builders)}, its knee at {knee}{tail}"
+    ]
+
+
+def _approach_lines(recommendation: dict) -> list[str]:
+    """UX-1368: one row per approach, its flags and replay wall, and the reading it stands on."""
+    host, chain, regime = (
+        recommendation['host_cpu_count'],
+        recommendation['critical_path_max_jobs'],
+        recommendation['regime'],
+    )
+    lines = [f"  Approaches sized for {host} cores (replay wall, durations held fixed):"]
+    for approach in recommendation['approaches']:
+        name, count, jobs = approach['name'], approach['builders'], approach['max_jobs']
+        if name == 'admission':
+            lines.append(
+                "    admission (BGA_ADMISSION=1): not proposed - slower than auto alone on 13-mixed-graph, "
+                "16 cores (202-217 s against 182 s)"
+            )
+            continue
+        mode = approach['jobserver']
+        if not count:
+            lines.append(f"    {name}: none - {recommendation.get('refused')}")
+            continue
+        flags = f"--builders {count} --max-jobs {jobs}" + ("" if mode in ('off', None) else f" --jobserver {mode}")
+        if name == 'off':
+            note = "proposed" if approach['proposed'] else f"the chain stays at {jobs} of {host} cores"
+        elif name == 'auto':
+            note = (
+                ("proposed; " if approach['proposed'] else "")
+                + _AUTO_READ[regime]
+                + ("" if regime == 'fat' else f"; builders = {host} cores less the chain's {chain}")
+            )
+        elif name == 'configured':
+            note = "as this run was configured" + ("" if mode else ", its jobserver mode not recorded")
+        else:
+            note = f"BuildStream's own (max-jobs = min({host} cores, 8)): {count * jobs} jobs on {host} cores"
+            note += ", as this run was configured" if tuple(recommendation['configured']) == (count, jobs, mode) else ""
+        wall = approach['replay_wall_us']
+        swept = len(recommendation['sweep_walls_us'])
+        shown = qty.duration(wall) if wall is not None else f"not swept (the replay stops at {swept})"
+        lines.append(f"    {name}: {flags} - {shown}; {note}")
     return lines
 
 
@@ -1712,15 +1861,11 @@ def cmd_compare(args: argparse.Namespace) -> int:
 
 
 def cmd_whatif(args: argparse.Namespace) -> int:
-    """Execute `bga whatif RUN --element A --element B` (UX-230).
+    """Execute `bga whatif RUN --element A --drop-edge PRED SUCC` (UX-230, UX-1357): exits 0 on a refusal too.
 
-    A question, not a gate: it exits 0 on a refusal too, because "this
-    selection cannot be projected" is the answer rather than a failure.
-    The projection itself is `bga.whatif.project`, which the viewer's
-    transport calls as well - one function, so the page and the terminal
-    cannot answer one selection two ways.
+    `bga.edge_whatif.answer` is the viewer transport's function too, so the page and terminal cannot disagree.
     """
-    from bga.whatif import project, render
+    from bga.edge_whatif import answer, render
 
     try:
         run_dir = resolve_run_alias(args.run)
@@ -1732,7 +1877,7 @@ def cmd_whatif(args: argparse.Namespace) -> int:
         return 2
     analyzer = BuildEfficiencyAnalyzer(verbose=getattr(args, 'verbose', False))
     analyzer.load(Path(run_dir))
-    document = project(analyzer.analyze(Path(run_dir)), analyzer.graph, args.element or [])
+    document = answer(analyzer, analyzer.analyze(Path(run_dir)), args.element or [], args.drop_edge or [])
     output = json.dumps(document, indent=2, default=str) if args.format == 'json' else "\n".join(render(document))
     if getattr(args, 'output', None):
         with open(args.output, 'w', encoding='utf-8') as handle:
@@ -2688,18 +2833,22 @@ def _add_whatif_subcommand(subparsers) -> None:
     whatif_parser = subparsers.add_parser(
         'whatif',
         help="What would the build drop to if I fixed these?",
-        description='Project the build for a chosen set of fixes: one '
-        'longest-path recompute with each named element zeroed, '
-        'never a sum of their individual savings (which is wrong '
-        'the moment two share a chain). "Fixed" means instant, '
-        'over this run\'s measured durations - an upper bound, '
-        'not a forecast. A question, not a gate: always exits 0.',
+        description='Project the build for chosen fixes: one longest-path recompute with each --element zeroed, '
+        'never a sum of their savings; or a replay without each --drop-edge, pruning what only it pulled in. '
+        'Over this run\'s measured durations - an upper bound, not a forecast. A question: always exits 0.',
     )
     whatif_parser.add_argument(
         'run', nargs='?', default='@last', metavar='RUN', help='The run to project over; `@last` by default.'
     )
     whatif_parser.add_argument(
         '--element', action='append', default=[], metavar='UID', help='An element to treat as fixed. Repeatable.'
+    )
+    whatif_parser.add_argument(
+        '--drop-edge',
+        action='append',
+        nargs=2,
+        metavar=('PRED', 'SUCC'),
+        help='Replay without this dependency edge, pruning what only it pulled in. Repeatable.',
     )
     whatif_parser.add_argument(
         '-f',

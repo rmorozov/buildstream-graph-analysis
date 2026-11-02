@@ -513,24 +513,22 @@ def store_aggregate_payload(store: Optional[dict]) -> Optional[dict]:
         return None
 
 
-def whatif_answer(run: str, elements) -> dict:
-    """`UX-230`: what the build drops to for a chosen subset.
+def whatif_answer(run: str, elements, edges=()) -> dict:
+    """`UX-230`/`UX-1357`: a chosen subset or dropped edges, which the payload cannot hold.
 
-    The blast transport, again, and for the same reason: an arbitrary
-    subset is not in the payload and a page must never compute one. The
-    projection is `bga.whatif.project` - the same function `bga whatif`
-    calls, over the same analysis - so the served answer and the
-    command-line answer are the same bytes.
+    `bga.edge_whatif.answer` is the function `bga whatif` calls, over the
+    same analysis, so the served answer and the command-line answer are
+    the same bytes.
     """
     import pathlib
 
     from bga.analyzer import BuildEfficiencyAnalyzer
-    from bga.whatif import project
+    from bga.edge_whatif import answer
 
     directory = pathlib.Path(run)
     analyzer = BuildEfficiencyAnalyzer()
     analyzer.load(directory)
-    return project(analyzer.analyze(directory), analyzer.graph, list(elements))
+    return answer(analyzer, analyzer.analyze(directory), list(elements), list(edges))
 
 
 def blast_answer(run: str, target: str) -> dict:
@@ -788,7 +786,8 @@ EXPORT_BUDGET_B = 8 * 1024 * 1024
 #: loader. The procedure and every earlier value are
 #: `test_the_report_you_can_attach.py`'s note on this name.
 #: UX-1350: 166,250 -> 166,750, owner-call default: main 166,248 B, font-proof place keeping 166,695 B.
-PAGE_BUDGET_B = 166_750
+#: UX-1357..1366: 166,750 -> 170,000, owner card 2026-10-31 - the field-test findings on the page read 167,576 B.
+PAGE_BUDGET_B = 170_000
 # The trace is the one part that can be dropped without losing the
 # report, so it is the one part with its own ceiling.
 #
@@ -1776,12 +1775,12 @@ class _Handler(http.server.BaseHTTPRequestHandler):
         """UX-230's transport. Same shape as `_blast`: read-only, bounded,
         and it calls the function the CLI calls."""
         query = urllib.parse.parse_qs(urllib.parse.urlparse(raw).query)
-        raw_elements = (query.get("elements") or [""])[0]
-        if len(raw_elements) > 4096:
-            return self._refuse(400, "too many elements")
+        raw_elements, names = (query.get("elements") or [""])[0], query.get("drop_edge", [])
+        if len(raw_elements) + sum(map(len, names)) > 4096 or len(names) % 2:
+            return self._refuse(400, "too many elements, or a drop_edge without its SUCC")
         elements = [uid for uid in raw_elements.split(",") if uid.strip()]
         try:
-            return self._json(whatif_answer(self.run_root, elements))
+            return self._json(whatif_answer(self.run_root, elements, list(zip(names[::2], names[1::2]))))
         except Exception as error:
             return self._refuse(422, str(error))
 

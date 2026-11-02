@@ -7,7 +7,7 @@ from .. import producer, provenance, schemas
 from ..consistency import verdict_violations
 from ..findings import compute_findings, compute_headline, compute_next_steps, finding_copy_text, reader_index
 from ..ingest.models import AnalysisResult
-from ..plane2 import binary_totals
+from ..plane2 import binary_totals, drop_run_wide, run_wide_findings
 from ._shared import (
     ATTRIBUTION_CATEGORY_HINTS_BY_KEY,
     GRAPH_SIGNAL_KEYS,
@@ -512,6 +512,8 @@ def _add_plane2_join(data, result, section, by_kind):
         joined = None
     if joined:
         data['element_join'] = joined.get('elements') or []
+        # UX-1366: a finding every traced element carries is the run-wide finding's, not each row's.
+        drop_run_wide(data['element_join'], run_wide_findings((native_report or {}).get('per_element_parallelism')))
         data['element_join_coverage'] = joined.get('coverage') or {}
         # `UX-407`: **the synthesis, not only the crumbs.**
         #

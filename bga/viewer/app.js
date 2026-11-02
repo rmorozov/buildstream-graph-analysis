@@ -33,7 +33,7 @@ import { renderBand, renderBandUnavailable, renderTrend, renderBlastSearch,
 // a module it would never inline (`UX-199`).
 import { renderCulprits, renderElementHistory, renderHorizon,
          renderElementSections, ensureElementSection, uidForAnchor,
-         renderWhatIf, elementUids } from "./element.js";
+         renderEdgeWhatIf, renderWhatIf, elementUids } from "./element.js";
 import { renderDecision, renderProvenanceRecords, renderInvestigation } from "./decision.js";
 import { anchor, collapsible, toc, scrollspy, stepper, runSelector,
          jumpTargets, matches, paletteResults } from "./nav.js";
@@ -797,8 +797,19 @@ async function boot() {
     // UX-206: the chain drawn, hung off the overview's execution
     // segment - the "where did the time go" spine, as a list with
     // widths rather than a graph layout problem.
-    const chain = contained(document, "critical_path", "report.json",
-                            () => renderCriticalPath(payload));
+    // UX-1357: the chain card prices dropping one of its edges.
+    const ask = (query) => async (value) => {
+      const response = await fetch(`whatif.json?${query}=${[value].flat().map(encodeURIComponent).join(`&${query}=`)}`);
+      const answer = await response.json();
+      if (!response.ok) throw new Error(answer.error ?? response.status);
+      return answer;
+    };
+    const chain = contained(document, "critical_path", "report.json", () => {
+      const card = renderCriticalPath(payload);
+      const edge = card && renderEdgeWhatIf(payload, served() ? ask("drop_edge") : null, { run: run.name });
+      if (edge) card.append(edge);
+      return card;
+    });
     if (chain) root.append(chain);
 
     // UX-219: the horizon as a plan rather than a five-column table.
@@ -814,13 +825,8 @@ async function boot() {
     // runs. Offline there is no server, so `ask` is null and the
     // section shows the command instead of a control that cannot
     // answer - `UX-199`'s shape for the blast box.
-    const whatif = renderWhatIf(payload, served() ? async (elements) => {
-      const response = await fetch(
-        `whatif.json?elements=${encodeURIComponent(elements.join(","))}`);
-      const answer = await response.json();
-      if (!response.ok) throw new Error(answer.error ?? response.status);
-      return answer;
-    } : null, { run: run.name ?? "RUN" });
+    const whatif = renderWhatIf(payload, served()
+      ? (elements) => ask("elements")(elements.join(",")) : null, { run: run.name ?? "RUN" });
     if (whatif) root.append(whatif);
 
     const overview = contained(document, "overview", "report.json",

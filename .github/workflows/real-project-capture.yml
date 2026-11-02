@@ -94,7 +94,9 @@ on:
         # that moves it - a third cron, or a bump step - and accepting
         # two populations. `test_the_pinned_ref_is_a_decision.py` holds
         # the policy word and the mechanism together.
-        default: 953683fb96b82cdf6d7941c4ba9859378942f22b
+        # UX-1361: the project's cache evicted 953683fb by 2026-10-04 (103
+        # of 126 not pullable); re-pinned to a 2026-10-27 merge - a new population.
+        default: dd4b4eceebb464446c106ad6ebaa0c1f93168807
       target:
         description: Element whose closure is warmed and then partially rebuilt
         default: components/libxml2.bst
@@ -192,7 +194,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  FDSDK_REF: ${{ github.event.inputs.fdsdk_ref || '953683fb96b82cdf6d7941c4ba9859378942f22b' }}
+  FDSDK_REF: ${{ github.event.inputs.fdsdk_ref || 'dd4b4eceebb464446c106ad6ebaa0c1f93168807' }}
   TARGET: ${{ github.event.inputs.target || 'components/libxml2.bst' }}
   BUILDERS: ${{ github.event.inputs.builders || '4' }}
   MAX_JOBS: ${{ github.event.inputs.max_jobs || '4' }}
@@ -220,6 +222,7 @@ jobs:
     # branch. See that step for why the uploaded artifact is not enough.
     permissions:
       contents: write
+      issues: write  # UX-1361: a dark schedule opens or updates one issue
     steps:
       - uses: actions/checkout@v7
 
@@ -437,9 +440,11 @@ jobs:
               print("NOT cached and NOT in the rebuild set:")
               for name in unexpected:
                   print(f"  {name} ({states[name]})")
+              evicted = len(unexpected) * 2 > len(states)
               raise SystemExit(
                   f"{len(unexpected)} element(s) would be built beyond the "
                   "intended cut - the warm phase did not pull the whole closure"
+                  + (" - most of the closure is gone from the remote cache: re-pin FDSDK_REF (UX-1361)" if evicted else "")
               )
           EOF
 
@@ -763,6 +768,7 @@ jobs:
           esac
 
       - name: Cache health trend across the retained refs
+        id: trend
         # UX-103 item 3: the trend accumulates without a human. Runs
         # after the publish, so this capture is the newest row and is the
         # run being judged.
@@ -777,9 +783,19 @@ jobs:
           set -o pipefail
           SHORT_REF="$(echo "$FDSDK_REF" | cut -c1-8)"
           GLOB="captures/fdsdk/${SHORT_REF}-${REF_MODE}-b${BUILDERS}j${MAX_JOBS}-*"
-          if ! bga baseline --glob "$GLOB" -n 8 --workdir "$RUNNER_TEMP/trend" -f json \
-               > "$RUNNER_TEMP/trend-set.json"; then
-            echo "No comparable baseline set to trend against yet"
+          rc=0
+          bga baseline --glob "$GLOB" -n 8 --workdir "$RUNNER_TEMP/trend" -f json \
+            > "$RUNNER_TEMP/trend-set.json" 2> "$RUNNER_TEMP/trend-refusal.txt" || rc=$?
+          cat "$RUNNER_TEMP/trend-refusal.txt" >&2
+          if [ "$rc" -ne 0 ]; then
+            # UX-1361: an empty history is a first capture's normal state; any other refusal darkens the trend.
+            if grep -q "no capture refs matched" "$RUNNER_TEMP/trend-refusal.txt"; then
+              echo "No capture history to trend against yet"
+              echo "refused=empty" >> "$GITHUB_OUTPUT"
+            else
+              echo "bga baseline refused the retained history (exit $rc): no cache trend this run"
+              echo "refused=true" >> "$GITHUB_OUTPUT"
+            fi
             exit 0
           fi
           # `UX-354`: the set document's shape is the producing module's
@@ -812,3 +828,27 @@ jobs:
             echo "Exit \`$rc\` - $note."
           } >> "$GITHUB_STEP_SUMMARY"
         shell: bash
+
+      # UX-1361: four weekly reds (2026-10-04..25) went unseen; a red schedule says so where a human reads.
+      # A refused baseline set is the other half: the trend step exits 0, so failure() alone never sees it.
+      - name: Report a dark scheduled capture
+        if: ${{ (failure() || steps.trend.outputs.refused == 'true') && github.event_name == 'schedule' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          JOB_STATUS: ${{ job.status }}
+          TREND_REFUSED: ${{ steps.trend.outputs.refused }}
+        run: |
+          title="Real-project capture is dark"
+          run_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          what=""
+          if [ "$JOB_STATUS" = "failure" ]; then what="the job failed"; fi
+          if [ "$TREND_REFUSED" = "true" ]; then
+            what="${what:+$what; }bga baseline refused the retained history, so the cache trend is dark"
+          fi
+          body="Scheduled run ${run_url}: ${what} (mode ${CAPTURE_MODE}, ref ${FDSDK_REF})."
+          num="$(gh issue list -R "${{ github.repository }}" --state open --search "\"$title\" in:title" --json number -q '.[0].number')"
+          if [ -n "$num" ]; then
+            gh issue comment "$num" -R "${{ github.repository }}" --body "$body"
+          else
+            gh issue create -R "${{ github.repository }}" --title "$title" --body "$body"
+          fi

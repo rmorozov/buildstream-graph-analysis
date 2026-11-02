@@ -819,6 +819,15 @@ __attribute__((constructor)) static void bst_trace_start(void) {
     const char *opens = getenv("BST_TRACE_OPENS");
     g_record_opens = (opens != NULL && opens[0] != '\0');
     g_pid = getpid();
+    /* UX-1360: the binary this process runs is a read of whatever staged it - execve opens it in the kernel. */
+    if (g_record_opens) {
+        char exe[PATH_MAX];
+        ssize_t n = readlink("/proc/self/exe", exe, sizeof(exe) - 1);
+        if (n > 0) {
+            exe[n] = '\0';
+            record_open(exe);
+        }
+    }
     /* No rusage on START: a process that has just been exec'd has
      * consumed no CPU worth recording, and emitting a near-zero value
      * would invite it being read as a measurement. */

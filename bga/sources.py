@@ -441,22 +441,48 @@ def resource_blast(
     return rows
 
 
+def build_only_elements(dependencies) -> set:
+    """Elements with at least one dependent and no runtime dependent (`UX-1366`).
+
+    `dependencies` is the graph's edges: predecessor, successor, dependency_type.
+    """
+    kinds: dict[str, set] = {}
+    for edge in dependencies:
+        kinds.setdefault(edge.predecessor, set()).add(edge.dependency_type)
+    return {uid for uid, types in kinds.items() if types == {"build"}}
+
+
+def mark_build_only_reach(rows: list[dict], build_only: set) -> list[dict]:
+    """Set each row's `build_only_reach` (`UX-1366`): all its direct elements are in `build_only`.
+
+    An observed edge type, never a tool role: a static library has build-only dependents too.
+    """
+    for row in rows:
+        row["build_only_reach"] = bool(build_only) and all(uid in build_only for uid in row["direct_elements"])
+    return rows
+
+
+BUILD_ONLY_NOTE = "every dependent of its direct elements takes them through build dependencies only"
+
+
 def keying_clause(row: dict) -> str:
-    """The sentence that turns a count into a decision.
+    """The sentence that turns a count into a decision, then `BUILD_ONLY_NOTE` when it holds.
 
     `UX-181`: the wording comes from the *kind*, because "any commit to
     this" is the right sentence about a repository and the wrong one
     about a pinned package version or a tarball.
     """
     if row.get("kind") == "pip":
-        return "keys on the pinned version: a version bump rebuilds every element that installs this package"
-    if row.get("kind") in ("tar", "zip", "remote", "deb"):
-        return "keys on the archive's ref: republishing it rebuilds every element that unpacks it"
-    if row["keying"] == "ref":
-        return "keys on ref: any commit to this rebuilds all of them, whatever each one stages"
-    if row["keying"] == "content":
-        return "keys on content: only the elements whose files changed rebuild"
-    return f"keying unknown for `{row['kind']}` sources - blast not estimated"
+        clause = "keys on the pinned version: a version bump rebuilds every element that installs this package"
+    elif row.get("kind") in ("tar", "zip", "remote", "deb"):
+        clause = "keys on the archive's ref: republishing it rebuilds every element that unpacks it"
+    elif row["keying"] == "ref":
+        clause = "keys on ref: any commit to this rebuilds all of them, whatever each one stages"
+    elif row["keying"] == "content":
+        clause = "keys on content: only the elements whose files changed rebuild"
+    else:
+        return f"keying unknown for `{row['kind']}` sources - blast not estimated"
+    return f"{clause}; {BUILD_ONLY_NOTE}" if row.get("build_only_reach") else clause
 
 
 # When one ref-keyed resource's blast covers this much of the graph, the
@@ -491,12 +517,13 @@ def monorepo_headline(rows: list[dict], element_count: int, share: float = MONOR
         cost = ""
         if row["measured_us"]:
             cost = f", {format_work(row['measured_us'] / US_PER_S)} of measured build work"
+        note = f" {BUILD_ONLY_NOTE[0].upper()}{BUILD_ONLY_NOTE[1:]}." if row.get("build_only_reach") else ""
         return (
             f"One repository decides most of this build: any commit to "
             f"{row['identity']} rebuilds {row['blast_count']:,} of "
             f"{element_count:,} elements ({covered:.0%}{cost}), because its "
             f"{row['direct_count']:,} direct elements key on its ref rather "
-            f"than on the files they stage."
+            f"than on the files they stage.{note}"
         )
     return None
 

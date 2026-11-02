@@ -120,6 +120,10 @@ class TestTheDefaultIsTheSafeCapUnderAuto:
         "critical_path_max_jobs": 8,
         "pool_size": 16,
         "pool_reading": "host_cpu_count (16)",
+        # UX-1363: the line needs this run's sweep; a knee under the cap leaves the cap standing.
+        "builders": 8,
+        "sweep_knee": 4,
+        "sweep_walls_us": [400_000_000, 220_000_000, 160_000_000, 140_000_000] + [138_000_000] * 4,
     }
 
     def test_the_first_line_recommends_the_safe_cap_with_auto(self):

@@ -45,7 +45,7 @@ Confirmed against `bga/cli.py` directly, not the original spec's Part 37 proposa
 | `bga diagnostics RUN` | Blast radius, criticality probability, wall-clock shares | 20–29, M5 |
 | `bga correlate RUN NATIVE_REPORT` | Joins this run with a Plane 2 native trace of the same build on element UID, and says what to fix. **Not spec-mandated**, `UX-51` | — |
 | `bga blast TARGET [RUN]` | What rebuilds if one thing changes, from whichever end the reader has it — a git url (every element sourcing that repository: the monorepo case, where one ref decides them all), a path (the elements whose `local` sources stage it), or an element name (its downstream closure). The answer says which reading it used, splits the closure into kinds that build and kinds that assemble, and prices it against the named run. A question, not a gate — always exits 0. **Not spec-mandated**, `UX-172`/`UX-173`/`UX-182` | — |
-| `bga whatif [RUN] --element UID …` | What the build drops to if those elements were fixed *together*: one longest-path recompute with each of them zeroed, never a sum of their individual savings — which is wrong the moment two of them share a chain. "Fixed" means instant over this run's measured durations, so the figure is an upper bound and not a forecast. **Not spec-mandated**, `UX-230` | — |
+| `bga whatif [RUN] --element UID …` | What the build drops to if those elements were fixed *together*: one longest-path recompute with each of them zeroed, never a sum of their individual savings — which is wrong the moment two of them share a chain. "Fixed" means instant over this run's measured durations, so the figure is an upper bound and not a forecast. `--drop-edge PRED SUCC` replays without that edge and prunes what only it pulled into the target's closure (`UX-1357`). **Not spec-mandated**, `UX-230` | — |
 | `bga variant-cost RUN RUN [RUN...]` | `junction-cost` is its old name, kept as an alias (`UX-1327`). N separate builds of one type under different variants, priced against one junctioned invocation: the elements they share by cache key, the pipeline cost paid N times, the union graph's T∞ and a lower bound on the one invocation, each figure citing its assumption. Refused for one run, mixed build types, or runs with no cache keys. **Not spec-mandated**, `UX-904` | — |
 | `bga junction-cost RUN RUN [RUN...]` | The old name of `bga variant-cost`, kept as an alias. **Not spec-mandated**, `UX-1327` | — |
 | `bga cache-trend RUN...` | Is the cache getting worse? A chronological *series*, not a pair — hit ratio, transfer seconds, churn per step, and a finding when the newest run leaves the band its trailing window describes. **Not spec-mandated**, `UX-103` | — |
@@ -424,6 +424,15 @@ and is superseded now is what the record says, and sweeping it forward
 with the tables above destroys the one thing the entry is for
 (`UX-653`). The newest entry is the exception: every round that
 re-grounds the document rewrites it.
+
+Updated 2026-10-30 (after `UX-1357`), covering two changes to this
+document, the second this entry itself. The `bga whatif` row names
+`--drop-edge PRED SUCC`, one replay without that edge that prunes what
+only it pulled into the target's closure; `whatif/v1` gains the
+optional `edges` — an addition, so the id does not move (`UX-1357`).
+The figures are re-grounded in `bga analyze --schema`
+(`analyze/v7`: **66 top-level properties**) and `bga.contracts.ids()`:
+**28 emitted ids**.
 
 Updated 2026-10-03 (after `UX-1327`), covering two changes to this
 document, the second this entry itself. The command table

@@ -770,7 +770,7 @@ column re-read in round 73:
                  elements   landed   opened    words   controls    nodes
 golden                  4    3,800   15,618    7,144        427    2,498
 macro_micro            11    5,965   31,804   12,002        750    5,686
-budget, to 50 elts             7,600   39,188   13,700        874    7,900
+budget, to 50 elts             7,600   39,188   14,200        908    7,900
 
 scale               1,202    4,763   26,242   36,542      1,941   24,294
 budget, to 4,000 elts          7,000   32,000   41,000      2,300   27,500
@@ -797,7 +797,7 @@ in it hidden, and the class is bounded at both ends:
                  elements   landed   opened    words   controls    nodes
 scale               1,202    5,007   26,584    8,259        787    4,732
 xl                  4,002    4,937   27,230    8,275        812    4,960
-budget, to 4,100 elts          7,600   46,822   14,100      1,195    8,085
+budget, to 4,100 elts          7,600   46,822   14,550      1,220    8,450
 ```
 
 Height does not move at all — a bounded row costs no pixels, which is
@@ -945,6 +945,14 @@ Round 165's merge, five tracks each under alone: the small class's words
 `UX-1271`'s step copy controls) - the owner-call default, reversible. The
 walk's sweep dots (knee, configured builders) take nodes to 8,085
 (`xl_both` 8,082).
+
+Round 175, the freedesktop-sdk field-test rows (owner card, ~2% over
+each reading): the small class's words 13,700 -> 14,200 (`macro_micro`
+13,922) and the 4,100 class's nodes 8,085 -> 8,450 (`xl_both` 8,295).
+Their review rework, by the same rule: the small class's controls 874 ->
+908 (`macro_micro` 890) and the 4,100 class's words 14,100 -> 14,550
+and controls 1,195 -> 1,220 (`xl_both` 14,265, 1,197) - the owner-call
+default, reversible.
 
 `UX-1152`'s card links read section titles, not ids; alone they took
 `macro_micro` to 38,201 px and 13,441 words. Round 154's merged tree,
@@ -2468,7 +2476,7 @@ shrink-only `UNCITED` set in the guard above. A guard that reads no page
 |---|---|---|
 | §1 | `test_the_mapping_is_law.py` | named |
 | §1a | `test_a_command_renders_as_a_command.py`, `test_a_counted_figure_is_derived.py`, `test_a_new_control_class_lands_declared.py`, `test_the_contract_names_its_vocabulary.py`, `test_the_vocabulary_has_the_shape.py` | |
-| §1b | `test_the_merge_carries_every_field.py`, `test_a_finding_says_whether_it_is_new_since_the_baseline.py`, `test_a_traced_elements_binaries_reach_the_page.py` |  |
+| §1b | `test_the_merge_carries_every_field.py`, `test_a_finding_says_whether_it_is_new_since_the_baseline.py`, `test_a_traced_elements_binaries_reach_the_page.py`, `test_a_low_cores_busy_chain_element_is_recommended.py`, `test_analyze_finds_the_report_beside_a_capture.py`, `test_physical_cores_are_context_beside_the_logical_denominator.py`, `test_a_build_tool_source_reach_is_expected.py` |  |
 | §1c | `test_the_first_finding_is_an_action.py`, `test_findings_are_listed_by_severity.py`, `test_the_binary_question_has_a_binary_total.py`, `test_the_page_checks_its_verdicts_agree.py` |  |
 | §1d | `test_a_next_step_names_the_run_by_its_snapshot.py`, `test_every_finding_publishes_its_step.py` | `UX-429`'s `test_a_command_renders_as_a_command.py` also holds it and cites §1 and §1a, not §1d |
 | §1e | `test_a_new_control_class_lands_declared.py`, `test_a_runbook_is_not_a_table.py`, `test_the_decision_is_said_once.py` | |

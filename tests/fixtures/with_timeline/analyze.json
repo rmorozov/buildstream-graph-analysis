@@ -2351,10 +2351,10 @@
         }
     ],
     "document_shape": {
-        "leaves": 1580,
+        "leaves": 1581,
         "deepest_depth": 6,
         "deepest_path": "findings.[].evidence.rows.[].element_uid",
         "deeper_than_three": 957,
-        "deeper_than_three_share": 0.6056962025316456
+        "deeper_than_three_share": 0.6053130929791272
     }
 }

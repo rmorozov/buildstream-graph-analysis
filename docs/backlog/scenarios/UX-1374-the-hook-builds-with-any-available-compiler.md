@@ -57,11 +57,11 @@ CC=ccache: fail CC='ccache' is not on PATH - required to build the LD_PRELOAD ho
 ```
 
 The guard with `test_doctor.py`: `51 passed, 8 skipped`; the new file
-alone `8 passed in 9.76s`.
+alone `7 passed in 6.37s`.
 
 | mutation | reddened | run |
 |---|---|---|
-| N1 `c_compiler` back to `cc` or `gcc` | clang alone on PATH, doctor names clang, the capture's reason, doctor reads the capture's predicate | 4 failed |
+| N1 `c_compiler` back to `cc` or `gcc` | clang alone on PATH, doctor names the compiler `CC` names, the capture's reason, doctor reads the capture's predicate | 4 failed |
 | N2 a missing `$CC` falls back | a named CC does not fall back, the capture's reason | 2 failed |
 | N3 the wheel build ignores `$CC` | a `CC=clang` prebuilt wheel stamps clang | 1 failed |
 | N4 `$CC` not split | split like a shell word list | 1 failed |
@@ -73,3 +73,6 @@ alone `8 passed in 9.76s`.
 `test_doctor.py`'s UX-143 clause grepped `c_compiler` for
 `shutil.which("…")` literals; it now asserts `c_compiler` calls
 `prebuilt.compiler()` and reads `CANDIDATES`, the predicate itself.
+The clang doctor clause lives in `test_doctor.py`: a third new file
+importing `bga_doctor` widened its selection to 50, over
+`test_the_loop_stays_fast.py`'s `HANDFUL` of 49.

@@ -9,7 +9,6 @@ import zipfile
 
 import pytest
 
-from tools import bga_doctor
 from tools import bst_native_build_tracer as tracer
 from tools.native_trace import prebuilt as native_prebuilt
 
@@ -69,12 +68,6 @@ class TestClangBuildsBoth:
         build.mkdir()
         for path in (tracer.compile_hook(str(build)), tracer.compile_spine(str(build))):
             assert open(path, "rb").read(4) == b"\x7fELF", path
-
-    def test_doctor_names_clang(self, tmp_path, monkeypatch, no_prebuilt):
-        monkeypatch.setenv("CC", "clang")
-        check = bga_doctor.check_compiler()
-        assert check["status"] in (bga_doctor.OK, bga_doctor.WARN), check
-        assert CLANG in check["summary"]
 
     def test_a_prebuilt_wheel_built_with_cc_clang_stamps_clang(self, tmp_path):
         src = tmp_path / "src"

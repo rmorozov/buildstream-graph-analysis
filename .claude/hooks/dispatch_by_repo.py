@@ -51,11 +51,14 @@ def run(root, command, payload):
     return subprocess.run(["bash", "-c", command], input=payload, text=True, env=env, cwd=root, check=False)
 
 
-def targets(cwd, command):
-    """`cwd`, then each directory a `cd DIR` or `git -C DIR` in `command` names."""
+def targets(cwd, tool_input):
+    """`cwd`, the edited file's directory, then each `cd DIR` or `git -C DIR` target."""
     found = [cwd]
+    for key in ("file_path", "notebook_path"):
+        if tool_input.get(key):
+            found.append(os.path.dirname(os.path.join(cwd, os.path.expanduser(tool_input[key]))))
     try:
-        words = shlex.split(command or "", posix=True)
+        words = shlex.split(tool_input.get("command") or "", posix=True)
     except ValueError:
         return found
     for before, word in zip(words, words[1:]):
@@ -67,7 +70,9 @@ def targets(cwd, command):
 def allowed_root(data, repos):
     """The allowed checkout the call runs in, or one its command enters."""
     cwd = data.get("cwd") or os.getcwd()
-    for place in targets(cwd, (data.get("tool_input") or {}).get("command")):
+    for place in targets(cwd, data.get("tool_input") or {}):
+        while place and not os.path.isdir(place) and place != os.path.dirname(place):
+            place = os.path.dirname(place)  # a Write may create the directory
         found = checkout(place) if os.path.isdir(place) else None
         if found and {found[0].resolve(), found[1].resolve()} & set(repos):
             return found[0]

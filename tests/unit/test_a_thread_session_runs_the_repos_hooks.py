@@ -10,9 +10,9 @@ SETUP = REPO / "tools/dev_cloud_setup.sh"
 DISPATCH = REPO / ".claude/hooks/dispatch_by_repo.py"
 
 
-def _setup(home):
+def _setup(home, repo=str(REPO), cwd=None):
     env = {"HOME": str(home), "PATH": "/usr/bin:/bin"}
-    subprocess.run(["bash", str(SETUP), "--links-only", str(REPO)], env=env, check=True)
+    subprocess.run(["bash", str(SETUP), "--links-only", repo], env=env, cwd=cwd, check=True)
     return json.loads((home / ".claude/settings.json").read_text())
 
 
@@ -63,3 +63,20 @@ def test_a_command_from_the_parent_that_enters_the_checkout_is_still_refused():
     for command in (f"cd {REPO.name} && git add -A", f"cd {REPO} && git status && git add -A"):
         call = {"tool_name": "Bash", "cwd": parent, "tool_input": {"command": command}}
         assert _dispatch("PreToolUse", call).returncode == 2, command
+
+
+def test_a_relative_repo_argument_links_and_allowlists_the_absolute_checkout(tmp_path):
+    settings = _setup(tmp_path, repo=REPO.name, cwd=REPO.parent)
+    assert (tmp_path / ".claude/agents/verifier.md").resolve() == REPO / ".claude/agents/verifier.md"
+    assert f" {REPO}" in settings["hooks"]["PreToolUse"][0]["hooks"][0]["command"]
+
+
+def test_an_edit_made_from_outside_runs_the_edited_files_checkout_hooks(tmp_path):
+    clone = tmp_path / "repo"
+    (clone / ".claude").mkdir(parents=True)
+    hook = {"matcher": "Edit|Write", "hooks": [{"type": "command", "command": "exit 7"}]}
+    (clone / ".claude/settings.json").write_text(json.dumps({"hooks": {"PreToolUse": [hook]}}))
+    subprocess.run(["git", "init", "-q", str(clone)], check=True)
+    for path in (str(clone / ".claude/settings.json"), "repo/tests/x.py"):
+        call = {"tool_name": "Edit", "cwd": str(tmp_path), "tool_input": {"file_path": path}}
+        assert _dispatch("PreToolUse", call, allowed=(str(clone),)).returncode == 7, path

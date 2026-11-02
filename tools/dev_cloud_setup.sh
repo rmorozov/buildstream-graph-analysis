@@ -17,7 +17,9 @@ set -euo pipefail
 links_only=0
 if [[ "${1:-}" == "--links-only" ]]; then links_only=1; shift; fi
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-repos=("$@")
+repos=()
+# Absolute, or the links and the hooks' allowlist resolve against another cwd.
+for repo in "$@"; do repos+=("$(cd "$repo" && pwd)"); done
 if [[ ${#repos[@]} -eq 0 ]]; then
     repos=("$here")
     # The project's second checkout clones beside this one, wherever home is.

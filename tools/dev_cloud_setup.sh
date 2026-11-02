@@ -58,7 +58,8 @@ EOF
 [[ $links_only -eq 1 ]] && exit 0
 for repo in "${repos[@]}"; do
     if [[ "$(git -C "$repo" rev-parse --is-shallow-repository)" == "true" ]]; then
-        git -C "$repo" fetch --unshallow --quiet origin
+        # Setup runs before git credentials exist; a shallow clone must not stop the installs.
+        git -C "$repo" fetch --unshallow --quiet origin || echo "unshallow skipped: $repo" >&2
     fi
 done
 # Debian's argcomplete and PyYAML refuse an uninstall, so the lock goes in over them.

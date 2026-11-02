@@ -61,9 +61,11 @@ def targets(cwd, tool_input):
         words = shlex.split(tool_input.get("command") or "", posix=True)
     except ValueError:
         return found
+    here = cwd  # each `cd` moves the directory the next relative target resolves from
     for before, word in zip(words, words[1:]):
         if before in ("cd", "-C"):
-            found.append(os.path.join(cwd, os.path.expanduser(word)))
+            found.append(os.path.normpath(os.path.join(here, os.path.expanduser(word))))
+            here = found[-1] if before == "cd" else here
     return found
 
 
@@ -95,7 +97,7 @@ def payload_for(root, data, payload):
     for key in ("file_path", "notebook_path"):  # the hook runs in root, not in cwd
         if tool_input.get(key):
             tool_input[key] = os.path.join(data["cwd"], os.path.expanduser(tool_input[key]))
-    inside = str(pathlib.Path(data["cwd"]).resolve()).startswith(str(root))
+    inside = pathlib.Path(data["cwd"]).resolve().is_relative_to(root.resolve())
     return json.dumps(dict(data, cwd=data["cwd"] if inside else str(root), tool_input=tool_input))
 
 

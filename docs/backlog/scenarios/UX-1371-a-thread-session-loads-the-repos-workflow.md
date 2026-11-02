@@ -65,6 +65,8 @@ reads `10 passed`. Mutations, `PYTHONDONTWRITEBYTECODE=1`:
 | a relative REPO argument is kept relative | 1 failed, 6 passed |
 | a relative `file_path` is passed on unchanged | 1 failed, 15 passed |
 | ... only when `cwd` is outside the checkout | 1 failed, 9 passed |
+| each `cd` resolves from the original `cwd` | 1 failed, 11 passed |
+| containment by string prefix | 1 failed, 11 passed |
 | a candidate's `.git` redirect is trusted | 1 failed, 16 passed |
 | only the first allowed checkout's hooks run | 1 failed, 9 passed |
 
@@ -85,7 +87,11 @@ allowlist; a worktree now counts only if the checkout's own
 `git worktree list` names it. On `a62645ac`: `cd B && git push` from A
 ran only A's gate; every allowed checkout the call touches now runs.
 On `ede9db04`: the same relative-path miss from a checkout subdirectory;
-edit paths are now made absolute whatever `cwd` is.
+edit paths are now made absolute whatever `cwd` is. On `0a682e58`:
+`cd a && cd b` resolved `b` from the start, and `repo-other` read as
+inside `repo`; `cd` now chains, and containment is by path component.
+Reading a shell command stays a heuristic (subshells, `pushd`), the
+same known gap as `no_bulk_add`'s.
 
 Deviation: running the script against this session's own `~/.claude`
 was refused by the session's permission classifier as self-modification,

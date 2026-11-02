@@ -119,3 +119,31 @@ def test_a_command_that_leaves_one_allowed_checkout_for_another_runs_both_hooks(
         "tool_input": {"command": f"cd {tmp_path / 'b'} && git push"},
     }
     assert _dispatch("PreToolUse", call, allowed=(str(tmp_path / "a"), str(tmp_path / "b"))).returncode == 7
+
+
+def _repo_with_hook(path, command):
+    (path / ".claude").mkdir(parents=True)
+    hook = {"matcher": "Bash", "hooks": [{"type": "command", "command": command}]}
+    (path / ".claude/settings.json").write_text(json.dumps({"hooks": {"PreToolUse": [hook]}}))
+    subprocess.run(["git", "init", "-q", str(path)], check=True)
+
+
+def test_a_chained_cd_resolves_from_the_directory_the_last_one_entered(tmp_path):
+    _repo_with_hook(tmp_path / "outer/repo", "exit 7")
+    call = {"tool_name": "Bash", "cwd": str(tmp_path), "tool_input": {"command": "cd outer && cd repo && git push"}}
+    assert _dispatch("PreToolUse", call, allowed=(str(tmp_path / "outer/repo"),)).returncode == 7
+
+
+def test_a_prefix_sharing_sibling_is_not_inside_the_checkout(tmp_path):
+    # The hook refuses unless its payload's cwd is its own checkout.
+    _repo_with_hook(
+        tmp_path / "repo",
+        'python3 -c "import json,os,sys; sys.exit(0 if json.load(sys.stdin)[\'cwd\'] == os.getcwd() else 7)"',
+    )
+    _repo_with_hook(tmp_path / "repo-other", "exit 0")
+    call = {
+        "tool_name": "Bash",
+        "cwd": str(tmp_path / "repo-other"),
+        "tool_input": {"command": "cd ../repo && git push"},
+    }
+    assert _dispatch("PreToolUse", call, allowed=(str(tmp_path / "repo"), str(tmp_path / "repo-other"))).returncode == 0

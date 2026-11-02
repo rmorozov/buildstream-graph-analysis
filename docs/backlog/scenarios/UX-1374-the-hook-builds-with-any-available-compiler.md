@@ -79,15 +79,10 @@ importing `bga_doctor` widened its selection to 50, over
 
 ### Codex on `ba5a112e`: a cross `$CC` certified the host
 
-Held. A `$CC` such as `aarch64-linux-gnu-gcc` exits 0 on an x86-64
-builder, and the stamp wrote `platform.machine()`, so `find()` would
-have handed AArch64 binaries to an x86-64 capture. Fixed: `build()`
-reads the ELF header's `e_machine` of each output and refuses one that
-is not this host's (`ELF_MACHINE`), before any stamp is written; `find()`
-reads it too, so a stamp alone cannot vouch for a binary. Cross wheels
-stay out of scope. Guard `TestACrossCompilerCannotCertifyThisHost`: a
-stand-in cross `$CC` that exits 0 having written an ELF for another
-machine (now `TestAForeignTargetCannotCertifyThisHost`, below).
+Held. `CC=aarch64-linux-gnu-gcc` exits 0 on x86-64 and the stamp wrote
+`platform.machine()`. `build()` now reads each output's ELF header and
+refuses a foreign one before stamping; `find()` reads it too. Cross
+wheels stay out of scope. Guard: `TestAForeignTargetCannotCertifyThisHost`.
 
 | mutation | reddened | run |
 |---|---|---|

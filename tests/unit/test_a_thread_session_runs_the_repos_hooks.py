@@ -60,7 +60,13 @@ def test_a_checkout_outside_the_allowlist_runs_no_hook(tmp_path):
 
 def test_a_command_from_the_parent_that_enters_the_checkout_is_still_refused():
     parent = str(REPO.parent)
-    for command in (f"cd {REPO.name} && git add -A", f"cd {REPO} && git status && git add -A"):
+    name = REPO.name
+    for command in (
+        f"cd {name} && git add -A",
+        f"cd {REPO} && git status && git add -A",
+        f"cd {name}; git add -A",
+        f"cd {name}&& git add -A",
+    ):
         call = {"tool_name": "Bash", "cwd": parent, "tool_input": {"command": command}}
         assert _dispatch("PreToolUse", call).returncode == 2, command
 

@@ -67,6 +67,7 @@ reads `10 passed`. Mutations, `PYTHONDONTWRITEBYTECODE=1`:
 | ... only when `cwd` is outside the checkout | 1 failed, 9 passed |
 | each `cd` resolves from the original `cwd` | 1 failed, 11 passed |
 | containment by string prefix | 1 failed, 11 passed |
+| `cd repo;` keeps its separator | 1 failed, 11 passed |
 | a candidate's `.git` redirect is trusted | 1 failed, 16 passed |
 | only the first allowed checkout's hooks run | 1 failed, 9 passed |
 
@@ -90,6 +91,7 @@ On `ede9db04`: the same relative-path miss from a checkout subdirectory;
 edit paths are now made absolute whatever `cwd` is. On `0a682e58`:
 `cd a && cd b` resolved `b` from the start, and `repo-other` read as
 inside `repo`; `cd` now chains, and containment is by path component.
+On `952de05e`: `cd repo;` kept the `;`, now split as `no_bulk_add` does.
 Reading a shell command stays a heuristic (subshells, `pushd`), the
 same known gap as `no_bulk_add`'s.
 

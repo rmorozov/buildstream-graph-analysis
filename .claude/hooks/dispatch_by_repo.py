@@ -57,8 +57,10 @@ def targets(cwd, tool_input):
     for key in ("file_path", "notebook_path"):
         if tool_input.get(key):
             found.append(os.path.dirname(os.path.join(cwd, os.path.expanduser(tool_input[key]))))
+    lexer = shlex.shlex(tool_input.get("command") or "", posix=True, punctuation_chars=True)
+    lexer.whitespace_split = True  # `cd repo;` and `cd repo&&` split as no_bulk_add.tokens_of does
     try:
-        words = shlex.split(tool_input.get("command") or "", posix=True)
+        words = list(lexer)
     except ValueError:
         return found
     here = cwd  # each `cd` moves the directory the next relative target resolves from

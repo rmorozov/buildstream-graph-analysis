@@ -81,6 +81,11 @@ $ python3 tools/dev_codex_status.py 336
 | a reply does not answer a finding | 1 failed, 5 passed |
 | no boundary wants a security review | 1 failed, 5 passed |
 | no review is not a problem | 1 failed, 5 passed |
+| a +1 covers every later head | 1 failed, 6 passed |
+
+Review (Codex on #339, `2f396d91`, the procedure's first live run, read
+by this tool as 2 open findings): a +1 has no sha, so it counted for
+every later head; it now counts only for the sha the marker names.
 
 Deviation: the security review's policy (boundary PRs, posting publicly)
 is the review's recommended default, pending the owner's call on the

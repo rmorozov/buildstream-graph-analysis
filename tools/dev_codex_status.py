@@ -48,11 +48,12 @@ def crosses_boundary(paths):
     return sorted(p for p in paths if p.startswith(BOUNDARIES))
 
 
-def reviewed_shas(reviews, reactions):
-    """Shas Codex finished a code review on; `"+1"` when it said so only by reaction."""
+def reviewed_shas(reviews, reactions, marker_sha=None):
+    """Shas Codex finished a code review on. A +1 has no sha of its own: it
+    counts for the sha the marker names, and for nothing without one."""
     shas = [r["commit_id"] for r in reviews if r["user"]["login"] == BOT]
-    if any(r["user"]["login"] == BOT and r["content"] == "+1" for r in reactions):
-        shas.append("+1")
+    if marker_sha and any(r["user"]["login"] == BOT and r["content"] == "+1" for r in reactions):
+        shas.append(marker_sha)
     return shas
 
 
@@ -77,7 +78,7 @@ def verdict(head, shas, findings, changed_since):
     problems, notes = [], []
     if not shas:
         problems.append("no Codex code review on this PR - mark it ready, or comment `@codex review`")
-    elif head not in shas and "+1" not in shas:
+    elif head not in shas:
         last = shas[-1]
         moved = [p for p in changed_since(last) if is_code(p)]
         if moved:
@@ -123,7 +124,10 @@ def main(argv=None):
     state = marker(issue_comments) or {}
     security_done = (state.get("security_review") or {}).get("status") == "completed"
     problems, notes = verdict(
-        head, reviewed_shas(reviews, reactions), open_findings(comments), lambda sha: _paths(sha, head)
+        head,
+        reviewed_shas(reviews, reactions, (state.get("code_review") or {}).get("commit_sha")),
+        open_findings(comments),
+        lambda sha: _paths(sha, head),
     )
     security = security_note(_paths(base, head), security_done)
     notes += [security] if security else []

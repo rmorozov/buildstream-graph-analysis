@@ -49,8 +49,15 @@ def test_a_submitted_review_is_done_though_the_marker_says_running():
 
 def test_a_plus_one_reaction_is_a_review_with_no_findings():
     reactions = [{"user": _user(BOT), "content": "+1"}, {"user": _user("someone"), "content": "+1"}]
-    assert codex.reviewed_shas([], reactions) == ["+1"]
-    assert codex.reviewed_shas([], reactions[1:]) == []
+    assert codex.reviewed_shas([], reactions, HEAD) == [HEAD]
+    assert codex.reviewed_shas([], reactions[1:], HEAD) == []
+    assert codex.reviewed_shas([], reactions) == []
+
+
+def test_an_old_plus_one_does_not_cover_code_pushed_after_it():
+    shas = codex.reviewed_shas([], [{"user": _user(BOT), "content": "+1"}], OLD)
+    problems, _ = _verdict(shas, changed=["bga/report/json.py"])
+    assert problems and "bga/report/json.py" in problems[0]
 
 
 def test_no_review_fails():

@@ -29,6 +29,7 @@ import urllib.request
 API = "https://api.github.com/repos/rmorozov/buildstream-graph-analysis"
 BOT = "chatgpt-codex-connector[bot]"
 MARKER = re.compile(r"codex-review-state:v1 (\{.*?\}) -->")
+NEXT = re.compile(r'<([^>]+)>;\s*rel="next"')
 CODE_SUFFIXES = (".py", ".js", ".mjs", ".c", ".h", ".cc", ".sh", ".yml", ".yaml", ".toml", ".css", ".html", ".lock")
 BOUNDARIES = (
     "tools/bga_view.py",
@@ -41,7 +42,8 @@ BOUNDARIES = (
 
 
 def is_code(path):
-    return not path.startswith("docs/") and path.endswith(CODE_SUFFIXES)
+    """Source, or an extensionless file such as `Makefile`, which runs the gates."""
+    return not path.startswith("docs/") and (path.endswith(CODE_SUFFIXES) or "." not in path.rsplit("/", 1)[-1])
 
 
 def crosses_boundary(paths):
@@ -97,13 +99,28 @@ def security_note(pr_paths, security_done):
     return None
 
 
-def _get(path):
+def _fetch(url):
+    """`(body, next page url or None)` for one GitHub REST page."""
     token = os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN")
-    request = urllib.request.Request(API + path, headers={"Accept": "application/vnd.github+json"})
+    request = urllib.request.Request(url, headers={"Accept": "application/vnd.github+json"})
     if token:
         request.add_header("Authorization", f"Bearer {token}")
     with urllib.request.urlopen(request, timeout=30) as response:
-        return json.load(response)
+        found = NEXT.search(response.headers.get("Link") or "")
+        return json.load(response), found.group(1) if found else None
+
+
+def pages(path, fetch=_fetch):
+    """Every item of a listing: a finding past page one still counts."""
+    items, url = [], API + path
+    while url:
+        body, url = fetch(url)
+        items += body
+    return items
+
+
+def _get(path):
+    return _fetch(API + path)[0]
 
 
 def _paths(a, b):
@@ -117,10 +134,10 @@ def main(argv=None):
     args = parser.parse_args(argv)
     pr = _get(f"/pulls/{args.pr}")
     head, base = pr["head"]["sha"], pr["base"]["sha"]
-    reviews = _get(f"/pulls/{args.pr}/reviews?per_page=100")
-    reactions = _get(f"/issues/{args.pr}/reactions?per_page=100")
-    comments = _get(f"/pulls/{args.pr}/comments?per_page=100")
-    issue_comments = _get(f"/issues/{args.pr}/comments?per_page=100")
+    reviews = pages(f"/pulls/{args.pr}/reviews?per_page=100")
+    reactions = pages(f"/issues/{args.pr}/reactions?per_page=100")
+    comments = pages(f"/pulls/{args.pr}/comments?per_page=100")
+    issue_comments = pages(f"/issues/{args.pr}/comments?per_page=100")
     state = marker(issue_comments) or {}
     security_done = (state.get("security_review") or {}).get("status") == "completed"
     problems, notes = verdict(

@@ -80,3 +80,15 @@ def test_an_edit_made_from_outside_runs_the_edited_files_checkout_hooks(tmp_path
     for path in (str(clone / ".claude/settings.json"), "repo/tests/x.py"):
         call = {"tool_name": "Edit", "cwd": str(tmp_path), "tool_input": {"file_path": path}}
         assert _dispatch("PreToolUse", call, allowed=(str(clone),)).returncode == 7, path
+
+
+def test_a_relative_edit_path_still_names_the_file_when_the_hook_runs_in_the_checkout(tmp_path):
+    clone = tmp_path / "repo"
+    (clone / ".claude").mkdir(parents=True)
+    exists = "python3 -c 'import json,os,sys; sys.exit(0 if os.path.isfile(json.load(sys.stdin)[\"tool_input\"][\"file_path\"]) else 7)'"
+    hook = {"matcher": "Edit", "hooks": [{"type": "command", "command": exists}]}
+    (clone / ".claude/settings.json").write_text(json.dumps({"hooks": {"PostToolUse": [hook]}}))
+    subprocess.run(["git", "init", "-q", str(clone)], check=True)
+    (clone / "x.py").write_text("x = 1\n")
+    call = {"tool_name": "Edit", "cwd": str(tmp_path), "tool_input": {"file_path": "repo/x.py"}}
+    assert _dispatch("PostToolUse", call, allowed=(str(clone),)).returncode == 0

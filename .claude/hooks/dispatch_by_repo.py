@@ -90,7 +90,11 @@ def main(argv):
         root = allowed_root(data, repos)
         roots = [root] if root else []
         if root and data.get("cwd") and not str(pathlib.Path(data["cwd"]).resolve()).startswith(str(root)):
-            payload = json.dumps(dict(data, cwd=str(root)))  # the hook judges the tree the command enters
+            tool_input = dict(data.get("tool_input") or {})
+            for key in ("file_path", "notebook_path"):  # the hook runs in root, not in cwd
+                if tool_input.get(key):
+                    tool_input[key] = os.path.join(data["cwd"], os.path.expanduser(tool_input[key]))
+            payload = json.dumps(dict(data, cwd=str(root), tool_input=tool_input))
     for root in roots:
         for command in commands(root, event, data.get("tool_name")):
             done = run(root, command, payload)

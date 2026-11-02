@@ -82,10 +82,14 @@ $ python3 tools/dev_codex_status.py 336
 | no boundary wants a security review | 1 failed, 5 passed |
 | no review is not a problem | 1 failed, 5 passed |
 | a +1 covers every later head | 1 failed, 6 passed |
+| an extensionless `Makefile` is not code | 1 failed, 15 passed |
+| only the first page of a listing is read | 1 failed, 15 passed |
 
 Review (Codex on #339, `2f396d91`, the procedure's first live run, read
 by this tool as 2 open findings): a +1 has no sha, so it counted for
 every later head; it now counts only for the sha the marker names.
+On `80231a31`: a `Makefile`-only change read as no code, and listings
+past 100 items were cut; extensionless files are code, every page is read.
 
 Deviation: the security review's policy (boundary PRs, posting publicly)
 is the review's recommended default, pending the owner's call on the

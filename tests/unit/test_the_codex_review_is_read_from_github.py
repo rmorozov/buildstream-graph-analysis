@@ -67,8 +67,14 @@ def test_no_review_fails():
 
 def test_only_code_after_the_reviewed_sha_asks_for_another_review():
     assert _verdict([OLD], changed=["docs/audits/round-176.md", "tests/quality_baseline.json"])[0] == []
-    problems, _ = _verdict([OLD], changed=["bga/report/json.py"])
-    assert problems and "bga/report/json.py" in problems[0]
+    for path in ("bga/report/json.py", "Makefile"):
+        problems, _ = _verdict([OLD], changed=[path])
+        assert problems and path in problems[0]
+
+
+def test_every_page_of_a_listing_is_read():
+    served = {codex.API + "/x": ([_finding(1)], "p2"), "p2": ([_finding(2)], None)}
+    assert [f["id"] for f in codex.open_findings(codex.pages("/x", served.__getitem__))] == [1, 2]
 
 
 def test_a_finding_is_open_until_a_reply_answers_it():

@@ -49,7 +49,7 @@ thread session listing `verifier` among its agents, waits on the owner.
 
 Gap: listed above (agents, skills, the unrefused bulk add). Close:
 `python3 -m pytest -q tests/unit/test_a_thread_session_runs_the_repos_hooks.py`
-reads `7 passed`. Mutations, `PYTHONDONTWRITEBYTECODE=1`:
+reads `8 passed`. Mutations, `PYTHONDONTWRITEBYTECODE=1`:
 
 | mutation | red |
 |---|---|
@@ -63,6 +63,7 @@ reads `7 passed`. Mutations, `PYTHONDONTWRITEBYTECODE=1`:
 | an edit's `file_path` is not read | 1 failed, 6 passed |
 | a new file's missing directory is not walked up | 1 failed, 6 passed |
 | a relative REPO argument is kept relative | 1 failed, 6 passed |
+| a relative `file_path` is passed on unchanged | 1 failed, 15 passed |
 
 Review (GitHub code scanning on #339): with no allowlist the dispatcher
 ran the hooks of any checkout a call entered, so a cloned capture source
@@ -74,6 +75,8 @@ also reads `cd DIR` and `git -C DIR` targets. `git -C x add -A` still
 passes `no_bulk_add` itself, its known gap (fixing guide §4a, UX-767). Codex on `c9672f04`: an Edit
 from the parent ran no hook, and a relative REPO linked dangling paths;
 the dispatcher now reads `file_path`, and the script makes REPO absolute.
+On `80231a31`: a relative `file_path` named the wrong file once the hook
+ran in the checkout; the dispatcher now makes it absolute first.
 
 Deviation: running the script against this session's own `~/.claude`
 was refused by the session's permission classifier as self-modification,

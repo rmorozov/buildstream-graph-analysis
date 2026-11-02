@@ -1,6 +1,6 @@
 # UX-1371: a project-thread session loads the repository's agents, skills and hooks
 
-**Priority:** High | **Status:** 🟡 In Progress | **Depends on:** — | **Found by:** the workflow review of 2026-11-01 (project thread "Review and optimize the agentic workflow") | **Serves:** every round run from a project thread, and every rule a hook holds | **Topic:** guards | **Area:** tools | **Shape:** judgement | **Reading:** container
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the workflow review of 2026-11-01 (project thread "Review and optimize the agentic workflow") | **Serves:** every round run from a project thread, and every rule a hook holds | **Topic:** guards | **Area:** tools | **Shape:** judgement | **Reading:** container
 
 **Guard:** `tests/unit/test_a_thread_session_runs_the_repos_hooks.py`
 
@@ -49,7 +49,7 @@ thread session listing `verifier` among its agents, waits on the owner.
 
 Gap: listed above (agents, skills, the unrefused bulk add). Close:
 `python3 -m pytest -q tests/unit/test_a_thread_session_runs_the_repos_hooks.py`
-reads `10 passed`. Mutations, `PYTHONDONTWRITEBYTECODE=1`:
+reads `13 passed`. Mutations, `PYTHONDONTWRITEBYTECODE=1`:
 
 | mutation | red |
 |---|---|
@@ -68,6 +68,7 @@ reads `10 passed`. Mutations, `PYTHONDONTWRITEBYTECODE=1`:
 | each `cd` resolves from the original `cwd` | 1 failed, 11 passed |
 | containment by string prefix | 1 failed, 11 passed |
 | `cd repo;` keeps its separator | 1 failed, 11 passed |
+| a failed unshallow is fatal again | 1 failed, 12 passed |
 | a candidate's `.git` redirect is trusted | 1 failed, 16 passed |
 | only the first allowed checkout's hooks run | 1 failed, 9 passed |
 
@@ -106,3 +107,11 @@ Probe of the owner's environment (2026-11-02, a new thread in
 and because the environment clones to `/home/user`, not `/home/claude`.
 Agents, skills and hooks were absent, the clone shallow, `bga` not
 installed. The script now finds its checkouts from its own path.
+
+Live reading (2026-11-02 11:40, a fresh thread on `6a3a2e2c`, setup line
+`bash /home/user/buildstream-graph-analysis/tools/dev_cloud_setup.sh`):
+`implementer`, `verifier`, `closer` listed; `orient`, `decompose`,
+`verify` present; `git add -A -n` refused by the hook; `dev_env_check`
+`env ok`. Setup itself exited 128: `fetch --unshallow` of `bga-bench`
+has no credentials before the session (`could not read Username`), and
+`set -e` skipped the installs. The unshallow is now non-fatal.

@@ -89,13 +89,14 @@ def allowed_roots(data, repos):
 
 def payload_for(root, data, payload):
     """The payload as the hook in `root` should read it: `cwd` is the tree the command enters."""
-    if not data.get("cwd") or str(pathlib.Path(data["cwd"]).resolve()).startswith(str(root)):
+    if not data.get("cwd"):
         return payload
     tool_input = dict(data.get("tool_input") or {})
     for key in ("file_path", "notebook_path"):  # the hook runs in root, not in cwd
         if tool_input.get(key):
             tool_input[key] = os.path.join(data["cwd"], os.path.expanduser(tool_input[key]))
-    return json.dumps(dict(data, cwd=str(root), tool_input=tool_input))
+    inside = str(pathlib.Path(data["cwd"]).resolve()).startswith(str(root))
+    return json.dumps(dict(data, cwd=data["cwd"] if inside else str(root), tool_input=tool_input))
 
 
 def main(argv):

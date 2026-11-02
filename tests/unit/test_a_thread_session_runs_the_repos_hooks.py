@@ -89,9 +89,11 @@ def test_a_relative_edit_path_still_names_the_file_when_the_hook_runs_in_the_che
     hook = {"matcher": "Edit", "hooks": [{"type": "command", "command": exists}]}
     (clone / ".claude/settings.json").write_text(json.dumps({"hooks": {"PostToolUse": [hook]}}))
     subprocess.run(["git", "init", "-q", str(clone)], check=True)
-    (clone / "x.py").write_text("x = 1\n")
-    call = {"tool_name": "Edit", "cwd": str(tmp_path), "tool_input": {"file_path": "repo/x.py"}}
-    assert _dispatch("PostToolUse", call, allowed=(str(clone),)).returncode == 0
+    (clone / "sub").mkdir()
+    (clone / "sub/x.py").write_text("x = 1\n")
+    for cwd, path in ((tmp_path, "repo/sub/x.py"), (clone / "sub", "x.py")):
+        call = {"tool_name": "Edit", "cwd": str(cwd), "tool_input": {"file_path": path}}
+        assert _dispatch("PostToolUse", call, allowed=(str(clone),)).returncode == 0, path
 
 
 def test_a_git_file_redirecting_into_the_checkout_does_not_borrow_its_allowlist(tmp_path):

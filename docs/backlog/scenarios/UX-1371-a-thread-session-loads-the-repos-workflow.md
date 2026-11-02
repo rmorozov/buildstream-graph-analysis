@@ -64,6 +64,7 @@ reads `10 passed`. Mutations, `PYTHONDONTWRITEBYTECODE=1`:
 | a new file's missing directory is not walked up | 1 failed, 6 passed |
 | a relative REPO argument is kept relative | 1 failed, 6 passed |
 | a relative `file_path` is passed on unchanged | 1 failed, 15 passed |
+| ... only when `cwd` is outside the checkout | 1 failed, 9 passed |
 | a candidate's `.git` redirect is trusted | 1 failed, 16 passed |
 | only the first allowed checkout's hooks run | 1 failed, 9 passed |
 
@@ -83,6 +84,8 @@ On `889ed9cc` (P1): a `.git` file pointing into the checkout borrowed its
 allowlist; a worktree now counts only if the checkout's own
 `git worktree list` names it. On `a62645ac`: `cd B && git push` from A
 ran only A's gate; every allowed checkout the call touches now runs.
+On `ede9db04`: the same relative-path miss from a checkout subdirectory;
+edit paths are now made absolute whatever `cwd` is.
 
 Deviation: running the script against this session's own `~/.claude`
 was refused by the session's permission classifier as self-modification,

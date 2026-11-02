@@ -75,6 +75,11 @@ gh pr create --title "retro: <date>" --body "the table and the command"
 row of its own, worked the normal way - the `retro` skill's job ends
 at the PR, the same boundary `UX-999`'s Out of Scope draws.
 
+**Every proposal gets a yes or a no.** The next round's close puts each
+open proposal on the owner's one decisions card; a proposal left
+unanswered across two retros is dropped, and the report says so
+(`UX-1372`).
+
 ## What this is not
 
 Not a task filer: an unattended id would race a live session's own

@@ -28,8 +28,10 @@ guards: the page read +10,841 B over its base (`UX-1039`).
    - `pytest -q tests/unit/test_the_chain_folds_and_clicks_are_counted.py` (landed screens)
    - `python3 tools/dev_close_task.py --check`
 3. A red that the merged tree caused and neither track could see is
-   yours: fix it by shape (split a module, trim a string), never by
-   raising a budget unless the brief allots the headroom.
+   yours: fix it by shape (split a module, trim a string). A budget a
+   closed row's own feature grew is raised to the reading plus 2% and
+   listed in the round document for the owner's veto (`UX-1372`); any
+   other raise needs headroom the brief allots.
 4. A red that one track caused alone goes back to the session as that
    track's hold. Do not repair a track's own defect.
 

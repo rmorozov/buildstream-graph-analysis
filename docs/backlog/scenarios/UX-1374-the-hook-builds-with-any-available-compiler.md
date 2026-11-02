@@ -87,9 +87,33 @@ is not this host's (`ELF_MACHINE`), before any stamp is written; `find()`
 reads it too, so a stamp alone cannot vouch for a binary. Cross wheels
 stay out of scope. Guard `TestACrossCompilerCannotCertifyThisHost`: a
 stand-in cross `$CC` that exits 0 having written an ELF for another
-machine.
+machine (now `TestAForeignTargetCannotCertifyThisHost`, below).
 
 | mutation | reddened | run |
 |---|---|---|
 | C1 `build` trusts the compiler's exit | the build refuses a foreign target | 1 failed, 23 passed |
 | C2 `find` trusts the stamp's machine | find refuses a foreign binary under a host stamp | 1 failed, 23 passed |
+
+### Codex on `9cd120dd`: one machine number, two ABIs
+
+Held. `CC='gcc -mx32'` writes ELFCLASS32 with `EM_X86_64`, and ppc64
+big- and little-endian share machine 21, so `e_machine` alone still
+certified a binary the host cannot load. `ELF_TARGET` now names the
+`(e_machine, EI_CLASS, EI_DATA)` triple per host and both `build()` and
+`find()` compare all three. Real minimal libraries on this host
+(`gcc -m64|-mx32 -shared -nostdlib`):
+
+```text
+-m64 (62, 2, 1) True
+-mx32 (62, 1, 1) False
+```
+
+Guard `TestAForeignTargetCannotCertifyThisHost`, parametrized over
+another machine, the host machine in the other class, and in the other
+byte order, with the host's own triple as the positive case.
+
+| mutation | reddened | run |
+|---|---|---|
+| D1 machine alone, as at `9cd120dd` | other class and other byte order, build and find | 4 failed, 25 passed |
+| D2 class ignored | other class, build and find | 2 failed, 27 passed |
+| D3 byte order ignored | other byte order, build and find | 2 failed, 27 passed |

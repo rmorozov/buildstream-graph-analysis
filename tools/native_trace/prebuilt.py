@@ -21,25 +21,33 @@ STAMP = "stamp.json"
 SOURCES = {"hook.so": "hook.c", "spine": "spine.c"}
 # UX-1374: `$CC` first, then these in order; any of them builds both.
 CANDIDATES = ("cc", "gcc", "clang")
-# ELF e_machine by `platform.machine()`: a cross `$CC` exits 0 on a foreign target, so the binary is asked.
-ELF_MACHINE = {"x86_64": 62, "aarch64": 183, "i686": 3, "armv7l": 40, "riscv64": 243, "ppc64le": 21, "s390x": 22}
+# (e_machine, EI_CLASS, EI_DATA) by `platform.machine()`: a cross or `-mx32` `$CC` exits 0, so the binary is asked.
+ELF_TARGET = {
+    "x86_64": (62, 2, 1),
+    "aarch64": (183, 2, 1),
+    "i686": (3, 1, 1),
+    "armv7l": (40, 1, 1),
+    "riscv64": (243, 2, 1),
+    "ppc64le": (21, 2, 1),
+    "s390x": (22, 2, 2),
+}
 
 
-def elf_machine(path: str):
-    """The ELF header's e_machine, or None when the file is not ELF."""
+def elf_target(path: str):
+    """The ELF header's (e_machine, EI_CLASS, EI_DATA), or None when the file is not ELF."""
     try:
         with open(path, "rb") as fh:
             head = fh.read(20)
     except OSError:
         return None
-    if len(head) < 20 or head[:4] != b"\x7fELF":
+    if len(head) < 20 or head[:4] != b"\x7fELF" or head[5] not in (1, 2):
         return None
-    return int.from_bytes(head[18:20], "little" if head[5] == 1 else "big")
+    return int.from_bytes(head[18:20], "little" if head[5] == 1 else "big"), head[4], head[5]
 
 
 def runs_here(path: str) -> bool:
-    expected = ELF_MACHINE.get(platform.machine())
-    return expected is not None and elf_machine(path) == expected
+    expected = ELF_TARGET.get(platform.machine())
+    return expected is not None and elf_target(path) == expected
 
 
 def compiler(environ=None):
@@ -108,8 +116,8 @@ def build(dest: str, cc: list, source_dir: str = HERE) -> dict:
         out = argv[argv.index("-o") + 1]
         if not runs_here(out):
             raise RuntimeError(
-                f"BGA_HOOK=prebuilt: {' '.join(cc)} built {os.path.basename(out)} for ELF machine "
-                f"{elf_machine(out)}, not this {platform.machine()} host; cross wheels are not supported"
+                f"BGA_HOOK=prebuilt: {' '.join(cc)} built {os.path.basename(out)} as ELF "
+                f"(machine, class, data) {elf_target(out)}, not this {platform.machine()} host; cross wheels are not supported"
             )
     version = subprocess.run([*cc, "--version"], capture_output=True, text=True).stdout.splitlines()
     stamp = {

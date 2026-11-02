@@ -2,6 +2,7 @@
 
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -89,38 +90,57 @@ class TestClangBuildsBoth:
         assert "clang" in stamp["compiler"], stamp
 
 
-FOREIGN = next(m for m in (183, 62) if m != native_prebuilt.ELF_MACHINE.get(os.uname().machine))
+HOST = native_prebuilt.ELF_TARGET[os.uname().machine]
 
 
-def _foreign_cc(tmp_path):
-    """A `$CC` that exits 0 having written an ELF for another machine, as a cross compiler does."""
+def _header(machine, cls, data):
+    return b"\x7fELF" + bytes([cls, data]) + bytes(12) + machine.to_bytes(2, "little" if data == 1 else "big")
+
+
+# Codex on ba5a112e (another machine) and on 9cd120dd (`-mx32`'s class, ppc64's byte order on one machine).
+FOREIGN = {
+    "another machine": (183 if HOST[0] != 183 else 62, HOST[1], HOST[2]),
+    "the host machine in the other class": (HOST[0], 3 - HOST[1], HOST[2]),
+    "the host machine in the other byte order": (HOST[0], HOST[1], 3 - HOST[2]),
+}
+
+
+def _foreign_cc(tmp_path, target):
+    """A `$CC` that exits 0 having written an ELF for `target`, as a cross or `-mx32` compiler does."""
     script = tmp_path / "cross-cc"
-    header = b"\x7fELF\x02\x01" + bytes(12) + FOREIGN.to_bytes(2, "little")
     script.write_text(
         f"#!{sys.executable}\nimport sys\n"
         f"if '--version' in sys.argv: print('cross-cc 1.0'); sys.exit(0)\n"
-        f"open(sys.argv[sys.argv.index('-o') + 1], 'wb').write({header!r})\n"
+        f"open(sys.argv[sys.argv.index('-o') + 1], 'wb').write({_header(*target)!r})\n"
     )
     script.chmod(0o755)
     return str(script)
 
 
-class TestACrossCompilerCannotCertifyThisHost:
-    """Codex on ba5a112e: a cross `$CC` exits 0, so the stamp's machine must come from the binary."""
+def _stamped_with(tmp_path, monkeypatch, binary):
+    dest = tmp_path / "prebuilt"
+    dest.mkdir()
+    (dest / "hook.so").write_bytes(binary)
+    sources = {src: native_prebuilt.sha256(os.path.join(native_prebuilt.HERE, src)) for src in ("hook.c", "spine.c")}
+    stamp = {"machine": os.uname().machine, "compiler": "cross-cc 1.0", "sources": sources}
+    (dest / native_prebuilt.STAMP).write_text(json.dumps(stamp))
+    monkeypatch.setattr(native_prebuilt, "PREBUILT_DIR", str(dest))
 
-    def test_the_build_refuses_a_foreign_target(self, tmp_path):
-        with pytest.raises(RuntimeError, match=f"for ELF machine {FOREIGN}, not this {os.uname().machine} host"):
-            native_prebuilt.build(str(tmp_path / "out"), [_foreign_cc(tmp_path)])
+
+class TestAForeignTargetCannotCertifyThisHost:
+    """A compiler's exit 0 says nothing about the target: machine, class and byte order are read from the binary."""
+
+    @pytest.mark.parametrize("target", list(FOREIGN.values()), ids=list(FOREIGN))
+    def test_the_build_refuses_it(self, tmp_path, target):
+        with pytest.raises(RuntimeError, match=re.escape(f"(machine, class, data) {target}, not this")):
+            native_prebuilt.build(str(tmp_path / "out"), [_foreign_cc(tmp_path, target)])
         assert not (tmp_path / "out" / native_prebuilt.STAMP).exists()
 
-    def test_find_refuses_a_foreign_binary_under_a_host_stamp(self, tmp_path, monkeypatch):
-        dest = tmp_path / "prebuilt"
-        dest.mkdir()
-        (dest / "hook.so").write_bytes(b"\x7fELF\x02\x01" + bytes(12) + FOREIGN.to_bytes(2, "little"))
-        sources = {
-            src: native_prebuilt.sha256(os.path.join(native_prebuilt.HERE, src)) for src in ("hook.c", "spine.c")
-        }
-        stamp = {"machine": os.uname().machine, "compiler": "cross-cc 1.0", "sources": sources}
-        (dest / native_prebuilt.STAMP).write_text(json.dumps(stamp))
-        monkeypatch.setattr(native_prebuilt, "PREBUILT_DIR", str(dest))
+    @pytest.mark.parametrize("target", list(FOREIGN.values()), ids=list(FOREIGN))
+    def test_find_refuses_it_under_a_host_stamp(self, tmp_path, monkeypatch, target):
+        _stamped_with(tmp_path, monkeypatch, _header(*target))
         assert native_prebuilt.find("hook.so") is None
+
+    def test_find_takes_the_host_s_own_target(self, tmp_path, monkeypatch):
+        _stamped_with(tmp_path, monkeypatch, _header(*HOST))
+        assert native_prebuilt.find("hook.so") == str(tmp_path / "prebuilt" / "hook.so")

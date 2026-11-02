@@ -19,10 +19,11 @@ needs_cc = pytest.mark.skipif(CC is None, reason="no C compiler on PATH")
 PREBUILT_FILES = {"hook.so", "spine", "stamp.json"}
 
 
-def elf(name, machine=None):
-    """A stand-in binary: an ELF64 little-endian header for `machine` (this host's by default), then its name."""
-    machine = native_prebuilt.ELF_MACHINE[os.uname().machine] if machine is None else machine
-    return b"\x7fELF\x02\x01" + bytes(12) + machine.to_bytes(2, "little") + b"prebuilt " + name.encode()
+def elf(name):
+    """A stand-in binary: this host's ELF header (machine, class, byte order), then its name."""
+    machine, cls, data = native_prebuilt.ELF_TARGET[os.uname().machine]
+    order = "little" if data == 1 else "big"
+    return b"\x7fELF" + bytes([cls, data]) + bytes(12) + machine.to_bytes(2, order) + b"prebuilt " + name.encode()
 
 
 @pytest.fixture

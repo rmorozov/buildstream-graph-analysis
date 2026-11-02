@@ -1,6 +1,6 @@
 # UX-1373: a wheel ships its hook prebuilt, or compiles it at capture, by choice
 
-**Priority:** Medium | **Status:** 🟡 In Progress | **Depends on:** — | **Found by:** Ruslan, 2026-11-02: "two types of bga wheels - one with pre compiled hook and one that builds hook on machine"; `UX-1287` named it out of scope | **Serves:** R5 | **Topic:** capture | **Area:** tools | **Shape:** bounded | **Reading:** container
+**Priority:** Medium | **Status:** 🟢 Done | **Depends on:** — | **Found by:** Ruslan, 2026-11-02: "two types of bga wheels - one with pre compiled hook and one that builds hook on machine"; `UX-1287` named it out of scope | **Serves:** R5 | **Topic:** capture | **Area:** tools | **Shape:** bounded | **Reading:** container
 
 **Guard:** `tests/unit/test_a_wheel_carries_its_hook_prebuilt_or_compiles_it.py`
 
@@ -52,8 +52,18 @@ with the poisoned `cc` first on PATH, and the shim ran.
 
 ## Outcome
 
-**Premise:** held. The container half is below; the CI half is the
-pull request's `installed-capture`, and the row stays 🟡 until it reads.
+**Premise:** held. The container half is below; the CI half is
+`installed-capture` on PR #341 at `fa13338d` (job 125294408188), with a
+`cc` and `gcc` that exit 97 first on PATH:
+
+```text
+  [ok  ] c-compiler: the wheel's prebuilt hook and spine match their sources (cc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0); no C compiler needed
+Using the wheel's prebuilt trace hook...
+  The bwrap shim ran 9 time(s); 9 rewritten, 0 passed through.
+Using the wheel's prebuilt trace hook...
+  The bwrap shim ran 9 time(s); 9 rewritten, 0 passed through.
+analyze @last resolved from the store, in a foreign venv
+```
 
 ### The gap, measured
 

@@ -102,3 +102,18 @@ def test_a_git_file_redirecting_into_the_checkout_does_not_borrow_its_allowlist(
     (source / ".git").write_text(f"gitdir: {REPO / '.git'}\n")
     call = {"tool_name": "Bash", "cwd": str(source), "tool_input": {"command": "ls"}}
     assert _dispatch("PreToolUse", call).returncode == 0
+
+
+def test_a_command_that_leaves_one_allowed_checkout_for_another_runs_both_hooks(tmp_path):
+    for name, code in (("a", "0"), ("b", "7")):
+        repo = tmp_path / name
+        (repo / ".claude").mkdir(parents=True)
+        hook = {"matcher": "Bash", "hooks": [{"type": "command", "command": f"exit {code}"}]}
+        (repo / ".claude/settings.json").write_text(json.dumps({"hooks": {"PreToolUse": [hook]}}))
+        subprocess.run(["git", "init", "-q", str(repo)], check=True)
+    call = {
+        "tool_name": "Bash",
+        "cwd": str(tmp_path / "a"),
+        "tool_input": {"command": f"cd {tmp_path / 'b'} && git push"},
+    }
+    assert _dispatch("PreToolUse", call, allowed=(str(tmp_path / "a"), str(tmp_path / "b"))).returncode == 7

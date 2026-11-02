@@ -75,37 +75,38 @@ def worktrees(repo):
     return {pathlib.Path(line[len("worktree ") :]).resolve() for line in lines if line.startswith("worktree ")}
 
 
-def allowed_root(data, repos):
-    """The allowed checkout the call runs in, or one its command enters."""
-    cwd = data.get("cwd") or os.getcwd()
+def allowed_roots(data, repos):
+    """Every allowed checkout the call runs in or its command enters, in order."""
+    cwd, roots = data.get("cwd") or os.getcwd(), []
     for place in targets(cwd, data.get("tool_input") or {}):
         while place and not os.path.isdir(place) and place != os.path.dirname(place):
             place = os.path.dirname(place)  # a Write may create the directory
         found = checkout(place) if os.path.isdir(place) else None
         if found and found[1].resolve() in repos and found[0].resolve() in worktrees(found[1]):
-            return found[0]
-    return None
+            roots += [found[0]] if found[0] not in roots else []
+    return roots
+
+
+def payload_for(root, data, payload):
+    """The payload as the hook in `root` should read it: `cwd` is the tree the command enters."""
+    if not data.get("cwd") or str(pathlib.Path(data["cwd"]).resolve()).startswith(str(root)):
+        return payload
+    tool_input = dict(data.get("tool_input") or {})
+    for key in ("file_path", "notebook_path"):  # the hook runs in root, not in cwd
+        if tool_input.get(key):
+            tool_input[key] = os.path.join(data["cwd"], os.path.expanduser(tool_input[key]))
+    return json.dumps(dict(data, cwd=str(root), tool_input=tool_input))
 
 
 def main(argv):
     event, repos = argv[0], [pathlib.Path(r).resolve() for r in argv[1:]]
     payload = sys.stdin.read()
     data = json.loads(payload or "{}")
-    if event == "SessionStart":
-        roots = repos
-    else:
-        # Only an allowed checkout or one of its worktrees: a cloned capture's hooks never run.
-        root = allowed_root(data, repos)
-        roots = [root] if root else []
-        if root and data.get("cwd") and not str(pathlib.Path(data["cwd"]).resolve()).startswith(str(root)):
-            tool_input = dict(data.get("tool_input") or {})
-            for key in ("file_path", "notebook_path"):  # the hook runs in root, not in cwd
-                if tool_input.get(key):
-                    tool_input[key] = os.path.join(data["cwd"], os.path.expanduser(tool_input[key]))
-            payload = json.dumps(dict(data, cwd=str(root), tool_input=tool_input))
+    # Only allowed checkouts or their worktrees: a cloned capture's hooks never run.
+    roots = repos if event == "SessionStart" else allowed_roots(data, repos)
     for root in roots:
         for command in commands(root, event, data.get("tool_name")):
-            done = run(root, command, payload)
+            done = run(root, command, payload_for(root, data, payload))
             if done.returncode != 0:
                 return done.returncode
     return 0

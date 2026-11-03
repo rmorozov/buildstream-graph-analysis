@@ -154,6 +154,7 @@ __all__ = [
     "summarize_jobserver_tokens_by_element",
     "tokens_by_element",
 ]
+from .native_trace import prebuilt as native_prebuilt
 from .native_trace.bwrap_shim import (
     _AUTH_OVERRIDE_STYLES,
     _COMPILER_SAFE_POLICIES,
@@ -182,24 +183,23 @@ class TraceError(RuntimeError):
     pass
 
 
-def c_compiler(purpose: str) -> str:
-    """The compiler a capture builds its hook and spine with; `bga doctor` asks the same."""
-    cc = shutil.which("cc") or shutil.which("gcc")
+def c_compiler(purpose: str) -> list:
+    """The compiler argv a capture builds its hook and spine with; `bga doctor` asks the same."""
+    cc, reason = native_prebuilt.compiler()
     if cc is None:
-        raise TraceError(f"no C compiler (cc/gcc) found on PATH - required to build the {purpose}")
+        raise TraceError(f"{reason} - required to build the {purpose}")
     return cc
 
 
 def compile_hook(build_dir: str) -> str:
-    """Compile the LD_PRELOAD hook fresh into build_dir, never cached: a stale hook.so bit UX-11."""
+    """The hook in build_dir: the wheel's prebuilt one while its stamp matches hook.c (UX-1373), else compiled (UX-11)."""
     hook_so = os.path.join(build_dir, "hook.so")
+    prebuilt = native_prebuilt.find("hook.so")
+    if prebuilt is not None:
+        shutil.copy2(prebuilt, hook_so)
+        return hook_so
     cc = c_compiler("LD_PRELOAD hook")
-    result = subprocess.run(
-        # -ldl for UX-46's dlsym(RTLD_NEXT): needed before glibc 2.34, harmless after.
-        [cc, "-shared", "-fPIC", "-O2", "-Wall", "-Wextra", "-o", hook_so, _HOOK_C, "-ldl"],
-        capture_output=True,
-        text=True,
-    )
+    result = subprocess.run(native_prebuilt.hook_argv(cc, hook_so), capture_output=True, text=True)
     if result.returncode != 0:
         raise TraceError(f"failed to compile {_HOOK_C}:\n{result.stderr}")
     return hook_so
@@ -215,16 +215,16 @@ def compile_spine(build_dir: str) -> str:
     nothing else. A dynamically-linked tracer would fail to start
     exactly where the static blind spot is worst.
 
-    Compiled fresh rather than cached, the same rule `compile_hook`
-    follows and for the same reason it learned it.
+    Compiled fresh, or the wheel's prebuilt one while it matches its
+    source, the same rule `compile_hook` follows (UX-11, UX-1373).
     """
     spine_bin = os.path.join(build_dir, "spine")
+    prebuilt = native_prebuilt.find("spine")
+    if prebuilt is not None:
+        shutil.copy2(prebuilt, spine_bin)
+        return spine_bin
     cc = c_compiler("ptrace spine")
-    result = subprocess.run(
-        [cc, "-static", "-O2", "-Wall", "-Wextra", "-o", spine_bin, _SPINE_C],
-        capture_output=True,
-        text=True,
-    )
+    result = subprocess.run(native_prebuilt.spine_argv(cc, spine_bin), capture_output=True, text=True)
     if result.returncode != 0:
         raise TraceError(f"failed to compile {_SPINE_C}:\n{result.stderr}")
     return spine_bin
@@ -2500,7 +2500,12 @@ def run_traced_build(
         os.makedirs(shim_dir)
         os.makedirs(bind_dir)
 
-        print("Compiling the trace hook...", file=sys.stderr)
+        print(
+            "Using the wheel's prebuilt trace hook..."
+            if native_prebuilt.find("hook.so")
+            else "Compiling the trace hook...",
+            file=sys.stderr,
+        )
         compile_hook(bind_dir)  # writes bind_dir/hook.so directly - no extra copy step
         # UX-106: opt-in until `UX-108` measures the overhead. The hook
         # stays either way - it is the only source of opened paths and of

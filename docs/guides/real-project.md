@@ -267,6 +267,24 @@ near the project it analyzes, and the capture is exercised in exactly
 that shape by CI. `pip install -e ".[bst]"` from inside the checkout is
 the contributor mode.
 
+That wheel compiles the `LD_PRELOAD` hook and the ptrace spine when a
+capture starts, so the capture host needs a C compiler (`UX-1287`): `$CC`
+if set, else the first of `cc`, `gcc` and `clang` on `PATH` (`UX-1374`). For an agent
+image with no compiler, build the other kind once on a machine of the
+same architecture and install that instead (`UX-1373`):
+
+```bash
+BGA_HOOK=prebuilt pip wheel --no-deps -w dist ./buildstream-graph-analysis   # bga-*-py3-none-linux_<arch>.whl
+pip install dist/bga-*-linux_*.whl
+```
+
+It carries both binaries and a stamp of their sources' sha256; a capture
+uses them only while the stamp matches and the machine is the one they
+were built on, and otherwise compiles as before. `bga doctor` says which.
+The sandbox's glibc must be at least the newest symbol version the hook
+asks for — `GLIBC_2.34` when built on Ubuntu 24.04 (`objdump -T hook.so`)
+— the same floor a hook compiled at capture time on that host has.
+
 `--single-branch` because this repository doubles as the capture archive
 (`UX-77`): `captures/*` branches — twelve as of 2026-09-07 (`git
 ls-remote --heads origin 'captures/*' | wc -l`; a capture job may add

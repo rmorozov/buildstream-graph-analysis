@@ -14,7 +14,7 @@ what a script would assume.
 
 import json
 import os
-import re
+import shutil
 import subprocess
 import sys
 import tempfile as tempfile_mod
@@ -309,13 +309,14 @@ def test_the_compiler_check_is_the_one_the_capture_performs():
 
     from tools import bst_native_build_tracer as tracer
 
-    source = inspect.getsource(tracer.c_compiler)
-    compilers = set(re.findall(r'shutil\.which\(["\'](\w+)["\']\)', source))
+    # UX-1374: the candidates live in `prebuilt.compiler`, which `c_compiler` calls.
+    assert "native_prebuilt.compiler()" in inspect.getsource(tracer.c_compiler)
+    compilers = tracer.native_prebuilt.CANDIDATES
     assert compilers, "c_compiler no longer resolves a compiler by name"
 
     import shutil
 
-    if not any(shutil.which(name) for name in compilers):
+    if not any(shutil.which(name) for name in compilers) and not os.environ.get("CC"):
         assert check_compiler()["status"] == FAIL
         return
     # UX-153: present is not the same as capable, so OK is no longer the
@@ -467,7 +468,7 @@ class TestTheCompilerCheckProbesRatherThanChecks:
 
         monkeypatch.setattr(doctor, "_compiles", lambda argv: "-static" not in argv)
         monkeypatch.setattr(tracer, "compile_hook", lambda build_dir: os.path.join(build_dir, "hook.so"))
-        monkeypatch.setattr(tracer, "c_compiler", lambda purpose: "/usr/bin/cc")
+        monkeypatch.setattr(tracer, "c_compiler", lambda purpose: ["/usr/bin/cc"])
 
         finding = doctor.check_compiler()
 
@@ -481,7 +482,7 @@ class TestTheCompilerCheckProbesRatherThanChecks:
 
         monkeypatch.setattr(doctor, "_compiles", lambda argv: True)
         monkeypatch.setattr(tracer, "compile_hook", lambda build_dir: os.path.join(build_dir, "hook.so"))
-        monkeypatch.setattr(tracer, "c_compiler", lambda purpose: "/usr/bin/cc")
+        monkeypatch.setattr(tracer, "c_compiler", lambda purpose: ["/usr/bin/cc"])
 
         assert doctor.check_compiler()["status"] == OK
 
@@ -782,3 +783,15 @@ class TestScratchAndTmpdirChecks:
         found = _by_id(check_scratch(str(missing)), "scratch-executable")
         assert found["status"] == SKIP
         assert not missing.exists()
+
+
+@pytest.mark.skipif(shutil.which("clang") is None, reason="no clang on PATH")
+def test_doctor_names_the_compiler_cc_names(tmp_path, monkeypatch):
+    """UX-1374: `CC=clang` is the compiler doctor builds the hook with and names."""
+    from tools.native_trace import prebuilt as native_prebuilt
+
+    monkeypatch.setattr(native_prebuilt, "PREBUILT_DIR", str(tmp_path / "absent"))
+    monkeypatch.setenv("CC", "clang")
+    check = check_compiler()
+    assert check["status"] in (OK, WARN), check
+    assert shutil.which("clang") in check["summary"]

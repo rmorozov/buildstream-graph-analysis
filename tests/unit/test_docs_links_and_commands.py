@@ -1672,7 +1672,7 @@ def test_the_architecture_names_the_file_behind_each_command():
 
 
 def test_the_architecture_lists_every_native_trace_member():
-    """Plane 2's mechanism is five members under `tools/native_trace/`;
+    """Plane 2's mechanism is six members under `tools/native_trace/`;
     the document named three in prose and the map named none.
     `bwrap_shim.py`, the piece that puts the hook in front of the real
     `bwrap`, was nowhere.
@@ -1689,7 +1689,7 @@ def test_the_architecture_lists_every_native_trace_member():
     ]
     wrappers = "tools/native_trace/wrappers/"
     members = sorted({wrappers if one.startswith(wrappers) else one for one in raw})
-    assert len(members) == 5, ("tools/native_trace/ no longer holds the five members this guard is for", members)
+    assert len(members) == 6, ("tools/native_trace/ no longer holds the six members this guard is for", members)
     text = _ARCHITECTURE.read_text(encoding="utf-8")
     missing = [one for one in members if one not in text]
     assert missing == [], "architecture.md describes Plane 2 without naming:\n  " + "\n  ".join(missing)

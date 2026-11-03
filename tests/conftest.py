@@ -399,6 +399,7 @@ KNOWN_SKIP_REASONS = {
     "golden has no Plane 2 sibling to lose": ("a fixture-shape gate: the clause needs a run with both planes", 0),
     "jq not found on PATH": ("the docs' own examples pipe through jq; it is not a dependency", 0),
     "no C compiler on PATH": ("the LD_PRELOAD hook and the spine's fixtures are compiled here", 0),
+    "no clang on PATH": ("UX-1374: the hook and spine built with a compiler that is not gcc", 0),
     "no PATH": (
         "the doctor's remedy text is about resolving a command, so an "
         "environment with no PATH at all has nothing to assert",

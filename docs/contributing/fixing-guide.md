@@ -505,6 +505,8 @@ tools/native_trace/trackevent.py  Perfetto's own TrackEvent format, written as
                              a stream by the stdlib (UX-298, Direction 15)
 tools/native_trace/bwrap_shim.py  a `bwrap` shim ahead of the real one in
                              `$PATH`, so the hook reaches inside the sandbox
+tools/native_trace/prebuilt.py  the hook and spine a `BGA_HOOK=prebuilt`
+                             wheel ships, used while their stamp matches (UX-1373)
 tools/native_trace/wrappers/_common.sh  the jobserver token-holding
                              wrappers' shared logic - `ld.lld`/`lld`/
                              `ld.gold`/`mold`/`ninja` each source it

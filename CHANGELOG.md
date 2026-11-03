@@ -39,6 +39,7 @@ derivation actually reads.
 
 | release | date | closed rows | kind |
 |---|---|---|---|
+| [0.6.1](#061--a-wheel-that-needs-no-compiler-2026-11-03) | 2026-11-03 | 1311 | patch |
 | [0.6.0](#060--findings-that-say-what-to-do-and-a-pool-that-fits-its-cgroup-2026-10-07) | 2026-10-07 | 1280 | breaking |
 | [0.5.0](#050--the-tool-prices-its-own-cost-and-the-jobserver-2026-09-29) | 2026-09-29 | 1083 | extending |
 | [0.4.1](#041--the-tool-says-what-it-assumes-2026-09-12) | 2026-09-12 | 813 | patch |
@@ -61,6 +62,97 @@ round 86 first "corrected" that to *a lineage `main` cannot reach*.
 Both are wrong: `pyproject.toml` enters this history at `4ace856`
 (2026-08-13) and `0.2.0` is an ordinary release. The wrong correction
 was read off a shallow clone — `UX-633`, and `UX-637` for the cause.
+
+## 0.6.1 — a wheel that needs no compiler (2026-11-03)
+
+Named for what most people installing it will notice. `bga` ships a
+wheel whose `LD_PRELOAD` hook and ptrace spine are prebuilt, used only
+while their stamp matches the shipped source and the machine, and
+otherwise compiled at capture time with any C compiler, `$CC` first
+(`UX-1373`, `UX-1374`); the wheel carries the jobserver's
+`native_trace/wrappers` it was missing (`UX-1347`). On the analysis side
+an element's saving is one number in every section (`UX-1362`), the
+headline's top three and the work order agree (`UX-1342`), an edge
+what-if prices removing a dependency (`UX-1357`), the builders line
+reads the run's own sweep and proposes one approach for the host's
+regime (`UX-1363`, `UX-1368`), and a junctioned target reaches `bst
+show` with its junction (`UX-1356`). Python 3.9-3.11 are dropped
+(`UX-1348`).
+
+**Contract delta:** none — the twenty-eight contracts and the command
+surface are `0.6.0`'s, which makes the row `patch`.
+
+**Upgrade note:** `bga` now needs **Python 3.12** or newer
+(`requires-python = ">=3.12"`); on 3.9-3.11 stay on 0.6.0. A prebuilt
+hook built on Ubuntu 24.04 asks for `GLIBC_2.34`, so the sandbox it is
+loaded into needs **glibc 2.34 or newer** — the same floor a hook
+compiled at capture time on that host has, and nothing checks it yet
+(`UX-1373`'s Out of Scope; `objdump -T hook.so` shows it).
+
+**Carried findings.** Review 38 (closed-row marker 1292) filed `UX-1355`,
+closed before this cut. Walk seed 6
+([`walk-seed-6.md`](docs/audits/walk-seed-6.md), on `ffcb221f`) filed
+`UX-1376` - `correlate --format json` on a run with no Plane 2 answers in
+text - and `UX-1377` - an incremental run lists cached elements as
+bottlenecks - which ship open, with the sandbox glibc check above.
+
+```text state
+contracts: analyze/v2 analyze/v3 analyze/v4 analyze/v5 analyze/v6 analyze/v7 blast/v1 blast/v2 bundle-manifest/v1 capacity-model/v1 capture-layout/v1 compare/v1 compare/v2 correlate/v1 correlate/v2 host-samples/v1 host/v1 host/v2 junction-cost/v1 plane2/v1 plane2/v2 plane2/v3 sources/v1 store-aggregate/v1 store/v1 sweep/v1 tail/v1 whatif/v1
+commands: analyze baseline blast bundle cache-logs cache-trend capture checkout-cost chrome-to-trace compare correlate cross-check diagnostics doctor extract floors gen-synthetic graph graph-from-show junction-cost log-to-chrome native-to-chrome rebuild-set release-notes replay run-context snapshot sweep timeline utilisation variant-cost view whatif wrap
+```
+
+### What landed
+
+<!-- generated: UX-252 1280→1311 -->
+31 scenarios closed (closed-row markers 1280 → 1311).
+
+**contracts**
+
+- [UX-1378](docs/backlog/scenarios/UX-1378-cut-release-0-6-1.md) — [cut release 0.6.1, patch](docs/backlog/scenarios/UX-1378-cut-release-0-6-1.md)
+
+**analysis**
+
+- [UX-1342](docs/backlog/scenarios/UX-1342-the-headline-and-the-order-name-two-different-top-threes.md) — [the headline's "top 3" and the work order name two different triples](docs/backlog/scenarios/UX-1342-the-headline-and-the-order-name-two-different-top-threes.md)
+- [UX-1357](docs/backlog/scenarios/UX-1357-edge-what-if-prices-removing-a-dependency.md) — [an edge what-if prices removing a dependency, not only zeroing an element](docs/backlog/scenarios/UX-1357-edge-what-if-prices-removing-a-dependency.md)
+- [UX-1359](docs/backlog/scenarios/UX-1359-a-low-cores-busy-chain-element-is-recommended.md) — [a critical-path element with low cores busy and a real saving gets a recommendation](docs/backlog/scenarios/UX-1359-a-low-cores-busy-chain-element-is-recommended.md)
+- [UX-1362](docs/backlog/scenarios/UX-1362-one-saving-per-element-across-sections.md) — [one element's saving is the same number in every section](docs/backlog/scenarios/UX-1362-one-saving-per-element-across-sections.md)
+- [UX-1363](docs/backlog/scenarios/UX-1363-the-builders-line-reads-this-runs-sweep.md) — [the builders recommendation reads this run's own sweep](docs/backlog/scenarios/UX-1363-the-builders-line-reads-this-runs-sweep.md)
+- [UX-1364](docs/backlog/scenarios/UX-1364-physical-cores-are-context-beside-the-logical-denominator.md) — [physical cores are context beside the logical denominator](docs/backlog/scenarios/UX-1364-physical-cores-are-context-beside-the-logical-denominator.md)
+- [UX-1365](docs/backlog/scenarios/UX-1365-analyze-finds-the-plane-2-report-beside-a-capture.md) — [analyze finds the Plane 2 report beside a published capture](docs/backlog/scenarios/UX-1365-analyze-finds-the-plane-2-report-beside-a-capture.md)
+- [UX-1366](docs/backlog/scenarios/UX-1366-build-tool-sources-and-universal-flags.md) — [shared-source findings separate build tools, and a flag on every element is not printed](docs/backlog/scenarios/UX-1366-build-tool-sources-and-universal-flags.md)
+- [UX-1368](docs/backlog/scenarios/UX-1368-the-builders-line-sizes-by-host-regime.md) — [the builders line sizes every approach for the host's regime and proposes one](docs/backlog/scenarios/UX-1368-the-builders-line-sizes-by-host-regime.md)
+
+**capture**
+
+- [UX-1309](docs/backlog/scenarios/UX-1309-prune-deletes-a-snapshot-whose-capture-is-still-running.md) — [`--prune` deletes a snapshot whose capture is still running](docs/backlog/scenarios/UX-1309-prune-deletes-a-snapshot-whose-capture-is-still-running.md)
+- [UX-1356](docs/backlog/scenarios/UX-1356-a-junctioned-target-reaches-bst-show-without-its-junction.md) — [a junctioned target reaches `bst show` without its junction](docs/backlog/scenarios/UX-1356-a-junctioned-target-reaches-bst-show-without-its-junction.md)
+- [UX-1374](docs/backlog/scenarios/UX-1374-the-hook-builds-with-any-available-compiler.md) — [the hook and spine build with any available C compiler, `$CC` first](docs/backlog/scenarios/UX-1374-the-hook-builds-with-any-available-compiler.md)
+- [UX-1373](docs/backlog/scenarios/UX-1373-a-wheel-ships-its-hook-prebuilt-or-compiles-it.md) — [a wheel ships its hook prebuilt, or compiles it at capture, by choice](docs/backlog/scenarios/UX-1373-a-wheel-ships-its-hook-prebuilt-or-compiles-it.md)
+
+**guards**
+
+- [UX-1345](docs/backlog/scenarios/UX-1345-the-append-guard-assumes-the-live-chunk-has-room.md) — [the append guard copies the live closed index and assumes its last chunk has room](docs/backlog/scenarios/UX-1345-the-append-guard-assumes-the-live-chunk-has-room.md)
+- [UX-1346](docs/backlog/scenarios/UX-1346-four-test-sites-use-zip-strict-which-3-9-lacks.md) — [four test sites call `zip(strict=True)`, which Python 3.9 does not have](docs/backlog/scenarios/UX-1346-four-test-sites-use-zip-strict-which-3-9-lacks.md)
+- [UX-1347](docs/backlog/scenarios/UX-1347-the-wheel-ships-no-jobserver-wrappers.md) — [the wheel ships no `native_trace/wrappers`, so `--jobserver auto` dies in bwrap](docs/backlog/scenarios/UX-1347-the-wheel-ships-no-jobserver-wrappers.md)
+- [UX-1343](docs/backlog/scenarios/UX-1343-the-pull-request-lane-never-installs-on-the-python-floor.md) — [the pull-request lane never installs on the Python floor, so a 3.9-only break reds main alone](docs/backlog/scenarios/UX-1343-the-pull-request-lane-never-installs-on-the-python-floor.md)
+- [UX-1348](docs/backlog/scenarios/UX-1348-bga-supports-python-3-12-to-3-14.md) — [bga supports Python 3.12, 3.13 and 3.14 only](docs/backlog/scenarios/UX-1348-bga-supports-python-3-12-to-3-14.md)
+- [UX-1350](docs/backlog/scenarios/UX-1350-the-390-page-depends-on-its-font.md) — [the 390px page depends on its font, so eight guards red where `system-ui` is Inter](docs/backlog/scenarios/UX-1350-the-390-page-depends-on-its-font.md)
+- [UX-1351](docs/backlog/scenarios/UX-1351-the-run-ledger-prices-a-run.md) — [the run ledger prices a run, at its model's version and card](docs/backlog/scenarios/UX-1351-the-run-ledger-prices-a-run.md)
+- [UX-1353](docs/backlog/scenarios/UX-1353-a-guard-auditor-reads-every-new-test.md) — [a guard auditor reads every new test against what its task says it guards](docs/backlog/scenarios/UX-1353-a-guard-auditor-reads-every-new-test.md)
+- [UX-1349](docs/backlog/scenarios/UX-1349-browser-tests-are-59-percent-of-ci-seconds.md) — [browser tests are 59% of CI's test seconds, against UX-690's 40%](docs/backlog/scenarios/UX-1349-browser-tests-are-59-percent-of-ci-seconds.md)
+- [UX-1040](docs/backlog/scenarios/UX-1040-a-paired-reading-decides-the-implementers-model.md) — [a paired reading decides the implementers' model, and where Haiku 5.5 reads](docs/backlog/scenarios/UX-1040-a-paired-reading-decides-the-implementers-model.md)
+- [UX-1352](docs/backlog/scenarios/UX-1352-a-triager-reads-the-red-logs.md) — [a `triager` reads the red logs so the session reads a table](docs/backlog/scenarios/UX-1352-a-triager-reads-the-red-logs.md)
+- [UX-1354](docs/backlog/scenarios/UX-1354-layout-free-browser-checks-read-the-dom-shim-instead-of-chrome.md) — [layout-free browser checks read the DOM shim instead of Chrome](docs/backlog/scenarios/UX-1354-layout-free-browser-checks-read-the-dom-shim-instead-of-chrome.md)
+- [UX-1370](docs/backlog/scenarios/UX-1370-a-track-is-verified-whatever-agent-ran-it.md) — [a merged track is verified whatever agent type ran it, and for every row it names](docs/backlog/scenarios/UX-1370-a-track-is-verified-whatever-agent-ran-it.md)
+- [UX-1369](docs/backlog/scenarios/UX-1369-codex-reviews-the-round-pr-once.md) — [Codex reviews the round PR once at ready, and its findings are answered like holds](docs/backlog/scenarios/UX-1369-codex-reviews-the-round-pr-once.md)
+- [UX-1372](docs/backlog/scenarios/UX-1372-a-grown-budget-and-a-retro-proposal-have-standing-answers.md) — [a budget a row's feature grew, and a retro proposal, have standing answers](docs/backlog/scenarios/UX-1372-a-grown-budget-and-a-retro-proposal-have-standing-answers.md)
+- [UX-1371](docs/backlog/scenarios/UX-1371-a-thread-session-loads-the-repos-workflow.md) — [a project-thread session loads the repository's agents, skills and hooks](docs/backlog/scenarios/UX-1371-a-thread-session-loads-the-repos-workflow.md)
+
+**docs**
+
+- [UX-1355](docs/backlog/scenarios/UX-1355-five-sentences-say-all-four-pythons-and-the-matrix-is-three.md) — [five sentences say push to main runs "all four" Pythons, and the matrix is three](docs/backlog/scenarios/UX-1355-five-sentences-say-all-four-pythons-and-the-matrix-is-three.md)
+
+<!-- /generated -->
 
 ## 0.6.0 — findings that say what to do, and a pool that fits its cgroup (2026-10-07)
 
@@ -104,6 +196,7 @@ open too: the pull-request lane never installs on Python 3.9, which is
 how `main`'s 3.9 cell stayed red from `057bc920` until `UX-1340`.
 
 ```text state
+digest: 482ae001b0f6
 contracts: analyze/v2 analyze/v3 analyze/v4 analyze/v5 analyze/v6 analyze/v7 blast/v1 blast/v2 bundle-manifest/v1 capacity-model/v1 capture-layout/v1 compare/v1 compare/v2 correlate/v1 correlate/v2 host-samples/v1 host/v1 host/v2 junction-cost/v1 plane2/v1 plane2/v2 plane2/v3 sources/v1 store-aggregate/v1 store/v1 sweep/v1 tail/v1 whatif/v1
 commands: analyze baseline blast bundle cache-logs cache-trend capture checkout-cost chrome-to-trace compare correlate cross-check diagnostics doctor extract floors gen-synthetic graph graph-from-show junction-cost log-to-chrome native-to-chrome rebuild-set release-notes replay run-context snapshot sweep timeline utilisation variant-cost view whatif wrap
 ```

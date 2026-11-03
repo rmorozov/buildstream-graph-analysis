@@ -24,6 +24,8 @@ to instead of superseded:
 | [`retro-2026-09-28.md`](retro-2026-09-28.md) | the first weekly retro (`UX-999`) — the week's findings by class, main's CI history, three `optimization` proposals |
 | [`retro-2026-10-05.md`](retro-2026-10-05.md) | the second weekly retro — the ledger by class, main's 3.9 cell red since 2026-09-29 on a dev pin above the floor, three `optimization` proposals |
 | [`retro-2026-10-12.md`](retro-2026-10-12.md) | the third weekly retro — a quiet ledger, the browser-share guard adopted up 9.2 points in two days, last week's proposals unfiled |
+| [`retro-2026-10-26.md`](retro-2026-10-26.md) | the fourth weekly retro, over two weeks — main green, three of three dependabot pip bumps waiting on a hand lock commit, six proposals unfiled |
+| [`retro-2026-11-02.md`](retro-2026-11-02.md) | the fifth weekly retro — round 175 closed ten rows with no verifier run, worktree shell refusals in 4 of 6 runs, `PAGE_BUDGET_B` raised 8 times in a month |
 
 The rounds themselves:
 

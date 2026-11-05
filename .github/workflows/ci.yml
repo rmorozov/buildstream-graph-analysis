@@ -93,16 +93,17 @@ jobs:
     # `UX-943`: one key per cell, because a matrix job's outputs are
     # last-writer-wins and the runner skips an empty one.
     outputs:
+      clean_311: ${{ steps.verdict.outputs.clean_311 }}
       clean_312: ${{ steps.verdict.outputs.clean_312 }}
       clean_313: ${{ steps.verdict.outputs.clean_313 }}
       clean_314: ${{ steps.verdict.outputs.clean_314 }}
     strategy:
       fail-fast: false
       matrix:
-        # pyproject.toml's classifiers declare 3.12-3.14 (P4-06, `UX-1348`).
-        # `UX-995`: a pull request runs the primary cell alone, which is
-        # also the floor (`UX-1343`); a push to the default branch runs all three.
-        python-version: ${{ fromJSON(github.event_name == 'pull_request' && '["3.12"]' || '["3.12","3.13","3.14"]') }}
+        # pyproject.toml's classifiers declare 3.11-3.14 (P4-06, `UX-1379`).
+        # `UX-995`: a pull request runs the primary cell alone, 3.12; the
+        # 3.11 floor runs on a push to the default branch, with all four.
+        python-version: ${{ fromJSON(github.event_name == 'pull_request' && '["3.12"]' || '["3.11","3.12","3.13","3.14"]') }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -755,7 +756,8 @@ jobs:
     # `UX-943`: from a run red at the drift step or nowhere - its rows
     # are that step's excursions; a red anywhere else adopts nothing.
     if: >-
-      !cancelled() && needs.test.outputs.clean_312 == 'true'
+      !cancelled() && needs.test.outputs.clean_311 == 'true'
+      && needs.test.outputs.clean_312 == 'true'
       && needs.test.outputs.clean_313 == 'true'
       && needs.test.outputs.clean_314 == 'true'
       && github.event_name == 'push'

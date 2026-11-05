@@ -35,6 +35,8 @@ task file, which is the only place it ever lived twice.
 | UX-1361 | [the weekly real-project capture cannot go dark without someone hearing](UX-1361-the-weekly-real-project-capture-cannot-go-dark.md) | capture | High | R4 | 🟡 In Progress |
 | UX-1367 | [an analysis written by an older bga is not served as the current one](UX-1367-a-stale-analysis-is-not-served-as-current.md) | analysis | Medium | R1 | 🔴 Not Started |
 | UX-1375 | [the Back-after-Collapse-all guard waits for a settled page, not a fixed second](UX-1375-the-back-guard-waits-for-a-settled-page-not-a-fixed-second.md) | viewer | Medium | R1 | 🔴 Not Started |
+| UX-1376 | [`correlate` on a run with no Plane 2 answers in the format it was asked for](UX-1376-correlate-without-plane-2-answers-in-its-format.md) | cli | Low | R3 | 🔴 Not Started |
+| UX-1377 | [an incremental run lists cached elements as bottlenecks](UX-1377-an-incremental-run-lists-cached-elements-as-bottlenecks.md) | analysis | Medium | R3, R1 | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

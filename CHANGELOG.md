@@ -39,6 +39,7 @@ derivation actually reads.
 
 | release | date | closed rows | kind |
 |---|---|---|---|
+| [0.6.2](#062--python-311-again-2026-11-05) | 2026-11-05 | 1313 | patch |
 | [0.6.1](#061--a-wheel-that-needs-no-compiler-2026-11-03) | 2026-11-03 | 1311 | patch |
 | [0.6.0](#060--findings-that-say-what-to-do-and-a-pool-that-fits-its-cgroup-2026-10-07) | 2026-10-07 | 1280 | breaking |
 | [0.5.0](#050--the-tool-prices-its-own-cost-and-the-jobserver-2026-09-29) | 2026-09-29 | 1083 | extending |
@@ -62,6 +63,46 @@ round 86 first "corrected" that to *a lineage `main` cannot reach*.
 Both are wrong: `pyproject.toml` enters this history at `4ace856`
 (2026-08-13) and `0.2.0` is an ordinary release. The wrong correction
 was read off a shallow clone — `UX-633`, and `UX-637` for the cause.
+
+## 0.6.2 — Python 3.11 again (2026-11-05)
+
+0.6.1 with one change: `bga` installs and runs on **Python 3.11** again
+(`UX-1379`), for a field user who still needs it. `requires-python` is
+`>=3.11`, CI's push to `main` runs 3.11 to 3.14, and a pull request still
+runs 3.12 alone, so a break only 3.11 sees reds `main` first. Nothing
+else moved.
+
+**Contract delta:** none — the twenty-eight contracts and the command
+surface are `0.6.1`'s, which makes the row `patch`.
+
+**Upgrade note:** none from 0.6.1. 0.6.1's notes still hold: a prebuilt
+hook built on Ubuntu 24.04 needs **glibc 2.34 or newer** in the sandbox,
+and nothing checks it yet.
+
+**Carried findings.** Review 39 (closed-row marker 1311) filed `UX-1380` -
+`cli.md`'s doctor clause names the compiler order `UX-1374` replaced - and
+`UX-1381` - the `triager` agent is in no guide - which ship open, with walk
+seed 6's `UX-1376` and `UX-1377`.
+
+```text state
+contracts: analyze/v2 analyze/v3 analyze/v4 analyze/v5 analyze/v6 analyze/v7 blast/v1 blast/v2 bundle-manifest/v1 capacity-model/v1 capture-layout/v1 compare/v1 compare/v2 correlate/v1 correlate/v2 host-samples/v1 host/v1 host/v2 junction-cost/v1 plane2/v1 plane2/v2 plane2/v3 sources/v1 store-aggregate/v1 store/v1 sweep/v1 tail/v1 whatif/v1
+commands: analyze baseline blast bundle cache-logs cache-trend capture checkout-cost chrome-to-trace compare correlate cross-check diagnostics doctor extract floors gen-synthetic graph graph-from-show junction-cost log-to-chrome native-to-chrome rebuild-set release-notes replay run-context snapshot sweep timeline utilisation variant-cost view whatif wrap
+```
+
+### What landed
+
+<!-- generated: UX-252 1311→1313 -->
+2 scenarios closed (closed-row markers 1311 → 1313).
+
+**contracts**
+
+- [UX-1382](docs/backlog/scenarios/UX-1382-cut-release-0-6-2.md) — [cut release 0.6.2, patch](docs/backlog/scenarios/UX-1382-cut-release-0-6-2.md)
+
+**guards**
+
+- [UX-1379](docs/backlog/scenarios/UX-1379-bga-supports-python-3-11-again.md) — [bga supports Python 3.11 again, on push to main](docs/backlog/scenarios/UX-1379-bga-supports-python-3-11-again.md)
+
+<!-- /generated -->
 
 ## 0.6.1 — a wheel that needs no compiler (2026-11-03)
 
@@ -97,6 +138,7 @@ text - and `UX-1377` - an incremental run lists cached elements as
 bottlenecks - which ship open, with the sandbox glibc check above.
 
 ```text state
+digest: 482ae001b0f6
 contracts: analyze/v2 analyze/v3 analyze/v4 analyze/v5 analyze/v6 analyze/v7 blast/v1 blast/v2 bundle-manifest/v1 capacity-model/v1 capture-layout/v1 compare/v1 compare/v2 correlate/v1 correlate/v2 host-samples/v1 host/v1 host/v2 junction-cost/v1 plane2/v1 plane2/v2 plane2/v3 sources/v1 store-aggregate/v1 store/v1 sweep/v1 tail/v1 whatif/v1
 commands: analyze baseline blast bundle cache-logs cache-trend capture checkout-cost chrome-to-trace compare correlate cross-check diagnostics doctor extract floors gen-synthetic graph graph-from-show junction-cost log-to-chrome native-to-chrome rebuild-set release-notes replay run-context snapshot sweep timeline utilisation variant-cost view whatif wrap
 ```

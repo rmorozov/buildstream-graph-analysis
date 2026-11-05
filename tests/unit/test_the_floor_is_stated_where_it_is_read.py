@@ -119,7 +119,7 @@ def test_a_document_naming_another_floor_is_not_accepted(tmp_path):
     over a document that states 3.8."""
     assert _versions_named("README.md"), "the reader finds nothing to read"
     wrong = tmp_path / "wrong.md"
-    wrong.write_text("Needs Python 3.8 or newer; CI runs 3.8-3.11.\n")
+    wrong.write_text("Needs Python 3.8 or newer; CI runs 3.8-3.10.\n")
     named = re.findall(r"Python \*{0,2}(\d+\.\d+)", wrong.read_text())
     assert named == ["3.8"], named
     assert _floor() not in named, "the probe document happens to state the real floor"

@@ -23,7 +23,7 @@ SCANNED = ("bga", "tools", "tests")
 
 
 def _floor():
-    """`(3, 12)` from `pyproject.toml`, not from a constant here."""
+    """`(3, 11)` from `pyproject.toml`, not from a constant here."""
     text = (REPO / "pyproject.toml").read_text(encoding="utf-8")
     found = re.search(r'requires-python\s*=\s*"[>=~^]*\s*(\d+)\.(\d+)', text)
     assert found, "pyproject.toml declares no requires-python"
@@ -70,7 +70,7 @@ def _pep604_annotations(path):
 
 
 def test_the_floor_is_declared_and_read():
-    assert _floor() == (3, 12), _floor()
+    assert _floor() == (3, 11), _floor()
 
 
 def test_no_annotation_needs_a_newer_python_than_the_floor():

@@ -1,6 +1,6 @@
 """`UX-995`: a pull request queues behind another's matrix, so it runs
-one cell; `UX-1348`: that cell is the primary (the timing reference)
-and the `requires-python` floor (`UX-1343`); a push runs every classifier.
+one cell, the primary (the timing reference); `UX-1379`: the
+`requires-python` floor runs on push, which runs every classifier.
 
 Reuses `test_a_run_red_for_another_reason_adopts_nothing`'s replay
 engine (`_jobs`, `_Expr`, `_holds`, `_status`, `_matrix_cells`) rather
@@ -96,14 +96,16 @@ def test_the_push_matrix_equals_pyprojects_classifiers():
     )
 
 
-def test_the_pull_request_matrix_is_the_primary_cell_and_the_floor_alone():
+def test_the_pull_request_matrix_is_the_primary_cell_alone():
     jobs = _jobs()
-    push = _matrix_cells(jobs, {"event_name": "push"})
     pr = _matrix_cells(jobs, {"event_name": "pull_request"})
     assert pr == _primary(jobs), f"pull_request runs {pr}, the timing reference is {_primary(jobs)}"
-    assert pr == [min(push, key=_version_key)] == [_floor()], (
-        f"pull_request runs {pr}; the floor is {_floor()} and push runs {push}"
-    )
+
+
+def test_the_push_matrix_starts_at_the_floor():
+    """`UX-1379`: the 3.11 floor runs on push alone (Ruslan, 2026-11-05)."""
+    push = _matrix_cells(_jobs(), {"event_name": "push"})
+    assert min(push, key=_version_key) == _floor(), f"the floor is {_floor()} and push runs {push}"
 
 
 def test_exactly_one_make_test_step_holds_per_event_and_cell():

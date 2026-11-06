@@ -5,7 +5,8 @@
 # `overhead` (none/capture/trace/spine/all x3) and UX-1132's `twogiants`/
 # `widechain`/`memgiant`/`latepeak` (examples/14-17, off against auto at the safe
 # cap). Host, width and the sandbox were probed in earlier runs of this
-# file; the Ryzen leg never started on the free plan.
+# file. `runner: x64` reads the same legs on the Ryzen 9950X (UX-1280); on
+# 2026-09-24 that label never started on the free plan.
 name: CodSpeed runner probe
 
 on:
@@ -14,6 +15,11 @@ on:
       legs:
         description: JSON list of graviton_arms.sh legs; empty runs the default matrix
         default: ""
+      runner:
+        description: arm64 (Graviton, 16 A72) or x64 (Ryzen 9950X)
+        type: choice
+        options: [arm64, x64]
+        default: arm64
   push:
     branches: [claude/project-thread-bim9mu, claude/project-thread-pxl1wp]
     paths: [.github/workflows/codspeed-probe.yml, examples/11-serial-giant/graviton_arms.sh]
@@ -25,7 +31,7 @@ jobs:
   probe:
     # Macro runners register only on organizations: elsewhere this job would queue forever.
     if: github.repository_owner == 'bst-perf-tools'
-    runs-on: codspeed-macro-arm64-graviton-ubuntu-22-04
+    runs-on: ${{ inputs.runner == 'x64' && 'codspeed-macro-x64-ryzen-9950x-ubuntu-24-04' || 'codspeed-macro-arm64-graviton-ubuntu-22-04' }}
     timeout-minutes: 90
     strategy:
       fail-fast: false
@@ -75,7 +81,9 @@ jobs:
       # staging the pinned closure's bin/ onto PATH is the whole fix.
       # At `/` itself: ELF interpreter and makeCWrapper paths are absolute
       # `/nix/store`, so under a prefix exec reports ENOENT on a file that exists.
+      # x86_64's BuildStream wheel bundles buildbox-casd/buildbox-run itself.
       - name: Stage buildbox
+        if: runner.arch == 'ARM64'
         run: |
           sudo -n mkdir -p /nix && sudo -n chown "$(id -u):$(id -g)" /nix
           BIN="$(python3 -m tools.nix_buildbox /)"  # unwrapped: nix's wrapper shadows bga's bwrap shim
@@ -89,7 +97,7 @@ jobs:
       # including 11-serial-giant.
       - name: Stage toolchain
         run: |
-          command -v buildbox-casd
+          [ "$RUNNER_ARCH" != ARM64 ] || command -v buildbox-casd
           examples/stage_cpp_toolchain.sh
 
       - name: Calibrate the runner's width

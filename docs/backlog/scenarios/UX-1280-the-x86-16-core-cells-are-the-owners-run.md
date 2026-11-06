@@ -40,6 +40,11 @@ examples/stage_cpp_toolchain.sh
 The x86_64 BuildStream wheel bundles `buildbox-casd`, so the Graviton
 workflow's "Stage buildbox" step is not needed.
 
+A second route needs no owner host: dispatch `codspeed-probe.yml` in
+`bst-perf-tools/bga-bench` with `runner: x64` (the Ryzen 9950X macro
+runner, whose plan availability is unconfirmed) and the legs above as
+`legs`. Its Host notice says whether `nproc` counts SMT threads.
+
 The legs: close other work first, since a busy desktop is noise.
 
 ```sh

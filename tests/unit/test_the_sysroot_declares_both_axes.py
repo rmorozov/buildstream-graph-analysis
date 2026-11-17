@@ -214,6 +214,21 @@ class TestTheDeclarationCoversWhatIsStaged:
 
         assert argv == {"libc.so.6": [str(tmp_path / "usr/lib/x86_64-linux-gnu/libc.so.6"), "--version"]}
 
+    @pytest.mark.parametrize(
+        ("text", "release"),
+        [
+            ('ID=ubuntu\nVERSION_ID="24.04"\n', "24.04"),
+            ('ID=ubuntu\nVERSION_ID="26.04"\n', "26.04"),
+            ('ID=ubuntu\nVERSION_ID="22.04"\n', None),
+            ('ID=debian\nVERSION_ID="24.04"\n', None),
+        ],
+    )
+    def test_the_host_rows_follow_the_staging_hosts_release(self, tmp_path, text, release):
+        """UX-1386: 24.04 and 26.04 are both declared; anything else is undeclared and warns."""
+        (tmp_path / "os-release").write_text(text, encoding="utf-8")
+
+        assert sysroot_manifest.host_release(str(tmp_path / "os-release")) == release
+
 
 #: A `skipif`, not a `pytest.skip` in a helper, for the reason
 #: `test_the_staged_make_is_the_pinned_one.py` states: the sysroot is

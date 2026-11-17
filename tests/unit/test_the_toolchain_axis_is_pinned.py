@@ -33,17 +33,16 @@ STAGER = REPO / "examples/stage_cpp_toolchain.sh"
 SYSROOT = REPO / "examples/05-cmake-cpp-toolchain/files/toolchain"
 STORE_PATH = re.compile(r"^/nix/store/[0-9a-df-np-sv-z]{32}-[\w.+-]+$")
 
-#: The runtime axis as `UX-1386` re-declared it for Ubuntu 26.04, written out rather than read
-#: from the table it is checking. `UX-925`'s last claim is that the two
-#: axes are independent, and a copy of the table would agree with any
+#: The runtime axis per Ubuntu release (`UX-1386`), written out rather than
+#: read from the table it is checking. `UX-925`'s last claim is that the
+#: two axes are independent, and a copy of the table would agree with any
 #: change to it.
+PINNED_RUNTIME = {("dash", "host", None), ("make-4.2", "pinned", "4.2.1"), ("make-4.4", "pinned", "4.4.1")}
 RUNTIME_ROWS = {
-    ("glibc", "host", "2.43"),
-    ("coreutils", "host", "0.10.0"),
-    ("dash", "host", None),
-    ("make-4.2", "pinned", "4.2.1"),
-    ("make-4.4", "pinned", "4.4.1"),
+    "24.04": {("glibc", "host", "2.39"), ("coreutils", "host", "9.4")} | PINNED_RUNTIME,
+    "26.04": {("glibc", "host", "2.43"), ("coreutils", "host", "0.10.0")} | PINNED_RUNTIME,
 }
+HOST = sysroot_manifest.host_release() or max(sysroot_manifest.HOST_RELEASES)
 
 staged_only = pytest.mark.skipif(
     not os.path.isdir(os.path.join(SYSROOT, "nix", "store")),
@@ -291,26 +290,33 @@ class TestAHostToolchainStagedOverThePinReddens:
         assert "assembler" in [row[0] for row in tp.divergences(clone)]
 
 
+@pytest.mark.parametrize("release", sorted(RUNTIME_ROWS))
+def test_each_releases_runtime_rows_are_written_out(release):
+    rows = {
+        (row["name"], row["origin"], row["version"])
+        for row in sysroot_manifest.components(release=release)
+        if row["axis"] == "runtime"
+    }
+
+    assert rows == RUNTIME_ROWS[release]
+
+
+def test_every_declared_release_is_written_out():
+    assert set(sysroot_manifest.HOST_RELEASES) == set(RUNTIME_ROWS)
+
+
 @staged_only
 class TestTheRuntimeAxisDidNotMove:
-    def test_its_rows_are_what_UX_914_left(self):
-        rows = {
-            (row["name"], row["origin"], row["version"])
-            for row in sysroot_manifest.components()
-            if row["axis"] == "runtime"
-        }
-
-        assert rows == RUNTIME_ROWS
-
     def test_the_staged_shell_and_coreutils_are_still_the_hosts(self):
         measured = sysroot_manifest.measure(str(SYSROOT))
+        declared = sysroot_manifest.HOST_RELEASES[HOST]
 
-        assert measured["/usr/bin/env"] == "0.10.0"
-        assert measured["libc.so.6"] == "2.43"
+        assert measured["/usr/bin/env"] == declared["coreutils"]
+        assert measured["libc.so.6"] == declared["glibc"]
 
     def test_the_target_glibc_is_not_the_closures(self):
         """Two glibcs in one tree, and the reason both are declared:
-        the host-staged 2.43 loads the tree's own `sh` and coreutils,
+        the host-staged glibc loads the tree's own `sh` and coreutils,
         and the closure's 2.40 loads the pin and everything the pin
         links. Reading one for the other is how a runtime row would
         move without anything saying so."""

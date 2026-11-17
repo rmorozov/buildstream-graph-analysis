@@ -41,16 +41,13 @@ AXES = ("runtime", "toolchain")
 #: `binaries` are the sysroot-absolute paths this package owns out of
 #: the script's own axis arrays; `probe` the one whose `--version` the
 #: sysroot can be asked, relative to the sysroot root, or `None` with a
-#: `why`. `version` is what this repository declares, at the upstream
-#: precision Ubuntu 26.04 freezes - the release's own patch suffix
-#: (`2.43-2ubuntu2.7`) moves without the program moving. UX-1386: 26.04's
-#: coreutils is uutils (Rust), so the row reads uutils' own version.
+#: `why`. A row's `version` comes from `HOST_RELEASES` for the staging
+#: host's release (`components`).
 HOST_COMPONENTS = (
-    {"name": "glibc", "axis": "runtime", "version": "2.43", "binaries": (), "lib_probe": "libc.so.6"},
+    {"name": "glibc", "axis": "runtime", "binaries": (), "lib_probe": "libc.so.6"},
     {
         "name": "coreutils",
         "axis": "runtime",
-        "version": "0.10.0",
         "binaries": ("/usr/bin/env", "/usr/bin/uname", "/usr/bin/sort", "/usr/bin/cat"),
     },
     {
@@ -78,11 +75,37 @@ HOST_COMPONENTS = (
 )
 
 
-def components(arch: Optional[str] = None) -> list:
-    """Every declared row: the host packages above plus one per nix
-    pin, read out of `nix_store_fetch.PINS` rather than restated, so a
-    pin bump cannot drift from this table."""
-    rows: list[dict] = [dict(row, origin="host") for row in HOST_COMPONENTS]
+#: UX-1386: the Ubuntu releases the examples stage on, and what each
+#: declares, at the upstream precision the release freezes - its own
+#: patch suffix (`2.43-2ubuntu2.7`) moves without the program moving.
+#: 26.04's coreutils is uutils (Rust), so its row reads uutils' version.
+HOST_RELEASES = {
+    "24.04": {"glibc": "2.39", "coreutils": "9.4"},
+    "26.04": {"glibc": "2.43", "coreutils": "0.10.0"},
+}
+OS_RELEASE = "/etc/os-release"
+
+
+def host_release(path: str = OS_RELEASE) -> Optional[str]:
+    """This host's `VERSION_ID` when it is an Ubuntu `HOST_RELEASES` declares, else `None`."""
+    try:
+        with open(path, encoding="utf-8") as handle:
+            fields = dict(line.rstrip("\n").split("=", 1) for line in handle if "=" in line)
+    except OSError:
+        return None
+    version = fields.get("VERSION_ID", "").strip('"')
+    return version if fields.get("ID", "").strip('"') == "ubuntu" and version in HOST_RELEASES else None
+
+
+def components(arch: Optional[str] = None, release: Optional[str] = None) -> list:
+    """Every declared row: the host packages above, at `release`'s
+    versions (this host's, else the newest declared - which warns), plus
+    one per nix pin, read out of `nix_store_fetch.PINS` rather than
+    restated, so a pin bump cannot drift from this table."""
+    declared = HOST_RELEASES[release or host_release() or max(HOST_RELEASES)]
+    rows: list[dict] = [
+        dict(row, origin="host", version=declared.get(row["name"], row.get("version"))) for row in HOST_COMPONENTS
+    ]
     for name, pin in sorted(nix_toolchain.pins(arch).items()):
         rows.append(dict(pin, name=name, origin="pinned"))
     # The closure's own glibc, on the toolchain axis because it arrives
@@ -301,7 +324,7 @@ def main(argv=None) -> int:
         print(
             f"sysroot_manifest: {name} is {got}, declared {declared} - this "
             f"host is not the one the examples' figures were measured on. "
-            f"Re-declare HOST_COMPONENTS and re-derive them (UX-914).",
+            f"Declare this release in HOST_RELEASES (UX-914, UX-1386).",
             file=sys.stderr,
         )
     for _origin, name, declared, got in pinned:

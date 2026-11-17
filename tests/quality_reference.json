@@ -173,7 +173,7 @@
     "tools/nix_closure.py": {"duplicate_blocks": 0, "file_lines": 351, "longest_function": 39},
     "tools/nix_store_fetch.py": {"duplicate_blocks": 0, "file_lines": 344, "longest_function": 40},
     "tools/nix_toolchain.py": {"duplicate_blocks": 0, "file_lines": 359, "longest_function": 42},
-    "tools/sysroot_manifest.py": {"duplicate_blocks": 0, "file_lines": 313, "longest_function": 48},
+    "tools/sysroot_manifest.py": {"duplicate_blocks": 0, "file_lines": 336, "longest_function": 48},
     "tools/toolchain_params.py": {"duplicate_blocks": 0, "file_lines": 458, "longest_function": 78}
   }
 }

@@ -7708,7 +7708,7 @@ def load_records(raw_log_path: str, merge: bool = True) -> list[dict]:
     records they became. The rows come back sorted by start, which is
     what `pair_events` always returned and what every caller reads.
     """
-    with open(raw_log_path, encoding="utf-8", errors="ignore") as handle:
+    with _open_maybe_gzipped(raw_log_path) as handle:
         records = sorted(stream_records(stream_trace_events(handle)), key=lambda record: record["start_ts"])
     return merge_record_streams(records) if merge else records
 

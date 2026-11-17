@@ -444,3 +444,194 @@ class TestTheReportBesideARunDirectory:
         (tmp_path / PLANE2_NAME).write_text("{}")
 
         assert sibling_plane2(str(tmp_path / "elsewhere")) is None
+
+
+class _Reached(Exception):
+    """The tool got past argument resolution to its first read."""
+
+
+# UX-1385: (argv, the snapshot file it must reach, module, the function it reads through, which argument).
+_TOOL_CASES = [
+    (["extract", ".", "@last", "out"], "build.log", "tools.bst_extract_run", "extract_run", 1),
+    (["run-context", "@last", "out.json"], "build.log", "tools.bst_run_context", "build_run_context", 0),
+    (
+        ["native-to-chrome", "standalone", "@last", "out.json"],
+        "plane2.log.gz",
+        "tools.bst_native_build_tracer",
+        "load_records",
+        0,
+    ),
+]
+
+# argv, the member a snapshot lacking it must be refused by name for.
+_REFUSAL_CASES = [
+    (["extract", ".", "@last", "out"], "build.log"),
+    (["run-context", "@last", "out.json"], "build.log"),
+    (["log-to-chrome", "@last", "out.json"], "build.log"),
+    (["rebuild-set", "@last", "--cut", "a.bst"], os.path.join("run", "graph.json")),
+    (["cross-check", "@last", "@last"], "analyze.json"),
+    (["native-to-chrome", "standalone", "@last", "out.json"], "plane2.log.gz"),
+    (
+        ["native-to-chrome", "combined", "@last", "@last", "out.json", "--anchor-element", "a.bst"],
+        os.path.join("run", "chrome_trace.json"),
+    ),
+]
+
+
+class TestTheToolsTakeTheStoresNamesToo:
+    """UX-1385: a dispatched tool parses its own argv, so `bga.cli`'s pass never reaches it;
+    each declares `SNAPSHOT_ARGUMENTS` and resolves through `run_store.resolve_arguments`."""
+
+    def _two(self, project, *members):
+        snapshots = []
+        for stamp in ("20260101T000000Z", "20260102T000000Z"):
+            path = _snapshot(project, stamp)
+            for member in members:
+                with open(os.path.join(path, member), "w", encoding="utf-8") as handle:
+                    handle.write("{}")
+            snapshots.append(path)
+        return snapshots
+
+    @pytest.mark.parametrize(
+        "argv, member, module, function, index", _TOOL_CASES, ids=lambda v: v[0] if isinstance(v, list) else None
+    )
+    def test_last_reaches_that_snapshots_file(self, project, monkeypatch, argv, member, module, function, index):
+        _old, new = self._two(project, member)
+        monkeypatch.chdir(project)
+        import importlib
+
+        import bga.cli as cli
+
+        seen = []
+
+        def record(*args, **_kwargs):
+            seen.append(args[index])
+            raise _Reached
+
+        monkeypatch.setattr(importlib.import_module(module), function, record)
+
+        with pytest.raises(_Reached):
+            cli.main(argv)
+
+        assert seen == [os.path.join(new, member)]
+
+    def test_log_to_chrome_converts_that_snapshots_log(self, project, monkeypatch, tmp_path):
+        self._two(project, "build.log")
+        monkeypatch.chdir(project)
+        import bga.cli as cli
+
+        out = tmp_path / "lc.json"
+        assert cli.main(["log-to-chrome", "@last", str(out)]) == 0, "a file called @last does not exist"
+
+        assert out.is_file()
+
+    def test_rebuild_set_reads_that_snapshots_graph(self, project, monkeypatch, capsys):
+        old, _new = self._two(project)
+        graph = {
+            "elements": [{"uid": "a.bst"}, {"uid": "b.bst"}],
+            "dependencies": [{"predecessor": "a.bst", "successor": "b.bst", "dependency_type": "build"}],
+        }
+        with open(os.path.join(old, "run", "graph.json"), "w", encoding="utf-8") as handle:
+            json.dump(graph, handle)
+        monkeypatch.chdir(project)
+        import bga.cli as cli
+
+        assert cli.main(["rebuild-set", "@prev", "--cut", "a.bst", "--count-only"]) == 0
+
+        assert capsys.readouterr().out.strip() == "2"
+
+    def test_cross_check_takes_one_snapshots_run_and_analysis(self, project, monkeypatch):
+        old, new = self._two(project, "analyze.json")
+        monkeypatch.chdir(project)
+        import bga.cli as cli
+        import tools.bga_cross_check as cross_check
+
+        seen = {}
+        monkeypatch.setattr(cross_check, "run", lambda run_dir, analysis: seen.update(run=run_dir) or 0)
+        real_load = json.load
+        monkeypatch.setattr(
+            cross_check.json, "load", lambda handle: seen.update(analysis=handle.name) or real_load(handle)
+        )
+
+        assert cli.main(["cross-check", "@prev", "@last"]) == 0
+
+        assert seen == {"run": os.path.join(old, "run"), "analysis": os.path.join(new, "analyze.json")}
+
+    def test_native_to_chrome_reads_the_gzipped_raw_log_a_snapshot_keeps(self, project, monkeypatch, tmp_path):
+        import gzip
+
+        _old, new = self._two(project)
+        log = "START pid=1 ppid=0 ts=1.0 element=a.bst inv=i1 src=spine cmd=cc\nEND pid=1 ppid=0 ts=2.0 element=a.bst inv=i1 src=spine exit=0 cmd=cc\n"
+        with gzip.open(os.path.join(new, "plane2.log.gz"), "wt", encoding="utf-8") as handle:
+            handle.write(log)
+        monkeypatch.chdir(project)
+        import bga.cli as cli
+
+        out = tmp_path / "n.json"
+        assert cli.main(["native-to-chrome", "standalone", "@last", str(out)]) == 0
+
+        assert json.loads(out.read_text()), "the gzipped log parsed to no events"
+
+    @pytest.mark.parametrize(
+        "argv, member", _REFUSAL_CASES, ids=lambda v: " ".join(v[:2]) if isinstance(v, list) else None
+    )
+    def test_a_snapshot_without_the_file_is_refused_by_name(self, project, monkeypatch, capsys, argv, member):
+        present = {"build.log", "plane2.log.gz", "analyze.json", os.path.join("run", "graph.json")} - {member}
+        self._two(project, *present)
+        monkeypatch.chdir(project)
+        import bga.cli as cli
+
+        assert cli.main(argv) == 2
+
+        assert f"20260102T000000Z, which has no {member}" in capsys.readouterr().err
+
+    def test_an_explicit_path_still_means_itself(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        import bga.cli as cli
+        import tools.bst_extract_run as extract
+
+        seen = []
+        monkeypatch.setattr(
+            extract, "extract_run", lambda *args, **_kw: seen.append(args[1]) or (_ for _ in ()).throw(_Reached())
+        )
+
+        with pytest.raises(_Reached):
+            cli.main(["extract", ".", "my.log", "out"])
+
+        assert seen == ["my.log"]
+
+
+# Every dispatched tool, and how `@last`/`@prev` reach its arguments - or why none takes them.
+_RESOLVES_ITS_OWN = {
+    "view": "run_store.resolve on RUN and --compare",
+    "timeline": "run_store.resolve_snapshot on RUN",
+    "snapshot": "the store's own command; --compare and --plan",
+    "baseline": "--candidate, through run_store.resolve",
+    "cache-logs": "--native-report, through run_store.resolve_plane2",
+}
+_TAKES_NO_SNAPSHOT = {
+    "wrap": "runs a build and writes a new log; a snapshot is its output, never its input",
+    "capture": "runs a build; a snapshot is its output",
+    "graph-from-show": "reads a project through `bst show`, not a file",
+    "gen-synthetic": "writes a new run directory",
+    "doctor": "reads this machine and a project directory",
+    "checkout-cost": "measures a checkout; its log is not one a snapshot keeps",
+    "chrome-to-trace": "every snapshot's run/ already holds the trace.json this would convert to",
+    "release-notes": "a maintainer tool over the backlog",
+}
+
+
+def test_every_tool_is_classified_for_aliases():
+    """A new tool lands in one of three places, or this reds before it half-works."""
+    import importlib
+
+    from bga.tools_dispatch import TOOL_ALIASES
+
+    declared = set()
+    for alias, (module_name, _help) in TOOL_ALIASES.items():
+        if getattr(importlib.import_module(module_name), "SNAPSHOT_ARGUMENTS", None):
+            declared.add(alias)
+
+    assert declared == {"extract", "run-context", "log-to-chrome", "native-to-chrome", "rebuild-set", "cross-check"}
+    assert not declared & (_RESOLVES_ITS_OWN.keys() | _TAKES_NO_SNAPSHOT.keys())
+    assert declared | _RESOLVES_ITS_OWN.keys() | _TAKES_NO_SNAPSHOT.keys() == set(TOOL_ALIASES)

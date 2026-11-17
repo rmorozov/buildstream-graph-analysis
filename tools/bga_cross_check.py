@@ -63,6 +63,10 @@ import sys
 from collections import defaultdict
 
 from bga import schemas as _schemas
+from bga.run_store import ANALYSIS_NAME, RUN_SUBDIR, refuse_unresolved
+
+# UX-1385: the positionals `@last`/`@prev` name, and which file of that snapshot each takes.
+SNAPSHOT_ARGUMENTS = {"run_dir": RUN_SUBDIR, "analysis_json": ANALYSIS_NAME}
 
 
 def _load(run_dir: str):
@@ -234,6 +238,9 @@ def main() -> int:
     parser.add_argument("run_dir", help="A bga run directory.")
     parser.add_argument("analysis_json", help="`bga analyze -f json` output for it.")
     args = parser.parse_args()
+
+    if (refused := refuse_unresolved(args, SNAPSHOT_ARGUMENTS)) is not None:
+        return refused
 
     with open(args.analysis_json, encoding="utf-8") as handle:
         analysis = json.load(handle)

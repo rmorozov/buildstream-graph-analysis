@@ -15,7 +15,7 @@ NEEDLE = "# ninja: warning: -jN forced on command line; ignoring GNU make jobser
 REPORT = """case " $* " in *" --version "*) echo 1.10.2; exit 0 ;; *" --help "*) exit 0 ;; esac
 echo "ARGV:$*"
 echo "MAKEFLAGS:$MAKEFLAGS"
-if [ -e /dev/fd/9 ]; then echo "FD9:$(dd bs=1 count=1 iflag=nonblock 2>/dev/null <&9)"; fi
+if [ -e /dev/fd/9 ]; then echo "FLAGS9:$(sed -n 's/^flags:[[:space:]]*//p' /proc/self/fdinfo/9)"; echo "FD9:$(dd if=/dev/fd/9 bs=1 count=1 iflag=nonblock 2>/dev/null)"; fi
 """
 
 
@@ -101,3 +101,12 @@ def test_an_unpatched_1_10_still_gets_a_held_width(tmp_path):
     os.close(fd)
     assert out["ARGV"] == "-j 4 all"
     assert out["MAKEFLAGS"] == f"--jobserver-auth=fifo:{fifo}"
+
+
+def test_the_held_read_leaves_the_tools_pool_fd_blocking(tmp_path):
+    """UX-1386: the wrapper reads its tokens through `if=`, so `O_NONBLOCK`
+    stays on dd's own description instead of the fd 9 the tool inherits."""
+    fifo, fd = _pool(tmp_path, b"+++")
+    out = _run(tmp_path, _real(tmp_path, patched=False), f"--jobserver-auth=fifo:{fifo}")
+    os.close(fd)
+    assert not int(out["FLAGS9"], 8) & os.O_NONBLOCK, out["FLAGS9"]

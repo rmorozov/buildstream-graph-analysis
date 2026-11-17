@@ -42,14 +42,15 @@ AXES = ("runtime", "toolchain")
 #: the script's own axis arrays; `probe` the one whose `--version` the
 #: sysroot can be asked, relative to the sysroot root, or `None` with a
 #: `why`. `version` is what this repository declares, at the upstream
-#: precision Ubuntu 24.04 freezes - the release's own patch suffix
-#: (`13.3.0-6ubuntu2~24.04.1`) moves without the program moving.
+#: precision Ubuntu 26.04 freezes - the release's own patch suffix
+#: (`2.43-2ubuntu2.7`) moves without the program moving. UX-1386: 26.04's
+#: coreutils is uutils (Rust), so the row reads uutils' own version.
 HOST_COMPONENTS = (
-    {"name": "glibc", "axis": "runtime", "version": "2.39", "binaries": (), "lib_probe": "libc.so.6"},
+    {"name": "glibc", "axis": "runtime", "version": "2.43", "binaries": (), "lib_probe": "libc.so.6"},
     {
         "name": "coreutils",
         "axis": "runtime",
-        "version": "9.4",
+        "version": "0.10.0",
         "binaries": ("/usr/bin/env", "/usr/bin/uname", "/usr/bin/sort", "/usr/bin/cat"),
     },
     {
@@ -175,8 +176,8 @@ def probes(dest: str, arch: Optional[str] = None) -> list:
     a shim (`UX-925`), which is a shell script rather than an ELF file:
     the version comes off the pin's own binary that the shim execs,
     and `test_the_sysroot_declares_both_axes` reads that the shim execs
-    it. glibc's runtime row is asked through the one real copy of the
-    loader `nix_store_fetch.sysroot_lib_dir` finds; the pinned row
+    it. glibc's runtime row is asked through the one real `libc.so.6`
+    `nix_store_fetch.sysroot_real_file` finds; the pinned row
     through the closure's own, which answers `--version` itself. A
     helper is located in the staged tree, and gets `None` when it is
     not there so `measure` records that rather than guessing a path."""
@@ -196,14 +197,14 @@ def probes(dest: str, arch: Optional[str] = None) -> list:
             argv = None if binary is None else through + [binary] + row["helpers"][label][0].split()
         elif label == row.get("lib_probe"):
             store = nix_toolchain.glibc_store_path(dest, arch) if row["origin"] == "pinned" else None
-            where = (
-                os.path.join(store, "lib")
+            lib = (
+                os.path.join(store, "lib", label)
                 if store is not None
-                else nix_store_fetch.sysroot_lib_dir(dest, group)
+                else nix_store_fetch.sysroot_real_file(dest, label)
                 if row["origin"] != "pinned"
                 else None
             )
-            argv = None if where is None else [os.path.join(where, label), "--version"]
+            argv = None if lib is None else [lib, "--version"]
         elif row["origin"] != "pinned":
             argv = [dest + label, "--version"]
         elif os.path.basename(label) in nix_toolchain.DRIVERS:

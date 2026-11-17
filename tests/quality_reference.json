@@ -99,7 +99,7 @@
     "tools/_run_context_common.py": {"duplicate_blocks": 0, "file_lines": 531, "longest_function": 64},
     "tools/bga_cross_check.py": {"duplicate_blocks": 0, "file_lines": 244, "longest_function": 107},
     "tools/bga_doctor.py": {"duplicate_blocks": 1, "file_lines": 1166, "longest_function": 164},
-    "tools/bga_gen_project.py": {"duplicate_blocks": 0, "file_lines": 365, "longest_function": 54},
+    "tools/bga_gen_project.py": {"duplicate_blocks": 0, "file_lines": 394, "longest_function": 54},
     "tools/bga_release_notes.py": {"duplicate_blocks": 0, "file_lines": 131, "longest_function": 25},
     "tools/bga_snapshot.py": {"duplicate_blocks": 1, "file_lines": 2024, "longest_function": 263},
     "tools/bga_timeline.py": {"duplicate_blocks": 2, "file_lines": 2206, "longest_function": 333},
@@ -171,9 +171,9 @@
     "tools/native_trace_to_chrome_trace.py": {"duplicate_blocks": 0, "file_lines": 324, "longest_function": 83},
     "tools/nix_buildbox.py": {"duplicate_blocks": 0, "file_lines": 93, "longest_function": 11},
     "tools/nix_closure.py": {"duplicate_blocks": 0, "file_lines": 351, "longest_function": 39},
-    "tools/nix_store_fetch.py": {"duplicate_blocks": 0, "file_lines": 342, "longest_function": 40},
+    "tools/nix_store_fetch.py": {"duplicate_blocks": 0, "file_lines": 344, "longest_function": 40},
     "tools/nix_toolchain.py": {"duplicate_blocks": 0, "file_lines": 359, "longest_function": 42},
-    "tools/sysroot_manifest.py": {"duplicate_blocks": 0, "file_lines": 312, "longest_function": 48},
+    "tools/sysroot_manifest.py": {"duplicate_blocks": 0, "file_lines": 313, "longest_function": 48},
     "tools/toolchain_params.py": {"duplicate_blocks": 0, "file_lines": 458, "longest_function": 78}
   }
 }

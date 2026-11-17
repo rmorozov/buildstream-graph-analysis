@@ -194,11 +194,25 @@ class TestTheDeclarationCoversWhatIsStaged:
             "env (GNU coreutils) 9.4": "9.4",
             "GNU C Library (Ubuntu GLIBC 2.39-0ubuntu8.7) stable release version 2.39.": "2.39",
             "GNU Make 4.4.1": "4.4.1",
+            "env (uutils coreutils) 0.10.0": "0.10.0",
+            "GNU C Library (Ubuntu GLIBC 2.43-2ubuntu2.7) stable release version 2.43.": "2.43",
         }
 
         read = {line: sysroot_manifest.declared_version_token(line) for line in lines}
 
         assert read == lines
+
+    def test_the_host_glibc_is_probed_where_it_is_staged_not_beside_the_loader(self, tmp_path):
+        """UX-1386: 26.04 stages the loader under `lib/` and `libc.so.6`
+        under `usr/lib/`; the probe asked beside the loader and read
+        `did not run` on a working sysroot."""
+        for path in ("lib/x86_64-linux-gnu/ld-linux-x86-64.so.2", "usr/lib/x86_64-linux-gnu/libc.so.6"):
+            (tmp_path / path).parent.mkdir(parents=True, exist_ok=True)
+            (tmp_path / path).touch()
+
+        argv = {label: argv for row, label, argv in sysroot_manifest.probes(str(tmp_path)) if row["name"] == "glibc"}
+
+        assert argv == {"libc.so.6": [str(tmp_path / "usr/lib/x86_64-linux-gnu/libc.so.6"), "--version"]}
 
 
 #: A `skipif`, not a `pytest.skip` in a helper, for the reason

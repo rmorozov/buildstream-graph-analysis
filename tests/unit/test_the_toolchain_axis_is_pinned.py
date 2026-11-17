@@ -33,13 +33,13 @@ STAGER = REPO / "examples/stage_cpp_toolchain.sh"
 SYSROOT = REPO / "examples/05-cmake-cpp-toolchain/files/toolchain"
 STORE_PATH = re.compile(r"^/nix/store/[0-9a-df-np-sv-z]{32}-[\w.+-]+$")
 
-#: The runtime axis as `UX-914` left it, written out rather than read
+#: The runtime axis as `UX-1386` re-declared it for Ubuntu 26.04, written out rather than read
 #: from the table it is checking. `UX-925`'s last claim is that the two
 #: axes are independent, and a copy of the table would agree with any
 #: change to it.
 RUNTIME_ROWS = {
-    ("glibc", "host", "2.39"),
-    ("coreutils", "host", "9.4"),
+    ("glibc", "host", "2.43"),
+    ("coreutils", "host", "0.10.0"),
     ("dash", "host", None),
     ("make-4.2", "pinned", "4.2.1"),
     ("make-4.4", "pinned", "4.4.1"),
@@ -305,12 +305,12 @@ class TestTheRuntimeAxisDidNotMove:
     def test_the_staged_shell_and_coreutils_are_still_the_hosts(self):
         measured = sysroot_manifest.measure(str(SYSROOT))
 
-        assert measured["/usr/bin/env"] == "9.4"
-        assert measured["libc.so.6"] == "2.39"
+        assert measured["/usr/bin/env"] == "0.10.0"
+        assert measured["libc.so.6"] == "2.43"
 
     def test_the_target_glibc_is_not_the_closures(self):
         """Two glibcs in one tree, and the reason both are declared:
-        the host-staged 2.39 loads the tree's own `sh` and coreutils,
+        the host-staged 2.43 loads the tree's own `sh` and coreutils,
         and the closure's 2.40 loads the pin and everything the pin
         links. Reading one for the other is how a runtime row would
         move without anything saying so."""

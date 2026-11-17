@@ -171,13 +171,11 @@ bga_hold() {
     esac
 
     cap=${BST_TRACE_WRAPPER_CAP:-$(nproc 2>/dev/null || echo 1)}
-    # One `dd`, not one fork per token: `count=$cap` non-blocking
-    # single-byte reads in dd's own loop, bounded by `timeout` rather
-    # than a shell loop polling `date` - measured, the per-fork shell
-    # loop this replaced needed 2-3 extra forks per token and missed
-    # its own 50ms budget under a loaded machine. `dd` still exits
-    # non-zero on a short read (EAGAIN before `count` is reached) -
-    # expected, not an error, so `|| :` under `set -e`.
+    # One `dd`, one `read(2)` of up to `$cap` bytes: a short read is
+    # the tokens there are, and an empty pool is EAGAIN (`|| :` under
+    # `set -e`). UX-1386: `if=`, not stdin - uutils dd ignores `iflag`
+    # on stdin, and `count=$cap` single-byte reads let it drop the bytes
+    # it had read when the last one fails, so tokens left the pool.
     #
     # `BGA_WRAPPER_ACQUIRE_MS` (default 50): the budget is production's
     # own choice, not a test's - a guard asserting an exact token count
@@ -188,9 +186,9 @@ bga_hold() {
     acquire_ms=${BGA_WRAPPER_ACQUIRE_MS:-50}
     acquire_budget=$(printf '%d.%03d' "$((acquire_ms / 1000))" "$((acquire_ms % 1000))")
     if command -v timeout >/dev/null 2>&1; then
-        out=$(timeout "$acquire_budget" dd bs=1 count="$cap" iflag=nonblock 2>/dev/null <&9) || :
+        out=$(timeout "$acquire_budget" dd if=/dev/fd/9 bs="$cap" count=1 iflag=nonblock 2>/dev/null) || :
     else
-        out=$(dd bs=1 count="$cap" iflag=nonblock 2>/dev/null <&9) || :
+        out=$(dd if=/dev/fd/9 bs="$cap" count=1 iflag=nonblock 2>/dev/null) || :
     fi
     bga_held=${#out}
     bga_ledger acquire

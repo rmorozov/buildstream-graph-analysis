@@ -1305,7 +1305,12 @@ jobs:
     #
     # A single Python version is enough - this job is about the bst seam,
     # not about interpreter compatibility, which the `test` matrix covers.
-    runs-on: ubuntu-latest
+    # UX-1386: both Ubuntu releases `sysroot_manifest.HOST_RELEASES` declares.
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, ubuntu-26.04]
+    runs-on: ${{ matrix.os }}
     needs: [changes, bst-smoke]
     if: needs.changes.outputs.docs_only != 'true'
     steps:

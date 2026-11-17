@@ -225,32 +225,34 @@ def host_arch(arch: Optional[str] = None) -> dict:
     return PINS[arch]
 
 
-#: The staged store, which `sysroot_lib_dir` does not look in.
+#: The staged store, which `sysroot_real_file` does not look in.
 #: `UX-925`'s closure carries a second real loader there - the pinned
 #: toolchain's - and this function means the *target's* glibc, the one
 #: the tree's own host-staged binaries load through.
 _STORE = "/nix/store"
 
 
-def sysroot_lib_dir(dest: str, group: dict) -> str:
-    """Where `dest` really keeps glibc, read off the one staged copy of
-    the dynamic linker rather than assumed. `stage_cpp_toolchain.sh`
-    resolves symlink chains lexically, so on a usrmerged host the real
-    file lands under `/lib/...` while `/usr/lib/...` holds only the
-    link-time files - a hardcoded guess picks the wrong one."""
+def sysroot_real_file(dest: str, name: str) -> str:
+    """The one real (not symlinked) `name` staged under `dest` outside
+    its store. `stage_cpp_toolchain.sh` resolves symlink chains
+    lexically, so on a usrmerged host the real file lands under
+    whichever of `/lib/...` and `/usr/lib/...` its chain names - and
+    UX-1386 measured 26.04 keeping the loader and `libc.so.6` in
+    different ones, so each is found, never assumed beside the other."""
     skip = os.path.abspath(dest) + _STORE
     found = [
-        os.path.join(root, group["loader"])
+        os.path.join(root, name)
         for root, _dirs, files in os.walk(dest)
-        if group["loader"] in files
-        and not os.path.abspath(root).startswith(skip)
-        and not os.path.islink(os.path.join(root, group["loader"]))
+        if name in files and not os.path.abspath(root).startswith(skip) and not os.path.islink(os.path.join(root, name))
     ]
     if len(found) != 1:
-        raise SystemExit(
-            f"nix_store_fetch: expected exactly one real {group['loader']} under {dest}, found {len(found)}: {found}"
-        )
-    return os.path.dirname(found[0])
+        raise SystemExit(f"nix_store_fetch: expected exactly one real {name} under {dest}, found {len(found)}: {found}")
+    return found[0]
+
+
+def sysroot_lib_dir(dest: str, group: dict) -> str:
+    """Where `dest` really keeps the dynamic linker (`sysroot_real_file`)."""
+    return os.path.dirname(sysroot_real_file(dest, group["loader"]))
 
 
 def stage_interpreter_link(dest: str, group: dict) -> str:

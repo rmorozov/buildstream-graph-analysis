@@ -23,7 +23,13 @@ from tools import gen_synthetic_scale_run as synth
 REPO = pathlib.Path(__file__).resolve().parents[2]
 TOOLCHAIN = REPO / "examples/05-cmake-cpp-toolchain/files/toolchain"
 HEAVY, LIGHT = "w-heavy.bst", ("w-light-a.bst", "w-light-b.bst")
-SLEEP = shutil.which("sleep") or "/usr/bin/sleep"
+CC = shutil.which("cc") or shutil.which("gcc")
+needs_cc = pytest.mark.skipif(CC is None, reason="no C compiler on PATH")
+
+
+@pytest.fixture(scope="module")
+def sleeper(tmp_path_factory):
+    return gen.build_sleeper(tmp_path_factory.mktemp("sleeper"), CC)
 
 
 def _plan():
@@ -64,12 +70,28 @@ def test_a_static_binary_is_refused(tmp_path):
         gen.write_workload_project({HEAVY: {"a": 1}}, tmp_path / "p", tmp_path / "toolchain", static)
 
 
-def test_the_written_project_execs_each_planned_call(tmp_path):
+@needs_cc
+def test_a_sleeper_that_dispatches_on_its_name_is_refused(tmp_path):
+    """UX-1386: 26.04's `sleep` is uutils' multicall binary; every fake copy exited 1 in the sandbox."""
+    source = tmp_path / "multicall.c"
+    source.write_text(
+        '#include <string.h>\nint main(int c, char **v) { const char *b = strrchr(v[0], 47); '
+        'return strcmp(b ? b + 1 : v[0], "sleep") != 0; }\n',
+        encoding="utf-8",
+    )
+    multicall = tmp_path / "sleep"
+    subprocess.run([CC, "-o", str(multicall), str(source)], check=True)
+    with pytest.raises(gen.SpecError, match="multicall"):
+        gen.write_workload_project({HEAVY: {"a": 1}}, tmp_path / "p", tmp_path / "toolchain", multicall)
+
+
+@needs_cc
+def test_the_written_project_execs_each_planned_call(tmp_path, sleeper):
     """The YAML parses, and its commands, run against counting stand-ins, exec the plan's calls exactly."""
     calls = synth.workload_calls(_plan())
     toolchain = tmp_path / "toolchain"
     (toolchain / "usr/bin").mkdir(parents=True)
-    project = gen.write_workload_project(calls, tmp_path / "project", toolchain, SLEEP)
+    project = gen.write_workload_project(calls, tmp_path / "project", toolchain, sleeper)
     assert len(list((project / "files/fakebin/opt/fakebin").iterdir())) == len({b for p in calls.values() for b in p})
     stand_ins = tmp_path / "bin"
     stand_ins.mkdir()
@@ -105,13 +127,13 @@ def test_the_written_project_execs_each_planned_call(tmp_path):
     not (TOOLCHAIN / "usr/bin").is_dir(),
     reason="examples/05-cmake-cpp-toolchain's toolchain isn't staged - run stage_cpp_toolchain.sh first",
 )
-def test_a_real_capture_counts_every_planned_call(tmp_path):
+def test_a_real_capture_counts_every_planned_call(tmp_path, sleeper):
     """Plane 2's records per element per binary equal the plan's calls; the heavy element shows 200 binaries."""
     from tests.unit._bst_env import bst_env
     from tools.bst_native_build_tracer import pair_events, parse_trace_log, run_traced_build
 
     calls = synth.workload_calls(_plan())
-    project = gen.write_workload_project(calls, tmp_path / "project", TOOLCHAIN, SLEEP)
+    project = gen.write_workload_project(calls, tmp_path / "project", TOOLCHAIN, sleeper)
     raw_log = tmp_path / "raw.log"
     with bst_env(tmp_path / "home"):
         returncode = run_traced_build(str(project), ["bst", "--no-colors", "build", "all.bst"], str(raw_log))

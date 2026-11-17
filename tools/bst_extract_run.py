@@ -36,6 +36,8 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import Optional
 
+from bga.run_store import BUILD_LOG_NAME, refuse_unresolved
+
 from ._run_context_common import (
     add_artifact_weights,
     add_build_class,
@@ -57,6 +59,9 @@ from .chrome_trace_to_bga_trace import (
     failed_elements,
     invocation_wall_clock,
 )
+
+# UX-1385: the positionals `@last`/`@prev` name, and which file of that snapshot each takes.
+SNAPSHOT_ARGUMENTS = {"log_path": BUILD_LOG_NAME}
 
 # S607: resolved once against PATH, not trusted to whatever order the
 # shell would have used.
@@ -1238,6 +1243,9 @@ def main() -> int:
         "that looks like it renders the root proto's own length.",
     )
     args = parser.parse_args()
+
+    if (refused := refuse_unresolved(args, SNAPSHOT_ARGUMENTS)) is not None:
+        return refused
 
     declared = build_class_from_args(args)
     if declared is None:

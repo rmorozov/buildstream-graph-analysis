@@ -61,6 +61,11 @@ import json
 import sys
 from collections.abc import Iterable
 
+from bga.run_store import GRAPH_MEMBER, refuse_unresolved
+
+# UX-1385: the positionals `@last`/`@prev` name, and which file of that snapshot each takes.
+SNAPSHOT_ARGUMENTS = {"graph_json": GRAPH_MEMBER}
+
 
 def build_successors(dependencies: Iterable[dict]) -> dict[str, list[str]]:
     """`{predecessor: [successors]}` over `build` edges only."""
@@ -115,6 +120,9 @@ def main() -> int:
         help="Print only the size of the resulting set.",
     )
     args = parser.parse_args()
+
+    if (refused := refuse_unresolved(args, SNAPSHOT_ARGUMENTS)) is not None:
+        return refused
 
     with open(args.graph_json, encoding="utf-8") as handle:
         graph = json.load(handle)

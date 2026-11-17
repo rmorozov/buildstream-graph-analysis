@@ -65,8 +65,8 @@ PLANE2_NAME = "plane2.json"
 # raw log gzips to **8.0%** and **8.6%** of itself (676,931 -> 53,828 B;
 # 150,969 -> 12,915 B), which is 12% on top of the processed report it
 # sits beside. `--no-keep-raw` turns it off.
-RAW_LOG_NAME = "plane2.log.gz"
-WRAPPED_LOG_NAME = "build.log"
+RAW_LOG_NAME = run_store.RAW_LOG_NAME
+WRAPPED_LOG_NAME = run_store.BUILD_LOG_NAME
 # `UX-378`, named in `run_store` so the layout has one authority.
 HOST_SAMPLES_NAME = run_store.HOST_SAMPLES_NAME
 CONTEXT_NAME = "capture-context.txt"

@@ -22,6 +22,7 @@ directory is still one.
 import json
 import os
 import re
+import sys
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -108,6 +109,11 @@ HOST_SAMPLES_NAME = "host-samples.jsonl"
 
 # UX-1078: what bga itself cost after the build, one row per tail phase.
 TAIL_NAME = "tail.json"
+
+# UX-1385: the snapshot's wrapped log, and the two run-directory files a tool takes alone.
+BUILD_LOG_NAME = "build.log"
+GRAPH_MEMBER = os.path.join(RUN_SUBDIR, "graph.json")
+CHROME_TRACE_MEMBER = os.path.join(RUN_SUBDIR, "chrome_trace.json")
 
 # UX-155: bga's own scratch — the shim it puts on `$PATH`, the compiled
 # hook and spine, and the unnamed intermediate logs. Project-local for
@@ -203,6 +209,55 @@ def resolve_plane2(token: str, start: Optional[str] = None) -> str:
             f"Name a different snapshot, or pass the report's path."
         )
     return plane2
+
+
+def resolve_member(token: str, member: str, start: Optional[str] = None) -> str:
+    """`UX-1385`: the same alias, naming `member` inside that snapshot.
+
+    `RUN_SUBDIR` and `PLANE2_NAME` keep their own resolvers' answers and
+    sentences; any other member is checked for, so a capture that never
+    kept it fails by name rather than as a missing path.
+    """
+    if not is_alias(token):
+        return token
+    if member == RUN_SUBDIR:
+        return resolve(token, start)
+    if member == PLANE2_NAME:
+        return resolve_plane2(token, start)
+    snapshot = resolve_snapshot(token, start)
+    path = os.path.join(snapshot, member)
+    if not os.path.exists(path):
+        raise StoreError(
+            f"{token} resolves to {os.path.basename(snapshot)}, which has no "
+            f"{member}. Name a different snapshot, or pass the file's path."
+        )
+    return path
+
+
+def resolve_arguments(args, members: dict, start: Optional[str] = None) -> Optional[str]:
+    """Resolve every alias in `args` named by `members` (attribute -> member), in place.
+
+    Returns the refusal's sentence, or `None`; a list attribute resolves each entry.
+    """
+    try:
+        for name, member in members.items():
+            value = getattr(args, name, None)
+            if isinstance(value, str):
+                setattr(args, name, resolve_member(value, member, start))
+            elif isinstance(value, list):
+                setattr(args, name, [resolve_member(v, member, start) for v in value])
+    except StoreError as error:
+        return str(error)
+    return None
+
+
+def refuse_unresolved(args, members: dict) -> Optional[int]:
+    """`resolve_arguments` for a tool's `main`: exit 2 after printing the refusal, else `None`."""
+    refusal = resolve_arguments(args, members)
+    if refusal is None:
+        return None
+    print(f"Error: {refusal}", file=sys.stderr)
+    return 2
 
 
 def declared_class(run_dir: str) -> Optional[dict]:
@@ -826,7 +881,7 @@ CAPTURE_LAYOUT = (
         "a phase that did not run has no row.",
     ),
     (
-        f"{STORE_DIRNAME}/{RUNS_DIRNAME}/<stamp>/build.log",
+        f"{STORE_DIRNAME}/{RUNS_DIRNAME}/<stamp>/{BUILD_LOG_NAME}",
         CONDITIONAL,
         None,
         "the wrapped BuildStream log, kept because its first line records "

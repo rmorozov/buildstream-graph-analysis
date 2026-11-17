@@ -32,6 +32,11 @@ import re
 import sys
 from datetime import datetime, timezone
 
+from bga.run_store import BUILD_LOG_NAME, refuse_unresolved
+
+# UX-1385: the positionals `@last`/`@prev` name, and which file of that snapshot each takes.
+SNAPSHOT_ARGUMENTS = {"input_log": BUILD_LOG_NAME}
+
 # Regex to match your EXACT wrapper prefix and extract UTC time + the raw message
 PREFIX_RE = re.compile(r"^\[.*?\]\s*\[(.*?)\]\s*[A-Z]+:\s*(.*)$")
 ANSI_RE = re.compile(r"\x1b\[[0-9;]*m")
@@ -885,6 +890,9 @@ def main(argv=None, quiet=False):
         "fallback). Defaults to the input file's mtime.",
     )
     args = parser.parse_args(argv)
+
+    if (refused := refuse_unresolved(args, SNAPSHOT_ARGUMENTS)) is not None:
+        return refused
 
     try:
         start_time_us = _resolve_start_time_us(args.start_time, args.input_log)

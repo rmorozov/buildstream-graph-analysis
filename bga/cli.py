@@ -27,7 +27,7 @@ import sys
 from pathlib import Path
 from typing import NoReturn, Optional
 
-from . import __version__, contracts, hostinfo, schemas
+from . import __version__, contracts, hostinfo, run_store, schemas
 from . import plane2 as plane2_shape
 from . import shown as qty
 from .analyzer import (
@@ -79,7 +79,6 @@ from .run_store import (
     sibling_plane2,
 )
 from .run_store import resolve as resolve_run_alias
-from .run_store import resolve_plane2 as resolve_plane2_alias
 from .units import kb_to_bytes, mb_to_bytes
 
 logger = logging.getLogger(__name__)
@@ -3212,26 +3211,19 @@ _RUN_DIRECTORY_LIST_ARGS = ('run_dirs', 'baseline_run', 'calibration_dir')
 _PLANE2_ARGS = ('native_report', 'plane2', 'baseline_plane2', 'candidate_plane2')
 
 
-def _resolve_run_aliases(args: argparse.Namespace) -> None:
-    """Turn snapshot aliases into paths, in place.
+def _resolve_run_aliases(args: argparse.Namespace) -> Optional[str]:
+    """Turn snapshot aliases into paths, in place; the refusal's sentence, or `None`.
 
     Anything that is not an alias passes through untouched, so an
     explicit path means exactly what it meant before the store existed -
     including a directory that really is called `@last`, which is a path
     the store's grammar deliberately still reaches (`run_store._ALIAS`).
     """
-    for name in _RUN_DIRECTORY_ARGS:
-        value = getattr(args, name, None)
-        if isinstance(value, str):
-            setattr(args, name, resolve_run_alias(value))
-    for name in _RUN_DIRECTORY_LIST_ARGS:
-        values = getattr(args, name, None)
-        if isinstance(values, list):
-            setattr(args, name, [resolve_run_alias(v) for v in values])
-    for name in _PLANE2_ARGS:
-        value = getattr(args, name, None)
-        if isinstance(value, str):
-            setattr(args, name, resolve_plane2_alias(value))
+    members: dict[str, str] = {
+        **dict.fromkeys(_RUN_DIRECTORY_ARGS + _RUN_DIRECTORY_LIST_ARGS, run_store.RUN_SUBDIR),
+        **dict.fromkeys(_PLANE2_ARGS, run_store.PLANE2_NAME),
+    }
+    return run_store.resolve_arguments(args, members)
 
 
 # UX-190: which command publishes which output schema.
@@ -3926,10 +3918,9 @@ def _run(argv: Optional[list[str]] = None) -> int:
         parser.print_help()
         return 0
 
-    try:
-        _resolve_run_aliases(args)
-    except StoreError as exc:
-        print(f"Error: {exc}", file=sys.stderr)
+    refusal = _resolve_run_aliases(args)
+    if refusal is not None:
+        print(f"Error: {refusal}", file=sys.stderr)
         return 2
 
     return args.func(args)

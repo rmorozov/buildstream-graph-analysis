@@ -81,6 +81,11 @@ import os
 import sys
 from typing import Optional
 
+from bga.run_store import CHROME_TRACE_MEMBER, RAW_LOG_NAME, refuse_unresolved
+
+# UX-1385: the positionals `@last`/`@prev` name, and which file of that snapshot each takes.
+SNAPSHOT_ARGUMENTS = {"raw_log": RAW_LOG_NAME, "plane1_json": CHROME_TRACE_MEMBER}
+
 PLANE2_CAT = "native-process"
 
 
@@ -269,6 +274,9 @@ def main(argv=None, quiet=False) -> int:
     )
 
     args = parser.parse_args(argv)
+
+    if (refused := refuse_unresolved(args, SNAPSHOT_ARGUMENTS)) is not None:
+        return refused
 
     # Local imports (not at module top) - this tool is standalone, single-
     # purpose per this module's own docstring; avoids importing

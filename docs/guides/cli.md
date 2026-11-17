@@ -236,6 +236,27 @@ bga compare @prev @last --baseline-plane2 @prev --candidate-plane2 @last
 bga cache-logs . --native-report @last
 ```
 
+**The tools take them too, each naming one file of that snapshot**
+(`UX-1385`). A tool parses its own arguments, so each declares
+`SNAPSHOT_ARGUMENTS` and resolves through `run_store.resolve_arguments`,
+the resolver the commands above share:
+
+| command | argument | `@last` names |
+|---|---|---|
+| `bga extract . @last out/` | the log | `build.log` — re-extract a capture with a newer `bga` or another flag |
+| `bga run-context @last out.json` | the log | `build.log` |
+| `bga log-to-chrome @last out.json` | the log | `build.log` |
+| `bga rebuild-set @last --cut E` | the graph | `run/graph.json` |
+| `bga cross-check @last @last` | the run, the analysis | `run/`, `analyze.json` |
+| `bga native-to-chrome standalone @last out.json` | the raw log | `plane2.log.gz`; `combined`'s Plane 1 trace is `run/chrome_trace.json` |
+
+A snapshot without that file is refused by name, exit 2: *"@last
+resolves to 20260102T000000Z, which has no build.log"*. Output
+arguments take no alias, and neither do `wrap`, `capture`,
+`graph-from-show`, `gen-synthetic` and `doctor`, which make a capture
+rather than read one, nor `checkout-cost` and `chrome-to-trace`, whose
+inputs no snapshot keeps or whose output every snapshot already holds.
+
 `bga analyze` finds the `plane2.json` beside a snapshot on its own
 (`UX-329`), as `bga correlate` and `bga view` always have — before that
 the same run published `plane2_coverage: null` in the terminal and the

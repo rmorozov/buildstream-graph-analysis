@@ -60,6 +60,8 @@ import json
 import sys
 from typing import Optional
 
+from bga.run_store import BUILD_LOG_NAME, refuse_unresolved
+
 from ._run_context_common import (
     add_build_class,
     add_build_class_arguments,
@@ -77,6 +79,9 @@ from .bst_log_to_chrome_trace import (
     _resolve_start_time_us,
 )
 from .chrome_trace_to_bga_trace import invocation_wall_clock
+
+# UX-1385: the positionals `@last`/`@prev` name, and which file of that snapshot each takes.
+SNAPSHOT_ARGUMENTS = {"input_log": BUILD_LOG_NAME}
 
 
 def build_run_context(
@@ -221,6 +226,9 @@ def main() -> int:
         "(UX-21).",
     )
     args = parser.parse_args()
+
+    if (refused := refuse_unresolved(args, SNAPSHOT_ARGUMENTS)) is not None:
+        return refused
 
     declared = build_class_from_args(args)
     if declared is None:

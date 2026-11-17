@@ -34,7 +34,7 @@ read the pinned toolchain axis, not these rows.
 `sysroot_manifest:` divergence line in the staging step; each new guard
 reddens under its mutation on this container (24.04, GNU).
 
-## Outcome (round 177, 2026-11-17) — 🟢 Done
+## Outcome (round 176, 2026-11-17) — 🟢 Done
 
 **Premise:** held - all four reds are the image, not a diff: `#350`'s
 diff touches none of these files, and Timing on main reds identically

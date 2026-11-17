@@ -4,8 +4,8 @@ Printed by `dev_area_pages.py --areas` (`UX-688`, `UX-1000`) from each task's `*
 
 | Task | Topic | Guard |
 |---|---|---|
-| [UX-19](https://github.com/rmorozov/buildstream-graph-analysis/blob/24f8a0471f2abc54f4ea1e7a17e984e89851c780/docs/backlog/scenarios/UX-0019-resource-scheduler-wait-known-gap-shapes-reconfirmed.md) | analysis | `test_wait_gap_resaturation.py`, `test_blame_chain.py`, `test_resource_wait.py`, `test_retry_wait_classification.py` · inferred r149 |
-| [UX-42](https://github.com/rmorozov/buildstream-graph-analysis/blob/24f8a0471f2abc54f4ea1e7a17e984e89851c780/docs/backlog/scenarios/UX-0042-attribution-is-quadratic-per-gap-at-scale.md) | analysis | `test_resource_saturation_timeline.py` · inferred r149 |
-| [UX-541](https://github.com/rmorozov/buildstream-graph-analysis/blob/24f8a0471f2abc54f4ea1e7a17e984e89851c780/docs/backlog/scenarios/UX-0541-the-gap-sweep-is-cut-but-still-quadratic.md) | analysis | none — no guard named at close |
+| [UX-19](https://github.com/rmorozov/buildstream-graph-analysis/blob/9eae740451c9db5ec5ccf214a8cd31a3fe7e35f7/docs/backlog/scenarios/UX-0019-resource-scheduler-wait-known-gap-shapes-reconfirmed.md) | analysis | `test_wait_gap_resaturation.py`, `test_blame_chain.py`, `test_resource_wait.py`, `test_retry_wait_classification.py` · inferred r149 |
+| [UX-42](https://github.com/rmorozov/buildstream-graph-analysis/blob/9eae740451c9db5ec5ccf214a8cd31a3fe7e35f7/docs/backlog/scenarios/UX-0042-attribution-is-quadratic-per-gap-at-scale.md) | analysis | `test_resource_saturation_timeline.py` · inferred r149 |
+| [UX-541](https://github.com/rmorozov/buildstream-graph-analysis/blob/9eae740451c9db5ec5ccf214a8cd31a3fe7e35f7/docs/backlog/scenarios/UX-0541-the-gap-sweep-is-cut-but-still-quadratic.md) | analysis | none — no guard named at close |
 
 covered 2 / 3 (none 1, inferred r149 2, no line 0)

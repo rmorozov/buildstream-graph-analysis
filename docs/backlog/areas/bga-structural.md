@@ -4,9 +4,9 @@ Printed by `dev_area_pages.py --areas` (`UX-688`, `UX-1000`) from each task's `*
 
 | Task | Topic | Guard |
 |---|---|---|
-| [UX-41](https://github.com/rmorozov/buildstream-graph-analysis/blob/24f8a0471f2abc54f4ea1e7a17e984e89851c780/docs/backlog/scenarios/UX-0041-level-decomposition-uses-shortest-not-longest-path.md) | analysis | `test_level_decomposition.py` · inferred r149 |
-| [UX-43](https://github.com/rmorozov/buildstream-graph-analysis/blob/24f8a0471f2abc54f4ea1e7a17e984e89851c780/docs/backlog/scenarios/UX-0043-choke-point-detection-degenerates-at-scale.md) | analysis | `test_choke_points.py` · inferred r149 |
-| [UX-719](https://github.com/rmorozov/buildstream-graph-analysis/blob/24f8a0471f2abc54f4ea1e7a17e984e89851c780/docs/backlog/scenarios/UX-0719-the-bottleneck-fan-in-and-fan-out-labels-are-swapped.md) | analysis | none — no guard named at close |
-| [UX-733](https://github.com/rmorozov/buildstream-graph-analysis/blob/24f8a0471f2abc54f4ea1e7a17e984e89851c780/docs/backlog/scenarios/UX-0733-the-two-fan-averages-are-the-same-number-and-both-described-wrong.md) | analysis | none — no guard named at close |
+| [UX-41](https://github.com/rmorozov/buildstream-graph-analysis/blob/9eae740451c9db5ec5ccf214a8cd31a3fe7e35f7/docs/backlog/scenarios/UX-0041-level-decomposition-uses-shortest-not-longest-path.md) | analysis | `test_level_decomposition.py` · inferred r149 |
+| [UX-43](https://github.com/rmorozov/buildstream-graph-analysis/blob/9eae740451c9db5ec5ccf214a8cd31a3fe7e35f7/docs/backlog/scenarios/UX-0043-choke-point-detection-degenerates-at-scale.md) | analysis | `test_choke_points.py` · inferred r149 |
+| [UX-719](https://github.com/rmorozov/buildstream-graph-analysis/blob/9eae740451c9db5ec5ccf214a8cd31a3fe7e35f7/docs/backlog/scenarios/UX-0719-the-bottleneck-fan-in-and-fan-out-labels-are-swapped.md) | analysis | none — no guard named at close |
+| [UX-733](https://github.com/rmorozov/buildstream-graph-analysis/blob/9eae740451c9db5ec5ccf214a8cd31a3fe7e35f7/docs/backlog/scenarios/UX-0733-the-two-fan-averages-are-the-same-number-and-both-described-wrong.md) | analysis | none — no guard named at close |
 
 covered 2 / 4 (none 2, inferred r149 2, no line 0)

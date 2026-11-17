@@ -38,8 +38,11 @@ pytestmark = needs_cc
 
 #: Writes 8 MiB and fsyncs it, so the block-layer counters are non-zero
 #: on the process that did it and zero on the shell that spawned it -
-#: which is the pair the mis-read below confused.
-WORKLOAD = "dd if=/dev/urandom of={path} bs=1M count=8 2>/dev/null; sync"
+#: which is the pair the mis-read below confused. UX-1386: the writer is
+#: Python, not `dd` - uutils' multicall `dd` and `sync` fault alike, and
+#: its `dd` is threaded, so no other process could stand as the yardstick.
+WRITER = "import os; f = os.open({path!r}, os.O_WRONLY | os.O_CREAT); os.write(f, os.urandom(8 << 20)); os.fsync(f)"
+WORKLOAD = "{python} -c " + '"{writer}"' + "; sync"
 
 
 def _records(tmp_path, both_planes=True):
@@ -52,7 +55,13 @@ def _records(tmp_path, both_planes=True):
     if both_planes:
         env["LD_PRELOAD"] = compile_hook(str(build))
     done = subprocess.run(
-        [spine, "--", "sh", "-c", WORKLOAD.format(path=tmp_path / "probe.bin")],
+        [
+            spine,
+            "--",
+            "sh",
+            "-c",
+            WORKLOAD.format(python=sys.executable, writer=WRITER.format(path=str(tmp_path / "probe.bin"))),
+        ],
         env=env,
         capture_output=True,
         text=True,
@@ -142,10 +151,10 @@ class TestTheTwoMechanismsAgree:
 
         A tolerance here would be a number nothing measured. A
         comparison is available instead: on this container over 5 runs
-        the worker read `minflt` 339-340 under **both** mechanisms
+        the worker read `minflt` 3438-3442 under **both** mechanisms
         while the next-nearest spine record on any other process read
-        81-91. So "the two mechanisms differ by less than any two
-        processes do" carries a ~250-fault margin, needs no constant,
+        83-95 (UX-1386's Python writer). So "the two mechanisms differ by less than any two
+        processes do" carries a ~3,300-fault margin, needs no constant,
         and still reddens for a spine that reads the wrong process,
         the wrong `/proc` field, or nothing at all.
         """

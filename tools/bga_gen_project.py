@@ -41,7 +41,9 @@ import os
 import pathlib
 import shutil
 import struct
+import subprocess
 import sys
+import tempfile
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
 
@@ -251,6 +253,27 @@ def is_dynamic(path):
     return any(struct.unpack_from("<I", data, phoff + i * size)[0] == 3 for i in range(count))
 
 
+#: UX-1386: a sleeper that answers to any name. A distro `sleep` need not:
+#: 26.04's is uutils' multicall binary, which dispatches on `argv[0]`.
+SLEEPER_C = """#include <stdlib.h>
+#include <time.h>
+int main(int argc, char **argv) {
+    double s = argc > 1 ? strtod(argv[1], 0) : 0;
+    struct timespec t = {(time_t)s, (long)((s - (time_t)s) * 1e9)};
+    return nanosleep(&t, 0) != 0;
+}
+"""
+
+
+def build_sleeper(out, cc="cc"):
+    """Compile `SLEEPER_C` to `out/sleep`, dynamic, and return its path."""
+    out = pathlib.Path(out)
+    out.mkdir(parents=True, exist_ok=True)
+    (out / "sleeper.c").write_text(SLEEPER_C, encoding="utf-8")
+    subprocess.run([cc, "-O2", "-o", str(out / "sleep"), str(out / "sleeper.c")], check=True)
+    return out / "sleep"
+
+
 def workload_commands(calls):
     """One shell line per planned call: `{binary: calls}` -> `/opt/fakebin/<binary> <1-5 ms>`."""
     lines = []
@@ -264,10 +287,16 @@ def write_workload_project(calls, out, toolchain, sleep):
 
     Every binary is a copy of `sleep`, which must be dynamic: `LD_PRELOAD`
     does not load into a static binary, so the hook would see nothing.
+    It must also run under another name (`build_sleeper` does).
     `toolchain` is a staged sysroot (examples/05's) providing `sh` and libc.
     """
     if not is_dynamic(sleep):
         raise SpecError(f"{sleep} is not a dynamic ELF: the LD_PRELOAD hook cannot see a static binary run")
+    with tempfile.TemporaryDirectory() as scratch:
+        renamed = shutil.copy2(sleep, os.path.join(scratch, "renamed-sleeper"))
+        ran = subprocess.run([renamed, "0"], capture_output=True, check=False)
+    if ran.returncode != 0:
+        raise SpecError(f"{sleep} exits {ran.returncode} under another name: a multicall binary dispatches on argv[0]")
     out = pathlib.Path(out)
     if out.exists():
         shutil.rmtree(out)

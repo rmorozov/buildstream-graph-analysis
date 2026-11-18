@@ -27,6 +27,7 @@ to instead of superseded:
 | [`retro-2026-10-12.md`](retro-2026-10-12.md) | the third weekly retro — a quiet ledger, the browser-share guard adopted up 9.2 points in two days, last week's proposals unfiled |
 | [`retro-2026-10-26.md`](retro-2026-10-26.md) | the fourth weekly retro, over two weeks — main green, three of three dependabot pip bumps waiting on a hand lock commit, six proposals unfiled |
 | [`retro-2026-11-02.md`](retro-2026-11-02.md) | the fifth weekly retro — round 175 closed ten rows with no verifier run, worktree shell refusals in 4 of 6 runs, `PAGE_BUDGET_B` raised 8 times in a month |
+| [`retro-2026-11-09.md`](retro-2026-11-09.md) | the sixth weekly retro — the tool's 0 misses 7 closed rows' header `Guard:`, the red ledger has never recorded a catch, and where each of the twelve proposals went |
 
 The rounds themselves:
 

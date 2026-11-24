@@ -533,6 +533,8 @@ A citation is closed or marked (open).
                                              cold (UX-96), no push
                                              trigger (UX-90);
                                              docs/design/capture-workflow.md
+.github/workflows/dependabot-lock.yml       dependabot pip PR - commits
+                                             the bump's lock, UX-1383 (open)
 .github/workflows/codspeed-probe.yml        dispatch - CodSpeed's bare-metal
                                              Graviton runner: sudo, bwrap,
                                              bst on aarch64, compile width

@@ -107,7 +107,7 @@ class TestThePolicyIsDeclaredWhereThePinIs:
         that moved one of them would give the two triggers two different
         populations without saying so anywhere."""
         if declared_policy() != "pinned":
-            pytest.skip("the workflow declares `advanced`: there is no pin to copy")
+            pytest.skip("the workflow declares `advanced`")
         block = _input_block()
         default = re.search(r"default:\s*([0-9a-f]{40})", block)
         assert default, block

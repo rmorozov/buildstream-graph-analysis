@@ -127,6 +127,7 @@ CENSUS = (
     "tests/unit/test_a_guard_reads_only_what_a_clone_has.py",
     "tests/unit/test_a_case_carries_both_captures.py",
     "tests/unit/test_capture_ref_patterns.py",
+    "tests/unit/test_every_agent_file_is_named_in_a_steering_document.py",
     "tests/unit/test_every_direction_names_its_reader.py",
     "tests/unit/test_every_skill_directory_is_named_in_claude_md.py",
     "tests/unit/test_every_skip_reason_is_declared.py",

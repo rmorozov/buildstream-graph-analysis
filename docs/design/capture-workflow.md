@@ -328,6 +328,7 @@ finds this table and goes looking for `native-report.json` inside a
 | `graph-declared.json` | the declared graph, extracted before any build |
 | `rebuild-set.txt` | the exact elements deleted |
 | `state-after-warm.txt`, `state-after-delete.txt` | `bst show %{state}` either side of the cut |
+| `beyond-cut.txt` | up to two uncached elements outside the cut, built anyway (UX-1361) |
 | `analyze.txt`, `analyze.json`, `correlate.txt` | the analysis as run on the runner |
 | `bst-element-logs.tar.gz` | BuildStream's own per-element logs, `_casd/` excluded |
 | `doctor.txt` | `bga doctor` against the real project, run before the build |

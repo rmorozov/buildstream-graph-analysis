@@ -194,7 +194,8 @@ class TestTheSelectorStillSelects:
     # `UX-1283`'s seed guard runs `bga.cli`'s jobserver translator: median 41, p90 70, max 212 over 847.
     # The field-test rows' merged tree (UX-1357/1363/1364/1365/1366's guards run `bga.cli`): median 41, p90 70, max 217 over 871.
     # `UX-1368`'s regime guard runs `bga.cli`'s builders line: median 41, p90 70, max 218 over 873.
-    CEILING = {"median": 41, "p90": 70, "max": 218}
+    # This batch's merged tree (UX-1367/1377/1381's guards, the census growing to 36): median 42, p90 71, max 220 over 884.
+    CEILING = {"median": 42, "p90": 71, "max": 220}
     POPULATION_FLOOR = 60
     #: `UX-645`: **13 census + 14 of your own**. The census floor is
     #: inside this bound because those files run - the figure is what
@@ -237,8 +238,10 @@ class TestTheSelectorStillSelects:
     #: Same arithmetic: 47 -> 48.
     #: `UX-902` moved it 34 -> 35 (its guard lists `docs/cases/` with `git ls-files`).
     #: Same arithmetic: 48 -> 49.
-    HANDFUL = 49
-    CENSUS_FLOOR = 35
+    #: `UX-1381` moved it 35 -> 36 (its guard globs `.claude/agents/`).
+    #: Same arithmetic: 49 -> 50.
+    HANDFUL = 50
+    CENSUS_FLOOR = 36
 
     # Wide because the module's name is how a test invokes it, not
     # because the selector is wrong. `UX-606` argued each one.

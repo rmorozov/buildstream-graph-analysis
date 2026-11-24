@@ -36,7 +36,6 @@ task file, which is the only place it ever lived twice.
 | UX-1367 | [an analysis written by an older bga is not served as the current one](UX-1367-a-stale-analysis-is-not-served-as-current.md) | analysis | Medium | R1 | 🔴 Not Started |
 | UX-1375 | [the Back-after-Collapse-all guard waits for a settled page, not a fixed second](UX-1375-the-back-guard-waits-for-a-settled-page-not-a-fixed-second.md) | viewer | Medium | R1 | 🔴 Not Started |
 | UX-1376 | [`correlate` on a run with no Plane 2 answers in the format it was asked for](UX-1376-correlate-without-plane-2-answers-in-its-format.md) | cli | Low | R3 | 🔴 Not Started |
-| UX-1377 | [an incremental run lists cached elements as bottlenecks](UX-1377-an-incremental-run-lists-cached-elements-as-bottlenecks.md) | analysis | Medium | R3, R1 | 🔴 Not Started |
 | UX-1380 | [the doctor's compiler clause in `cli.md` names the order `UX-1374` replaced](UX-1380-the-doctor-clause-names-the-old-compiler-order.md) | docs | Low | R4 | 🔴 Not Started |
 | UX-1381 | [the `triager` agent is in no guide and not in `CLAUDE.md`'s pipeline](UX-1381-the-triager-is-in-no-guide.md) | docs | Low | R8 | 🔴 Not Started |
 | UX-1383 | [a dependabot pip pull request arrives with its lock](UX-1383-a-dependabot-pip-pr-arrives-with-its-lock.md) | guards | Medium | every dependabot pip bump | 🟡 In Progress |

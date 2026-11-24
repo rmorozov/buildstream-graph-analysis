@@ -309,6 +309,10 @@ class StructuralAnalyzer:
         # graph-iteration order.
         choke_points.sort(key=lambda node: (-choke_impact[node], node))
 
+        # UX-1377: a bottleneck is one this run measured; the rest were cached or pulled.
+        durations = self._durations()
+        unpriced = [node for node in choke_points if not durations.get(node)]
+
         # Resource contention (structural - same resource type used by many elements)
         resource_usage = defaultdict(list)
         for key, task in self.tasks.items():
@@ -337,6 +341,7 @@ class StructuralAnalyzer:
         return BottleneckAnalysis(
             choke_points=choke_points,
             choke_point_impact=choke_impact,
+            unpriced_choke_points=unpriced,
             resource_contention=dict(resource_contention),
             longest_serial_chain=longest_chain,
             serial_chain_length=len(longest_chain),

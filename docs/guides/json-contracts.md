@@ -180,7 +180,7 @@ the blocks a reader meets first, and `certified_headroom`, the number
 Key Findings leads with, had never been in the population at all. It was
 302 such keys when that was filed and 305 when it landed. One level and
 no further: `blast_radius_distribution.deciles` is in the population and
-its own nine buckets are not. The surface is **645 keys** today, and
+its own nine buckets are not. The surface is **646 keys** today, and
 that figure is derived from the walk rather than typed here.
 
 So the statement of coverage, which is now a statement and not a
@@ -228,7 +228,7 @@ can look one up.
 
 | key | what it is |
 |---|---|
-| `bottleneck` | Where work funnels through one element, and how much waits behind it. `choke_points` ranks by `downstream_count`. |
+| `bottleneck` | Where work funnels through one element, and how much waits behind it. `choke_points` ranks by `downstream_count`; `unpriced_choke_points` is the subset with no measured duration this run (cached or pulled), counted apart by the text report and never named as bottlenecks (`UX-1377`). |
 | `cpu_time` | The run-level CPU totals beside `element_cpu_time`, with the sentence saying what a CPU figure here is and is not. |
 | `resource_pressure` | The run-level coverage beside `element_resource_pressure`, and what each counter counts. |
 | `configure_phase` | The share of CPU spent configuring rather than building. A floor, for the reason its own `note` gives. |

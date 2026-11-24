@@ -2412,6 +2412,13 @@ _STRUCTURAL_TABLES = {
             # sort every other element table has. Before this
             # the whole `structural` section carried **zero**
             # links out of it, measured on the 1,202-element run.
+            # UX-1377: the subset of `choke_points` with no duration this run.
+            "unpriced_choke_points": {
+                GROWS: "elements (subset of choke_points, no cap)",
+                "items": {"type": "string", "description": "element uid"},
+                "description": "Choke points this run has no measured duration for (cached or "
+                "pulled, not built), so not named as bottlenecks.",
+            },
             "choke_points": {
                 GROWS: "elements (nodes where downstream+ancestor "
                 "count == n-1, bounded on the page by "
@@ -7283,6 +7290,17 @@ def choke_point_uids(bottleneck: dict) -> list:
     """
     entries = (bottleneck or {}).get('choke_points') or []
     return [entry.get('element_uid') if isinstance(entry, dict) else entry for entry in entries]
+
+
+def measured_bottlenecks(bottleneck: dict) -> tuple[list, list]:
+    """`(named, unpriced)`: choke points this run measured, and those it has no duration for.
+
+    `UX-1377`: a cached element is a choke point of the graph, not a bottleneck
+    of the run. A document without `unpriced_choke_points` names them all.
+    """
+    unpriced = set((bottleneck or {}).get('unpriced_choke_points') or [])
+    uids = choke_point_uids(bottleneck)
+    return [u for u in uids if u not in unpriced], [u for u in uids if u in unpriced]
 
 
 def stamp(payload: dict, name: str) -> dict:

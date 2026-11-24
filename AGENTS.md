@@ -8,7 +8,7 @@ when that provider is available. Report unavailable capabilities.
 ## Review guidelines
 
 Read [REVIEW.md](REVIEW.md) before reviewing a change. Follow its four
-passes and finding threshold. For security, also read the
+passes and finding threshold. For its Security pass, also read the
 [threat model](docs/design/threat-model.md). Read the task and affected
 contract or guide sections; use code and guards to verify their claims.
 
@@ -21,9 +21,9 @@ internal assertion does not prove that rendered advice is consistent.
 ## Before handing off a PR
 
 Follow [the external review procedure](docs/contributing/codex-reviews.md):
-a round PR is reviewed once when marked ready, again only when code moves
-after the reviewed sha, and a security review only when the diff crosses a
-threat-model boundary. Answer each finding in its task file.
+a round PR is reviewed once when marked ready, and again only when code moves
+after the reviewed sha; no separate security review is requested. Answer each
+finding in its task file.
 A review-only task reports findings without modifying the author's code.
 Do not recursively request reviews when acting as the reviewer.
 

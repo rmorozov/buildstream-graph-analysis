@@ -33,7 +33,6 @@ task file, which is the only place it ever lived twice.
 | UX-1358 | [an element's serial stretches are measured, and "already compute-bound" is refused while they are large](UX-1358-serial-stretches-are-measured.md) | analysis | High | R2, R1 | 🟡 In Progress |
 | UX-1360 | [a never-read build edge counts executed binaries and probes as reads](UX-1360-a-never-read-edge-counts-execs-and-probes.md) | capture | High | R2, R3 | 🟡 In Progress |
 | UX-1361 | [the weekly real-project capture cannot go dark without someone hearing](UX-1361-the-weekly-real-project-capture-cannot-go-dark.md) | capture | High | R4 | 🟡 In Progress |
-| UX-1367 | [an analysis written by an older bga is not served as the current one](UX-1367-a-stale-analysis-is-not-served-as-current.md) | analysis | Medium | R1 | 🔴 Not Started |
 | UX-1375 | [the Back-after-Collapse-all guard waits for a settled page, not a fixed second](UX-1375-the-back-guard-waits-for-a-settled-page-not-a-fixed-second.md) | viewer | Medium | R1 | 🔴 Not Started |
 | UX-1376 | [`correlate` on a run with no Plane 2 answers in the format it was asked for](UX-1376-correlate-without-plane-2-answers-in-its-format.md) | cli | Low | R3 | 🔴 Not Started |
 | UX-1380 | [the doctor's compiler clause in `cli.md` names the order `UX-1374` replaced](UX-1380-the-doctor-clause-names-the-old-compiler-order.md) | docs | Low | R4 | 🔴 Not Started |

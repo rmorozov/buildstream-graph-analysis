@@ -43,10 +43,10 @@ node = __import__("shutil").which("node")
 needs_node = pytest.mark.skipif(node is None, reason="node is not installed")
 
 
-def _stamped(contracts):
+def _stamped(contracts, version="0.2.9"):
     """A stored analysis whose producer records `contracts`."""
     document = json.loads(STORED.read_text(encoding="utf-8"))
-    document["producer"] = {"tool": "bga", "version": "0.2.9", "contracts": list(contracts)}
+    document["producer"] = {"tool": "bga", "version": version, "contracts": list(contracts)}
     return document
 
 
@@ -64,7 +64,9 @@ class TestWhichAnalysisThisIs:
         """The clause that makes the sentence discriminate. Same run,
         same code path, a stamp that agrees - and no claim of staleness,
         so a page that says it every time fails here."""
-        note = view.analysis_source(_stamped(producer.stamp()["contracts"]), reanalysed=False)
+        note = view.analysis_source(
+            _stamped(producer.stamp()["contracts"], producer.stamp()["version"]), reanalysed=False
+        )
         assert note["stale"] is False, note["contracts_moved"]
 
     def test_a_moved_contract_is_named_in_the_direction_it_moved(self):

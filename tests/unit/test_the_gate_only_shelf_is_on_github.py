@@ -7,6 +7,7 @@ CI installs; an archive member that escapes its directory is dropped.
 """
 
 import io
+import itertools
 import pathlib
 import re
 import sys
@@ -89,6 +90,13 @@ class TestTheLockfileIsTheDevExtra:
         assert loose == [], loose
 
 
+def make_recipe(target):
+    """The recipe lines of one Makefile target, `UX-1384`'s lock targets among them."""
+    lines = (REPO / "Makefile").read_text(encoding="utf-8").splitlines()
+    start = lines.index(f"{target}:") + 1
+    return "\n".join(line for line in itertools.takewhile(lambda line: line.startswith("\t"), lines[start:]))
+
+
 class TestTheShelfReadsTheLock:
     """UX-1128: a weekly run reds on an upstream release unless the compile starts from the lock."""
 
@@ -97,9 +105,10 @@ class TestTheShelfReadsTheLock:
         return "\n".join(str(step.get("run", "")) for step in workflow["jobs"][job]["steps"])
 
     def test_the_lock_check_is_seeded_from_the_committed_lock(self):
-        blob = self._run("pip-audit")
-        compile_at = blob.index("uv pip compile")
-        seed = re.search(r"^\s*cp requirements\.lock (\S+)$", blob[:compile_at], re.M)
+        assert "make lock-check" in self._run("pip-audit")
+        blob = make_recipe("lock-check")
+        compile_at = blob.index("$(LOCK_COMPILE)")
+        seed = re.search(r"^\s*@?cp requirements\.lock (\S+)$", blob[:compile_at], re.M)
         assert seed, blob
         assert f"-o {seed.group(1)}" in blob[compile_at:], blob
 

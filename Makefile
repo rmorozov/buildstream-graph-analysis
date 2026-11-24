@@ -120,8 +120,22 @@ test-e2e:
 # UX-694: --check is the baselined families (S, C901, PLR0912, PLR0913,
 # PLR0915, SIM115) - zero-tolerance for a finding not in the baseline.
 # UX-698: the lockfile is the dev extra, resolved; CI diffs it.
+# UX-1384: one Python and one header for every compile, so any host writes what quality.yml checks.
+LOCK_PYTHON := 3.12
+LOCK_COMPILE = uv pip compile pyproject.toml --extra dev -q --python-version $(LOCK_PYTHON) --custom-compile-command "make lock"
+LOCK_SCRATCH := /tmp/bga-lock-check.lock
 lock:
-	uv pip compile pyproject.toml --extra dev -o requirements.lock -q --upgrade
+	$(LOCK_COMPILE) -o requirements.lock --upgrade
+
+# Re-resolve without --upgrade: only what pyproject.toml moved moves (a dependabot bump).
+lock-sync:
+	$(LOCK_COMPILE) -o requirements.lock
+
+# UX-1128: seeded from the committed lock, so an upstream release is not a red.
+lock-check:
+	@cp requirements.lock $(LOCK_SCRATCH)
+	@$(LOCK_COMPILE) -o $(LOCK_SCRATCH)
+	@diff requirements.lock $(LOCK_SCRATCH) || { echo "requirements.lock is stale: run make lock-sync"; exit 1; }
 
 lint: lint-docs lint-code
 

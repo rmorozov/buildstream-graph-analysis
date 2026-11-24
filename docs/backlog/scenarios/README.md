@@ -35,7 +35,6 @@ task file, which is the only place it ever lived twice.
 | UX-1361 | [the weekly real-project capture cannot go dark without someone hearing](UX-1361-the-weekly-real-project-capture-cannot-go-dark.md) | capture | High | R4 | 🟡 In Progress |
 | UX-1375 | [the Back-after-Collapse-all guard waits for a settled page, not a fixed second](UX-1375-the-back-guard-waits-for-a-settled-page-not-a-fixed-second.md) | viewer | Medium | R1 | 🔴 Not Started |
 | UX-1376 | [`correlate` on a run with no Plane 2 answers in the format it was asked for](UX-1376-correlate-without-plane-2-answers-in-its-format.md) | cli | Low | R3 | 🔴 Not Started |
-| UX-1381 | [the `triager` agent is in no guide and not in `CLAUDE.md`'s pipeline](UX-1381-the-triager-is-in-no-guide.md) | docs | Low | R8 | 🔴 Not Started |
 | UX-1383 | [a dependabot pip pull request arrives with its lock](UX-1383-a-dependabot-pip-pr-arrives-with-its-lock.md) | guards | Medium | every dependabot pip bump | 🟡 In Progress |
 
 **The narrative round headings below are retired at round 94**

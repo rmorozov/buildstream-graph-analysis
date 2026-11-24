@@ -1,0 +1,50 @@
+# UX-1383: Dependabot edits pyproject.toml only, so its pip bump arrives
+# with no lock and reds pip-audit, lint and tests until a hand commit.
+# This job writes that commit: `make lock-sync` is the lock check's own
+# compile, seeded and without --upgrade, so only the bumped pins move.
+#
+# A push made with GITHUB_TOKEN starts no workflow, so the lock commit
+# would carry no CI; DEPENDABOT_LOCK_TOKEN (a Dependabot secret, a
+# fine-grained token with contents: write on this repository) is the
+# token whose push does. Without it the job still pushes and warns.
+name: Dependabot lock
+
+on:
+  pull_request:
+    branches: [main]
+    paths: [pyproject.toml]
+
+permissions:
+  contents: write
+
+jobs:
+  lock:
+    if: github.actor == 'dependabot[bot]' && startsWith(github.head_ref, 'dependabot/pip/')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.head_ref }}
+          token: ${{ secrets.DEPENDABOT_LOCK_TOKEN || github.token }}
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Re-resolve the lock without upgrading
+        run: |
+          pip install uv
+          make lock-sync
+      - name: Push the lock to the dependabot branch
+        env:
+          HAS_TOKEN: ${{ secrets.DEPENDABOT_LOCK_TOKEN != '' }}
+        run: |
+          if git diff --quiet -- requirements.lock; then
+            echo "requirements.lock already agrees with pyproject.toml"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -q -m "UX-1383: the lock for this bump (make lock-sync)" -- requirements.lock
+          git push origin "HEAD:refs/heads/dependabot/pip/${GITHUB_HEAD_REF#dependabot/pip/}"
+          if [ "$HAS_TOKEN" != "true" ]; then
+            echo "::warning::pushed with GITHUB_TOKEN, which starts no CI on the lock commit - add the DEPENDABOT_LOCK_TOKEN Dependabot secret (UX-1383)"
+          fi

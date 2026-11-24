@@ -39,7 +39,7 @@ task file, which is the only place it ever lived twice.
 | UX-1377 | [an incremental run lists cached elements as bottlenecks](UX-1377-an-incremental-run-lists-cached-elements-as-bottlenecks.md) | analysis | Medium | R3, R1 | 🔴 Not Started |
 | UX-1380 | [the doctor's compiler clause in `cli.md` names the order `UX-1374` replaced](UX-1380-the-doctor-clause-names-the-old-compiler-order.md) | docs | Low | R4 | 🔴 Not Started |
 | UX-1381 | [the `triager` agent is in no guide and not in `CLAUDE.md`'s pipeline](UX-1381-the-triager-is-in-no-guide.md) | docs | Low | R8 | 🔴 Not Started |
-| UX-1383 | [a dependabot pip pull request arrives with its lock](UX-1383-a-dependabot-pip-pr-arrives-with-its-lock.md) | guards | Medium | every dependabot pip bump | 🔴 Not Started |
+| UX-1383 | [a dependabot pip pull request arrives with its lock](UX-1383-a-dependabot-pip-pr-arrives-with-its-lock.md) | guards | Medium | every dependabot pip bump | 🟡 In Progress |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

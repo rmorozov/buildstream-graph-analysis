@@ -64,6 +64,22 @@ committed alone with a tracked stray edit present; an agreeing lock pushes nothi
 | D6 the checkout token is `github.token` alone | 1 failed, 4 passed |
 | reverted | 5 passed |
 
+Owner review of #352: the token reached the job that runs `make lock-sync` on
+Dependabot's tree. Now `generate` checks out the event's head sha with
+`persist-credentials: false`, no secret and `contents: read`, and uploads the lock;
+`publish` holds the token, runs no project code, fetches the branch, leaves it alone
+if it moved past that sha, and commits the downloaded lock alone. 7 passed:
+
+| mutation | count |
+|---|---|
+| D7 `persist-credentials: false` dropped | 1 failed, 6 passed |
+| D8 `generate` checks out `github.head_ref` | 1 failed, 6 passed |
+| D9 the secret passed to `generate`'s checkout | 1 failed, 6 passed |
+| D10 `publish` runs `make lock-sync` | 1 failed, 6 passed |
+| D11 the head check removed | 1 failed, 6 passed |
+| D12 `git commit -a` | 1 failed, 6 passed |
+| reverted | 7 passed |
+
 The Acceptance Test is the runner's: the next dependabot pip PR green on
 its first run, which needs the secret; the row stays open until then.
 

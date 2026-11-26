@@ -1,7 +1,8 @@
 # UX-1383: Dependabot edits pyproject.toml only, so its pip bump arrives
 # with no lock and reds pip-audit, lint and tests until a hand commit.
-# This job writes that commit: `make lock-sync` is the lock check's own
-# compile, seeded and without --upgrade, so only the bumped pins move.
+# `generate` runs `make lock-sync` on the event's head sha with no write
+# credential; `publish` holds the token, runs no project code, checks the
+# branch has not moved and commits the generated lock alone.
 #
 # A push made with GITHUB_TOKEN starts no workflow, so the lock commit
 # would carry no CI; DEPENDABOT_LOCK_TOKEN (a Dependabot secret, a
@@ -15,17 +16,19 @@ on:
     paths: [pyproject.toml]
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  lock:
+  generate:
     if: github.actor == 'dependabot[bot]' && startsWith(github.head_ref, 'dependabot/pip/')
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: ${{ github.head_ref }}
-          token: ${{ secrets.DEPENDABOT_LOCK_TOKEN || github.token }}
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
       - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
@@ -33,10 +36,38 @@ jobs:
         run: |
           pip install uv
           make lock-sync
+      - uses: actions/upload-artifact@v7
+        with:
+          name: requirements-lock
+          path: requirements.lock
+          retention-days: 1
+
+  publish:
+    needs: generate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          token: ${{ secrets.DEPENDABOT_LOCK_TOKEN || github.token }}
+      - uses: actions/download-artifact@v8
+        with:
+          name: requirements-lock
+          path: ${{ runner.temp }}/lock
       - name: Push the lock to the dependabot branch
         env:
           HAS_TOKEN: ${{ secrets.DEPENDABOT_LOCK_TOKEN != '' }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          LOCK: ${{ runner.temp }}/lock/requirements.lock
         run: |
+          git fetch -q origin "refs/heads/dependabot/pip/${GITHUB_HEAD_REF#dependabot/pip/}"
+          if [ "$(git rev-parse FETCH_HEAD)" != "$HEAD_SHA" ]; then
+            echo "::notice::$GITHUB_HEAD_REF moved past $HEAD_SHA; the run for its new head writes the lock"
+            exit 0
+          fi
+          cp "$LOCK" requirements.lock
           if git diff --quiet -- requirements.lock; then
             echo "requirements.lock already agrees with pyproject.toml"
             exit 0

@@ -127,6 +127,7 @@ class StructuralAnalyzer:
         tasks: dict[str, NormalizedTask],
         element_durations: Optional[dict[str, int]] = None,
         element_head_durations: Optional[dict[str, int]] = None,
+        built_elements: Optional[set[str]] = None,
     ):
         """
         `element_durations` (UX-50) is the authoritative per-element
@@ -163,6 +164,8 @@ class StructuralAnalyzer:
         # they are computed by two different traversals. A model applied
         # to one of them is `UX-52` again.
         self.element_head_durations = element_head_durations or {}
+        # UX-1377: elements with a positive BUILD span; None reads any duration as built.
+        self.built_elements = built_elements
         self._graph = edg.G  # NetworkX DiGraph
 
     def compute_structural_metrics(self) -> StructuralMetrics:
@@ -309,9 +312,12 @@ class StructuralAnalyzer:
         # graph-iteration order.
         choke_points.sort(key=lambda node: (-choke_impact[node], node))
 
-        # UX-1377: a bottleneck is one this run measured; the rest were cached or pulled.
-        durations = self._durations()
-        unpriced = [node for node in choke_points if not durations.get(node)]
+        # UX-1377: a bottleneck is one this run built; a cached or pulled-only one is unpriced.
+        if self.built_elements is not None:
+            unpriced = [node for node in choke_points if node not in self.built_elements]
+        else:
+            durations = self._durations()
+            unpriced = [node for node in choke_points if not durations.get(node)]
 
         # Resource contention (structural - same resource type used by many elements)
         resource_usage = defaultdict(list)

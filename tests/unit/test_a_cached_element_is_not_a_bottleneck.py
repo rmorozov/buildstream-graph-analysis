@@ -88,3 +88,21 @@ def test_a_document_whose_choke_points_are_all_unpriced_names_none():
 
     line = _bottleneck_line(format_text(_Result(structural), section="graph"))
     assert line == "Bottlenecks Identified: 0 (2 cached, not priced)"
+
+
+def test_a_pulled_only_choke_point_is_unpriced_beside_a_rebuilt_one(tmp_path):
+    """Owner's review of #352: a PULL span is work time, not a build; only BUILD prices a bottleneck."""
+    run_context, graph, trace = copy.deepcopy(topo.the_same_build_twice()[1])
+    trace["spans"].append(
+        {
+            "task_key": "lib0.bst|PULL|PULL|0",
+            "ts_us": 0,
+            "dur_us": 3_000_000,
+            "resources": ["NETWORK"],
+            "primary_resource": "NETWORK",
+        }
+    )
+    run = str(topo.write_run_dir(tmp_path, (run_context, graph, trace)))
+    bottleneck = json.loads(_bga("analyze", run, "--format", "json"))["bottleneck"]
+    assert sorted(bottleneck["unpriced_choke_points"]) == ["lib0.bst", "lib1.bst", "lib2.bst"]
+    assert _bottleneck_line(_bga("analyze", run)) == "Bottlenecks Identified: 1 - lib3.bst (3 cached, not priced)"

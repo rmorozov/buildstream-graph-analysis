@@ -2539,6 +2539,11 @@ class BuildEfficiencyAnalyzer:
                 for uid in set(element_durations) | set(work_durations)
             },
             element_head_durations=head_durations,
+            built_elements={
+                t.task_key.element_uid
+                for t in self.normalized_tasks
+                if getattr(t.task_key.task_kind, 'value', t.task_key.task_kind) == 'BUILD' and t.dur_us > 0
+            },
         )
 
         # Run full structural analysis

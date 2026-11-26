@@ -76,3 +76,5 @@ No golden snapshot moved. `dev_touching.py --base origin/main` selection (245 fi
 Not discriminating: `test_an_all_cached_run_names_no_element_and_states_the_cached_count` and `test_a_cold_run_is_unchanged` stay green under both - an all-cached run has no structural block at all, so nothing reaches the filter; they hold the input classes, not the filter.
 
 **Deviation** - none.
+
+**Review correction** (owner, #352 head `1ad43be5`): the split read `work_durations`, which holds every non-FETCH span, so a choke point with a positive PULL span and no BUILD stayed named. The analyzer now passes `built_elements` (a positive BUILD span) and the split reads it; graph weights are unchanged. Guard: a pulled-only `lib0.bst` (3 s PULL) beside the rebuilt `lib3.bst`, JSON and text. `python3 -m pytest -q -p no:xdist tests/unit/test_a_cached_element_is_not_a_bottleneck.py` -> 6 passed; mutation `== 'BUILD'` -> `!= 'FETCH'` (the old reading) -> 1 failed, 5 passed.

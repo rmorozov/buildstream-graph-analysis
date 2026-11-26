@@ -52,7 +52,7 @@ def _bottleneck_line(report: str) -> str:
 
 def test_an_incremental_run_names_only_what_it_rebuilt():
     line = _bottleneck_line(_bga("analyze", str(INCREMENTAL)))
-    assert line == "Bottlenecks Identified: 1 - lib3.bst (3 cached, not priced)"
+    assert line == "Bottlenecks Identified: 1 - lib3.bst (3 without measured build time)"
 
 
 def test_the_json_publishes_the_split_beside_the_choke_points():
@@ -87,7 +87,7 @@ def test_a_document_whose_choke_points_are_all_unpriced_names_none():
     }
 
     line = _bottleneck_line(format_text(_Result(structural), section="graph"))
-    assert line == "Bottlenecks Identified: 0 (2 cached, not priced)"
+    assert line == "Bottlenecks Identified: 0 (2 without measured build time)"
 
 
 def test_a_pulled_only_choke_point_is_unpriced_beside_a_rebuilt_one(tmp_path):
@@ -105,4 +105,14 @@ def test_a_pulled_only_choke_point_is_unpriced_beside_a_rebuilt_one(tmp_path):
     run = str(topo.write_run_dir(tmp_path, (run_context, graph, trace)))
     bottleneck = json.loads(_bga("analyze", run, "--format", "json"))["bottleneck"]
     assert sorted(bottleneck["unpriced_choke_points"]) == ["lib0.bst", "lib1.bst", "lib2.bst"]
-    assert _bottleneck_line(_bga("analyze", run)) == "Bottlenecks Identified: 1 - lib3.bst (3 cached, not priced)"
+    assert _bottleneck_line(_bga("analyze", run)) == "Bottlenecks Identified: 1 - lib3.bst (3 without measured build time)"
+
+
+def test_an_unstarted_choke_point_is_not_called_cached(tmp_path):
+    """Owner's re-review of #352: an interrupted cold run has no cache hit to claim."""
+    run_context, graph, trace = copy.deepcopy(topo.the_same_build_twice()[0])
+    trace["spans"] = [span for span in trace["spans"] if not span["task_key"].startswith("lib3.bst|")]
+    line = _bottleneck_line(_bga("analyze", str(topo.write_run_dir(tmp_path, (run_context, graph, trace)))))
+    assert line.startswith("Bottlenecks Identified: 3 - "), line
+    assert line.endswith(" (1 without measured build time)"), line
+    assert "lib3.bst" not in line and "cached" not in line

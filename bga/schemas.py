@@ -2416,8 +2416,8 @@ _STRUCTURAL_TABLES = {
             "unpriced_choke_points": {
                 GROWS: "elements (subset of choke_points, no cap)",
                 "items": {"type": "string", "description": "element uid"},
-                "description": "Choke points this run has no measured duration for (cached or "
-                "pulled, not built), so not named as bottlenecks.",
+                "description": "Choke points with no positive BUILD span this run (cached, "
+                "pulled or never started), so not named as bottlenecks.",
             },
             "choke_points": {
                 GROWS: "elements (nodes where downstream+ancestor "

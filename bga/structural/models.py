@@ -67,7 +67,7 @@ class BottleneckAnalysis:
     # Key bottlenecks
     choke_points: list[str]  # Element keys that are choke points
     choke_point_impact: dict[str, int]  # Downstream count per choke point
-    unpriced_choke_points: list[str]  # Choke points with no duration this run (cached/pulled)
+    unpriced_choke_points: list[str]  # Choke points with no BUILD span this run (cached, pulled or unstarted)
 
     # Resource bottlenecks (structural)
     resource_contention: dict[str, list[str]]  # resource_type -> [element_keys]

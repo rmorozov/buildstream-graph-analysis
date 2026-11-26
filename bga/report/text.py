@@ -1071,8 +1071,8 @@ def _render_structural_overview(metrics: dict, bottleneck: dict, parallelism: di
         # project, the single most actionable output the tool
         # produced - reduced to an integer.
         shown = choke_points[:_CHOKE_POINTS_SHOWN_MAX]
-        # UX-1377: cached or pulled choke points are counted apart, never named.
-        apart = f" ({len(unpriced)} cached, not priced)" if unpriced else ""
+        # UX-1377: no BUILD span is not a cache hit - an unstarted element has none either.
+        apart = f" ({len(unpriced)} without measured build time)" if unpriced else ""
         overflow = (
             f" (+{len(choke_points) - len(shown)} more, see --format json)" if len(choke_points) > len(shown) else ""
         )

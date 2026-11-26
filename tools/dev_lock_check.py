@@ -8,6 +8,7 @@ goes with the process, so two runs in one checkout never read each
 other's output. Exit 1 names `make lock-sync`.
 """
 
+import difflib
 import pathlib
 import shutil
 import subprocess
@@ -25,7 +26,8 @@ def main(argv: list[str]) -> int:
         subprocess.run([*argv, "-o", str(copy)], cwd=REPO, check=True)
         if copy.read_bytes() == lock.read_bytes():
             return 0
-        subprocess.run(["diff", str(lock), str(copy)], check=False)
+        old, new = lock.read_text().splitlines(True), copy.read_text().splitlines(True)
+        sys.stdout.writelines(difflib.unified_diff(old, new, "requirements.lock", "compiled"))
     print("requirements.lock is stale: run make lock-sync")
     return 1
 

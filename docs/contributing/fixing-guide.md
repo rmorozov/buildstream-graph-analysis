@@ -446,6 +446,9 @@ tools/dev_sizes.py           the size ledger for what has no finding
                              identity - longest function, file lines,
                              duplicate blocks - in tests/quality_reference.json;
                              a grown cell is red (UX-712)
+tools/dev_lock_check.py      `make lock-check`: the seeded compile against
+                             requirements.lock, in a scratch directory of
+                             its own run (UX-1384)
 tools/dev_flake_census.py    which files the flake ledger says need a
                              filed task or a declared reason (UX-691)
 tools/dev_adopt_check.py     the guards an adopt job runs on the record it

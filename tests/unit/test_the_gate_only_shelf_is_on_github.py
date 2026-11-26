@@ -106,11 +106,8 @@ class TestTheShelfReadsTheLock:
 
     def test_the_lock_check_is_seeded_from_the_committed_lock(self):
         assert "make lock-check" in self._run("pip-audit")
-        blob = make_recipe("lock-check")
-        compile_at = blob.index("$(LOCK_COMPILE)")
-        seed = re.search(r"^\s*@?cp requirements\.lock (\S+)$", blob[:compile_at], re.M)
-        assert seed, blob
-        assert f"-o {seed.group(1)}" in blob[compile_at:], blob
+        # The seed itself is run, not read: test_make_lock_resolves_on_the_check_s_python.py.
+        assert make_recipe("lock-check").strip() == "@python3 tools/dev_lock_check.py $(LOCK_COMPILE)"
 
     def test_the_sizes_job_installs_the_lock(self):
         installs = [line.strip() for line in self._run("sizes").splitlines() if "pip install" in line]

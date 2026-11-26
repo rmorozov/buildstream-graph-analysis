@@ -242,4 +242,3 @@ docs/audits/mutation.md
 tests/red_ledger.json
 tests/.records-sha
 tests/.records-baseline.json
-.lock-check.lock

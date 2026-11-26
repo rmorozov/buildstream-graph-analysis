@@ -123,8 +123,6 @@ test-e2e:
 # UX-1384: one Python and one header for every compile, so any host writes what quality.yml checks.
 LOCK_PYTHON := 3.12
 LOCK_COMPILE = uv pip compile pyproject.toml --extra dev -q --python-version $(LOCK_PYTHON) --custom-compile-command "make lock"
-# Per checkout, so two worktrees never diff each other's compile (gitignored).
-LOCK_SCRATCH := $(CURDIR)/.lock-check.lock
 lock:
 	$(LOCK_COMPILE) -o requirements.lock --upgrade
 
@@ -133,10 +131,9 @@ lock-sync:
 	$(LOCK_COMPILE) -o requirements.lock
 
 # UX-1128: seeded from the committed lock, so an upstream release is not a red.
+# The seed, compile and comparison share one scratch directory per run.
 lock-check:
-	@cp requirements.lock $(LOCK_SCRATCH)
-	@$(LOCK_COMPILE) -o $(LOCK_SCRATCH)
-	@diff requirements.lock $(LOCK_SCRATCH) || { echo "requirements.lock is stale: run make lock-sync"; exit 1; }
+	@python3 tools/dev_lock_check.py $(LOCK_COMPILE)
 
 lint: lint-docs lint-code
 

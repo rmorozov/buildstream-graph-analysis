@@ -75,3 +75,17 @@ at a time. `make lock-check` -> rc 0; the guard file -> 5 passed.
 | M6 `LOCK_SCRATCH := /tmp/bga-lock-check.lock` | 1 failed, 4 passed |
 | M7 the recipe's `cp` and compile name `/tmp/x.lock` | 1 failed, 4 passed |
 | reverted | 5 passed |
+
+Owner re-review of #352 (head `d3261bd0`): per checkout still let two runs in one checkout pass a
+stale lock, and the unquoted absolute path split on a space. `make lock-check` is now
+`tools/dev_lock_check.py $(LOCK_COMPILE)`: seed, compile, compare in one `TemporaryDirectory`,
+which Python removes, so no recipe `rm` and no shell path. Guards run the real recipe in a
+`BGA work` checkout against a stub compile: seeded first, and a stale run paused 1.5 s while a
+fresh one completes in the same checkout. `make lock-check` -> rc 0; the file -> 6 passed.
+
+| mutation | count |
+|---|---|
+| M8 the tool compiles into a fixed `REPO/.lock-check.lock` | 1 failed, 5 passed |
+| M9 the seed copy dropped | 2 failed, 4 passed |
+| M10 the old `cp`/`-o`/`diff` recipe on `$(CURDIR)/.lock-check.lock` | 2 failed, 4 passed |
+| reverted | 6 passed |

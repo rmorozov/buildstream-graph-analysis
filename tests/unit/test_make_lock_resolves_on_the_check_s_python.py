@@ -6,6 +6,10 @@ written on the host's Python differed from quality.yml's 3.12 compile.
 
 import pathlib
 import re
+import shutil
+import subprocess
+import sys
+import time
 
 import yaml
 
@@ -32,7 +36,7 @@ def test_every_lock_target_compiles_through_one_command():
     compiles = [line.strip() for line in MAKEFILE.splitlines() if line.startswith("\t") and "pip compile" in line]
     assert compiles == [], compiles
     for target in ("lock", "lock-sync", "lock-check"):
-        assert re.search(rf"^{target}:\n(\t.*\n)*\t@?\$\(LOCK_COMPILE\)", MAKEFILE, re.M), target
+        assert re.search(rf"^{target}:\n(\t.*\n)*\t@?.*\$\(LOCK_COMPILE\)", MAKEFILE, re.M), target
 
 
 def test_the_check_compiles_with_the_makefile_and_on_its_python():
@@ -52,11 +56,47 @@ def test_the_committed_lock_was_written_by_the_target():
     assert header[1].strip() == "#    make lock", header
 
 
-def test_each_checkout_compiles_into_its_own_scratch_file():
-    """Owner's review of #352: a fixed /tmp path let two worktrees diff each other's compile."""
-    scratch = _var("LOCK_SCRATCH")
-    assert scratch.startswith("$(CURDIR)/"), scratch
-    recipe = re.search(r"^lock-check:\n((?:\t.*\n)+)", MAKEFILE, re.M).group(1)
-    assert "/tmp/" not in recipe and recipe.count("$(LOCK_SCRATCH)") == 3, recipe
-    ignored = (REPO / ".gitignore").read_text(encoding="utf-8").splitlines()
-    assert scratch.removeprefix("$(CURDIR)/") in ignored
+STUB = """
+import pathlib, sys, time
+mode, delay, out = sys.argv[1], float(sys.argv[2]), pathlib.Path(sys.argv[sys.argv.index("-o") + 1])
+if mode == "seeded" and out.read_bytes() != pathlib.Path("requirements.lock").read_bytes():
+    sys.exit(3)
+if mode == "differ":
+    out.write_text("a different resolve\\n")
+time.sleep(delay)
+"""
+
+
+def _checkout(tmp_path):
+    """A checkout whose path holds a space, with the recipe, the tool and a lock."""
+    root = tmp_path / "BGA work"
+    (root / "tools").mkdir(parents=True)
+    (root / "Makefile").write_text(MAKEFILE, encoding="utf-8")
+    shutil.copy(REPO / "tools/dev_lock_check.py", root / "tools")
+    (root / "requirements.lock").write_text("ruff==0.17.6\n")
+    (tmp_path / "stub.py").write_text(STUB)
+    return root
+
+
+def _make_lock_check(root, mode, delay=0.0):
+    compile_ = f"{sys.executable} {root.parent / 'stub.py'} {mode} {delay}"
+    cmd = ["make", "-s", "-C", str(root), "lock-check", f"LOCK_COMPILE={compile_}"]
+    return subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+
+
+def test_the_check_compiles_from_the_committed_lock_in_a_spaced_checkout(tmp_path):
+    """Owner's re-review of #352: an unquoted absolute scratch path split on a space."""
+    done = _make_lock_check(_checkout(tmp_path), "seeded")
+    assert done.wait(30) == 0, done.communicate()
+
+
+def test_two_checks_in_one_checkout_never_read_each_others_output(tmp_path):
+    """Owner's re-review of #352: B's seed landing before A's comparison passed A on a stale lock."""
+    root = _checkout(tmp_path)
+    stale = _make_lock_check(root, "differ", delay=1.5)
+    time.sleep(0.5)
+    fresh = _make_lock_check(root, "agree")
+    assert fresh.wait(30) == 0, fresh.communicate()
+    assert stale.wait(30) != 0, stale.communicate()
+    assert "run make lock-sync" in stale.communicate()[0]
+    assert sorted(path.name for path in root.iterdir()) == ["Makefile", "requirements.lock", "tools"]

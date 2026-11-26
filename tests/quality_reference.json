@@ -134,6 +134,7 @@
     "tools/dev_js_deps.py": {"duplicate_blocks": 0, "file_lines": 483, "longest_function": 74},
     "tools/dev_junit_tail.py": {"duplicate_blocks": 0, "file_lines": 97, "longest_function": 23},
     "tools/dev_lint_docs.py": {"duplicate_blocks": 0, "file_lines": 58, "longest_function": 9},
+    "tools/dev_lock_check.py": {"duplicate_blocks": 0, "file_lines": 34, "longest_function": 11},
     "tools/dev_mutation.py": {"duplicate_blocks": 0, "file_lines": 264, "longest_function": 40},
     "tools/dev_page_census.py": {"duplicate_blocks": 0, "file_lines": 259, "longest_function": 15},
     "tools/dev_perf_ratchet.py": {"duplicate_blocks": 0, "file_lines": 255, "longest_function": 48},

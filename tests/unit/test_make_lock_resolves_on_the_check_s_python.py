@@ -50,3 +50,13 @@ def test_the_check_compiles_with_the_makefile_and_on_its_python():
 def test_the_committed_lock_was_written_by_the_target():
     header = (REPO / "requirements.lock").read_text(encoding="utf-8").splitlines()[:2]
     assert header[1].strip() == "#    make lock", header
+
+
+def test_each_checkout_compiles_into_its_own_scratch_file():
+    """Owner's review of #352: a fixed /tmp path let two worktrees diff each other's compile."""
+    scratch = _var("LOCK_SCRATCH")
+    assert scratch.startswith("$(CURDIR)/"), scratch
+    recipe = re.search(r"^lock-check:\n((?:\t.*\n)+)", MAKEFILE, re.M).group(1)
+    assert "/tmp/" not in recipe and recipe.count("$(LOCK_SCRATCH)") == 3, recipe
+    ignored = (REPO / ".gitignore").read_text(encoding="utf-8").splitlines()
+    assert scratch.removeprefix("$(CURDIR)/") in ignored

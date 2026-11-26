@@ -123,7 +123,8 @@ test-e2e:
 # UX-1384: one Python and one header for every compile, so any host writes what quality.yml checks.
 LOCK_PYTHON := 3.12
 LOCK_COMPILE = uv pip compile pyproject.toml --extra dev -q --python-version $(LOCK_PYTHON) --custom-compile-command "make lock"
-LOCK_SCRATCH := /tmp/bga-lock-check.lock
+# Per checkout, so two worktrees never diff each other's compile (gitignored).
+LOCK_SCRATCH := $(CURDIR)/.lock-check.lock
 lock:
 	$(LOCK_COMPILE) -o requirements.lock --upgrade
 

@@ -64,3 +64,14 @@ Close: `make lock-sync` on the same 3.13 host changes line 2 only
 
 `test_the_gate_only_shelf_is_on_github.py`'s seeded-lock check now reads
 the `lock-check` recipe; 9 passed.
+
+Owner review of #352: the fixed `/tmp/bga-lock-check.lock` let two checkouts diff each other's
+compile. Scratch is now `$(CURDIR)/.lock-check.lock`, gitignored, so it is per checkout, not per
+invocation: a recipe `rm` is refused in this session, and one checkout runs one `make lock-check`
+at a time. `make lock-check` -> rc 0; the guard file -> 5 passed.
+
+| mutation | count |
+|---|---|
+| M6 `LOCK_SCRATCH := /tmp/bga-lock-check.lock` | 1 failed, 4 passed |
+| M7 the recipe's `cp` and compile name `/tmp/x.lock` | 1 failed, 4 passed |
+| reverted | 5 passed |

@@ -1,6 +1,6 @@
 # UX-1360: a never-read build edge counts executed binaries and probes as reads
 
-**Priority:** High | **Status:** 🟡 In Progress | **Depends on:** — | **Found by:** the freedesktop-sdk field test (2026-10-30), capture `captures/fdsdk-cold-latest` (run 36850726112) | **Serves:** R2, R3 | **Topic:** capture | **Area:** tools-native_trace | **Shape:** judgement | **Reading:** container
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the freedesktop-sdk field test (2026-10-30), capture `captures/fdsdk-cold-latest` (run 36850726112) | **Serves:** R2, R3 | **Topic:** capture | **Area:** tools-native_trace | **Shape:** judgement | **Reading:** container
 
 **Guard:** `tests/unit/test_a_dependency_whose_binary_ran_is_not_unused.py`
 
@@ -59,3 +59,5 @@ The fdsdk reading waits on a re-capture: its native trace was not published and 
 |---|---|---|
 | hook: `record_open(exe);` → `(void)exe;` (count opens only) | `test_running_a_dependencys_binary_reads_it` | 1 failed, 1 passed |
 | tracer: `elif executables := _staged_executables(staged):` → `elif executables := 0:` | `test_an_executable_nobody_opened_or_ran_is_not_judged` | 1 failed, 1 passed |
+
+**Recheck** (cold run 45353008659, `captures/fdsdk/783dba2b-cold-b4j4-45353008659`, fdsdk `release/26.08` @`783dba2b`, the exe-recording hook): `declared_vs_used` reads `used` 21, `unused_candidates` 4, `skipped` 0, `uncovered_elements` 0; `bootstrap/build/gcc-stage1.bst <- bootstrap/build/binutils-stage1.bst` is **used**, 7 of 180 staged files opened or run, and the capture's `correlate.txt` does not print it. The four candidates left are `bootstrap/symlinks.bst` and `components/utf-locale.bst` under `gettext.bst` and `python3-minimal.bst`.

@@ -73,6 +73,33 @@ def test_a_dispatched_commit_is_taken_as_given(tmp_path):
     assert done.stdout.strip().endswith(shas[9])
 
 
+def _ago(days):
+    return subprocess.run(["date", "-R", "-d", f"{days} days ago"], capture_output=True, text=True).stdout.strip()
+
+
+def test_a_merged_topic_commit_is_never_the_resolved_ref(tmp_path):
+    """Owner's review of #352: the lag applies to the release line, not to a topic's older date."""
+    src, shas = _remote(tmp_path, [10])
+    ident = ["-c", "user.name=f", "-c", "user.email=f@x"]
+    _git(src, "checkout", "-q", "-b", "topic")
+    _git(src, *ident, "commit", "-q", "--allow-empty", "-m", "topic", date=_ago(4))
+    topic = _git(src, "rev-parse", "HEAD")
+    _git(src, "checkout", "-q", BRANCH)
+    _git(src, *ident, "commit", "-q", "--allow-empty", "-m", "1", date=_ago(1))
+    _git(src, *ident, "merge", "-q", "--no-ff", "-m", "merge", "topic", date=_ago(0))
+    done, env = _clone(tmp_path, src)
+    assert done.returncode == 0, done.stderr
+    assert env == f"FDSDK_REF={shas[10]}\n", (env, topic)
+
+
+def test_a_quiet_branch_resolves_to_its_tip(tmp_path):
+    """Owner's review of #352: a tip older than any shallow-since window must still be fetched."""
+    src, shas = _remote(tmp_path, [60, 45])
+    done, env = _clone(tmp_path, src)
+    assert done.returncode == 0, done.stderr
+    assert env == f"FDSDK_REF={shas[45]}\n"
+
+
 def test_a_schedule_takes_nothing_newer_than_the_lag(tmp_path):
     assert WORKFLOW["env"]["FDSDK_LAG_DAYS"] == "2"
     assert "${{" not in WORKFLOW["env"]["FDSDK_BRANCH"]
@@ -111,3 +138,36 @@ def test_three_stragglers_are_a_red_cut(tmp_path):
     done, _ = _verify(tmp_path, ["a.bst"], ["a.bst", "x.bst", "y.bst", "z.bst"])
     assert done.returncode != 0
     assert "3 element(s) would be built beyond the intended cut" in done.stderr
+
+
+def _prefetch(tmp_path):
+    fdsdk, bin_dir = tmp_path / "fdsdk", tmp_path / "bin"
+    fdsdk.mkdir()
+    bin_dir.mkdir()
+    (bin_dir / "bst").write_text('#!/bin/sh\necho "$*" >> "$BST_LOG"\n')
+    (bin_dir / "bst").chmod(0o755)
+    log = tmp_path / "bst.log"
+    env = {**os.environ, "PATH": f"{bin_dir}:{os.environ['PATH']}", "BST_LOG": str(log)}
+    script = _step("Pre-fetch the sources beyond the cut")
+    done = subprocess.run(["bash", "-e", "-c", script], cwd=tmp_path, env=env, capture_output=True, text=True)
+    assert done.returncode == 0, done.stderr
+    return log.read_text() if log.exists() else ""
+
+
+def test_a_straggler_s_sources_are_fetched_before_the_clock_starts(tmp_path):
+    """Owner's review of #352: the verify step's record is what the pre-fetch reads."""
+    done, _ = _verify(tmp_path, ["a.bst"], ["a.bst", "bootstrap/build/rsync.bst"])
+    assert done.returncode == 0, done.stderr
+    assert _prefetch(tmp_path) == "--no-interactive source fetch --deps none bootstrap/build/rsync.bst\n"
+    names = [step.get("name") for step in STEPS]
+    verify, fetch = (
+        names.index("Verify the cut is exactly the rebuild set"),
+        names.index("Pre-fetch the sources beyond the cut"),
+    )
+    assert verify < fetch < names.index("Capture the build (both planes)")
+
+
+def test_an_exact_cut_fetches_nothing_more(tmp_path):
+    done, _ = _verify(tmp_path, ["a.bst"], ["a.bst"])
+    assert done.returncode == 0, done.stderr
+    assert _prefetch(tmp_path) == ""

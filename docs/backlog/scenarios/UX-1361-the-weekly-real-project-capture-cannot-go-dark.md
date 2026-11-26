@@ -87,4 +87,15 @@ The cache holds no commit for more than weeks, release tags included, so no pin 
 | R5 `beyond-cut.txt` not written | 2 failed, 4 passed |
 | reverted | 6 passed |
 
+Owner review of #352: the lag now walks `--first-parent`, so a merged topic's older date never resolves; the fetch is `--depth` 200 then 2000, so a branch quiet past any `--shallow-since` window resolves to its tip; and a new step fetches `beyond-cut.txt`'s sources `--deps none` between the verify step and the capture, so a straggler's download is not inside the timed build. Same file -> 10 passed:
+
+| mutation | count |
+|---|---|
+| R6 `--first-parent` dropped | 1 failed, 9 passed |
+| R7 `--shallow-since="30 days ago"` restored | 1 failed, 9 passed |
+| R8 `xargs` without `-r` | 1 failed, 9 passed |
+| R9 the pre-fetch reads `rebuild-set.txt` | 2 failed, 8 passed |
+| R10 the pre-fetch moved after the capture | 1 failed, 9 passed |
+| reverted | 10 passed |
+
 `test_the_pinned_ref_is_a_decision.py`: the pin-copy check skips under `advanced`; its mechanism check passes. Open until three consecutive green scheduled runs.

@@ -285,9 +285,14 @@ jobs:
           git -C fdsdk init -q
           git -C fdsdk remote add origin https://gitlab.com/freedesktop-sdk/freedesktop-sdk.git
           if [ -z "$FDSDK_REF" ]; then
-            git -C fdsdk fetch -q --shallow-since="30 days ago" origin "$FDSDK_BRANCH"
-            FDSDK_REF="$(git -C fdsdk rev-list -1 --before="$FDSDK_LAG_DAYS days ago" FETCH_HEAD)"
-            test -n "$FDSDK_REF" || { echo "::error::no $FDSDK_BRANCH commit older than $FDSDK_LAG_DAYS days in the last 30"; exit 1; }
+            # UX-1361: a depth always holds the tip, so a quiet branch resolves to its head;
+            # --first-parent keeps the lag on the branch's own history, never a merged topic.
+            for depth in 200 2000; do
+              git -C fdsdk fetch -q --depth="$depth" origin "$FDSDK_BRANCH"
+              FDSDK_REF="$(git -C fdsdk rev-list -1 --first-parent --before="$FDSDK_LAG_DAYS days ago" FETCH_HEAD)"
+              [ -z "$FDSDK_REF" ] || break
+            done
+            test -n "$FDSDK_REF" || { echo "::error::no first-parent $FDSDK_BRANCH commit older than $FDSDK_LAG_DAYS days in the last 2000"; exit 1; }
             echo "FDSDK_REF=$FDSDK_REF" >> "$GITHUB_ENV"
             echo "Resolved $FDSDK_BRANCH, $FDSDK_LAG_DAYS days back: $FDSDK_REF" >> "$GITHUB_STEP_SUMMARY"
           fi
@@ -456,6 +461,15 @@ jobs:
                   + (" - most of the closure is gone from the remote cache (UX-1361)" if evicted else "")
               )
           EOF
+
+      # UX-1361: an accepted straggler's sources download now, not inside the timed build.
+      - name: Pre-fetch the sources beyond the cut
+        if: env.CAPTURE_MODE != 'cold'
+        timeout-minutes: 30
+        run: |
+          cd fdsdk
+          xargs -r -a ../capture/beyond-cut.txt \
+            bst --no-interactive source fetch --deps none
 
       # Phase 3: the capture. One `bst build` invocation feeds both
       # planes (UX-24): the wrapped log is Plane 1, the LD_PRELOAD trace

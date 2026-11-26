@@ -105,7 +105,9 @@ def test_a_pulled_only_choke_point_is_unpriced_beside_a_rebuilt_one(tmp_path):
     run = str(topo.write_run_dir(tmp_path, (run_context, graph, trace)))
     bottleneck = json.loads(_bga("analyze", run, "--format", "json"))["bottleneck"]
     assert sorted(bottleneck["unpriced_choke_points"]) == ["lib0.bst", "lib1.bst", "lib2.bst"]
-    assert _bottleneck_line(_bga("analyze", run)) == "Bottlenecks Identified: 1 - lib3.bst (3 without measured build time)"
+    assert (
+        _bottleneck_line(_bga("analyze", run)) == "Bottlenecks Identified: 1 - lib3.bst (3 without measured build time)"
+    )
 
 
 def test_an_unstarted_choke_point_is_not_called_cached(tmp_path):

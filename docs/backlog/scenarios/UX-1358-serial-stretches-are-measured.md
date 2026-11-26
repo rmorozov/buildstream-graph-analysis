@@ -1,6 +1,6 @@
 # UX-1358: an element's serial stretches are measured, and "already compute-bound" is refused while they are large
 
-**Priority:** High | **Status:** 🟡 In Progress | **Depends on:** — | **Found by:** the freedesktop-sdk field test (2026-10-30), capture `captures/fdsdk-cold-latest` (run 36850726112) | **Serves:** R2, R1 | **Topic:** analysis | **Area:** bga | **Shape:** judgement | **Reading:** container
+**Priority:** High | **Status:** 🟢 Done | **Depends on:** — | **Found by:** the freedesktop-sdk field test (2026-10-30), capture `captures/fdsdk-cold-latest` (run 36850726112) | **Serves:** R2, R1 | **Topic:** analysis | **Area:** bga | **Shape:** judgement | **Reading:** container
 
 **Guard:** `tests/unit/test_a_serial_stretch_is_measured_not_averaged.py`
 
@@ -102,3 +102,5 @@ Reverted: 11 passed. M1 and M2 each redden the other counterexample's neighbours
 | R2 `requested_jobs` ignored | make-j1 | 1 failed, 12 passed |
 | R3 an unknown request read as `-j1` | no-j1 | 1 failed, 12 passed |
 | reverted | — | 13 passed |
+
+**Recheck** (cold run 45353008659, `captures/fdsdk/783dba2b-cold-b4j4-45353008659`, fdsdk `release/26.08` @`783dba2b`, gcc 16.2; its own `native-report.json`): every gcc element sampled, none unknown. `bootstrap/gcc.bst` 292 s serial of 2602 s sampled (13.9%, under the 15% line; owners `c++`, `as`, `cc1plus`), so its "already compute-bound" line stands. The autoreconf loop moved: `bootstrap/build/gcc-stage1.bst` 224 s (15.5%), `/bin/autoreconf2.69 -I ../config -fvi` owning 146.6 s, and `gcc-stage2.bst` 358 s (19.6%), both printed as serial stretches. Deviation: the >=400 s `autoreconf2.69` reading on `bootstrap/gcc.bst` belongs to `953683fb`'s tree and does not exist at this commit; the mechanism reads the loop where it now is.

@@ -84,3 +84,4 @@ Full file -> 6 passed; `dev_sizes.py --check` ok, `file_lines` unchanged at 2276
 
 Third rework (2026-11-27): the export of a run with a stored analysis and a sibling `plane2.json` over `VIEW_MAX_BYTES` (or a stored `--no-plane2` analysis) still said "Cores and memory need Plane 2, which this run did not capture." (`agent_sizing.absence`, `correlate.py`); `served_analysis` now says the refusal there too, `statusLine` says "Plane 2 not read (--no-plane2)", and `compute_agent_sizing` follows `plane2_absence`.
 Full file -> 9 passed; mutations: `why_absent` -> always not-captured, `declined ??` dropped, the `_refused` sizing replace dropped, `compute_agent_sizing` clause fixed -> each 1 failed, 8 passed.
+Fourth pass: with no stored analysis, `_analyze_now` puts the same refusal on its fresh analysis (`test_a_fresh_analysis_beside_a_too_large_report_says_so_on_the_page`; returning `fresh` unchanged reds it, 1 failed).

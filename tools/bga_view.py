@@ -336,17 +336,16 @@ def _analyze_now(run: str) -> dict:
     """
     from bga import plane2 as plane2_shape
 
-    # UX-329: the same discovery and the same bound `bga analyze` uses,
-    # from `bga.plane2` - this function and the CLI held two copies of
-    # the policy, and the copies disagreed: the page attached the
-    # sibling and the terminal did not.
+    # UX-329: the same discovery and bound `bga analyze` uses, from `bga.plane2`;
+    # two copies of the policy once disagreed, the page attaching what the terminal did not.
     argv = ["analyze", run, "--format", "json"]
     path, refusal = plane2_shape.attachable(run)
     if path:
         argv += ["--plane2", path]
     elif refusal:
         print(refusal, file=sys.stderr)
-    return _timed_capture("analyze", argv)
+    fresh = _timed_capture("analyze", argv)
+    return _refused(fresh, refusal) if refusal and isinstance(fresh, dict) else fresh
 
 
 #: `UX-533`: the two answers to "whose analysis is this page showing".

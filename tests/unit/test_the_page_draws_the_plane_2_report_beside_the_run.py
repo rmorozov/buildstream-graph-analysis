@@ -168,3 +168,15 @@ def test_the_exported_page_says_a_declined_report_was_not_read_in_the_sizing_sen
     page = _exported_page(tmp_path)
     assert "Cores and memory need Plane 2, which this report was asked not to read." in page
     assert "did not capture" not in page
+
+
+def test_a_fresh_analysis_beside_a_too_large_report_says_so_on_the_page(tmp_path):
+    """No stored analysis: the view analyses now, and the size refusal is the page's absence too."""
+    shutil.copytree(FIXTURE / "run", tmp_path / "run")
+    shutil.copy(FIXTURE / "plane2.json", tmp_path / "plane2.json")
+    _pad_past_the_bound(tmp_path)
+    report = view.payloads(str(tmp_path / "run"))["report.json"]
+    assert report["plane2_absence"] == plane2.attachable(str(tmp_path / "run"))[1]
+    page = _exported_page(tmp_path)
+    assert "Cores and memory need Plane 2, which is too large to join here." in page
+    assert "did not capture" not in page

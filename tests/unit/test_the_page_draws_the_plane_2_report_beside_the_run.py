@@ -43,3 +43,32 @@ def test_a_stored_analysis_that_saw_plane_2_is_still_served(tmp_path):
     run = _scratch(tmp_path, stored_with_plane2=True)
     assert json.loads((tmp_path / "analyze.json").read_text()).get("plane2_absence") != plane2.NOT_CAPTURED
     assert view.analysis_note(run)["source"] == view.ANALYSIS_FROM_CAPTURE
+
+
+def test_a_stored_analysis_that_joined_an_explicit_report_is_kept(tmp_path):
+    outside = tmp_path / "elsewhere"
+    outside.mkdir()
+    shutil.copy(FIXTURE / "plane2.json", outside / "report.json")
+    snap = tmp_path / "snap"
+    shutil.copytree(FIXTURE / "run", snap / "run")
+    run = str(snap / "run")
+    stored = view._capture(["analyze", run, "--format", "json", "--plane2", str(outside / "report.json")])
+    assert stored.get("plane2_coverage") and stored.get("plane2_absence") == plane2.NOT_CAPTURED
+    (snap / "analyze.json").write_text(json.dumps(stored), encoding="utf-8")
+    (snap / "plane2.json").write_text(json.dumps({"schema": plane2.SCHEMA, "process_count": 0}), encoding="utf-8")
+    assert plane2.attachable(run)[0]
+    assert view.payloads(run)["report.json"].get("plane2_coverage")
+    assert view.analysis_note(run)["source"] == view.ANALYSIS_FROM_CAPTURE
+
+
+def test_a_report_over_the_size_bound_is_named_not_called_absent(tmp_path):
+    run = _scratch(tmp_path, stored_with_plane2=False)
+    pad = plane2.VIEW_MAX_BYTES + 1 - (tmp_path / "plane2.json").stat().st_size
+    with open(tmp_path / "plane2.json", "ab") as handle:
+        handle.write(b" " * pad)
+    path, refusal = plane2.attachable(run)
+    assert path is None and refusal
+    report = view.payloads(run)["report.json"]
+    assert report["plane2_absence"] == refusal != plane2.NOT_CAPTURED
+    assert not report.get("plane2_coverage")
+    assert view.analysis_note(run)["source"] == view.ANALYSIS_FROM_CAPTURE

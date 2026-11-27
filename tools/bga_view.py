@@ -291,13 +291,18 @@ def served_analysis(run: str, reanalyse: bool = False) -> Optional[dict]:
 
     A stored analysis that recorded Plane 2 as not captured, with a Plane 2
     report now beside the run, is not served: the terminal says "beside this run" (`UX-1389`).
+    One that carries `plane2_coverage` joined a report already and is kept; one whose
+    report is over the size bound is kept, with the refusal as its absence.
     """
     from bga import plane2 as plane2_shape
 
     stored = None if reanalyse else published_analysis(run)
-    if (stored or {}).get("plane2_absence") == plane2_shape.NOT_CAPTURED and plane2_shape.attachable(run)[0]:
+    if not stored or stored.get("plane2_coverage") or stored.get("plane2_absence") != plane2_shape.NOT_CAPTURED:
+        return stored
+    path, refusal = plane2_shape.attachable(run)
+    if path:
         return None
-    return stored
+    return {**stored, "plane2_absence": refusal} if refusal else stored
 
 
 def _timed_capture(name: str, argv: list[str]) -> dict:

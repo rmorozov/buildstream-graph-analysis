@@ -32,6 +32,7 @@ from . import plane2 as plane2_shape
 from . import shown as qty
 from .analyzer import (
     MODELLED_AXIS_CLAUSE,
+    MODELLED_AXIS_UNRECORDED_CLAUSE,
     UNMODELED_AXIS_CLAUSE,
     BuildEfficiencyAnalyzer,
 )
@@ -326,15 +327,13 @@ def _finish_capacity_recommendation(analyzer, result, native_report: dict) -> No
     """
     if not result.capacity_recommendation:
         return
-    # UX-116 item 3: the "currently unmodeled axis" note is retired
-    # *only* where the block ran. Elsewhere it stays, because
-    # elsewhere it is still true - and the substitution is on a named
-    # constant rather than a re-typed sentence, so the two cannot
-    # drift into disagreeing about which clause is being retired.
+    # UX-116 item 3: the "unmodeled axis" clause is retired only where the block ran.
     floors = getattr(result, 'floors', None)
     note = (floors or {}).get('capacity_model_note') or ''
     if floors is not None and UNMODELED_AXIS_CLAUSE in note:
-        floors['capacity_model_note'] = note.replace(UNMODELED_AXIS_CLAUSE, MODELLED_AXIS_CLAUSE, 1)
+        skipped = getattr(analyzer, 'capacity_check_skipped_inputs', None) or []
+        clause = MODELLED_AXIS_UNRECORDED_CLAUSE if 'native_max_jobs' in skipped else MODELLED_AXIS_CLAUSE
+        floors['capacity_model_note'] = note.replace(UNMODELED_AXIS_CLAUSE, clause, 1)
     # UX-677: per-element `max-jobs`, on the same document - not a new
     # contract id. Joins `UX-675`'s raw host CPU series (present on
     # every capture) directly to each element's BUILD span; per-element

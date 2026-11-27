@@ -204,19 +204,18 @@ def _run_instance(run_context, loaded_from) -> dict:
 # the tool already refuses to read into.
 _RESOLUTION_MATERIAL_SHARE = 0.05
 
-# UX-09/UX-15's standing caveat, and UX-116's target. Named rather than
-# inlined because UX-116 retires *this clause* - and only where a joint
-# capacity recommendation actually ran for the capture in hand. Everywhere
-# else it stays, because everywhere else it is still true.
+# UX-116 retires the unmodeled clause only where the capacity recommendation ran.
 UNMODELED_AXIS_CLAUSE = "native build-system parallelism (--max-jobs) is a separate, currently unmodeled axis."
-
-# What replaces it when UX-116's block ran: the axis was modelled for this
-# capture, from its own measurements, so the note must stop saying it was
-# not.
 MODELLED_AXIS_CLAUSE = (
     "native build-system parallelism (--max-jobs) is modelled for this "
     "capture from its own Plane 2 measurements; see the capacity "
     "recommendation below."
+)
+# UX-1390: where the run's own --max-jobs is unrecorded the modelled value is per element and feeds no check.
+MODELLED_AXIS_UNRECORDED_CLAUSE = (
+    "native build-system parallelism (--max-jobs) is modelled per element from "
+    "this capture's Plane 2 measurements, in the capacity recommendation below; "
+    "that is not a recorded --max-jobs, so it does not feed the capacity checks."
 )
 
 

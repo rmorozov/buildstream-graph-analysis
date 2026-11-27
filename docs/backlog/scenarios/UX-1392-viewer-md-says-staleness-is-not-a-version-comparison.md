@@ -44,3 +44,5 @@ bga version (`UX-1367`)". `pytest tests/unit/test_the_viewer_guide_names_both_st
 | sentence: `contract set` -> `set` | 1 failed, 1 passed |
 | sentence: `another version of bga` -> `another release` | 1 failed, 1 passed |
 | `bga_view.py` stale: `moved or version_moved` -> `moved` | 1 failed, 1 passed |
+
+Review rework (2026-11-27): the code-side guard was a source regex that could not see `or True` on the `stale` expression. It now calls `analysis_source` with stored docs differing only in contract set, only in version, and in neither (stale True/True/False); renamed to the claim; the sentence regex is bounded to one sentence. Mutations: `or True` -> 1 failed, 3 passed; `moved or version_moved` -> `moved` -> 1 failed, 3 passed; drop `moved` -> 1 failed, 3 passed.

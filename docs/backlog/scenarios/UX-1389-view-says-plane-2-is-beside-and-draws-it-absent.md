@@ -66,3 +66,18 @@ Full file -> 4 passed; `dev_sizes.py --check` named `tools/bga_view.py file_line
 | `return {**stored, "plane2_absence": refusal} if refusal else stored` -> `return stored` | `test_a_report_over_the_size_bound_is_named_not_called_absent` | 1 failed, 3 passed |
 | `attachable(run, stored=True)` -> `attachable(run)` | `test_a_report_over_the_size_bound_is_named_not_called_absent` | 1 failed, 3 passed |
 | reverted | — | 4 passed |
+
+Second review rework (2026-11-27): coverage is sufficient evidence of a join, not necessary. `bga analyze run --plane2 p.json`, `p.json` being
+macro_micro's report minus `stream_coverage`, stores a `capacity_recommendation` and no `plane2_coverage`; an empty sibling then made `payloads` drop it.
+`--no-plane2` against `--plane2` differ in `element_join`/`element_join_coverage` (`bga/report/json.py`, written only when `_correlate` joined; absent, not null,
+otherwise) and in `binary_cost`, `capacity_recommendation`, `cpu_time`, `peak_memory`: the first two are the join itself, so the kept test is key presence.
+Second gap: with the oversized sibling `payload.plane2_absence` read "Plane 2 is 64.0M ..." but `statusLine` matched only "Plane 2 not attached" and printed
+"... 100% task coverage · Plane 2 not captured". Close: `served_analysis` keeps a stored analysis holding `element_join` or `element_join_coverage`;
+`views.js::statusLine` renders "Plane 2 too large to join here" for an absence starting "Plane 2 is <digit>". Asserted on the rendered line, node run of `tests/viewer.mjs`.
+Full file -> 6 passed; `dev_sizes.py --check` ok, `file_lines` unchanged at 2276.
+
+| mutation | reddened | count |
+|---|---|---|
+| drop `or "element_join" in stored or "element_join_coverage" in stored` | `test_a_stored_analysis_that_joined_a_report_without_coverage_is_kept` | 1 failed, 5 passed |
+| `statusLine` size branch -> `null` | `test_the_status_line_says_the_report_is_too_large_not_that_it_is_not_captured` | 1 failed, 5 passed |
+| reverted | — | 6 passed |

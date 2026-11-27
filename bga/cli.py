@@ -62,6 +62,7 @@ from .exceptions import (
     AnalysisError,
     IngestionError,
 )
+from .floors.cpu import effective_max_jobs
 from .help_format import CompactHelp
 from .ingest.loader import load_historical_runs
 from .logging_config import configure_logging
@@ -528,7 +529,12 @@ def _builder_pool_recommendation(analyzer, result) -> dict:
     max_jobs_by_uid = {e.uid: e.max_jobs for e in graph.elements} if graph else {}
     native_max_jobs = getattr(context, 'native_max_jobs', None)
     critical_path = schemas.critical_path_uids(getattr(result, 'signals', None) or {})
-    chain_widths = [max_jobs_by_uid.get(uid) or native_max_jobs for uid in critical_path]
+    chain_widths = [
+        effective_max_jobs(
+            native_max_jobs if max_jobs_by_uid.get(uid) is None else max_jobs_by_uid[uid], host_cpu_count
+        )
+        for uid in critical_path
+    ]
     critical_path_max_jobs = max((width or 1 for width in chain_widths), default=None)
     calibrated_cores = os.environ.get(_CALIBRATED_CORES_ENV)
     recommendation = compute_builder_pool_recommendation(

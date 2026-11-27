@@ -195,7 +195,8 @@ class TestTheSelectorStillSelects:
     # The field-test rows' merged tree (UX-1357/1363/1364/1365/1366's guards run `bga.cli`): median 41, p90 70, max 217 over 871.
     # `UX-1368`'s regime guard runs `bga.cli`'s builders line: median 41, p90 70, max 218 over 873.
     # This batch's merged tree (UX-1367/1377/1381's guards, the census growing to 36): median 42, p90 71, max 220 over 884.
-    CEILING = {"median": 42, "p90": 71, "max": 221}
+    # `UX-1389`'s third rework and `UX-1396`'s guard run `bga.correlate`, `bga.cli`: median 43, p90 71, max 222 over 890.
+    CEILING = {"median": 43, "p90": 71, "max": 222}
     POPULATION_FLOOR = 60
     #: `UX-645`: **13 census + 14 of your own**. The census floor is
     #: inside this bound because those files run - the figure is what

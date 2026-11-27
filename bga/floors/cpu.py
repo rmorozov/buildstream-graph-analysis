@@ -92,3 +92,14 @@ def compute_cpu_floor(
         'lb_cpu_cores_source': cores_source,
         'lb_cpu_binds': (lb_cpu_us > lb) if lb is not None else None,
     }
+
+
+#: BuildStream's `max-jobs: 0` (automatic) resolves to `min(cores, 8)` (UX-09).
+BST_MAX_JOBS_CEILING = 8
+
+
+def effective_max_jobs(jobs: Optional[int], cores: Optional[int]) -> Optional[int]:
+    """`jobs` as a width: a recorded 0 is BuildStream's automatic setting, `None` stays unrecorded (UX-1396)."""
+    if jobs != 0:
+        return jobs
+    return min(cores, BST_MAX_JOBS_CEILING) if cores else None

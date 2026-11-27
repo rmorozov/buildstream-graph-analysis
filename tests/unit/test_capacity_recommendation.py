@@ -293,7 +293,7 @@ class TestTheFinding:
 
         finding = _capacity_recommendation_finding(self._result(recommendation))[0]
 
-        assert "max-jobs unrecorded" in finding['detail'][1]
+        assert "native max-jobs unrecorded" in finding['detail'][1]
 
     def test_every_constraint_is_shown_beneath_the_verdict(self):
         """The binding one is the answer; the others are why it binds, and

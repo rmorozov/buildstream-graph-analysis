@@ -65,7 +65,7 @@ is in `capacity_check_skipped_inputs`; two history comments shrunk so
 `dev_sizes.py --check` holds. `test_the_loop_stays_fast.py` `CEILING["max"]`
 220 -> 221: the new guard names `bga.cli`, the widest module (selection 221).
 
-Not fixed: line 28 reads "max-jobs unrecorded" while `run-context.json` carries
+First pass left (fixed in the rework below): line 28 reads "max-jobs unrecorded" while `run-context.json` carries
 `"max_jobs": 4`; the checks read `native_max_jobs` only.
 
 | mutation | red |
@@ -74,3 +74,29 @@ Not fixed: line 28 reads "max-jobs unrecorded" while `run-context.json` carries
 | `bga/cli.py`: always `MODELLED_AXIS_UNRECORDED_CLAUSE` | `test_a_recorded_max_jobs_value_keeps_the_modelled_clause` (1 failed, 1 passed) |
 
 Reverted from a copy; both green after (2 passed).
+
+### Review rework (2026-11-27)
+
+Gap 1 (PR #353): on `macro_micro/run` + `plane2.json`, `capacity_recommendation.native_max_jobs`
+is null and there is no `max_jobs_advice` (no `host-samples.jsonl`), yet the Note said the
+per-element model was "in the capacity recommendation below". `_finish_capacity_recommendation`
+now computes the advice first and picks the clause after: unrecorded with advice keeps
+`MODELLED_AXIS_UNRECORDED_CLAUSE`; unrecorded without it says `UNMODELLED_UNRECORDED_CLAUSE`
+("has no per-element estimate"). The with-advice case is `tests/fixtures/host_cpu` (run +
+`host-samples.jsonl`) with `native_max_jobs` nulled.
+
+Gap 2: line 28 reads `native_max_jobs` (null); `run-context.json`'s `max_jobs: 4` is
+`--builders` (`RunContext.max_jobs`, `_capacity_recommendation`'s `builders`), not the native value,
+so the line was right and its label was not. It now reads `builders 4 x native max-jobs unrecorded`;
+a recorded value still prints `max-jobs N`. No JSON key changed; no golden changed
+(`cli.md` examples updated, with one sentence naming the two quantities).
+
+| mutation | red |
+|---|---|
+| advice ignored: always `MODELLED_AXIS_UNRECORDED_CLAUSE` | `..._with_no_advice_claims_no_model` (1 failed, 35 passed) |
+| always `UNMODELLED_UNRECORDED_CLAUSE` | `..._with_advice_points_at_it` (1 failed, 35 passed) |
+| always `MODELLED_AXIS_CLAUSE` | both unrecorded tests (2 failed, 34 passed) |
+| never `MODELLED_AXIS_CLAUSE` | `test_a_recorded_max_jobs_value_keeps_the_modelled_clause` (1 failed, 2 passed) |
+| `findings.py`: label back to `max-jobs unrecorded` | `test_an_unrecorded_max_jobs_is_named_rather_than_dropped` (1 failed, 35 passed) |
+
+Reverted from copies; green after (36 passed).

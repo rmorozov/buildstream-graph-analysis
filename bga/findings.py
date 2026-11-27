@@ -1337,9 +1337,9 @@ def _capacity_recommendation_finding(result: AnalysisResult) -> list[dict]:
     jobs = recommendation.get('native_max_jobs')
     # The question is the *joint* one, so an unrecorded `--max-jobs` is
     # named rather than dropped: "builders 4" reads as a complete setting
-    # and "builders 4 x max-jobs unrecorded" does not, which is the
+    # and "builders 4 x native max-jobs unrecorded" does not, which is the
     # honest shape when UX-29 could not recover it from the log.
-    setting = f"builders {builders} x max-jobs {jobs if jobs else 'unrecorded'}"
+    setting = f"builders {builders} x {f'max-jobs {jobs}' if jobs else 'native max-jobs unrecorded'}"
     # UX-861: a CPU-bound figure is clamped to the host's cores in
     # `compute_capacity_recommendation`, so the sentence says so rather
     # than leaving the clamp implicit in the number alone.

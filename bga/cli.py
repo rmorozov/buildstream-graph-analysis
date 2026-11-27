@@ -34,6 +34,7 @@ from .analyzer import (
     MODELLED_AXIS_CLAUSE,
     MODELLED_AXIS_UNRECORDED_CLAUSE,
     UNMODELED_AXIS_CLAUSE,
+    UNMODELLED_UNRECORDED_CLAUSE,
     BuildEfficiencyAnalyzer,
 )
 from .compare import (
@@ -327,18 +328,7 @@ def _finish_capacity_recommendation(analyzer, result, native_report: dict) -> No
     """
     if not result.capacity_recommendation:
         return
-    # UX-116 item 3: the "unmodeled axis" clause is retired only where the block ran.
-    floors = getattr(result, 'floors', None)
-    note = (floors or {}).get('capacity_model_note') or ''
-    if floors is not None and UNMODELED_AXIS_CLAUSE in note:
-        skipped = getattr(analyzer, 'capacity_check_skipped_inputs', None) or []
-        clause = MODELLED_AXIS_UNRECORDED_CLAUSE if 'native_max_jobs' in skipped else MODELLED_AXIS_CLAUSE
-        floors['capacity_model_note'] = note.replace(UNMODELED_AXIS_CLAUSE, clause, 1)
-    # UX-677: per-element `max-jobs`, on the same document - not a new
-    # contract id. Joins `UX-675`'s raw host CPU series (present on
-    # every capture) directly to each element's BUILD span; per-element
-    # peak RSS comes from this same Plane 2 report when it carries one,
-    # and is skipped rather than assumed when absent.
+    # UX-677: per-element `max-jobs` on the same document: host CPU series joined to each BUILD span.
     advice = _max_jobs_advice(analyzer, native_report)
     if advice:
         # UX-739: priced by replay, where the normalized tasks (for
@@ -353,6 +343,16 @@ def _finish_capacity_recommendation(analyzer, result, native_report: dict) -> No
             (native_report or {}).get('binary_cost'),
         )
         result.capacity_recommendation['max_jobs_advice'] = advice
+    # UX-116 item 3: the "unmodeled axis" clause is retired only where the block ran.
+    floors = getattr(result, 'floors', None)
+    note = (floors or {}).get('capacity_model_note') or ''
+    if floors is not None and UNMODELED_AXIS_CLAUSE in note:
+        # UX-1390: the per-element model is claimed only where the advice above exists.
+        if 'native_max_jobs' not in (getattr(analyzer, 'capacity_check_skipped_inputs', None) or []):
+            clause = MODELLED_AXIS_CLAUSE
+        else:
+            clause = MODELLED_AXIS_UNRECORDED_CLAUSE if advice else UNMODELLED_UNRECORDED_CLAUSE
+        floors['capacity_model_note'] = note.replace(UNMODELED_AXIS_CLAUSE, clause, 1)
 
 
 def _peak_rss_and_host_memory(

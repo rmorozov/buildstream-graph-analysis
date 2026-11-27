@@ -881,12 +881,14 @@ With `--plane2`, both consult what was actually measured inside the sandboxes:
   recommendation naming the binding one (`UX-116`), instead of four blocks a reader has to reconcile:
 
 ```text
-Capacity: builders 4 x max-jobs unrecorded on 4 core(s): CPU binds at 4 (the host's cores bound it, not the raw 7) - at the 4 configured
+Capacity: builders 4 x native max-jobs unrecorded on 4 core(s): CPU binds at 4 (the host's cores bound it, not the raw 7) - at the 4 configured
   graph allows 6: the sweep's knee is at 6 builder(s)
   CPU allows 4: 2.11 of 4 core(s) busy at builders=4, i.e. 0.53 core(s) per concurrent element - 7 before the host's 4 cores bound it
   memory allows 9: the 9-builder envelope fits in 15.7 GB (measured over 9 element peak(s), so it says nothing above 9)
   Free capacity you already have: core.bst asked its native build for -j1 - a builder slot drawing one core.
 ```
+
+  `native max-jobs unrecorded` reads `native_max_jobs`; `run-context.json`'s `max_jobs` is `--builders`, a different quantity, and is not read for it (`UX-1390`).
 
   The CPU ceiling is derived, not assumed: `cores_busy / builders` is what one concurrently-building element
   actually drew, and the ceiling is how many of those the host's cores can feed - never more builders than
@@ -1604,7 +1606,7 @@ bga analyze tests/fixtures/macro_micro/run \
 
 
 ```text
-  Capacity: builders 4 x max-jobs unrecorded on 4 cores: graph binds at 2, below the 4 configured - more builders contend rather than overlap here
+  Capacity: builders 4 x native max-jobs unrecorded on 4 cores: graph binds at 2, below the 4 configured - more builders contend rather than overlap here
     graph allows 2: the sweep's knee is at 2 builders
     CPU allows 4: 1.60 of 4 cores busy at builders=4, i.e. 0.40 cores per concurrent element
     memory allows 9: the 9-builder envelope fits in 15.7 GB (measured over 9 element peaks, so it says nothing above 9)

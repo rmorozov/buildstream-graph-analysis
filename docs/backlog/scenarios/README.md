@@ -35,7 +35,6 @@ task file, which is the only place it ever lived twice.
 | UX-1383 | [a dependabot pip pull request arrives with its lock](UX-1383-a-dependabot-pip-pr-arrives-with-its-lock.md) | guards | Medium | every dependabot pip bump | 🟡 In Progress |
 | UX-1389 | [`bga view` says Plane 2 is beside the run, then draws it absent](UX-1389-view-says-plane-2-is-beside-and-draws-it-absent.md) | viewer | Medium | R6, R3 | 🔴 Not Started |
 | UX-1390 | [one capacity Note says `--max-jobs` is modelled and missing](UX-1390-the-capacity-note-models-and-misses-max-jobs.md) | analysis | Low | R6 | 🔴 Not Started |
-| UX-1393 | [the examples README says only Ubuntu 24.04 stages without a warning](UX-1393-examples-readme-names-only-ubuntu-24-04.md) | docs | Low | R8 | 🔴 Not Started |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

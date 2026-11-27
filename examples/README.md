@@ -130,7 +130,7 @@ see the stager's header for the trial-and-error that took (symlink
 chains through `/etc/alternatives`, this host's usrmerge layout, GNU ld
 linker scripts with embedded `AS_NEEDED` paths).
 
-Staging prints that table and checks it against the staged copies:
+Staging prints that table (read on Ubuntu 24.04; 26.04 declares glibc 2.43 and uutils 0.10.0) and checks it against the staged copies:
 
 ```text
 runtime:
@@ -146,7 +146,7 @@ toolchain:
   glibc-pinned pinned  2.40  (1 probed of 1 declared)
 ```
 
-Two glibcs, and both are declared. The host-staged 2.39 loads the
+Two glibcs, and both are declared. The host-staged 2.39 (24.04) loads the
 tree's own `sh` and coreutils; the closure's 2.40 loads the pinned
 compiler **and everything the pinned compiler links**, because an
 unwrapped nix gcc bakes its own `ld-linux-x86-64.so.2` into every
@@ -177,7 +177,7 @@ A **pinned** row that disagrees fails the staging - the pin did not
 take. A **host** row that disagrees only warns, because a different
 working host is not a broken sysroot; it is a different program under
 measurement, and `tests/unit/test_the_sysroot_declares_both_axes.py` is
-what reddens. If you stage on a host outside Ubuntu 24.04, expect that
+what reddens. If you stage on a host outside Ubuntu 24.04 or 26.04, expect that
 warning: the figures the documents carry were measured against the
 versions above, and re-declaring them means re-deriving the figures.
 

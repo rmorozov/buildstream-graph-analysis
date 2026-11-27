@@ -1,8 +1,8 @@
 # UX-1393: the examples README says only Ubuntu 24.04 stages without a warning
 
-**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** review 40 (2026-11-27) | **Serves:** R8 | **Topic:** docs | **Area:** unassigned | **Shape:** judgement | **Reading:** container
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** — | **Found by:** review 40 (2026-11-27) | **Serves:** R8 | **Topic:** docs | **Area:** unassigned | **Shape:** judgement | **Reading:** container
 
-**Guard:** none — open, no guard named yet
+**Guard:** `tests/unit/test_the_examples_readme_names_each_declared_host_release.py`
 
 ## Motivation
 
@@ -26,3 +26,21 @@ Declaring a third release.
 
 A guard reads the README's release names against `HOST_RELEASES`' keys; a
 release added to one and not the other reddens it.
+
+## Outcome
+
+**Gap measured** (`sed -n 180p examples/README.md`, base `7e7b5db3`): "outside
+Ubuntu 24.04, expect that warning"; `HOST_RELEASES` keys are 24.04 and 26.04;
+the pasted table and "host-staged 2.39" carried no release. No existing guard
+read the README's release names.
+
+**Close measured**: the warning names 24.04 or 26.04, the table is labelled
+"read on Ubuntu 24.04" (26.04's glibc 2.43, uutils 0.10.0 stated), "2.39 (24.04)".
+`pytest tests/unit/test_the_examples_readme_names_each_declared_host_release.py`:
+2 passed.
+
+| Mutation | Result |
+|---|---|
+| README warning: drop ` or 26.04` | 1 failed, 1 passed |
+| README: drop `read on Ubuntu` label | 1 failed, 1 passed |
+| `HOST_RELEASES`: add `28.04` | 1 failed, 1 passed |

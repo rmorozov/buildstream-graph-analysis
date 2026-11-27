@@ -23,11 +23,12 @@ DECLINED = "does not feed the capacity checks"
 NO_ESTIMATE = "has no per-element estimate"
 
 
-def _analyze(tmp_path: Path, run: Path, native_max_jobs, host_samples: Path = None) -> dict:
+def _analyze(tmp_path: Path, run: Path, native_max_jobs, host_samples: Path = None, keep_lines: int = None) -> dict:
     shutil.copytree(run, tmp_path / "run")
     shutil.copy(FIXTURE / "plane2.json", tmp_path / "plane2.json")
     if host_samples is not None:
-        shutil.copy(host_samples, tmp_path / "host-samples.jsonl")
+        lines = host_samples.read_text().splitlines(keepends=True)
+        (tmp_path / "host-samples.jsonl").write_text("".join(lines[:keep_lines]))
     ctx = tmp_path / "run" / "run-context.json"
     data = json.loads(ctx.read_text())
     data["native_max_jobs"] = native_max_jobs
@@ -70,9 +71,36 @@ def test_a_missing_max_jobs_value_with_advice_points_at_it(tmp_path):
     assert NO_ESTIMATE not in note
 
 
+def test_a_missing_max_jobs_value_with_every_row_refused_claims_no_model(tmp_path):
+    result = _analyze(tmp_path, HOST_CPU / "run", None, HOST_CPU / "host-samples.jsonl", keep_lines=4)
+    note = result["floors"]["capacity_model_note"]
+    rows = result["capacity_recommendation"]["max_jobs_advice"]["elements"]
+    assert rows
+    assert all(row["recommended_max_jobs"] is None and row["refusal"] for row in rows)
+    assert MISSED in note
+    assert PER_ELEMENT not in note
+    assert NO_ESTIMATE in note
+
+
 def test_a_recorded_max_jobs_value_keeps_the_modelled_clause(tmp_path):
     note = _analyze(tmp_path, FIXTURE / "run", 4)["floors"]["capacity_model_note"]
     assert MODELLED in note
     assert MISSED not in note
     assert DECLINED not in note
     assert NO_ESTIMATE not in note
+
+
+def test_a_recorded_zero_max_jobs_is_not_reported_as_unrecorded(tmp_path):
+    result = _analyze(tmp_path, FIXTURE / "run", 0)
+    assert result["capacity_recommendation"]["native_max_jobs"] == 0
+    assert MISSED not in result["floors"]["capacity_model_note"]
+    text = subprocess.run(
+        [sys.executable, "-m", "bga.cli", "analyze", str(tmp_path / "run")],
+        capture_output=True,
+        text=True,
+        cwd=REPO,
+        env={"PYTHONPATH": str(REPO), "PATH": "/usr/bin:/bin"},
+        timeout=120,
+    ).stdout
+    assert "builders 4 x max-jobs 0 (BuildStream auto)" in text
+    assert "native max-jobs unrecorded" not in text

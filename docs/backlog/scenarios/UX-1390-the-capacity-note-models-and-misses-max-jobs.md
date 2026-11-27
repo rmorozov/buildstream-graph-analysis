@@ -100,3 +100,13 @@ a recorded value still prints `max-jobs N`. No JSON key changed; no golden chang
 | `findings.py`: label back to `max-jobs unrecorded` | `test_an_unrecorded_max_jobs_is_named_rather_than_dropped` (1 failed, 35 passed) |
 
 Reverted from copies; green after (36 passed).
+
+### Second review rework (2026-11-27)
+
+Gap 1: `tests/fixtures/host_cpu` + `native_max_jobs` null + first 4 `host-samples.jsonl` lines gave 11 advice rows, all
+`recommended_max_jobs: null`, yet "modelled per element". Clause now keys on any row's estimate, rows kept.
+Gap 2 (`cli.py` `get(uid) or native_max_jobs` reads 0 as 1, left): `native_max_jobs: 0` printed "native max-jobs unrecorded"; now `is not None`, 0 reads "max-jobs 0 (BuildStream auto)".
+| mutation | red |
+|---|---|
+| `if estimated` -> `if advice` | all-refused test (1 failed, 4 passed) |
+| `is None` -> `not jobs` | both zero tests (2 failed, 37 passed) |

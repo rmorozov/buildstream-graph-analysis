@@ -347,11 +347,12 @@ def _finish_capacity_recommendation(analyzer, result, native_report: dict) -> No
     floors = getattr(result, 'floors', None)
     note = (floors or {}).get('capacity_model_note') or ''
     if floors is not None and UNMODELED_AXIS_CLAUSE in note:
-        # UX-1390: the per-element model is claimed only where the advice above exists.
+        # UX-1390: the per-element model is claimed only where some advice row yielded an estimate, not a refusal.
         if 'native_max_jobs' not in (getattr(analyzer, 'capacity_check_skipped_inputs', None) or []):
             clause = MODELLED_AXIS_CLAUSE
         else:
-            clause = MODELLED_AXIS_UNRECORDED_CLAUSE if advice else UNMODELLED_UNRECORDED_CLAUSE
+            estimated = any(row.get('recommended_max_jobs') is not None for row in (advice or {}).get('elements') or [])
+            clause = MODELLED_AXIS_UNRECORDED_CLAUSE if estimated else UNMODELLED_UNRECORDED_CLAUSE
         floors['capacity_model_note'] = note.replace(UNMODELED_AXIS_CLAUSE, clause, 1)
 
 

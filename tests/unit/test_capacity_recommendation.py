@@ -295,6 +295,18 @@ class TestTheFinding:
 
         assert "native max-jobs unrecorded" in finding['detail'][1]
 
+    def test_a_recorded_zero_max_jobs_is_the_automatic_setting_not_unrecorded(self):
+        """UX-1390: 0 is BuildStream's own automatic setting, recorded; only None is unrecorded."""
+        recommendation = compute_capacity_recommendation(
+            _plane2(), _envelope(11), knee=5, builders=4, native_max_jobs=0
+        )
+
+        finding = _capacity_recommendation_finding(self._result(recommendation))[0]
+
+        assert recommendation['native_max_jobs'] == 0
+        assert "builders 4 x max-jobs 0 (BuildStream auto)" in finding['detail'][1]
+        assert "unrecorded" not in finding['detail'][1]
+
     def test_every_constraint_is_shown_beneath_the_verdict(self):
         """The binding one is the answer; the others are why it binds, and
         a reader who disagrees needs to see them to argue."""

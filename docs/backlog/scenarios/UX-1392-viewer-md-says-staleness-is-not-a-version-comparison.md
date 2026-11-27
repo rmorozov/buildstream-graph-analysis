@@ -1,8 +1,8 @@
 # UX-1392: `viewer.md` says staleness is not a version comparison; `UX-1367` made it one
 
-**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** review 40 (2026-11-27) | **Serves:** R1 | **Topic:** docs | **Area:** unassigned | **Shape:** judgement | **Reading:** container
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** — | **Found by:** review 40 (2026-11-27) | **Serves:** R1 | **Topic:** docs | **Area:** unassigned | **Shape:** judgement | **Reading:** container
 
-**Guard:** none — open, no guard named yet
+**Guard:** `tests/unit/test_the_viewer_guide_names_both_staleness_triggers.py`
 
 ## Motivation
 
@@ -25,3 +25,22 @@ The staleness rule itself.
 
 A guard reads `viewer.md`'s staleness sentence against `bga_view.py`'s two
 triggers; dropping either from the sentence reddens it.
+
+## Outcome
+
+**Gap measured** (`sed -n 140,141p docs/guides/viewer.md`, base `7e7b5db3`):
+"Staleness is `UX-249`'s contract set ... not a version comparison", while
+`bga_view.analysis_source` stales on `moved or version_moved`. No existing
+guard read the sentence (`grep -rn viewer.md tests/unit/`: ceilings, counted
+figures, comparison advice only).
+
+**Close measured**: the sentence now reads "Stale means one of two triggers:
+the contract set `UX-249` moved ..., or the stored analysis came from another
+bga version (`UX-1367`)". `pytest tests/unit/test_the_viewer_guide_names_both_staleness_triggers.py`:
+2 passed.
+
+| Mutation | Result |
+|---|---|
+| sentence: `contract set` -> `set` | 1 failed, 1 passed |
+| sentence: `another version of bga` -> `another release` | 1 failed, 1 passed |
+| `bga_view.py` stale: `moved or version_moved` -> `moved` | 1 failed, 1 passed |

@@ -137,8 +137,9 @@ sections are absent from it, and the command to re-run with.
 `--reanalyse` is that command. It analyses the run with this build and
 serves that instead; the stored file is **read, never written**, so the
 page and the CI comment that quotes the stored analysis do not diverge.
-Staleness is `UX-249`'s contract set — a build that moved nothing
-publishes the same set — not a version comparison.
+Stale means one of two triggers: the contract set `UX-249` moved
+(a build that moved nothing publishes the same set), or the stored
+analysis came from another version of bga (`UX-1367`).
 
 ### Finding your way around it (`UX-199`)
 

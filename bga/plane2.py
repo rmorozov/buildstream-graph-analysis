@@ -340,6 +340,16 @@ DECLINED = (
     "(`--no-plane2`), so every figure below is Plane 1 alone."
 )
 
+# The relative clause after "need Plane 2," in a sentence that names what Plane 1 alone cannot say.
+WHY_NOT_CAPTURED = "which this run did not capture"
+WHY_TOO_LARGE = "which is too large to join here"
+WHY_DECLINED = "which this report was asked not to read"
+
+
+def why_absent(absence: Optional[str]) -> str:
+    """The clause for a `plane2_absence` sentence: `--no-plane2`, else not captured."""
+    return WHY_DECLINED if absence == DECLINED else WHY_NOT_CAPTURED
+
 
 #: `UX-726`: the fourth state, which `UX-685`'s seed-2 walk met and no
 #: sentence covered. A report that exists and recorded nothing is not

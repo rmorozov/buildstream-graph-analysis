@@ -951,8 +951,9 @@ export function statusLine(payload) {
   const absence = payload?.plane2_absence;
   const j = /Plane 2 not attached.+/.exec(absence);
   const big = /^Plane 2 is \d/.test(absence) ? "Plane 2 too large to join here" : null;
+  const declined = /asked not to read it/.test(absence) ? "Plane 2 not read (--no-plane2)" : null;
   parts.push(plane2 && typeof plane2.processes === "number"
-    ? `Plane 2: ${tally(plane2.processes)} processes` : j?.[0] ?? big ?? PLANE2_NOT_CAPTURED);
+    ? `Plane 2: ${tally(plane2.processes)} processes` : j?.[0] ?? big ?? declined ?? PLANE2_NOT_CAPTURED);
   return parts.join(" \u00b7 ");
 }
 

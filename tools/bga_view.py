@@ -302,7 +302,19 @@ def served_analysis(run: str, reanalyse: bool = False) -> Optional[dict]:
     path, refusal = plane2_shape.attachable(run, stored=True)
     if path:
         return None
-    return {**stored, "plane2_absence": refusal} if refusal else stored
+    return _refused(stored, refusal) if refusal else stored
+
+
+def _refused(stored: dict, refusal: str) -> dict:
+    """`stored` with the size refusal said in `plane2_absence` and in the sizing sentence made before it."""
+    from bga import plane2 as plane2_shape
+
+    served = {**stored, "plane2_absence": refusal}
+    sizing = stored.get("agent_sizing")
+    if isinstance(sizing, dict) and isinstance(sizing.get("absence"), str):
+        said = sizing["absence"].replace(plane2_shape.WHY_NOT_CAPTURED, plane2_shape.WHY_TOO_LARGE)
+        served["agent_sizing"] = {**sizing, "absence": said}
+    return served
 
 
 def _timed_capture(name: str, argv: list[str]) -> dict:

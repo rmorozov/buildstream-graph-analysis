@@ -81,3 +81,6 @@ Full file -> 6 passed; `dev_sizes.py --check` ok, `file_lines` unchanged at 2276
 | drop `or "element_join" in stored or "element_join_coverage" in stored` | `test_a_stored_analysis_that_joined_a_report_without_coverage_is_kept` | 1 failed, 5 passed |
 | `statusLine` size branch -> `null` | `test_the_status_line_says_the_report_is_too_large_not_that_it_is_not_captured` | 1 failed, 5 passed |
 | reverted | — | 6 passed |
+
+Third rework (2026-11-27): the export of a run with a stored analysis and a sibling `plane2.json` over `VIEW_MAX_BYTES` (or a stored `--no-plane2` analysis) still said "Cores and memory need Plane 2, which this run did not capture." (`agent_sizing.absence`, `correlate.py`); `served_analysis` now says the refusal there too, `statusLine` says "Plane 2 not read (--no-plane2)", and `compute_agent_sizing` follows `plane2_absence`.
+Full file -> 9 passed; mutations: `why_absent` -> always not-captured, `declined ??` dropped, the `_refused` sizing replace dropped, `compute_agent_sizing` clause fixed -> each 1 failed, 8 passed.

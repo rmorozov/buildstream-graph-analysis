@@ -104,13 +104,7 @@ process.stdout.write(JSON.stringify(app.statusLine(JSON.parse(process.argv[1])))
 """
 
 
-@needs_node
-def test_the_status_line_says_the_report_is_too_large_not_that_it_is_not_captured(tmp_path):
-    run = _scratch(tmp_path, stored_with_plane2=False)
-    pad = plane2.VIEW_MAX_BYTES + 1 - (tmp_path / "plane2.json").stat().st_size
-    with open(tmp_path / "plane2.json", "ab") as handle:
-        handle.write(b" " * pad)
-    payload = view.payloads(run)["report.json"]
+def _status(payload):
     done = subprocess.run(
         [node, "--input-type=module", "-e", _STATUS, json.dumps(payload)],
         capture_output=True,
@@ -120,6 +114,57 @@ def test_the_status_line_says_the_report_is_too_large_not_that_it_is_not_capture
         check=False,
     )
     assert done.returncode == 0, done.stderr[-2000:]
-    line = json.loads(done.stdout)
+    return json.loads(done.stdout)
+
+
+def _pad_past_the_bound(tmp_path):
+    pad = plane2.VIEW_MAX_BYTES + 1 - (tmp_path / "plane2.json").stat().st_size
+    with open(tmp_path / "plane2.json", "ab") as handle:
+        handle.write(b" " * pad)
+
+
+def _exported_page(tmp_path):
+    out = tmp_path / "e.html"
+    view.export(str(tmp_path / "run"), str(out), with_trace=False)
+    return out.read_text(encoding="utf-8")
+
+
+@needs_node
+def test_the_status_line_says_the_report_is_too_large_not_that_it_is_not_captured(tmp_path):
+    run = _scratch(tmp_path, stored_with_plane2=False)
+    _pad_past_the_bound(tmp_path)
+    line = _status(view.payloads(run)["report.json"])
     assert line.endswith("Plane 2 too large to join here"), line
     assert "not captured" not in line
+
+
+def test_the_exported_page_says_the_report_is_too_large_in_the_sizing_sentence(tmp_path):
+    _scratch(tmp_path, stored_with_plane2=False)
+    _pad_past_the_bound(tmp_path)
+    page = _exported_page(tmp_path)
+    assert "Cores and memory need Plane 2, which is too large to join here." in page
+    assert "did not capture" not in page
+
+
+def _declined_run(tmp_path):
+    """A stored `--no-plane2` analysis made while the sibling existed."""
+    shutil.copytree(FIXTURE / "run", tmp_path / "run")
+    shutil.copy(FIXTURE / "plane2.json", tmp_path / "plane2.json")
+    stored = view._capture(["analyze", str(tmp_path / "run"), "--format", "json", "--no-plane2"])
+    assert stored["plane2_absence"] == plane2.DECLINED
+    (tmp_path / "analyze.json").write_text(json.dumps(stored), encoding="utf-8")
+    return str(tmp_path / "run")
+
+
+@needs_node
+def test_the_status_line_says_a_declined_report_was_not_read_not_that_it_is_not_captured(tmp_path):
+    line = _status(view.payloads(_declined_run(tmp_path))["report.json"])
+    assert line.endswith("Plane 2 not read (--no-plane2)"), line
+    assert "not captured" not in line
+
+
+def test_the_exported_page_says_a_declined_report_was_not_read_in_the_sizing_sentence(tmp_path):
+    _declined_run(tmp_path)
+    page = _exported_page(tmp_path)
+    assert "Cores and memory need Plane 2, which this report was asked not to read." in page
+    assert "did not capture" not in page

@@ -29,3 +29,11 @@ def test_the_pasted_table_is_labelled_with_a_declared_release():
     label = re.search(r"read on Ubuntu (\d\d\.\d\d)", text)
     assert label, "the pasted table carries no 'read on Ubuntu NN.NN' label"
     assert label.group(1) in sysroot_manifest.HOST_RELEASES
+
+
+def test_the_pasted_figures_are_the_labelled_releases_own():
+    text = README.read_text(encoding="utf-8")
+    label = re.search(r"read on Ubuntu (\d\d\.\d\d)", text).group(1)
+    block = text[text.index("read on Ubuntu") :].split("```text", 1)[1].split("```", 1)[0]
+    pasted = dict(re.findall(r"^\s+(glibc|coreutils)\s+host\s+(\S+)", block, re.M))
+    assert pasted == sysroot_manifest.HOST_RELEASES[label]

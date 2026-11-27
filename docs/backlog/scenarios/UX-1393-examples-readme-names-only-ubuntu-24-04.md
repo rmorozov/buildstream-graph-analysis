@@ -44,3 +44,5 @@ read the README's release names.
 | README warning: drop ` or 26.04` | 1 failed, 1 passed |
 | README: drop `read on Ubuntu` label | 1 failed, 1 passed |
 | `HOST_RELEASES`: add `28.04` | 1 failed, 1 passed |
+
+Review rework (2026-11-27): the label was checked only against `HOST_RELEASES` keys, so relabelling the table "read on Ubuntu 26.04" passed. A third test now requires the pasted glibc/coreutils figures to equal `HOST_RELEASES[label]`. Mutations: label 24.04 -> 26.04 -> 1 failed, 2 passed; glibc 2.39 -> 2.38 -> 1 failed, 2 passed.

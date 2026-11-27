@@ -350,16 +350,21 @@ def analysis_source(stored: Optional[dict], reanalysed: bool) -> dict:
             + [f"{mine[name]} (new)" for name in set(mine) - set(old)]
         )
     declared = set(schemas.ANALYZE_FULL_KEYS)
+    stored_version = producer.version_of(stored) if stored is not None else None
+    this_build = producer.version_of({"producer": producer.stamp()})
+    # `UX-1367`: additive changes move no contract, so the version is the other axis;
+    # an unstamped capture is already stale above, and is not "version moved".
+    version_moved = bool(stored_version not in (None, producer.UNSTAMPED) and stored_version != this_build)
     return {
         "source": ANALYSIS_FROM_VIEW if reanalysed else ANALYSIS_FROM_CAPTURE,
-        "stored_producer": producer.version_of(stored) if stored is not None else None,
-        "this_build": producer.version_of({"producer": producer.stamp()}),
+        "stored_producer": stored_version,
+        "this_build": this_build,
         "contracts_moved": moved,
+        "version_moved": version_moved and not reanalysed,
         "sections_declared": len(declared),
         "sections_absent": sorted(declared - set(stored or {})),
-        # Stale is the *producer* comparison and nothing else: an
-        # unstamped capture cannot be shown to agree with this build.
-        "stale": bool(not reanalysed and stored is not None and (theirs is None or moved)),
+        # Stale is the *producer* comparison: contracts, then the version string as stored.
+        "stale": bool(not reanalysed and stored is not None and (theirs is None or moved or version_moved)),
         "reanalyse": "bga view RUN --reanalyse",
     }
 

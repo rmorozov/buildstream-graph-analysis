@@ -1,7 +1,8 @@
 """`UX-997`: no workflow's `git push` lands a commit on the default branch.
 
 Every `git push` line in every `.github/workflows/*.yml` step must name
-`refs/heads/records` or `captures/*` - literally, or through a same-
+`refs/heads/records`, `captures/*` or (`UX-1383`'s lock job)
+`refs/heads/dependabot/pip/*` - literally, or through a same-
 script shell variable it is built from. `dev_records.py publish` is the
 other route: it pushes internally, so a step that calls it needs no
 literal `git push` line of its own to be read as compliant.
@@ -14,7 +15,7 @@ import yaml
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 WORKFLOWS = sorted((REPO / ".github/workflows").glob("*.yml"))
-ALLOWED = ("refs/heads/records", "captures/")
+ALLOWED = ("refs/heads/records", "captures/", "refs/heads/dependabot/pip/")
 GIT_PUSH = re.compile(r"\bgit push\b")
 
 

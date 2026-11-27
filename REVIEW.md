@@ -8,7 +8,7 @@ read by whoever — or whatever — reviews a pull request here.
 
 External review requests and completion are governed by
 [the Codex review procedure](docs/contributing/codex-reviews.md).
-Security reviewers also read [the threat model](docs/design/threat-model.md).
+The Security pass also reads [the threat model](docs/design/threat-model.md).
 
 ## Passes
 

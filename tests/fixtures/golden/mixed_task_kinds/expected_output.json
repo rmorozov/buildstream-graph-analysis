@@ -741,6 +741,7 @@
     },
     "bottleneck": {
         "choke_points": [],
+        "unpriced_choke_points": [],
         "resource_contention": {},
         "longest_serial_chain": [
             "base.bst",

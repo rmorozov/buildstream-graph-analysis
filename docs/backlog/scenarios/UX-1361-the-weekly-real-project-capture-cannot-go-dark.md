@@ -29,7 +29,7 @@ One dispatched run publishes a capture ref; a forced failure (bad target) produc
 The cause is the pin, not the tooling: the warm phase of run 40174440140
 (2026-10-25) read `126 elements, 103 not cached, 25 in the rebuild set` —
 `cache.freedesktop-sdk.io` no longer serves `953683fb`'s (2026-08-14)
-artifacts. Policy stays `pinned` (UX-514); re-pin to `dd4b4ece`
+artifacts. Policy stays `pinned` (UX-514); re-pin to `dd4b4ece` (superseded by rework 3: advanced)
 (2026-10-27 merge), a new population. The verify step names eviction when
 more than half the closure is unpullable. A last step, `failure()` or a
 refused trend (review 2) on a `schedule` run, comments on the open "Real-project capture is dark" issue or
@@ -65,3 +65,37 @@ Close: guard 4/4; mutations — `if: failure()` only → 3 red; that plus no
 | reverted | — | 9 passed |
 
 A `bga cache-trend` failure after an accepted set is still `continue-on-error` and unreported; the runner reading (a dispatched schedule) stays the Acceptance Test's.
+
+**Rework 3** (2026-11-24, owner's batch: "fix the weekly capture's cut step"). The re-pin went dark too: scheduled runs 42468092048, 43702204195 and 45012490234 (11-08, 11-15, 11-22) red at the cut, the last reading `79 element(s) ... 126 elements, 104 not cached`. Dispatched warm pulls, all `components/libxml2.bst`, verify step's own line:
+
+| ref | committed | not cached of 126 | beyond the cut |
+|---|---|---|---|
+| `db97cce3` 26.08.0 | 09-01 | 124 | 99 |
+| `114ae909` 26.08.4 | 10-26 | 36 | 11 |
+| `dd4b4ece` (the pin) | 10-27 | 104 (11-22) | 79 |
+| `783dba2b` release/26.08 head | 11-23 | 26 | 1 (`bootstrap/build/rsync.bst`) |
+| `20b2828f` master head | 11-23 | 26 | 1 (same) |
+
+The cache holds no commit for more than weeks, release tags included, so no pin survives: `capture-ref-policy: advanced`. The clone step resolves the newest `release/26.08` commit at least `FDSDK_LAG_DAYS` 2 old when no commit is dispatched; the verify step builds up to `BEYOND_CUT_MAX` 2 stragglers and writes them to `capture/beyond-cut.txt`, red above. The trend glob stays per commit: `bga baseline` refuses a set across `fdsdk_ref` (`HOMOGENEOUS_FIELDS`), so a cross-commit trend is `UX-92`'s, not this row's. `python3 -m pytest -q -p no:xdist tests/unit/test_the_weekly_capture_takes_a_commit_the_cache_holds.py` -> 6 passed (both step bodies, a dated `file://` remote, fixture state):
+
+| mutation | count |
+|---|---|
+| R1 `--before` lag dropped | 1 failed, 5 passed |
+| R2 a dispatched commit re-resolved | 1 failed, 5 passed |
+| R3 `BEYOND_CUT_MAX = 0` | 1 failed, 5 passed |
+| R4 `BEYOND_CUT_MAX = 9` | 1 failed, 5 passed |
+| R5 `beyond-cut.txt` not written | 2 failed, 4 passed |
+| reverted | 6 passed |
+
+Owner review of #352: the lag now walks `--first-parent`, so a merged topic's older date never resolves; the fetch is `--depth` 200 then 2000, so a branch quiet past any `--shallow-since` window resolves to its tip; and a new step fetches `beyond-cut.txt`'s sources `--deps none` between the verify step and the capture, so a straggler's download is not inside the timed build. Same file -> 10 passed:
+
+| mutation | count |
+|---|---|
+| R6 `--first-parent` dropped | 1 failed, 9 passed |
+| R7 `--shallow-since="30 days ago"` restored | 1 failed, 9 passed |
+| R8 `xargs` without `-r` | 1 failed, 9 passed |
+| R9 the pre-fetch reads `rebuild-set.txt` | 2 failed, 8 passed |
+| R10 the pre-fetch moved after the capture | 1 failed, 9 passed |
+| reverted | 10 passed |
+
+`test_the_pinned_ref_is_a_decision.py`: the pin-copy check skips under `advanced`; its mechanism check passes. Open until three consecutive green scheduled runs.

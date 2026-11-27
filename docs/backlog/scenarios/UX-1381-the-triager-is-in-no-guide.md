@@ -1,8 +1,8 @@
 # UX-1381: the `triager` agent is in no guide and not in `CLAUDE.md`'s pipeline
 
-**Priority:** Low | **Status:** 🔴 Not Started | **Depends on:** — | **Found by:** review 39 (2026-11-05) | **Serves:** R8 | **Topic:** docs | **Area:** unassigned | **Shape:** judgement | **Reading:** container
+**Priority:** Low | **Status:** 🟢 Done | **Depends on:** — | **Found by:** review 39 (2026-11-05) | **Serves:** R8 | **Topic:** docs | **Area:** unassigned | **Shape:** judgement | **Reading:** container
 
-**Guard:** none — open, no guard named yet
+**Guard:** `tests/unit/test_every_agent_file_is_named_in_a_steering_document.py`
 
 ## Motivation
 
@@ -28,3 +28,22 @@ The agent's own definition.
 The guard reddens on a new agent file that no document names.
 
 ## Outcome
+
+**Gap measured.** `CLAUDE.md` named `triager` 0 times, and the fixing guide
+0 times (it has no agent list). The guard's first draw found a second
+unnamed agent: `guard-auditor` (0 and 0), which `UX-1353` added.
+
+**Close measured.** `CLAUDE.md`'s pipeline now says "a red log goes to
+the `triager`, which returns a table" and names `guard-auditor` after
+`integrator`. The guard globs `.claude/agents/*.md` (9 files) against
+the two documents: `1 passed`. `CLAUDE.md` has no size guard that this
+touches; `AGENTS.md` already differs from it and is not held equal.
+
+| mutation | reddened | run |
+|---|---|---|
+| remove the `triager` clause from `CLAUDE.md` | the guard | 1 failed |
+| add `.claude/agents/zz-temp.md` no document names | the guard | 1 failed |
+
+**Deviation.** Not a row-listed fix: `guard-auditor` named too, or the
+guard would be red on arrival. `make test-touching` is blocked in a
+worktree (`UX-1041`); the session runs it.

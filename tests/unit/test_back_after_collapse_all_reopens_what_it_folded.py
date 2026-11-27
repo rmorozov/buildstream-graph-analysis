@@ -20,9 +20,14 @@ _COLLAPSE = r"""
   const wait = (ms) => new Promise((done) => setTimeout(done, ms));
   const shut = () => [...document.querySelectorAll("[data-collapsed='true']")].map((s) => s.getAttribute("data-section")).sort();
   if (HAND) document.querySelector(`[data-collapse="${HAND}"]`).click();
+  // UX-1375: read y once scroll anchoring stops moving it, not after a fixed second.
   scrollTo(0, 3000);
-  await wait(1000);
-  const y = scrollY;
+  let y = -1;
+  for (let still = 0, tries = 0; still < 4 && tries < 80; tries++) {
+    await wait(250);
+    still = scrollY === y ? still + 1 : 0;
+    y = scrollY;
+  }
   const before = shut();
   document.querySelector("[data-all='true']").click();
   await wait(1500);
@@ -57,4 +62,4 @@ def test_back_after_collapse_all_reopens_what_it_folded(browser, big, hand, widt
     assert got["before"] == ([hand] if hand else []), got
     assert got["during"] > 1, got
     assert got["after"] == got["before"], got
-    assert abs(got["back"] - got["y"]) <= 1 and got["y"] == 3000, got
+    assert got["y"] >= 3000 and abs(got["back"] - got["y"]) <= 1, got

@@ -83,7 +83,13 @@ def test_a_finding_is_open_until_a_reply_answers_it():
     assert [f["id"] for f in codex.open_findings([_finding(3)])] == [3]
 
 
-def test_a_boundary_wants_a_security_review_and_its_absence_is_a_note():
-    assert "security review wanted" in codex.security_note(["bga/viewer/app.js"], security_done=False)
-    assert codex.security_note(["bga/report/json.py"], security_done=False) is None
-    assert codex.security_note(["bga/viewer/app.js"], security_done=True) is None
+REVIEW_RULES = ("AGENTS.md", "REVIEW.md", "docs/contributing/codex-reviews.md", "docs/contributing/rules.md")
+
+
+def test_no_rule_requests_a_security_review():
+    """`UX-1388`: the owner's Codex security review never started; the code review is the one review."""
+    root = pathlib.Path(__file__).resolve().parents[2]
+    texts = {name: (root / name).read_text() for name in REVIEW_RULES + ("tools/dev_codex_status.py",)}
+    assert [name for name, text in texts.items() if "@codex security review" in text] == []
+    assert "security_review" not in texts["tools/dev_codex_status.py"]
+    assert "**No security review.**" in texts["docs/contributing/codex-reviews.md"]

@@ -1064,20 +1064,23 @@ def _render_structural_overview(metrics: dict, bottleneck: dict, parallelism: di
         )
     # UX-288: records in `analyze/v2`, bare uids in a v1
     # document - `schemas` knows both, this line reads names.
-    choke_points = schemas.choke_point_uids(bottleneck)
-    if choke_points:
+    choke_points, unpriced = schemas.measured_bottlenecks(bottleneck)
+    if choke_points or unpriced:
         # UX-33: name them. `Bottlenecks Identified: 5` with the
         # names only in the JSON was, on a real mis-shaped
         # project, the single most actionable output the tool
         # produced - reduced to an integer.
         shown = choke_points[:_CHOKE_POINTS_SHOWN_MAX]
+        # UX-1377: no BUILD span is not a cache hit - an unstarted element has none either.
+        apart = f" ({len(unpriced)} without measured build time)" if unpriced else ""
+        overflow = (
+            f" (+{len(choke_points) - len(shown)} more, see --format json)" if len(choke_points) > len(shown) else ""
+        )
         lines.append(
-            f"  Bottlenecks Identified: {len(choke_points)} - {', '.join(shown)}"
-            + (
-                f" (+{len(choke_points) - len(shown)} more, see --format json)"
-                if len(choke_points) > len(shown)
-                else ""
-            )
+            f"  Bottlenecks Identified: {len(choke_points)}"
+            + (f" - {', '.join(shown)}" if shown else "")
+            + overflow
+            + apart
         )
     if parallelism:
         # UX-49: `mean_width` is the number that actually answers

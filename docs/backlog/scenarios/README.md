@@ -30,17 +30,9 @@ task file, which is the only place it ever lived twice.
 | UX-1259 | [UX-861's host-core cap keeps a builder-bound run at 4 builders while the CPU could feed 18](UX-1259-the-host-core-cap-holds-a-builder-bound-run-whose-cpu-idles.md) | analysis | Medium | R1, R5 | 🔴 Not Started |
 | UX-1280 | [the x86 16-core cells of the builders-and-auto default are the owner's run, and it is written down](UX-1280-the-x86-16-core-cells-are-the-owners-run.md) | capture | High | R4, R5 | 🔴 Not Started |
 | UX-1281 | [the memgiant Graviton leg outlives its runner on the third repeat, and its readings die with it](UX-1281-the-memgiant-leg-loses-its-runner-on-a-later-repeat.md) | capture | Medium | R4, R5 | 🔴 Not Started |
-| UX-1358 | [an element's serial stretches are measured, and "already compute-bound" is refused while they are large](UX-1358-serial-stretches-are-measured.md) | analysis | High | R2, R1 | 🟡 In Progress |
-| UX-1360 | [a never-read build edge counts executed binaries and probes as reads](UX-1360-a-never-read-edge-counts-execs-and-probes.md) | capture | High | R2, R3 | 🟡 In Progress |
 | UX-1361 | [the weekly real-project capture cannot go dark without someone hearing](UX-1361-the-weekly-real-project-capture-cannot-go-dark.md) | capture | High | R4 | 🟡 In Progress |
-| UX-1367 | [an analysis written by an older bga is not served as the current one](UX-1367-a-stale-analysis-is-not-served-as-current.md) | analysis | Medium | R1 | 🔴 Not Started |
-| UX-1375 | [the Back-after-Collapse-all guard waits for a settled page, not a fixed second](UX-1375-the-back-guard-waits-for-a-settled-page-not-a-fixed-second.md) | viewer | Medium | R1 | 🔴 Not Started |
 | UX-1376 | [`correlate` on a run with no Plane 2 answers in the format it was asked for](UX-1376-correlate-without-plane-2-answers-in-its-format.md) | cli | Low | R3 | 🔴 Not Started |
-| UX-1377 | [an incremental run lists cached elements as bottlenecks](UX-1377-an-incremental-run-lists-cached-elements-as-bottlenecks.md) | analysis | Medium | R3, R1 | 🔴 Not Started |
-| UX-1380 | [the doctor's compiler clause in `cli.md` names the order `UX-1374` replaced](UX-1380-the-doctor-clause-names-the-old-compiler-order.md) | docs | Low | R4 | 🔴 Not Started |
-| UX-1381 | [the `triager` agent is in no guide and not in `CLAUDE.md`'s pipeline](UX-1381-the-triager-is-in-no-guide.md) | docs | Low | R8 | 🔴 Not Started |
-| UX-1383 | [a dependabot pip pull request arrives with its lock](UX-1383-a-dependabot-pip-pr-arrives-with-its-lock.md) | guards | Medium | every dependabot pip bump | 🔴 Not Started |
-| UX-1384 | [`make lock` resolves on the Python the lock check compiles on](UX-1384-make-lock-resolves-on-the-lock-check-s-python.md) | guards | Medium | anyone who regenerates `requirements.lock` | 🔴 Not Started |
+| UX-1383 | [a dependabot pip pull request arrives with its lock](UX-1383-a-dependabot-pip-pr-arrives-with-its-lock.md) | guards | Medium | every dependabot pip bump | 🟡 In Progress |
 
 **The narrative round headings below are retired at round 94**
 (`UX-763`): each one hand-types an id range and a date that a register

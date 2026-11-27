@@ -14,10 +14,9 @@ another vendor. It does not replace the push gate, CI, the Claude
    touches code (not `docs/`, not a derived register, not a catch-up or
    adopt) asks for one more review. `python3 tools/dev_codex_status.py <pr>`
    says which.
-3. **Security review** (`@codex security review`) only when the PR's diff
-   crosses a boundary in [the threat model](../design/threat-model.md).
-   The repository is public: findings post in the PR, as every review
-   comment does.
+3. **No security review.** Codex's security review never started for the
+   owner (#338), so it is not requested (`UX-1388`); the code review's
+   Security pass reads [the threat model](../design/threat-model.md).
 4. **Not at all** on dependabot PRs, and on retro or memo PRs with no code.
 
 ## Findings
@@ -33,16 +32,14 @@ code change.
 
 A review that never starts is recorded as blocked in the round document
 and the PR proceeds on CI and the verifiers; a missing external review
-does not freeze the queue. On #338 the security review never started,
-and the summary comment's `codex-review-state:v1` marker still read
+does not freeze the queue. On #338 the summary comment's `codex-review-state:v1` marker still read
 `running` after the code review was submitted, so completion is read
 from the bot's review or its +1 reaction, never from the marker.
 
 ## Grounding
 
-Codex starts at [AGENTS.md](../../AGENTS.md), then [REVIEW.md](../../REVIEW.md);
-a security review also reads [the threat model](../design/threat-model.md).
+Codex starts at [AGENTS.md](../../AGENTS.md), then [REVIEW.md](../../REVIEW.md),
+whose Security pass reads [the threat model](../design/threat-model.md).
 The PR names its task files, which carry the Required Fix and Acceptance
 Test a reviewer checks the code against. Invocation:
-[code review rules](https://developers.openai.com/blog/custom-code-review-rules-for-codex),
-[security review](https://developers.openai.com/blog/scaling-cyber-defenders-with-daybreak).
+[code review rules](https://developers.openai.com/blog/custom-code-review-rules-for-codex).

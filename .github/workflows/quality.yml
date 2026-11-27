@@ -5,6 +5,8 @@ name: Quality
 on:
   pull_request:
     branches: [main]
+  # UX-1383: the dependabot lock commit, pushed with GITHUB_TOKEN, is checked by dispatch.
+  workflow_dispatch:
   schedule:
     - cron: "0 6 * * 1"
 
@@ -48,11 +50,8 @@ jobs:
       - name: The lockfile is the dev extra, resolved
         run: |
           pip install uv
-          # UX-1128: seeded, so an upstream release is Dependabot's row, not a red audit.
-          cp requirements.lock /tmp/requirements.lock
-          uv pip compile pyproject.toml --extra dev -o /tmp/requirements.lock -q
-          diff <(grep -v '^#' requirements.lock) <(grep -v '^#' /tmp/requirements.lock) \
-            || { echo "requirements.lock is stale: run make lock"; exit 1; }
+          # UX-1128 seeds it from the lock; UX-1384: the Makefile names the Python, as `make lock` does.
+          make lock-check
       - name: Audit the lockfile
         run: |
           pip install pip-audit

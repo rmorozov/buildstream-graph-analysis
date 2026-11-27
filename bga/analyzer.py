@@ -2539,6 +2539,11 @@ class BuildEfficiencyAnalyzer:
                 for uid in set(element_durations) | set(work_durations)
             },
             element_head_durations=head_durations,
+            built_elements={
+                t.task_key.element_uid
+                for t in self.normalized_tasks
+                if getattr(t.task_key.task_kind, 'value', t.task_key.task_kind) == 'BUILD' and t.dur_us > 0
+            },
         )
 
         # Run full structural analysis
@@ -2740,6 +2745,8 @@ class BuildEfficiencyAnalyzer:
                     {'element_uid': uid, 'downstream_count': result.bottleneck.choke_point_impact.get(uid)}
                     for uid in result.bottleneck.choke_points
                 ],
+                # UX-1377: the choke points this run has no duration for (cached or pulled), beside the list.
+                'unpriced_choke_points': list(result.bottleneck.unpriced_choke_points),
                 'resource_contention': result.bottleneck.resource_contention,
                 'longest_serial_chain': result.bottleneck.longest_serial_chain,
                 'serial_chain_length': result.bottleneck.serial_chain_length,

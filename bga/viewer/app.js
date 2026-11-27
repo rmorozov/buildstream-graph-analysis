@@ -148,7 +148,8 @@ export function stampHeader(doc, payload, run) {
  * the two rendered identically, so every payload key a later round
  * added was missing from every existing run with nothing on the page to
  * say so. The staleness test is `UX-249`'s contract set, computed in
- * `tools/bga_view.py`; this only spells it.
+ * `tools/bga_view.py`; this only spells it. `UX-1367`: a version that
+ * moved with no contract moving gets its own, shorter sentence.
  */
 export function analysisSentence(note) {
   if (!note?.source) return null;
@@ -158,6 +159,10 @@ export function analysisSentence(note) {
   if (!note.stale) return `analysed at capture ${by}`;
   const absent = note.sections_absent?.length ?? 0;
   const moved = note.contracts_moved?.length ?? 0;
+  if (note.version_moved && !moved) {
+    return `analysed at capture ${by}; this is bga ${note.this_build}, `
+      + `whose analysis may differ \u2014 re-run with \`${note.reanalyse}\``;
+  }
   const why = moved
     ? `${moved} of the contracts it records have moved since`
     : "it records no contract set, so what it is missing cannot be checked";

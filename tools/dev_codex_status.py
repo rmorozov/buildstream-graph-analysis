@@ -8,9 +8,7 @@ summary comment's `codex-review-state:v1` marker is printed, never
 trusted: on PR 338 it still read `running` after the review was submitted.
 A finding is open until a reply answers it. The reviewed sha may trail
 the head when nothing after it touches code (catch-ups, adopts, docs).
-The security review is wanted only when the diff crosses a boundary in
-`docs/design/threat-model.md`; its only reading is the marker, and not
-started is reported, not failed.
+No security review is read or wanted (UX-1388).
 
 Exit 1 names each problem; 0 means the PR may go to its owner. Reads
 `GITHUB_TOKEN` (or `GH_TOKEN`) and `git diff` in this checkout.
@@ -31,14 +29,6 @@ BOT = "chatgpt-codex-connector[bot]"
 MARKER = re.compile(r"codex-review-state:v1 (\{.*?\}) -->")
 NEXT = re.compile(r'<([^>]+)>;\s*rel="next"')
 CODE_SUFFIXES = (".py", ".js", ".mjs", ".c", ".h", ".cc", ".sh", ".yml", ".yaml", ".toml", ".css", ".html", ".lock")
-BOUNDARIES = (
-    "tools/bga_view.py",
-    "bga/viewer/",
-    "bga/anonymize.py",
-    "tools/native_trace/",
-    "tools/jobserver/",
-    ".github/workflows/",
-)
 
 
 def is_code(path):
@@ -46,10 +36,6 @@ def is_code(path):
     if path.startswith(".claude/"):
         return True
     return not path.startswith("docs/") and (path.endswith(CODE_SUFFIXES) or "." not in path.rsplit("/", 1)[-1])
-
-
-def crosses_boundary(paths):
-    return sorted(p for p in paths if p.startswith(BOUNDARIES))
 
 
 def reviewed_shas(reviews, reactions, marker_sha=None):
@@ -94,13 +80,6 @@ def verdict(head, shas, findings, changed_since):
     return problems, notes
 
 
-def security_note(pr_paths, security_done):
-    crossing = crosses_boundary(pr_paths)
-    if crossing and not security_done:
-        return f"security review wanted ({', '.join(crossing[:3])}) and not started - recorded as blocked"
-    return None
-
-
 def _fetch(url):
     """`(body, next page url or None)` for one GitHub REST page."""
     token = os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN")
@@ -135,21 +114,18 @@ def main(argv=None):
     parser.add_argument("pr", type=int)
     args = parser.parse_args(argv)
     pr = _get(f"/pulls/{args.pr}")
-    head, base = pr["head"]["sha"], pr["base"]["sha"]
+    head = pr["head"]["sha"]
     reviews = pages(f"/pulls/{args.pr}/reviews?per_page=100")
     reactions = pages(f"/issues/{args.pr}/reactions?per_page=100")
     comments = pages(f"/pulls/{args.pr}/comments?per_page=100")
     issue_comments = pages(f"/issues/{args.pr}/comments?per_page=100")
     state = marker(issue_comments) or {}
-    security_done = (state.get("security_review") or {}).get("status") == "completed"
     problems, notes = verdict(
         head,
         reviewed_shas(reviews, reactions, (state.get("code_review") or {}).get("commit_sha")),
         open_findings(comments),
         lambda sha: _paths(sha, head),
     )
-    security = security_note(_paths(base, head), security_done)
-    notes += [security] if security else []
     print(f"#{args.pr} head {head[:10]}; marker says {json.dumps(state, sort_keys=True)}")
     for line in notes:
         print("  note:", line)

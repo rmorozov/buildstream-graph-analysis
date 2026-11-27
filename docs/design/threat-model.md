@@ -1,4 +1,4 @@
-# Security review threat model
+# Threat model
 
 Review guidance for BGA's current local-tool design. These are assets,
 boundaries and checks to apply to a diff, not a claim that every control

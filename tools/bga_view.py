@@ -286,6 +286,20 @@ def published_analysis(run: str) -> Optional[dict]:
     return document if isinstance(document, dict) else None
 
 
+def served_analysis(run: str, reanalyse: bool = False) -> Optional[dict]:
+    """The stored analysis the page serves, or None when it is analysed here.
+
+    A stored analysis that recorded Plane 2 as not captured, with a Plane 2
+    report now beside the run, is not served: the terminal says "beside this run" (`UX-1389`).
+    """
+    from bga import plane2 as plane2_shape
+
+    stored = None if reanalyse else published_analysis(run)
+    if (stored or {}).get("plane2_absence") == plane2_shape.NOT_CAPTURED and plane2_shape.attachable(run)[0]:
+        return None
+    return stored
+
+
 def _timed_capture(name: str, argv: list[str]) -> dict:
     """`_capture`, announced and timed through `bga.progress` (UX-1077)."""
     from bga import progress
@@ -376,7 +390,7 @@ def analysis_note(run: str, reanalyse: bool = False) -> dict:
     capture published nothing was analysed here whether or not the flag
     was given.
     """
-    stored = published_analysis(run)
+    stored = served_analysis(run, reanalyse)
     return analysis_source(stored, reanalyse or stored is None)
 
 
@@ -415,7 +429,7 @@ def payloads(
     # `UX-533`: `--reanalyse` asks for *this* build's answer. The stored
     # file is read, never written - it is the capture-time analysis the
     # CI comment quotes, and overwriting it would delete that.
-    stored = None if reanalyse else published_analysis(run)
+    stored = served_analysis(run, reanalyse)
     documents = {"report.json": stored or _analyze_now(run)}
     # `UX-203`: the comparison the user already has. `bga snapshot`
     # compares against the previous run automatically, so by the time

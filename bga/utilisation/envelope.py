@@ -26,6 +26,7 @@ element's own cap. Deciding between them is `UX-677`'s.
 # whole store, but importing it does not: this is a pure function of a
 # list, and the module costs `hostinfo`, `run_store` and `schemas`,
 # which `bga.analyzer` has already imported by the time this runs.
+from ..floors.cpu import effective_max_jobs
 from ..store_aggregate import percentile as percentile
 
 #: `UX-676`: how many interval rows are published per table. The same
@@ -185,7 +186,8 @@ def compute(samples: dict, run: dict) -> dict:
             "is not a gap",
         }
     cores = series[-1].get("cores")
-    configured = ((run.get("builders") or 0) * (run.get("native_max_jobs") or 0)) or None
+    jobs = effective_max_jobs(run.get("native_max_jobs"), cores)
+    configured = ((run.get("builders") or 0) * (jobs or 0)) or None
     binding = min(x for x in (configured, cores) if x) if (configured or cores) else None
     if not binding:
         return {

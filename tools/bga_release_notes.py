@@ -1,18 +1,9 @@
 """UX-252: the release notes' body is generated from the closed rows.
 
-Every closed backlog row already carries a one-line statement of what
-was wrong and a summary of what shipped, written at the moment the work
-was verified — which is the only moment anyone knows the detail. There
-are 238 of them.
+A hand-written body would be a third copy of facts the task file's Outcome
+and the closed row already hold, so only the head is written.
 
-A hand-written body would be a **third** copy of those facts, after the
-task file's Outcome and the closed row. So the body is generated and
-only the *head* is written: the theme, the contract delta, and what a
-consumer has to do about it.
-
-Markers are **closed-row counts**, the unit the release ledger and
-`docs/audits/architecture-review.md` already use: `--from 238 --to 250`
-emits the rows that closed between those two states.
+Markers are closed-row counts, the unit the release ledger uses:
 
     bga release-notes --from 238 --to 250
 """
@@ -69,12 +60,17 @@ def _topic(item_id):
     return "uncategorised"
 
 
+_LINKED = re.compile(r"\[(?P<text>.*)\]\((?P<url>[^)]*)\)")
+
+
 def _first_sentence(text, limit=200):
     """The row's summary is a paragraph; a release body wants a line."""
-    cut = re.split(r"(?<=[.;])\s", text, maxsplit=1)[0].strip()
+    linked = _LINKED.fullmatch(text.strip())
+    # a linked title is one unit: only the length limit may shorten it, never a `;` inside it
+    cut = linked["text"] if linked else re.split(r"(?<=[.;])\s", text, maxsplit=1)[0].strip()
     if len(cut) > limit:
         cut = cut[:limit].rsplit(" ", 1)[0] + "…"
-    return cut
+    return f"[{cut}]({linked['url']})" if linked else cut
 
 
 def render(start: int, end: int) -> str:

@@ -286,6 +286,37 @@ def published_analysis(run: str) -> Optional[dict]:
     return document if isinstance(document, dict) else None
 
 
+def served_analysis(run: str, reanalyse: bool = False) -> Optional[dict]:
+    """The stored analysis the page serves, or None when it is analysed here.
+
+    Not served (`UX-1389`): one that recorded Plane 2 absent with a report now beside the run. Kept:
+    one that joined a report (`element_join`), and one whose report is over the size bound, with the refusal.
+    """
+    from bga import plane2 as plane2_shape
+
+    stored = None if reanalyse else published_analysis(run)
+    if not stored or stored.get("plane2_absence") != plane2_shape.NOT_CAPTURED:
+        return stored
+    if stored.get("plane2_coverage") or "element_join" in stored or "element_join_coverage" in stored:
+        return stored
+    path, refusal = plane2_shape.attachable(run, stored=True)
+    if path:
+        return None
+    return _refused(stored, refusal) if refusal else stored
+
+
+def _refused(stored: dict, refusal: str) -> dict:
+    """`stored` with the size refusal said in `plane2_absence` and in the sizing sentence made before it."""
+    from bga import plane2 as plane2_shape
+
+    served = {**stored, "plane2_absence": refusal}
+    sizing = stored.get("agent_sizing")
+    if isinstance(sizing, dict) and isinstance(sizing.get("absence"), str):
+        said = sizing["absence"].replace(plane2_shape.WHY_NOT_CAPTURED, plane2_shape.WHY_TOO_LARGE)
+        served["agent_sizing"] = {**sizing, "absence": said}
+    return served
+
+
 def _timed_capture(name: str, argv: list[str]) -> dict:
     """`_capture`, announced and timed through `bga.progress` (UX-1077)."""
     from bga import progress
@@ -305,17 +336,16 @@ def _analyze_now(run: str) -> dict:
     """
     from bga import plane2 as plane2_shape
 
-    # UX-329: the same discovery and the same bound `bga analyze` uses,
-    # from `bga.plane2` - this function and the CLI held two copies of
-    # the policy, and the copies disagreed: the page attached the
-    # sibling and the terminal did not.
+    # UX-329: the same discovery and bound `bga analyze` uses, from `bga.plane2`;
+    # two copies of the policy once disagreed, the page attaching what the terminal did not.
     argv = ["analyze", run, "--format", "json"]
     path, refusal = plane2_shape.attachable(run)
     if path:
         argv += ["--plane2", path]
     elif refusal:
         print(refusal, file=sys.stderr)
-    return _timed_capture("analyze", argv)
+    fresh = _timed_capture("analyze", argv)
+    return _refused(fresh, refusal) if refusal and isinstance(fresh, dict) else fresh
 
 
 #: `UX-533`: the two answers to "whose analysis is this page showing".
@@ -376,7 +406,7 @@ def analysis_note(run: str, reanalyse: bool = False) -> dict:
     capture published nothing was analysed here whether or not the flag
     was given.
     """
-    stored = published_analysis(run)
+    stored = served_analysis(run, reanalyse)
     return analysis_source(stored, reanalyse or stored is None)
 
 
@@ -415,7 +445,7 @@ def payloads(
     # `UX-533`: `--reanalyse` asks for *this* build's answer. The stored
     # file is read, never written - it is the capture-time analysis the
     # CI comment quotes, and overwriting it would delete that.
-    stored = None if reanalyse else published_analysis(run)
+    stored = served_analysis(run, reanalyse)
     documents = {"report.json": stored or _analyze_now(run)}
     # `UX-203`: the comparison the user already has. `bga snapshot`
     # compares against the previous run automatically, so by the time

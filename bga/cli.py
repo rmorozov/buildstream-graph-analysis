@@ -32,7 +32,9 @@ from . import plane2 as plane2_shape
 from . import shown as qty
 from .analyzer import (
     MODELLED_AXIS_CLAUSE,
+    MODELLED_AXIS_UNRECORDED_CLAUSE,
     UNMODELED_AXIS_CLAUSE,
+    UNMODELLED_UNRECORDED_CLAUSE,
     BuildEfficiencyAnalyzer,
 )
 from .compare import (
@@ -60,6 +62,7 @@ from .exceptions import (
     AnalysisError,
     IngestionError,
 )
+from .floors.cpu import effective_max_jobs
 from .help_format import CompactHelp
 from .ingest.loader import load_historical_runs
 from .logging_config import configure_logging
@@ -326,20 +329,7 @@ def _finish_capacity_recommendation(analyzer, result, native_report: dict) -> No
     """
     if not result.capacity_recommendation:
         return
-    # UX-116 item 3: the "currently unmodeled axis" note is retired
-    # *only* where the block ran. Elsewhere it stays, because
-    # elsewhere it is still true - and the substitution is on a named
-    # constant rather than a re-typed sentence, so the two cannot
-    # drift into disagreeing about which clause is being retired.
-    floors = getattr(result, 'floors', None)
-    note = (floors or {}).get('capacity_model_note') or ''
-    if floors is not None and UNMODELED_AXIS_CLAUSE in note:
-        floors['capacity_model_note'] = note.replace(UNMODELED_AXIS_CLAUSE, MODELLED_AXIS_CLAUSE, 1)
-    # UX-677: per-element `max-jobs`, on the same document - not a new
-    # contract id. Joins `UX-675`'s raw host CPU series (present on
-    # every capture) directly to each element's BUILD span; per-element
-    # peak RSS comes from this same Plane 2 report when it carries one,
-    # and is skipped rather than assumed when absent.
+    # UX-677: per-element `max-jobs` on the same document: host CPU series joined to each BUILD span.
     advice = _max_jobs_advice(analyzer, native_report)
     if advice:
         # UX-739: priced by replay, where the normalized tasks (for
@@ -354,6 +344,17 @@ def _finish_capacity_recommendation(analyzer, result, native_report: dict) -> No
             (native_report or {}).get('binary_cost'),
         )
         result.capacity_recommendation['max_jobs_advice'] = advice
+    # UX-116 item 3: the "unmodeled axis" clause is retired only where the block ran.
+    floors = getattr(result, 'floors', None)
+    note = (floors or {}).get('capacity_model_note') or ''
+    if floors is not None and UNMODELED_AXIS_CLAUSE in note:
+        # UX-1390: the per-element model is claimed only where some advice row yielded an estimate, not a refusal.
+        if 'native_max_jobs' not in (getattr(analyzer, 'capacity_check_skipped_inputs', None) or []):
+            clause = MODELLED_AXIS_CLAUSE
+        else:
+            estimated = any(row.get('recommended_max_jobs') is not None for row in (advice or {}).get('elements') or [])
+            clause = MODELLED_AXIS_UNRECORDED_CLAUSE if estimated else UNMODELLED_UNRECORDED_CLAUSE
+        floors['capacity_model_note'] = note.replace(UNMODELED_AXIS_CLAUSE, clause, 1)
 
 
 def _peak_rss_and_host_memory(
@@ -528,7 +529,12 @@ def _builder_pool_recommendation(analyzer, result) -> dict:
     max_jobs_by_uid = {e.uid: e.max_jobs for e in graph.elements} if graph else {}
     native_max_jobs = getattr(context, 'native_max_jobs', None)
     critical_path = schemas.critical_path_uids(getattr(result, 'signals', None) or {})
-    chain_widths = [max_jobs_by_uid.get(uid) or native_max_jobs for uid in critical_path]
+    chain_widths = [
+        effective_max_jobs(
+            native_max_jobs if max_jobs_by_uid.get(uid) is None else max_jobs_by_uid[uid], host_cpu_count
+        )
+        for uid in critical_path
+    ]
     critical_path_max_jobs = max((width or 1 for width in chain_widths), default=None)
     calibrated_cores = os.environ.get(_CALIBRATED_CORES_ENV)
     recommendation = compute_builder_pool_recommendation(

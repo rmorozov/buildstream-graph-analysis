@@ -39,6 +39,7 @@ derivation actually reads.
 
 | release | date | closed rows | kind |
 |---|---|---|---|
+| [0.6.3](#063--a-stale-analysis-says-so-and-ubuntu-2604-2026-11-27) | 2026-11-27 | 1333 | patch |
 | [0.6.2](#062--python-311-again-2026-11-05) | 2026-11-05 | 1313 | patch |
 | [0.6.1](#061--a-wheel-that-needs-no-compiler-2026-11-03) | 2026-11-03 | 1311 | patch |
 | [0.6.0](#060--findings-that-say-what-to-do-and-a-pool-that-fits-its-cgroup-2026-10-07) | 2026-10-07 | 1280 | breaking |
@@ -64,6 +65,96 @@ Both are wrong: `pyproject.toml` enters this history at `4ace856`
 (2026-08-13) and `0.2.0` is an ordinary release. The wrong correction
 was read off a shallow clone — `UX-633`, and `UX-637` for the cause.
 
+## 0.6.3 — a stale analysis says so, and Ubuntu 26.04 (2026-11-27)
+
+0.6.2 plus the nineteen rows closed since. The tools `bga` dispatches take
+`@last` and `@prev` like the rest of the surface (`UX-1385`); an
+`analyze.json` stored by another `bga` version is marked stale instead of
+served as current (`UX-1367`); an incremental run stops listing cached
+elements as bottlenecks (`UX-1377`); a dependency whose binary the build ran
+counts as read, and one that stages executables nobody opened or ran is
+skipped as uncovered rather than called unused (`UX-1360`); an element's
+serial stretches are measured, and "already compute-bound" is refused while
+they are large (`UX-1358`). The capture's sandbox stages on Ubuntu 24.04 and
+26.04 both (`UX-1386`, `UX-1387`). The release's own walk and review found
+four more, fixed before the cut: `bga view` draws a Plane 2 report that
+arrived beside a run after its analysis was stored (`UX-1389`), the capacity
+Note says why a modelled `--max-jobs` does not count (`UX-1390`), and
+`viewer.md` and the examples README say what the tree does (`UX-1392`,
+`UX-1393`); review of the cut found a release-notes bullet cut inside its
+link, which also mends eleven such bullets in 0.5.0's and 0.6.0's notes
+(`UX-1394`), and a release tag left on a reverted cut now reds the tag
+checks (`UX-1395`). A recorded `--max-jobs 0`, BuildStream's automatic
+setting, resolves to `min(cores, 8)` instead of reading as missing
+(`UX-1396`). Python 3.11 stays the floor.
+
+**Contract delta:** none — the twenty-eight contracts and the command
+surface are `0.6.2`'s, which makes the row `patch`.
+
+**Upgrade note:** none from 0.6.2. An `analyze.json` an older `bga` stored
+beside a capture now reads as stale on the page; `bga view RUN --reanalyse`
+draws it from the current analysis.
+0.6.1's note still holds: a prebuilt hook built on Ubuntu 24.04 needs
+**glibc 2.34 or newer** in the sandbox.
+
+**Carried findings.** Review 40 (closed-row marker 1325) filed `UX-1392`
+and `UX-1393`, and walk seed 7 filed `UX-1389` and `UX-1390`; all four
+closed before the cut. Walk seed 6's `UX-1376` - `correlate` with no Plane 2
+answers in a format it was not asked for - ships open.
+
+```text state
+contracts: analyze/v2 analyze/v3 analyze/v4 analyze/v5 analyze/v6 analyze/v7 blast/v1 blast/v2 bundle-manifest/v1 capacity-model/v1 capture-layout/v1 compare/v1 compare/v2 correlate/v1 correlate/v2 host-samples/v1 host/v1 host/v2 junction-cost/v1 plane2/v1 plane2/v2 plane2/v3 sources/v1 store-aggregate/v1 store/v1 sweep/v1 tail/v1 whatif/v1
+commands: analyze baseline blast bundle cache-logs cache-trend capture checkout-cost chrome-to-trace compare correlate cross-check diagnostics doctor extract floors gen-synthetic graph graph-from-show junction-cost log-to-chrome native-to-chrome rebuild-set release-notes replay run-context snapshot sweep timeline utilisation variant-cost view whatif wrap
+```
+
+### What landed
+
+<!-- generated: UX-252 1313→1333 -->
+20 scenarios closed (closed-row markers 1313 → 1333).
+
+**contracts**
+
+- [UX-1395](docs/backlog/scenarios/UX-1395-a-tag-on-a-reverted-cut-passes-the-tag-clauses.md) — [a tag on a reverted cut passes the tag clauses](docs/backlog/scenarios/UX-1395-a-tag-on-a-reverted-cut-passes-the-tag-clauses.md)
+- [UX-1391](docs/backlog/scenarios/UX-1391-cut-release-0-6-3.md) — [cut release 0.6.3, patch](docs/backlog/scenarios/UX-1391-cut-release-0-6-3.md)
+
+**cli**
+
+- [UX-1385](docs/backlog/scenarios/UX-1385-the-tools-take-the-stores-names.md) — [the tools `bga` dispatches take `@last` and `@prev` too](docs/backlog/scenarios/UX-1385-the-tools-take-the-stores-names.md)
+- [UX-1394](docs/backlog/scenarios/UX-1394-the-release-notes-cut-a-linked-title-at-its-semicolon.md) — [`bga release-notes` cuts a linked title at the semicolon inside it](docs/backlog/scenarios/UX-1394-the-release-notes-cut-a-linked-title-at-its-semicolon.md)
+
+**analysis**
+
+- [UX-1377](docs/backlog/scenarios/UX-1377-an-incremental-run-lists-cached-elements-as-bottlenecks.md) — [an incremental run lists cached elements as bottlenecks](docs/backlog/scenarios/UX-1377-an-incremental-run-lists-cached-elements-as-bottlenecks.md)
+- [UX-1367](docs/backlog/scenarios/UX-1367-a-stale-analysis-is-not-served-as-current.md) — [an analysis written by an older bga is not served as the current one](docs/backlog/scenarios/UX-1367-a-stale-analysis-is-not-served-as-current.md)
+- [UX-1358](docs/backlog/scenarios/UX-1358-serial-stretches-are-measured.md) — [an element's serial stretches are measured, and "already compute-bound" is refused while they are large](docs/backlog/scenarios/UX-1358-serial-stretches-are-measured.md)
+- [UX-1390](docs/backlog/scenarios/UX-1390-the-capacity-note-models-and-misses-max-jobs.md) — [one capacity Note says `--max-jobs` is modelled and missing](docs/backlog/scenarios/UX-1390-the-capacity-note-models-and-misses-max-jobs.md)
+- [UX-1396](docs/backlog/scenarios/UX-1396-a-recorded-max-jobs-0-is-read-as-missing.md) — [a recorded `--max-jobs 0` is read as missing](docs/backlog/scenarios/UX-1396-a-recorded-max-jobs-0-is-read-as-missing.md)
+
+**capture**
+
+- [UX-1360](docs/backlog/scenarios/UX-1360-a-never-read-edge-counts-execs-and-probes.md) — [a never-read build edge counts executed binaries and probes as reads](docs/backlog/scenarios/UX-1360-a-never-read-edge-counts-execs-and-probes.md)
+
+**viewer**
+
+- [UX-1375](docs/backlog/scenarios/UX-1375-the-back-guard-waits-for-a-settled-page-not-a-fixed-second.md) — [the Back-after-Collapse-all guard waits for a settled page, not a fixed second](docs/backlog/scenarios/UX-1375-the-back-guard-waits-for-a-settled-page-not-a-fixed-second.md)
+- [UX-1389](docs/backlog/scenarios/UX-1389-view-says-plane-2-is-beside-and-draws-it-absent.md) — [`bga view` says Plane 2 is beside the run, then draws it absent](docs/backlog/scenarios/UX-1389-view-says-plane-2-is-beside-and-draws-it-absent.md)
+
+**guards**
+
+- [UX-1386](docs/backlog/scenarios/UX-1386-the-bst-fixtures-run-on-ubuntu-26-04.md) — [the bst fixtures and wrapper run on Ubuntu 26.04](docs/backlog/scenarios/UX-1386-the-bst-fixtures-run-on-ubuntu-26-04.md)
+- [UX-1387](docs/backlog/scenarios/UX-1387-the-examples-stage-on-24-04-and-26-04.md) — [the examples stage on Ubuntu 24.04 and 26.04 both](docs/backlog/scenarios/UX-1387-the-examples-stage-on-24-04-and-26-04.md)
+- [UX-1388](docs/backlog/scenarios/UX-1388-the-codex-review-is-the-code-review-alone.md) — [the Codex review is the code review alone](docs/backlog/scenarios/UX-1388-the-codex-review-is-the-code-review-alone.md)
+- [UX-1384](docs/backlog/scenarios/UX-1384-make-lock-resolves-on-the-lock-check-s-python.md) — [`make lock` resolves on the Python the lock check compiles on](docs/backlog/scenarios/UX-1384-make-lock-resolves-on-the-lock-check-s-python.md)
+
+**docs**
+
+- [UX-1380](docs/backlog/scenarios/UX-1380-the-doctor-clause-names-the-old-compiler-order.md) — [the doctor's compiler clause in `cli.md` names the order `UX-1374` replaced](docs/backlog/scenarios/UX-1380-the-doctor-clause-names-the-old-compiler-order.md)
+- [UX-1381](docs/backlog/scenarios/UX-1381-the-triager-is-in-no-guide.md) — [the `triager` agent is in no guide and not in `CLAUDE.md`'s pipeline](docs/backlog/scenarios/UX-1381-the-triager-is-in-no-guide.md)
+- [UX-1392](docs/backlog/scenarios/UX-1392-viewer-md-says-staleness-is-not-a-version-comparison.md) — [`viewer.md` says staleness is not a version comparison; `UX-1367` made it one](docs/backlog/scenarios/UX-1392-viewer-md-says-staleness-is-not-a-version-comparison.md)
+- [UX-1393](docs/backlog/scenarios/UX-1393-examples-readme-names-only-ubuntu-24-04.md) — [the examples README says only Ubuntu 24.04 stages without a warning](docs/backlog/scenarios/UX-1393-examples-readme-names-only-ubuntu-24-04.md)
+
+<!-- /generated -->
+
 ## 0.6.2 — Python 3.11 again (2026-11-05)
 
 0.6.1 with one change: `bga` installs and runs on **Python 3.11** again
@@ -85,6 +176,7 @@ and nothing checks it yet.
 seed 6's `UX-1376` and `UX-1377`.
 
 ```text state
+digest: 482ae001b0f6
 contracts: analyze/v2 analyze/v3 analyze/v4 analyze/v5 analyze/v6 analyze/v7 blast/v1 blast/v2 bundle-manifest/v1 capacity-model/v1 capture-layout/v1 compare/v1 compare/v2 correlate/v1 correlate/v2 host-samples/v1 host/v1 host/v2 junction-cost/v1 plane2/v1 plane2/v2 plane2/v3 sources/v1 store-aggregate/v1 store/v1 sweep/v1 tail/v1 whatif/v1
 commands: analyze baseline blast bundle cache-logs cache-trend capture checkout-cost chrome-to-trace compare correlate cross-check diagnostics doctor extract floors gen-synthetic graph graph-from-show junction-cost log-to-chrome native-to-chrome rebuild-set release-notes replay run-context snapshot sweep timeline utilisation variant-cost view whatif wrap
 ```
@@ -300,12 +392,12 @@ commands: analyze baseline blast bundle cache-logs cache-trend capture checkout-
 - [UX-1134](docs/backlog/scenarios/UX-1134-auto-oom-kills-a-memory-bound-giant-with-no-plan.md) — [`--jobserver auto` with no plan widens a memory-bound giant into the OOM killer](docs/backlog/scenarios/UX-1134-auto-oom-kills-a-memory-bound-giant-with-no-plan.md)
 - [UX-1287](docs/backlog/scenarios/UX-1287-doctor-names-the-c-compiler-the-capture-needs.md) — [`bga doctor` names the C compiler the capture compiles its hook with](docs/backlog/scenarios/UX-1287-doctor-names-the-c-compiler-the-capture-needs.md)
 - [UX-1301](docs/backlog/scenarios/UX-1301-four-capture-flags-appear-in-no-help-under-a-heading-that-says-they-do.md) — [four capture flags appear in no `--help`, under a heading that says they do](docs/backlog/scenarios/UX-1301-four-capture-flags-appear-in-no-help-under-a-heading-that-says-they-do.md)
-- [UX-1302](docs/backlog/scenarios/UX-1302-bga-snapshot-refuses-the-per-element-jobserver-and-capture-log-flags-capture-run.md) — [`bga snapshot` refuses the per-element jobserver and capture-log flags `capture run` takes, and no doc says…
+- [UX-1302](docs/backlog/scenarios/UX-1302-bga-snapshot-refuses-the-per-element-jobserver-and-capture-log-flags-capture-run.md) — [`bga snapshot` refuses the per-element jobserver and capture-log flags `capture run` takes, and no doc says so](docs/backlog/scenarios/UX-1302-bga-snapshot-refuses-the-per-element-jobserver-and-capture-log-flags-capture-run.md)
 - [UX-1304](docs/backlog/scenarios/UX-1304-bga-jobserver-env-is-validated-and-recorded-and-no-sandbox-ever-reads-it.md) — [`bga-jobserver-env` is validated and recorded, and no sandbox ever reads it](docs/backlog/scenarios/UX-1304-bga-jobserver-env-is-validated-and-recorded-and-no-sandbox-ever-reads-it.md)
 - [UX-1311](docs/backlog/scenarios/UX-1311-a-junctioned-elements-jobserver-annotation-never-reaches-the-shim.md) — [a junctioned element's jobserver annotation never reaches the shim](docs/backlog/scenarios/UX-1311-a-junctioned-elements-jobserver-annotation-never-reaches-the-shim.md)
-- [UX-1312](docs/backlog/scenarios/UX-1312-jobserver-auth-override-reads-its-groups-from-a-file-for-capture-run-and-snapshot.md) — [`--jobserver-auth-override` takes only inline groups, and real element names are long junction-relative…
+- [UX-1312](docs/backlog/scenarios/UX-1312-jobserver-auth-override-reads-its-groups-from-a-file-for-capture-run-and-snapshot.md) — [`--jobserver-auth-override` takes only inline groups, and real element names are long junction-relative paths](docs/backlog/scenarios/UX-1312-jobserver-auth-override-reads-its-groups-from-a-file-for-capture-run-and-snapshot.md)
 - [UX-1320](docs/backlog/scenarios/UX-1320-plane-2-keys-a-junctioned-element-by-its-full-name.md) — [Plane 2 keys a junctioned element by its full name, not the short name the shim keeps](docs/backlog/scenarios/UX-1320-plane-2-keys-a-junctioned-element-by-its-full-name.md)
-- [UX-1322](docs/backlog/scenarios/UX-1322-a-build-run-through-a-wrapper-script-is-captured.md) — [`bga snapshot -- ./build.sh` ends in a Python traceback;
+- [UX-1322](docs/backlog/scenarios/UX-1322-a-build-run-through-a-wrapper-script-is-captured.md) — [`bga snapshot -- ./build.sh` ends in a Python traceback; a project built through a wrapper cannot be captured](docs/backlog/scenarios/UX-1322-a-build-run-through-a-wrapper-script-is-captured.md)
 - [UX-1328](docs/backlog/scenarios/UX-1328-doctor-counts-what-junctions-stage.md) — [`bga doctor` warns every project whose toolchain arrives through a junction to run bga's own example scripts](docs/backlog/scenarios/UX-1328-doctor-counts-what-junctions-stage.md)
 - [UX-1331](docs/backlog/scenarios/UX-1331-doctor-points-at-the-error-where-it-prints-it.md) — [`doctor` says "read the error below" above the error, and warns about suspend inside a container](docs/backlog/scenarios/UX-1331-doctor-points-at-the-error-where-it-prints-it.md)
 - [UX-1315](docs/backlog/scenarios/UX-1315-a-nested-build-can-run-the-ninja-wrapper.md) — [a nested build can run the ninja wrapper](docs/backlog/scenarios/UX-1315-a-nested-build-can-run-the-ninja-wrapper.md)
@@ -315,7 +407,7 @@ commands: analyze baseline blast bundle cache-logs cache-trend capture checkout-
 - [UX-1283](docs/backlog/scenarios/UX-1283-the-pool-seed-is-handed-out-before-the-memory-gate.md) — [the pool's seed tokens are handed out before the memory gate has a say](docs/backlog/scenarios/UX-1283-the-pool-seed-is-handed-out-before-the-memory-gate.md)
 - [UX-1284](docs/backlog/scenarios/UX-1284-a-late-memory-peak-is-under-reserved.md) — [a link step that peaks above every compile before it is reserved at the compile's size](docs/backlog/scenarios/UX-1284-a-late-memory-peak-is-under-reserved.md)
 - [UX-1310](docs/backlog/scenarios/UX-1310-the-decision-log-says-which-auth-style-each-element-was-forced-to-and-why.md) — [the decision log says which auth style each element was forced to, and by which switch](docs/backlog/scenarios/UX-1310-the-decision-log-says-which-auth-style-each-element-was-forced-to-and-why.md)
-- [UX-1314](docs/backlog/scenarios/UX-1314-the-per-element-cpu-curve-samples-the-sandboxs-processes-not-host-pids-that-share-their-number.md) — [the per-element CPU curve samples the sandbox's processes, not host pids that share their…
+- [UX-1314](docs/backlog/scenarios/UX-1314-the-per-element-cpu-curve-samples-the-sandboxs-processes-not-host-pids-that-share-their-number.md) — [the per-element CPU curve samples the sandbox's processes, not host pids that share their number](docs/backlog/scenarios/UX-1314-the-per-element-cpu-curve-samples-the-sandboxs-processes-not-host-pids-that-share-their-number.md)
 - [UX-1339](docs/backlog/scenarios/UX-1339-the-opening-seed-can-exceed-a-cgroup-cap.md) — [the pool's opening width can exceed a cgroup cap, and nothing takes tokens back](docs/backlog/scenarios/UX-1339-the-opening-seed-can-exceed-a-cgroup-cap.md)
 
 **viewer**
@@ -633,7 +725,7 @@ commands: analyze baseline blast bundle cache-logs cache-trend capture checkout-
 - [UX-828](docs/backlog/scenarios/UX-0828-the-header-spends-14-of-the-viewport-on-a-filesystem-path.md) — [the header spends 14% of the viewport on a filesystem path](docs/backlog/scenarios/UX-0828-the-header-spends-14-of-the-viewport-on-a-filesystem-path.md)
 - [UX-831](docs/backlog/scenarios/UX-0831-a-max-jobs-advice-row-is-four-levels-deep.md) — [a max-jobs advice row is four levels deep](docs/backlog/scenarios/UX-0831-a-max-jobs-advice-row-is-four-levels-deep.md)
 - [UX-829](docs/backlog/scenarios/UX-0829-five-of-seven-joined-fields-on-the-elements-table-draw-no-column.md) — [five of seven joined fields on the elements table draw no column](docs/backlog/scenarios/UX-0829-five-of-seven-joined-fields-on-the-elements-table-draw-no-column.md)
-- [UX-837](docs/backlog/scenarios/UX-0837-structured-js-sits-at-the-ceiling-the-copy-format-preference-moves-out.md) — [structured.js sits at the ceiling;
+- [UX-837](docs/backlog/scenarios/UX-0837-structured-js-sits-at-the-ceiling-the-copy-format-preference-moves-out.md) — [structured.js sits at the ceiling; the copy-format preference moves out](docs/backlog/scenarios/UX-0837-structured-js-sits-at-the-ceiling-the-copy-format-preference-moves-out.md)
 - [UX-840](docs/backlog/scenarios/UX-0840-the-3e-summary-table-is-one-item-behind-the-bound-it-summarises.md) — [the §3e summary table is one item behind the bound it summarises](docs/backlog/scenarios/UX-0840-the-3e-summary-table-is-one-item-behind-the-bound-it-summarises.md)
 - [UX-864](docs/backlog/scenarios/UX-0864-a-one-key-per-item-map-is-a-table-with-filters.md) — [a one-key-per-item map is a table with filters](docs/backlog/scenarios/UX-0864-a-one-key-per-item-map-is-a-table-with-filters.md)
 - [UX-862](docs/backlog/scenarios/UX-0862-the-twin-table-hides-on-screen.md) — [the twin table hides on screen](docs/backlog/scenarios/UX-0862-the-twin-table-hides-on-screen.md)
@@ -737,7 +829,7 @@ commands: analyze baseline blast bundle cache-logs cache-trend capture checkout-
 - [UX-936](docs/backlog/scenarios/UX-0936-a-heavy-fixture-guard-excurses-on-a-record-that-is-not-too-low.md) — [a heavy-fixture guard excurses three times on a record that is not too low, so the ledger is reading the runner](docs/backlog/scenarios/UX-0936-a-heavy-fixture-guard-excurses-on-a-record-that-is-not-too-low.md)
 - [UX-890](docs/backlog/scenarios/UX-0890-the-trace-census-guard-has-three-unconfirmed-excursions.md) — [the trace-census guard has three unconfirmed CI excursions and no filing](docs/backlog/scenarios/UX-0890-the-trace-census-guard-has-three-unconfirmed-excursions.md)
 - [UX-917](docs/backlog/scenarios/UX-0917-the-fold-depth-guard-has-three-unconfirmed-excursions.md) — [the fold-depth guard has three unconfirmed CI excursions, spread over three weeks](docs/backlog/scenarios/UX-0917-the-fold-depth-guard-has-three-unconfirmed-excursions.md)
-- [UX-944](docs/backlog/scenarios/UX-0944-the-sysroot-fixture-clones-910mb-to-read-nine-files.md) — [the sysroot fixture clones 910 MB to read nine files, so its cost has two modes 30x apart and the reference entry is the median of…
+- [UX-944](docs/backlog/scenarios/UX-0944-the-sysroot-fixture-clones-910mb-to-read-nine-files.md) — [the sysroot fixture clones 910 MB to read nine files, so its cost has two modes 30x apart and the reference entry is the median of both](docs/backlog/scenarios/UX-0944-the-sysroot-fixture-clones-910mb-to-read-nine-files.md)
 - [UX-929](docs/backlog/scenarios/UX-0929-two-population-sized-guards-reach-three-excursions-in-one-run.md) — [population-sized guards reach three excursions in one run, and their records were frozen](docs/backlog/scenarios/UX-0929-two-population-sized-guards-reach-three-excursions-in-one-run.md)
 - [UX-912](docs/backlog/scenarios/UX-0912-the-timing-reference-is-unrepresentative-and-branches-pay-for-it.md) — [the timing reference is unrepresentative on four files, and branches pay for it](docs/backlog/scenarios/UX-0912-the-timing-reference-is-unrepresentative-and-branches-pay-for-it.md)
 - [UX-935](docs/backlog/scenarios/UX-0935-a-conflicted-path-is-counted-once-per-stage.md) — [a conflicted path is counted once per stage, so `--check --write` bakes a wrong number and calls the tree clean](docs/backlog/scenarios/UX-0935-a-conflicted-path-is-counted-once-per-stage.md)
@@ -747,26 +839,26 @@ commands: analyze baseline blast bundle cache-logs cache-trend capture checkout-
 - [UX-942](docs/backlog/scenarios/UX-0942-the-selector-misses-a-guard-that-reads-a-record-through-a-tool.md) — [the touching selector misses a guard that reads a record through a tool's constant](docs/backlog/scenarios/UX-0942-the-selector-misses-a-guard-that-reads-a-record-through-a-tool.md)
 - [UX-928](docs/backlog/scenarios/UX-0928-the-routing-rule-sends-a-prose-diff-to-a-protocol-that-opens-on-a-page.md) — [the routing rule sends a prose diff to a protocol that opens on a served page](docs/backlog/scenarios/UX-0928-the-routing-rule-sends-a-prose-diff-to-a-protocol-that-opens-on-a-page.md)
 - [UX-940](docs/backlog/scenarios/UX-0940-the-versions-the-behaviour-claims-were-confirmed-on-are-three.md) — [the BuildStream behaviour claims are pinned to three versions and nothing says which were re-confirmed](docs/backlog/scenarios/UX-0940-the-versions-the-behaviour-claims-were-confirmed-on-are-three.md)
-- [UX-941](docs/backlog/scenarios/UX-0941-the-only-job-that-builds-anything-is-a-population-of-one.md) — [the one job that builds anything real produces a single number per run and records none of them, so no instrument in this repository can read its…
-- [UX-926](docs/backlog/scenarios/UX-0926-a-round-that-leaves-no-trace-is-invisible-to-the-register.md) — [a round that leaves neither a document nor a ledger row is invisible to the register, and so to the guard whose job is to demand its…
+- [UX-941](docs/backlog/scenarios/UX-0941-the-only-job-that-builds-anything-is-a-population-of-one.md) — [the one job that builds anything real produces a single number per run and records none of them, so no instrument in this repository can read its clock](docs/backlog/scenarios/UX-0941-the-only-job-that-builds-anything-is-a-population-of-one.md)
+- [UX-926](docs/backlog/scenarios/UX-0926-a-round-that-leaves-no-trace-is-invisible-to-the-register.md) — [a round that leaves neither a document nor a ledger row is invisible to the register, and so to the guard whose job is to demand its document](docs/backlog/scenarios/UX-0926-a-round-that-leaves-no-trace-is-invisible-to-the-register.md)
 - [UX-948](docs/backlog/scenarios/UX-0948-the-push-gate-is-the-whole-suite-and-ci-runs-it-again.md) — [the push gate is the whole suite, and CI runs the same suite again before anything merges](docs/backlog/scenarios/UX-0948-the-push-gate-is-the-whole-suite-and-ci-runs-it-again.md)
 - [UX-956](docs/backlog/scenarios/UX-0956-a-docs-only-pull-request-runs-the-whole-matrix.md) — [a docs-only pull request runs the whole matrix, and the selector that could narrow it misses the guards that read documents by glob](docs/backlog/scenarios/UX-0956-a-docs-only-pull-request-runs-the-whole-matrix.md)
 - [UX-993](docs/backlog/scenarios/UX-0993-an-architect-shapes-a-row-before-a-round-schedules-it.md) — [an architect shapes a row before a round schedules it](docs/backlog/scenarios/UX-0993-an-architect-shapes-a-row-before-a-round-schedules-it.md)
 - [UX-994](docs/backlog/scenarios/UX-0994-a-round-spends-at-most-forty-percent-of-its-rows-on-process.md) — [a round spends at most forty percent of its rows on process](docs/backlog/scenarios/UX-0994-a-round-spends-at-most-forty-percent-of-its-rows-on-process.md)
 - [UX-991](docs/backlog/scenarios/UX-0991-the-docs-lanes-first-live-pr-never-ran-green.md) — [UX-956's docs lane never ran green on its first live PR](docs/backlog/scenarios/UX-0991-the-docs-lanes-first-live-pr-never-ran-green.md)
 - [UX-996](docs/backlog/scenarios/UX-0996-a-derived-figure-is-computed-where-it-is-read-never-committed.md) — [a derived figure is computed where it is read, never committed](docs/backlog/scenarios/UX-0996-a-derived-figure-is-computed-where-it-is-read-never-committed.md)
-- [UX-995](docs/backlog/scenarios/UX-0995-a-pull-request-runs-the-suite-on-the-newest-python-only.md) — [a pull request runs the suite on the newest Python only;
+- [UX-995](docs/backlog/scenarios/UX-0995-a-pull-request-runs-the-suite-on-the-newest-python-only.md) — [a pull request runs the suite on the newest Python only; main keeps the matrix](docs/backlog/scenarios/UX-0995-a-pull-request-runs-the-suite-on-the-newest-python-only.md)
 - [UX-992](docs/backlog/scenarios/UX-0992-the-push-gate-reads-the-main-checkouts-head-from-a-worktree.md) — [the push gate reads the main checkout's `HEAD` from a worktree](docs/backlog/scenarios/UX-0992-the-push-gate-reads-the-main-checkouts-head-from-a-worktree.md)
 - [UX-990](docs/backlog/scenarios/UX-0990-the-tools-behaviour-claims-are-outside-the-register.md) — [the BuildStream behaviour claims in `tools/` are outside the register `UX-940` built for `bga/`](docs/backlog/scenarios/UX-0990-the-tools-behaviour-claims-are-outside-the-register.md)
 - [UX-998](docs/backlog/scenarios/UX-0998-a-bookkeeping-finding-is-one-line-swept-once-a-round.md) — [a bookkeeping finding is one line in a ledger, swept once a round](docs/backlog/scenarios/UX-0998-a-bookkeeping-finding-is-one-line-swept-once-a-round.md)
 - [UX-999](docs/backlog/scenarios/UX-0999-a-weekly-retro-turns-repeated-bookkeeping-into-automation.md) — [a weekly retro turns repeated bookkeeping into automation](docs/backlog/scenarios/UX-0999-a-weekly-retro-turns-repeated-bookkeeping-into-automation.md)
 - [UX-979](docs/backlog/scenarios/UX-0979-a-guard-citation-names-a-class-a-rename-retired.md) — [§7a cites a guard class a rename retired, and no guard resolves the part after `::`](docs/backlog/scenarios/UX-0979-a-guard-citation-names-a-class-a-rename-retired.md)
 - [UX-977](docs/backlog/scenarios/UX-0977-the-coverage-section-states-the-surface-twice-and-the-guard-reads-one.md) — [the coverage section states the surface twice, and the guard reads one of them](docs/backlog/scenarios/UX-0977-the-coverage-section-states-the-surface-twice-and-the-guard-reads-one.md)
-- [UX-945](docs/backlog/scenarios/UX-0945-the-context-map-existence-check-reads-five-typed-top-level-names.md) — [the context map's existence check reads five typed top-level names, so a §6 line under any other directory is never checked against the…
+- [UX-945](docs/backlog/scenarios/UX-0945-the-context-map-existence-check-reads-five-typed-top-level-names.md) — [the context map's existence check reads five typed top-level names, so a §6 line under any other directory is never checked against the tree](docs/backlog/scenarios/UX-0945-the-context-map-existence-check-reads-five-typed-top-level-names.md)
 - [UX-997](docs/backlog/scenarios/UX-0997-a-record-ci-measures-lives-outside-main.md) — [a record CI measures lives outside main, and main carries only reviewed commits](docs/backlog/scenarios/UX-0997-a-record-ci-measures-lives-outside-main.md)
 - [UX-1000](docs/backlog/scenarios/UX-1000-an-area-page-names-each-scenarios-guard-and-ci-publishes-it.md) — [an area page names each scenario's guard, and CI publishes it where it can be read](docs/backlog/scenarios/UX-1000-an-area-page-names-each-scenarios-guard-and-ci-publishes-it.md)
 - [UX-1039](docs/backlog/scenarios/UX-1039-every-agent-names-its-model-and-effort.md) — [every agent names its model and effort, and the seams between tracks have owners](docs/backlog/scenarios/UX-1039-every-agent-names-its-model-and-effort.md)
-- [UX-938](docs/backlog/scenarios/UX-0938-an-acceptance-clause-can-name-a-reading-no-environment-takes.md) — [an acceptance clause can name a reading that no environment in this project ever takes, and nothing says so until the round that owes…
+- [UX-938](docs/backlog/scenarios/UX-0938-an-acceptance-clause-can-name-a-reading-no-environment-takes.md) — [an acceptance clause can name a reading that no environment in this project ever takes, and nothing says so until the round that owes it](docs/backlog/scenarios/UX-0938-an-acceptance-clause-can-name-a-reading-no-environment-takes.md)
 - [UX-950](docs/backlog/scenarios/UX-0950-the-flake-ledger-counts-a-runner-event-once-per-file.md) — [the flake ledger's excursions cluster by run, and the census counts a runner event once per file](docs/backlog/scenarios/UX-0950-the-flake-ledger-counts-a-runner-event-once-per-file.md)
 - [UX-955](docs/backlog/scenarios/UX-0955-a-population-entry-keeps-the-size-its-seconds-no-longer-describe.md) — [a population entry keeps the tree size its seconds no longer describe, so the gate scales the growth twice](docs/backlog/scenarios/UX-0955-a-population-entry-keeps-the-size-its-seconds-no-longer-describe.md)
 - [UX-1041](docs/backlog/scenarios/UX-1041-an-agent-cannot-repoint-the-shared-install-or-run-the-sweep.md) — [an agent cannot repoint the shared install or start the touching sweep](docs/backlog/scenarios/UX-1041-an-agent-cannot-repoint-the-shared-install-or-run-the-sweep.md)

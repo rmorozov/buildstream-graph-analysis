@@ -44,9 +44,11 @@ from dataclasses import dataclass, field
 from typing import Optional
 
 from . import hostinfo, schemas, sweep_curve
+from . import plane2 as plane2_shape
 from . import shown as qty
 from .findings import SEVERITY_HIGH, SEVERITY_INFO, SEVERITY_MEDIUM
 from .floors.capacity import compute_default_capacities
+from .floors.cpu import BST_MAX_JOBS_CEILING
 from .plural import plural as _count
 from .units import GIB, MIB, US_PER_S, kb_to_bytes, mb_to_bytes, s_to_us
 
@@ -1527,7 +1529,7 @@ def compute_agent_sizing(result, builders: Optional[int] = None) -> dict:
     if missing:
         two = len(missing) == 2
         if getattr(result, 'plane2_report', None) is None:
-            why = f"{'need' if two else 'needs'} Plane 2, which this run did not capture"
+            why = f"{'need' if two else 'needs'} Plane 2, {plane2_shape.why_absent(getattr(result, 'plane2_absence', None))}"
         else:
             why = f"{'were' if two else 'was'} not measured by this capture"
         absence = f"{' and '.join(missing).capitalize()} {why}."
@@ -1580,9 +1582,8 @@ def with_own_sweep(recommendation: dict, sweep: Optional[tuple]) -> dict:
     )
 
 
-#: BuildStream's `userconfig.yaml` `builders`, and `max-jobs: 0`'s `min(cores, 8)` ceiling (UX-09).
+#: BuildStream's `userconfig.yaml` `builders` (UX-09).
 BST_DEFAULT_BUILDERS = 4
-BST_MAX_JOBS_CEILING = 8
 
 
 def host_regime(host_cpu_count: Optional[int], chain_max_jobs: Optional[int]) -> Optional[str]:

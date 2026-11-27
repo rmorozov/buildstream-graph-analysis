@@ -57,11 +57,12 @@ Review rework (2026-11-27): two gaps in `served_analysis`, measured by the two n
 (`4 items: 2 failed, 2 passed`). (1) `bga analyze run --plane2 /elsewhere/report.json` stores `plane2_coverage` yet `plane2_absence == NOT_CAPTURED`
 (it describes what sat beside `run/`); an empty report then placed beside `run/` made `payloads` drop it and lose `plane2_coverage`.
 (2) a sibling `plane2.json` padded to `VIEW_MAX_BYTES + 1` made `attachable` return `(None, refusal)`; checking `[0]` alone served "not captured".
-Close: a stored `plane2_coverage` keeps the analysis; a refusal replaces `plane2_absence` on a copy (the stored Plane 1 figures stay), reusing `attachable`'s sentence.
+Close: a stored `plane2_coverage` keeps the analysis; a refusal replaces `plane2_absence` on a copy (the stored Plane 1 figures stay), worded by `attachable(run, stored=True)`: "this run's stored analysis was made without it", not "published no analysis", which a stored analysis contradicts.
 Full file -> 4 passed; `dev_sizes.py --check` named `tools/bga_view.py file_lines 2271 -> 2276`, adopted in a `sizes:` commit.
 
 | mutation | reddened | count |
 |---|---|---|
 | drop `or stored.get("plane2_coverage")` | `test_a_stored_analysis_that_joined_an_explicit_report_is_kept` | 1 failed, 3 passed |
 | `return {**stored, "plane2_absence": refusal} if refusal else stored` -> `return stored` | `test_a_report_over_the_size_bound_is_named_not_called_absent` | 1 failed, 3 passed |
+| `attachable(run, stored=True)` -> `attachable(run)` | `test_a_report_over_the_size_bound_is_named_not_called_absent` | 1 failed, 3 passed |
 | reverted | — | 4 passed |

@@ -66,9 +66,10 @@ def test_a_report_over_the_size_bound_is_named_not_called_absent(tmp_path):
     pad = plane2.VIEW_MAX_BYTES + 1 - (tmp_path / "plane2.json").stat().st_size
     with open(tmp_path / "plane2.json", "ab") as handle:
         handle.write(b" " * pad)
-    path, refusal = plane2.attachable(run)
+    path, refusal = plane2.attachable(run, stored=True)
     assert path is None and refusal
     report = view.payloads(run)["report.json"]
     assert report["plane2_absence"] == refusal != plane2.NOT_CAPTURED
+    assert "stored analysis was made without it" in refusal and "published no" not in refusal
     assert not report.get("plane2_coverage")
     assert view.analysis_note(run)["source"] == view.ANALYSIS_FROM_CAPTURE

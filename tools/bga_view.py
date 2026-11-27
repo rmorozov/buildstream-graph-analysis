@@ -299,7 +299,7 @@ def served_analysis(run: str, reanalyse: bool = False) -> Optional[dict]:
     stored = None if reanalyse else published_analysis(run)
     if not stored or stored.get("plane2_coverage") or stored.get("plane2_absence") != plane2_shape.NOT_CAPTURED:
         return stored
-    path, refusal = plane2_shape.attachable(run)
+    path, refusal = plane2_shape.attachable(run, stored=True)
     if path:
         return None
     return {**stored, "plane2_absence": refusal} if refusal else stored

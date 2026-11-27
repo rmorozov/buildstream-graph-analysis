@@ -404,7 +404,7 @@ def _recorded_nothing(path):
         return False
 
 
-def attachable(run_dir: str):
+def attachable(run_dir: str, stored: bool = False):
     """`(path, refusal)` for the Plane 2 report beside a run directory.
 
     `UX-329`: one discovery function, three callers. `bga correlate` and
@@ -416,10 +416,9 @@ def attachable(run_dir: str):
     "the viewer and the terminal can never disagree about what a run
     says".
 
-    `path` is the report to attach, or `None`. `refusal` is the sentence
-    to print when there **is** a report and it is not being attached -
-    which is the size bound, and is a thing to say rather than a thing
-    to do quietly (`UX-194`'s rule for an absent precondition).
+    `path` is the report to attach, or `None`. `refusal` is the sentence for a
+    report over the size bound, said rather than done quietly (`UX-194`);
+    `stored` words it for a Plane 1 analysis already stored (`UX-1389`).
     """
     from . import run_store
 
@@ -433,8 +432,9 @@ def attachable(run_dir: str):
     if size <= VIEW_MAX_BYTES:
         return path, None
     return None, (
-        f"Plane 2 is {run_store.human_bytes(size)} and this run published no "
-        f"analysis, so the report is rendered from Plane 1 alone — parsing it "
+        f"Plane 2 is {run_store.human_bytes(size)} and this run's "
+        f"{'stored analysis was made without it' if stored else 'capture published no analysis'}, "
+        f"so the report is rendered from Plane 1 alone — parsing it "
         f"here costs about {run_store.human_bytes(int(size * 2.9))} of memory. "
         f"`bga snapshot -- bst build TARGET` publishes an analysis "
         f"that carries both planes."

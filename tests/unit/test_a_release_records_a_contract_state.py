@@ -616,6 +616,12 @@ def _reaches(commit):
     return (code == 0 and out == commit), (out or "no common ancestor")
 
 
+def _pyproject_version(rev):
+    """`version` in `pyproject.toml` at `rev`, or `None`."""
+    found = re.search(r'^version = "(.*)"', _git("show", f"{rev}:pyproject.toml")[1], re.M)
+    return found.group(1) if found else None
+
+
 def _git(*argv):
     done = subprocess.run(("git",) + argv, capture_output=True, text=True, cwd=REPO, timeout=60)
     return done.returncode, done.stdout.strip()
@@ -672,6 +678,28 @@ class TestEveryVersionedReleaseIsTagged:
             elif found.group(1) != row["version"]:
                 wrong.append(f"{tag} names a commit whose pyproject.toml says {found.group(1)}, not {row['version']}")
         assert wrong == [], wrong
+
+    def test_no_later_commit_sets_a_tagged_version_again(self):
+        """A reverted cut keeps its version, its ancestry and its tag, so
+        the three clauses above pass on it; a re-cut is a later commit that
+        moves the version up to the same one again (`UX-1395`)."""
+        self._require_tags()
+        if _shallow():
+            pytest.skip(
+                "this checkout is shallow, so its history stops at a "
+                "boundary and reachability here is not the tree's answer"
+            )
+        stale = []
+        for row in _rows():
+            tag = f"v{row['version']}"
+            code, out = _git("log", "--format=%H", f"{tag}..HEAD", "-G", "^version = ", "--", "pyproject.toml")
+            for sha in out.split() if code == 0 else []:
+                now, before = (_pyproject_version(f"{sha}{hop}") for hop in ("", "^"))
+                if now == row["version"] and before and _version_tuple(before) < _version_tuple(now):
+                    stale.append(
+                        f"{tag} -> {_git('rev-parse', '--short', f'{tag}^{{commit}}')[1]}, re-cut at {sha[:8]}"
+                    )
+        assert stale == [], f"release tag(s) on a cut a later commit re-made: {stale}. Move the tag to the re-cut"
 
     def test_every_release_tag_is_reachable_from_here(self):
         """A tag on a commit this history cannot reach hands a reader

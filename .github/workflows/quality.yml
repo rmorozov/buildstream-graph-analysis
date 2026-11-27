@@ -5,6 +5,8 @@ name: Quality
 on:
   pull_request:
     branches: [main]
+  # UX-1383: the dependabot lock commit, pushed with GITHUB_TOKEN, is checked by dispatch.
+  workflow_dispatch:
   schedule:
     - cron: "0 6 * * 1"
 

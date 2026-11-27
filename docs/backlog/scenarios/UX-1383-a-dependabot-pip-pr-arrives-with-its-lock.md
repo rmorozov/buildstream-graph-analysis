@@ -33,10 +33,11 @@ no commit but dependabot's and the lock job's.
 (`UX-1384`'s `LOCK_COMPILE`, seeded, no `--upgrade` - the check's compile)
 and commit `requirements.lock` alone to that branch. Dependabot-triggered
 runs get a read-only token unless `permissions:` raises it, and a push
-made with `GITHUB_TOKEN` starts no workflow, so the checkout takes the
-`DEPENDABOT_LOCK_TOKEN` Dependabot secret (a fine-grained token, contents:
-write, this repository - the owner's to create) and falls back to
-`GITHUB_TOKEN` with a warning. Not `pull_request_target`: no base-branch
+made with `GITHUB_TOKEN` starts no workflow, so after its push the job
+dispatches `ci.yml` and `quality.yml` on the branch (`actions: write`): a
+`GITHUB_TOKEN` dispatch does start a run, and its checks land on the lock
+commit the PR shows - no personal token or secret (owner's call, 2026-11-27).
+Not `pull_request_target`: no base-branch
 token is needed, and none is handed to the PR's tree.
 `test_no_workflow_pushes_to_the_default_branch.py` admits
 `refs/heads/dependabot/pip/` literally. Once someone else commits,
@@ -80,6 +81,21 @@ if it moved past that sha, and commits the downloaded lock alone. 7 passed:
 | D12 `git commit -a` | 1 failed, 6 passed |
 | reverted | 7 passed |
 
+Owner's call (2026-11-27): no personal token. `publish` pushes with `GITHUB_TOKEN` and then
+runs `gh workflow run ci.yml|quality.yml --ref <branch>`; both declare `workflow_dispatch`.
+Evidence a dispatched run reaches the PR: #336's head `f5dbc365` carries the dispatched
+`capture` check (run 41242571111) among its pull-request checks; `main` has no branch
+protection naming required checks. A dispatched `ci.yml` run takes the non-PR shape - four
+Pythons and the bst jobs, no adopt job (those need `push`). Guard -> 8 passed:
+
+| mutation | count |
+|---|---|
+| D13 the dispatch loop removed | 1 failed, 7 passed |
+| D14 `ci.yml` without `workflow_dispatch` | 1 failed, 7 passed |
+| D15 `actions: write` dropped | 1 failed, 7 passed |
+| D16 the dispatch moved before the head check | 2 failed, 6 passed |
+| reverted | 8 passed |
+
 The Acceptance Test is the runner's: the next dependabot pip PR green on
-its first run, which needs the secret; the row stays open until then.
+its first run; the row stays open until then.
 

@@ -1,13 +1,13 @@
 # UX-1383: Dependabot edits pyproject.toml only, so its pip bump arrives
 # with no lock and reds pip-audit, lint and tests until a hand commit.
 # `generate` runs `make lock-sync` on the event's head sha with no write
-# credential; `publish` holds the token, runs no project code, checks the
-# branch has not moved and commits the generated lock alone.
+# credential; `publish` runs no project code, checks the branch has not
+# moved and commits the generated lock alone.
 #
-# A push made with GITHUB_TOKEN starts no workflow, so the lock commit
-# would carry no CI; DEPENDABOT_LOCK_TOKEN (a Dependabot secret, a
-# fine-grained token with contents: write on this repository) is the
-# token whose push does. Without it the job still pushes and warns.
+# A push made with GITHUB_TOKEN starts no workflow, but a dispatch made
+# with it does, and a dispatched run's checks land on the same commit the
+# pull request shows - so `publish` dispatches CI and Quality on the lock
+# commit, with no personal token or secret.
 name: Dependabot lock
 
 on:
@@ -47,18 +47,18 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      actions: write
     steps:
       - uses: actions/checkout@v7
         with:
           ref: ${{ github.event.pull_request.head.sha }}
-          token: ${{ secrets.DEPENDABOT_LOCK_TOKEN || github.token }}
       - uses: actions/download-artifact@v8
         with:
           name: requirements-lock
           path: ${{ runner.temp }}/lock
       - name: Push the lock to the dependabot branch
         env:
-          HAS_TOKEN: ${{ secrets.DEPENDABOT_LOCK_TOKEN != '' }}
+          GH_TOKEN: ${{ github.token }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           LOCK: ${{ runner.temp }}/lock/requirements.lock
         run: |
@@ -76,6 +76,6 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git commit -q -m "UX-1383: the lock for this bump (make lock-sync)" -- requirements.lock
           git push origin "HEAD:refs/heads/dependabot/pip/${GITHUB_HEAD_REF#dependabot/pip/}"
-          if [ "$HAS_TOKEN" != "true" ]; then
-            echo "::warning::pushed with GITHUB_TOKEN, which starts no CI on the lock commit - add the DEPENDABOT_LOCK_TOKEN Dependabot secret (UX-1383)"
-          fi
+          for workflow in ci.yml quality.yml; do
+            gh workflow run "$workflow" --ref "$GITHUB_HEAD_REF"
+          done

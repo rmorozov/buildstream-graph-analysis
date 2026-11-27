@@ -5,6 +5,8 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  # UX-1383: the dependabot lock commit, pushed with GITHUB_TOKEN, is checked by dispatch.
+  workflow_dispatch:
 
 # UX-197: every job here installs the dev extras, so every job should
 # *fail* rather than skip if one of them is missing. Without this the

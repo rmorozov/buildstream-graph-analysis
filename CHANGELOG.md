@@ -39,6 +39,7 @@ derivation actually reads.
 
 | release | date | closed rows | kind |
 |---|---|---|---|
+| [0.6.3](#063--a-stale-analysis-says-so-and-ubuntu-2604-2026-11-27) | 2026-11-27 | 1330 | patch |
 | [0.6.2](#062--python-311-again-2026-11-05) | 2026-11-05 | 1313 | patch |
 | [0.6.1](#061--a-wheel-that-needs-no-compiler-2026-11-03) | 2026-11-03 | 1311 | patch |
 | [0.6.0](#060--findings-that-say-what-to-do-and-a-pool-that-fits-its-cgroup-2026-10-07) | 2026-10-07 | 1280 | breaking |
@@ -64,6 +65,87 @@ Both are wrong: `pyproject.toml` enters this history at `4ace856`
 (2026-08-13) and `0.2.0` is an ordinary release. The wrong correction
 was read off a shallow clone — `UX-633`, and `UX-637` for the cause.
 
+## 0.6.3 — a stale analysis says so, and Ubuntu 26.04 (2026-11-27)
+
+0.6.2 plus the sixteen rows closed since. The tools `bga` dispatches take
+`@last` and `@prev` like the rest of the surface (`UX-1385`); an
+`analyze.json` stored by another `bga` version is marked stale instead of
+served as current (`UX-1367`); an incremental run stops listing cached
+elements as bottlenecks (`UX-1377`); a never-read build edge no longer
+counts executed binaries and probes as reads (`UX-1360`); an element's
+serial stretches are measured, and "already compute-bound" is refused while
+they are large (`UX-1358`). The capture's sandbox stages on Ubuntu 24.04 and
+26.04 both (`UX-1386`, `UX-1387`). The release's own walk and review found
+four more, fixed before the cut: `bga view` draws a Plane 2 report that
+arrived beside a run after its analysis was stored (`UX-1389`), the capacity
+Note says why a modelled `--max-jobs` does not count (`UX-1390`), and
+`viewer.md` and the examples README say what the tree does (`UX-1392`,
+`UX-1393`). Python 3.11 stays the floor.
+
+**Contract delta:** none — the twenty-eight contracts and the command
+surface are `0.6.2`'s, which makes the row `patch`.
+
+**Upgrade note:** none from 0.6.2. An `analyze.json` an older `bga` stored
+beside a capture now reads as stale on the page; `bga view RUN --reanalyse`
+draws it from the current analysis.
+0.6.1's note still holds: a prebuilt hook built on Ubuntu 24.04 needs
+**glibc 2.34 or newer** in the sandbox.
+
+**Carried findings.** Review 40 (closed-row marker 1325) filed `UX-1392`
+and `UX-1393`, and walk seed 7 filed `UX-1389` and `UX-1390`; all four
+closed before the cut. Walk seed 6's `UX-1376` - `correlate` with no Plane 2
+answers in a format it was not asked for - ships open.
+
+```text state
+contracts: analyze/v2 analyze/v3 analyze/v4 analyze/v5 analyze/v6 analyze/v7 blast/v1 blast/v2 bundle-manifest/v1 capacity-model/v1 capture-layout/v1 compare/v1 compare/v2 correlate/v1 correlate/v2 host-samples/v1 host/v1 host/v2 junction-cost/v1 plane2/v1 plane2/v2 plane2/v3 sources/v1 store-aggregate/v1 store/v1 sweep/v1 tail/v1 whatif/v1
+commands: analyze baseline blast bundle cache-logs cache-trend capture checkout-cost chrome-to-trace compare correlate cross-check diagnostics doctor extract floors gen-synthetic graph graph-from-show junction-cost log-to-chrome native-to-chrome rebuild-set release-notes replay run-context snapshot sweep timeline utilisation variant-cost view whatif wrap
+```
+
+### What landed
+
+<!-- generated: UX-252 1313→1330 -->
+17 scenarios closed (closed-row markers 1313 → 1330).
+
+**contracts**
+
+- [UX-1391](docs/backlog/scenarios/UX-1391-cut-release-0-6-3.md) — [cut release 0.6.3, patch](docs/backlog/scenarios/UX-1391-cut-release-0-6-3.md)
+
+**cli**
+
+- [UX-1385](docs/backlog/scenarios/UX-1385-the-tools-take-the-stores-names.md) — [the tools `bga` dispatches take `@last` and `@prev` too](docs/backlog/scenarios/UX-1385-the-tools-take-the-stores-names.md)
+
+**analysis**
+
+- [UX-1377](docs/backlog/scenarios/UX-1377-an-incremental-run-lists-cached-elements-as-bottlenecks.md) — [an incremental run lists cached elements as bottlenecks](docs/backlog/scenarios/UX-1377-an-incremental-run-lists-cached-elements-as-bottlenecks.md)
+- [UX-1367](docs/backlog/scenarios/UX-1367-a-stale-analysis-is-not-served-as-current.md) — [an analysis written by an older bga is not served as the current one](docs/backlog/scenarios/UX-1367-a-stale-analysis-is-not-served-as-current.md)
+- [UX-1358](docs/backlog/scenarios/UX-1358-serial-stretches-are-measured.md) — [an element's serial stretches are measured, and "already compute-bound" is refused while they are large](docs/backlog/scenarios/UX-1358-serial-stretches-are-measured.md)
+- [UX-1390](docs/backlog/scenarios/UX-1390-the-capacity-note-models-and-misses-max-jobs.md) — [one capacity Note says `--max-jobs` is modelled and missing](docs/backlog/scenarios/UX-1390-the-capacity-note-models-and-misses-max-jobs.md)
+
+**capture**
+
+- [UX-1360](docs/backlog/scenarios/UX-1360-a-never-read-edge-counts-execs-and-probes.md) — [a never-read build edge counts executed binaries and probes as reads](docs/backlog/scenarios/UX-1360-a-never-read-edge-counts-execs-and-probes.md)
+
+**viewer**
+
+- [UX-1375](docs/backlog/scenarios/UX-1375-the-back-guard-waits-for-a-settled-page-not-a-fixed-second.md) — [the Back-after-Collapse-all guard waits for a settled page, not a fixed second](docs/backlog/scenarios/UX-1375-the-back-guard-waits-for-a-settled-page-not-a-fixed-second.md)
+- [UX-1389](docs/backlog/scenarios/UX-1389-view-says-plane-2-is-beside-and-draws-it-absent.md) — [`bga view` says Plane 2 is beside the run, then draws it absent](docs/backlog/scenarios/UX-1389-view-says-plane-2-is-beside-and-draws-it-absent.md)
+
+**guards**
+
+- [UX-1386](docs/backlog/scenarios/UX-1386-the-bst-fixtures-run-on-ubuntu-26-04.md) — [the bst fixtures and wrapper run on Ubuntu 26.04](docs/backlog/scenarios/UX-1386-the-bst-fixtures-run-on-ubuntu-26-04.md)
+- [UX-1387](docs/backlog/scenarios/UX-1387-the-examples-stage-on-24-04-and-26-04.md) — [the examples stage on Ubuntu 24.04 and 26.04 both](docs/backlog/scenarios/UX-1387-the-examples-stage-on-24-04-and-26-04.md)
+- [UX-1388](docs/backlog/scenarios/UX-1388-the-codex-review-is-the-code-review-alone.md) — [the Codex review is the code review alone](docs/backlog/scenarios/UX-1388-the-codex-review-is-the-code-review-alone.md)
+- [UX-1384](docs/backlog/scenarios/UX-1384-make-lock-resolves-on-the-lock-check-s-python.md) — [`make lock` resolves on the Python the lock check compiles on](docs/backlog/scenarios/UX-1384-make-lock-resolves-on-the-lock-check-s-python.md)
+
+**docs**
+
+- [UX-1380](docs/backlog/scenarios/UX-1380-the-doctor-clause-names-the-old-compiler-order.md) — [the doctor's compiler clause in `cli.md` names the order `UX-1374` replaced](docs/backlog/scenarios/UX-1380-the-doctor-clause-names-the-old-compiler-order.md)
+- [UX-1381](docs/backlog/scenarios/UX-1381-the-triager-is-in-no-guide.md) — [the `triager` agent is in no guide and not in `CLAUDE.md`'s pipeline](docs/backlog/scenarios/UX-1381-the-triager-is-in-no-guide.md)
+- [UX-1392](docs/backlog/scenarios/UX-1392-viewer-md-says-staleness-is-not-a-version-comparison.md) — [`viewer.md` says staleness is not a version comparison;
+- [UX-1393](docs/backlog/scenarios/UX-1393-examples-readme-names-only-ubuntu-24-04.md) — [the examples README says only Ubuntu 24.04 stages without a warning](docs/backlog/scenarios/UX-1393-examples-readme-names-only-ubuntu-24-04.md)
+
+<!-- /generated -->
+
 ## 0.6.2 — Python 3.11 again (2026-11-05)
 
 0.6.1 with one change: `bga` installs and runs on **Python 3.11** again
@@ -85,6 +167,7 @@ and nothing checks it yet.
 seed 6's `UX-1376` and `UX-1377`.
 
 ```text state
+digest: 482ae001b0f6
 contracts: analyze/v2 analyze/v3 analyze/v4 analyze/v5 analyze/v6 analyze/v7 blast/v1 blast/v2 bundle-manifest/v1 capacity-model/v1 capture-layout/v1 compare/v1 compare/v2 correlate/v1 correlate/v2 host-samples/v1 host/v1 host/v2 junction-cost/v1 plane2/v1 plane2/v2 plane2/v3 sources/v1 store-aggregate/v1 store/v1 sweep/v1 tail/v1 whatif/v1
 commands: analyze baseline blast bundle cache-logs cache-trend capture checkout-cost chrome-to-trace compare correlate cross-check diagnostics doctor extract floors gen-synthetic graph graph-from-show junction-cost log-to-chrome native-to-chrome rebuild-set release-notes replay run-context snapshot sweep timeline utilisation variant-cost view whatif wrap
 ```
